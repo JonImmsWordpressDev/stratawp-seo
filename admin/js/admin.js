@@ -4,8 +4,12 @@
     // --- Generate page elements ---
     const $generateBtn    = $('#swps-generate-btn');
     const $analyzeBtn     = $('#swps-analyze-btn');
+    const $previewBtn     = $('#swps-preview-btn');
+    const $bulkBtn        = $('#swps-bulk-btn');
     const $generateAnother = $('#swps-generate-another');
     const $topicInput     = $('#swps-topic');
+    const $templateSelect = $('#swps-template');
+    const $bulkCount      = $('#swps-bulk-count');
     const $progress       = $('#swps-progress');
     const $progressTitle  = $('#swps-progress-title');
     const $progressDesc   = $('#swps-progress-desc');
@@ -13,12 +17,15 @@
     const $errorMessage   = $('#swps-error-message');
     const $result         = $('#swps-result');
     const $analysis       = $('#swps-analysis');
+    const $rateLimitBar   = $('#swps-rate-limit');
+    const $previewModal   = $('#swps-preview-modal');
 
     // --- Settings page elements ---
     const $aiProvider     = $('select[name="swps_ai_provider"]');
     const $imageProvider  = $('select[name="swps_image_provider"]');
     const $featuredImages = $('input[name="swps_featured_images"]');
     const $modelSelect    = $('select[name="swps_model"]');
+    const $clearCacheBtn  = $('#swps-clear-cache-btn');
 
     // Progress messages to cycle through during generation.
     const progressMessages = [
@@ -32,6 +39,7 @@
 
     let progressInterval = null;
     let messageIndex = 0;
+    let rateLimitTimer = null;
 
     // =====================================================================
     // Settings page: AI provider switching
@@ -121,20 +129,111 @@
     }
 
     // =====================================================================
+    // Settings page: Clear cache button
+    // =====================================================================
+
+    if ($clearCacheBtn.length) {
+        $clearCacheBtn.on('click', function() {
+            var $btn = $(this);
+            $btn.prop('disabled', true).text('Clearing...');
+
+            $.ajax({
+                url: swpsAdmin.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'swps_clear_cache',
+                    nonce: swpsAdmin.nonce,
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $btn.text('Cache Cleared!');
+                        setTimeout(function() {
+                            $btn.text('Clear Cache').prop('disabled', false);
+                        }, 2000);
+                    } else {
+                        $btn.text('Failed').prop('disabled', false);
+                    }
+                },
+                error: function() {
+                    $btn.text('Error').prop('disabled', false);
+                }
+            });
+        });
+    }
+
+    // =====================================================================
+    // Generate page: Rate limit indicator
+    // =====================================================================
+
+    function initRateLimit() {
+        if (!$rateLimitBar.length) return;
+
+        var remaining = parseInt(swpsAdmin.rate_limit_remaining, 10) || 0;
+        if (remaining > 0) {
+            startRateLimitCountdown(remaining);
+        } else {
+            showRateLimitReady();
+        }
+    }
+
+    function startRateLimitCountdown(seconds) {
+        setGenerateButtonsEnabled(false);
+        updateRateLimitDisplay(seconds);
+
+        rateLimitTimer = setInterval(function() {
+            seconds--;
+            if (seconds <= 0) {
+                clearInterval(rateLimitTimer);
+                rateLimitTimer = null;
+                showRateLimitReady();
+                setGenerateButtonsEnabled(true);
+            } else {
+                updateRateLimitDisplay(seconds);
+            }
+        }, 1000);
+    }
+
+    function updateRateLimitDisplay(seconds) {
+        $rateLimitBar
+            .html('<span class="swps-status-dot swps-status-inactive"></span> <strong>Cooldown:</strong> ' + seconds + 's remaining')
+            .show();
+    }
+
+    function showRateLimitReady() {
+        $rateLimitBar
+            .html('<span class="swps-status-dot swps-status-active"></span> <strong>Ready</strong> to generate')
+            .show();
+    }
+
+    function setGenerateButtonsEnabled(enabled) {
+        $generateBtn.prop('disabled', !enabled);
+        $previewBtn.prop('disabled', !enabled);
+        $bulkBtn.prop('disabled', !enabled);
+    }
+
+    // =====================================================================
     // Generate page: progress animation
     // =====================================================================
 
-    function startProgress() {
+    function startProgress(customTitle) {
         messageIndex = 0;
         $progress.slideDown(200);
         $error.hide();
         $result.hide();
 
-        updateProgressMessage();
+        if (customTitle) {
+            $progressTitle.text(customTitle);
+            $progressDesc.text('This may take a moment...');
+        } else {
+            updateProgressMessage();
+        }
+
         progressInterval = setInterval(function() {
-            messageIndex++;
-            if (messageIndex < progressMessages.length) {
-                updateProgressMessage();
+            if (!customTitle) {
+                messageIndex++;
+                if (messageIndex < progressMessages.length) {
+                    updateProgressMessage();
+                }
             }
         }, 8000);
     }
@@ -175,6 +274,14 @@
             $('#swps-result-links').text('None');
         }
 
+        // Cost info.
+        if (data.cost) {
+            $('#swps-result-cost').text('$' + parseFloat(data.cost).toFixed(4));
+            $('#swps-result-cost-row').show();
+        } else {
+            $('#swps-result-cost-row').hide();
+        }
+
         // Action URLs.
         $('#swps-result-edit').attr('href', data.edit_url);
         $('#swps-result-preview').attr('href', data.preview_url);
@@ -188,13 +295,23 @@
     }
 
     /**
+     * Get the currently selected template.
+     */
+    function getSelectedTemplate() {
+        return $templateSelect.length ? $templateSelect.val() : 'auto';
+    }
+
+    /**
      * Generate Post button click handler.
      */
     $generateBtn.on('click', function() {
-        const topic = $topicInput.val().trim();
+        const topic    = $topicInput.val().trim();
+        const template = getSelectedTemplate();
 
         $(this).prop('disabled', true);
         $analyzeBtn.prop('disabled', true);
+        $previewBtn.prop('disabled', true);
+        $bulkBtn.prop('disabled', true);
 
         startProgress();
 
@@ -205,11 +322,17 @@
                 action: 'swps_generate_post',
                 nonce: swpsAdmin.nonce,
                 topic: topic,
+                template: template,
             },
             timeout: 180000, // 3 minute timeout.
             success: function(response) {
                 if (response.success) {
                     showResult(response.data);
+                    // Start rate limit cooldown after successful generation.
+                    var cooldown = parseInt(swpsAdmin.rate_limit_remaining, 10) || 60;
+                    if (cooldown > 0) {
+                        startRateLimitCountdown(cooldown);
+                    }
                 } else {
                     showError(response.data.message || 'Generation failed. Please try again.');
                 }
@@ -224,9 +347,171 @@
             complete: function() {
                 $generateBtn.prop('disabled', false);
                 $analyzeBtn.prop('disabled', false);
+                $previewBtn.prop('disabled', false);
+                $bulkBtn.prop('disabled', false);
             }
         });
     });
+
+    // =====================================================================
+    // Generate page: Preview button
+    // =====================================================================
+
+    $previewBtn.on('click', function() {
+        const topic    = $topicInput.val().trim();
+        const template = getSelectedTemplate();
+
+        $(this).prop('disabled', true);
+        $generateBtn.prop('disabled', true);
+        $bulkBtn.prop('disabled', true);
+
+        startProgress('Generating preview...');
+
+        $.ajax({
+            url: swpsAdmin.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'swps_preview_post',
+                nonce: swpsAdmin.nonce,
+                topic: topic,
+                template: template,
+            },
+            timeout: 180000,
+            success: function(response) {
+                stopProgress();
+                if (response.success) {
+                    showPreviewModal(response.data);
+                } else {
+                    showError(response.data.message || 'Preview failed.');
+                }
+            },
+            error: function(xhr, status, error) {
+                if (status === 'timeout') {
+                    showError('The preview request timed out.');
+                } else {
+                    showError('Preview failed: ' + (error || 'Unknown error.'));
+                }
+            },
+            complete: function() {
+                $previewBtn.prop('disabled', false);
+                $generateBtn.prop('disabled', false);
+                $bulkBtn.prop('disabled', false);
+            }
+        });
+    });
+
+    function showPreviewModal(data) {
+        $('#swps-preview-title').text(data.title || 'Untitled');
+        $('#swps-preview-meta').text(data.meta_description || '');
+        $('#swps-preview-keyword').text(data.focus_keyword || '—');
+        $('#swps-preview-content').html(data.content || '');
+
+        $previewModal.fadeIn(200);
+
+        // Publish button in preview modal.
+        $('#swps-preview-publish').off('click').on('click', function() {
+            $previewModal.fadeOut(200);
+            // Trigger a generate with the same topic.
+            $topicInput.val(data.title || '');
+            $generateBtn.trigger('click');
+        });
+    }
+
+    // Close preview modal.
+    $(document).on('click', '.swps-modal-close, .swps-modal-overlay', function() {
+        $previewModal.fadeOut(200);
+    });
+
+    $(document).on('keydown', function(e) {
+        if (e.key === 'Escape' && $previewModal.is(':visible')) {
+            $previewModal.fadeOut(200);
+        }
+    });
+
+    // =====================================================================
+    // Generate page: Bulk generate
+    // =====================================================================
+
+    $bulkBtn.on('click', function() {
+        var count    = parseInt($bulkCount.val(), 10) || 1;
+        var template = getSelectedTemplate();
+
+        if (count < 1) count = 1;
+        if (count > 5) count = 5;
+
+        if (!confirm('Generate ' + count + ' post' + (count > 1 ? 's' : '') + '? This will run ' + count + ' AI generation' + (count > 1 ? 's' : '') + ' and may take several minutes.')) {
+            return;
+        }
+
+        $(this).prop('disabled', true);
+        $generateBtn.prop('disabled', true);
+        $previewBtn.prop('disabled', true);
+
+        startProgress('Generating ' + count + ' posts... (this may take a few minutes)');
+
+        $.ajax({
+            url: swpsAdmin.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'swps_bulk_generate',
+                nonce: swpsAdmin.nonce,
+                count: count,
+                template: template,
+            },
+            timeout: 600000, // 10 minute timeout for bulk.
+            success: function(response) {
+                stopProgress();
+                if (response.success) {
+                    showBulkResults(response.data);
+                } else {
+                    showError(response.data.message || 'Bulk generation failed.');
+                }
+            },
+            error: function(xhr, status, error) {
+                if (status === 'timeout') {
+                    showError('Bulk generation timed out. Check your posts — some may have been created.');
+                } else {
+                    showError('Bulk generation failed: ' + (error || 'Unknown error.'));
+                }
+            },
+            complete: function() {
+                $bulkBtn.prop('disabled', false);
+                $generateBtn.prop('disabled', false);
+                $previewBtn.prop('disabled', false);
+            }
+        });
+    });
+
+    function showBulkResults(data) {
+        var html = '<h2><span class="dashicons dashicons-yes-alt" style="color: #00a32a;"></span> Bulk Generation Complete</h2>';
+        html += '<p><strong>' + data.completed + '</strong> of <strong>' + data.total + '</strong> posts generated successfully.</p>';
+
+        if (data.results && data.results.length > 0) {
+            html += '<table class="swps-result-table">';
+            html += '<tr><th>Title</th><th>Status</th><th>Actions</th></tr>';
+
+            data.results.forEach(function(r) {
+                html += '<tr>';
+                if (r.success) {
+                    html += '<td>' + r.data.title + '</td>';
+                    html += '<td><span style="color:#00a32a;">Created</span></td>';
+                    html += '<td><a href="' + r.data.edit_url + '" target="_blank" class="button button-small">Edit</a></td>';
+                } else {
+                    html += '<td colspan="2"><span style="color:#d63638;">Failed: ' + r.message + '</span></td>';
+                    html += '<td></td>';
+                }
+                html += '</tr>';
+            });
+
+            html += '</table>';
+        }
+
+        $result.html(html).slideDown(300);
+
+        $('html, body').animate({
+            scrollTop: $result.offset().top - 50
+        }, 400);
+    }
 
     /**
      * Analyze Site button click handler.
@@ -276,5 +561,8 @@
             $generateBtn.trigger('click');
         }
     });
+
+    // Initialize rate limit on page load.
+    initRateLimit();
 
 })(jQuery);

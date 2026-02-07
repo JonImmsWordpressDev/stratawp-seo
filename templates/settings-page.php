@@ -18,6 +18,16 @@
         ?>
     </form>
 
+    <!-- Cache Management -->
+    <div class="swps-card" style="margin-top: 20px;">
+        <h2><?php esc_html_e( 'Cache Management', 'stratawp-seo' ); ?></h2>
+        <p><?php esc_html_e( 'The site analyzer caches results for 1 hour to improve performance. Clear the cache if you\'ve made significant content changes and want fresh analysis data.', 'stratawp-seo' ); ?></p>
+        <button type="button" id="swps-clear-cache-btn" class="button button-secondary">
+            <span class="dashicons dashicons-trash" style="margin-top: 4px;"></span>
+            <?php esc_html_e( 'Clear Cache', 'stratawp-seo' ); ?>
+        </button>
+    </div>
+
     <?php
     // Show generation log.
     $log = get_option( 'swps_generation_log', [] );

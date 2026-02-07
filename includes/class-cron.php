@@ -14,22 +14,18 @@ class SWPS_Cron {
     private const HOOK = 'swps_generate_scheduled_post';
 
     private SWPS_Generator $generator;
+    private ?SWPS_Topic_Queue $queue;
 
-    public function __construct( SWPS_Generator $generator ) {
+    public function __construct( SWPS_Generator $generator, ?SWPS_Topic_Queue $queue = null ) {
         $this->generator = $generator;
+        $this->queue     = $queue;
 
-        // Register the cron hook.
         add_action( self::HOOK, [ $this, 'run_scheduled_generation' ] );
-
-        // Register custom cron schedules.
         add_filter( 'cron_schedules', [ $this, 'add_custom_schedules' ] );
     }
 
     /**
      * Add custom cron schedules.
-     *
-     * @param array $schedules Existing schedules.
-     * @return array Modified schedules.
      */
     public function add_custom_schedules( array $schedules ): array {
         $schedules['swps_twice_weekly'] = [
@@ -56,7 +52,7 @@ class SWPS_Cron {
     }
 
     /**
-     * The cron callback — generates posts.
+     * The cron callback — generates posts from queue or randomly.
      */
     public function run_scheduled_generation(): void {
         $enabled = get_option( 'swps_cron_enabled', false );
@@ -66,23 +62,46 @@ class SWPS_Cron {
         }
 
         $posts_per_run = (int) get_option( 'swps_cron_posts_per_run', 1 );
-        $posts_per_run = min( $posts_per_run, 5 ); // Safety cap.
+        $posts_per_run = min( $posts_per_run, 5 );
 
         for ( $i = 0; $i < $posts_per_run; $i++ ) {
-            $result = $this->generator->generate_post();
+            $topic    = '';
+            $template = get_option( 'swps_default_template', 'auto' );
+            $topic_id = 0;
+
+            // Check queue for next topic.
+            if ( $this->queue ) {
+                $next_topic = $this->queue->get_next_topic();
+                if ( $next_topic ) {
+                    $topic    = $next_topic->post_title;
+                    $template = get_post_meta( $next_topic->ID, '_swps_template', true ) ?: $template;
+                    $topic_id = $next_topic->ID;
+                    $this->queue->update_status( $topic_id, 'generating' );
+                }
+            }
+
+            $result = $this->generator->generate_post( $topic, $template );
 
             if ( is_wp_error( $result ) ) {
                 error_log( '[StrataWP SEO Cron] Generation failed: ' . $result->get_error_message() );
-                break; // Stop on error (likely API issue).
+
+                if ( $topic_id && $this->queue ) {
+                    $this->queue->update_status( $topic_id, 'failed', $result->get_error_message() );
+                }
+
+                break;
             }
 
-            // Small delay between generations to be kind to the API.
+            // Update topic status if from queue.
+            if ( $topic_id && $this->queue ) {
+                $this->queue->update_status( $topic_id, 'published', '', $result['post_id'] );
+            }
+
             if ( $i < $posts_per_run - 1 ) {
                 sleep( 5 );
             }
         }
 
-        // Update last run timestamp.
         update_option( 'swps_cron_last_run', current_time( 'mysql' ) );
     }
 
@@ -90,14 +109,12 @@ class SWPS_Cron {
      * Schedule the cron event.
      */
     public static function schedule(): void {
-        // Clear existing schedule first.
         self::unschedule();
 
         $frequency = get_option( 'swps_cron_frequency', 'weekly' );
         $day       = get_option( 'swps_cron_day', 'monday' );
         $time      = get_option( 'swps_cron_time', '09:00' );
 
-        // Map frequency to WP cron recurrence.
         $recurrence_map = [
             'daily'        => 'daily',
             'twice_weekly' => 'swps_twice_weekly',
@@ -108,8 +125,6 @@ class SWPS_Cron {
         ];
 
         $recurrence = $recurrence_map[ $frequency ] ?? 'weekly';
-
-        // Calculate next run time.
         $next_run = self::calculate_next_run( $day, $time );
 
         wp_schedule_event( $next_run, $recurrence, self::HOOK );
@@ -123,29 +138,21 @@ class SWPS_Cron {
         if ( $timestamp ) {
             wp_unschedule_event( $timestamp, self::HOOK );
         }
-        // Clear all instances.
         wp_unschedule_hook( self::HOOK );
     }
 
     /**
      * Calculate the next run timestamp based on desired day and time.
-     *
-     * @param string $day  Day of the week (monday, tuesday, etc.).
-     * @param string $time Time in HH:MM format.
-     * @return int Unix timestamp.
      */
     private static function calculate_next_run( string $day, string $time ): int {
         $timezone = wp_timezone();
         $now      = new DateTime( 'now', $timezone );
 
-        // Parse the desired time.
         list( $hour, $minute ) = explode( ':', $time );
 
-        // Find the next occurrence of the desired day.
         $next = new DateTime( "next {$day}", $timezone );
         $next->setTime( (int) $hour, (int) $minute, 0 );
 
-        // If the next occurrence is more than 7 days away, use today/tomorrow.
         $diff = $now->diff( $next );
         if ( $diff->days > 7 ) {
             $next = clone $now;
@@ -160,8 +167,6 @@ class SWPS_Cron {
 
     /**
      * Get info about the current schedule for display.
-     *
-     * @return array Schedule info.
      */
     public static function get_schedule_info(): array {
         $next = wp_next_scheduled( self::HOOK );

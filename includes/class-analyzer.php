@@ -3,6 +3,7 @@
  * Site content analyzer.
  *
  * Reads existing WordPress content to provide context for AI generation.
+ * Uses cache manager for performance.
  *
  * @package StrataWP_SEO
  */
@@ -13,6 +14,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class SWPS_Analyzer {
 
+    private ?SWPS_Cache_Manager $cache;
+
+    public function __construct( ?SWPS_Cache_Manager $cache = null ) {
+        $this->cache = $cache;
+    }
+
     /**
      * Get a structured summary of the site's content for Claude.
      *
@@ -20,13 +27,28 @@ class SWPS_Analyzer {
      * @return array Site summary data.
      */
     public function get_site_summary( int $max_posts = 50 ): array {
-        return [
+        $cache_key = 'site_summary_' . $max_posts;
+
+        if ( $this->cache ) {
+            $cached = $this->cache->get( $cache_key );
+            if ( false !== $cached ) {
+                return $cached;
+            }
+        }
+
+        $summary = [
             'site_info'    => $this->get_site_info(),
             'posts'        => $this->get_posts_summary( $max_posts ),
             'categories'   => $this->get_categories(),
             'tags'         => $this->get_popular_tags( 30 ),
             'content_stats' => $this->get_content_stats(),
         ];
+
+        if ( $this->cache ) {
+            $this->cache->set( $cache_key, $summary );
+        }
+
+        return $summary;
     }
 
     /**
@@ -63,13 +85,11 @@ class SWPS_Analyzer {
             $categories = wp_get_post_categories( $post->ID, [ 'fields' => 'names' ] );
             $tags       = wp_get_post_tags( $post->ID, [ 'fields' => 'names' ] );
 
-            // Get a content excerpt (first 200 words).
             $content    = wp_strip_all_tags( $post->post_content );
             $words      = explode( ' ', $content );
             $excerpt    = implode( ' ', array_slice( $words, 0, 200 ) );
             $word_count = count( $words );
 
-            // Extract headings from content.
             $headings = $this->extract_headings( $post->post_content );
 
             $summaries[] = [
@@ -175,11 +195,19 @@ class SWPS_Analyzer {
 
     /**
      * Build a condensed text representation of the site for Claude's context.
-     * This is what actually gets sent in the prompt.
      *
      * @return string Formatted site context string.
      */
     public function build_context_for_prompt(): string {
+        $cache_key = 'context_prompt';
+
+        if ( $this->cache ) {
+            $cached = $this->cache->get( $cache_key );
+            if ( false !== $cached ) {
+                return $cached;
+            }
+        }
+
         $summary = $this->get_site_summary();
         $info    = $summary['site_info'];
 
@@ -195,7 +223,6 @@ class SWPS_Analyzer {
             $cats = implode( ', ', $post['categories'] );
             $context .= "- \"{$post['title']}\" ({$post['url']}) [{$cats}] {$post['word_count']} words\n";
             if ( ! empty( $post['excerpt'] ) ) {
-                // Truncate excerpt to keep context manageable.
                 $short_excerpt = mb_substr( $post['excerpt'], 0, 150 );
                 $context .= "  Summary: {$short_excerpt}...\n";
             }
@@ -210,6 +237,10 @@ class SWPS_Analyzer {
             $tag_names = array_column( $summary['tags'], 'name' );
             $context .= "\n=== POPULAR TAGS ===\n";
             $context .= implode( ', ', $tag_names ) . "\n";
+        }
+
+        if ( $this->cache ) {
+            $this->cache->set( $cache_key, $context );
         }
 
         return $context;

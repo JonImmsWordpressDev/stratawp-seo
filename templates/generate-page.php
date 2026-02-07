@@ -2,6 +2,8 @@
 $has_api_key = ! empty( SWPS_Provider_Factory::create_ai_provider()->get_api_key() );
 $has_niche   = ! empty( get_option( 'swps_site_niche' ) );
 $schedule    = SWPS_Cron::get_schedule_info();
+$cost_stats  = stratawp_seo()->cost_tracker->get_monthly_stats();
+$templates   = SWPS_Templates::get_options();
 ?>
 <div class="wrap swps-wrap">
     <h1>
@@ -36,6 +38,25 @@ $schedule    = SWPS_Cron::get_schedule_info();
                 />
             </div>
 
+            <div class="swps-form-row">
+                <div class="swps-form-group swps-form-group-inline">
+                    <label for="swps-template"><?php esc_html_e( 'Template', 'stratawp-seo' ); ?></label>
+                    <select id="swps-template" <?php echo ! $has_api_key ? 'disabled' : ''; ?>>
+                        <?php foreach ( $templates as $value => $label ) : ?>
+                            <option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="swps-form-group swps-form-group-inline">
+                    <label for="swps-bulk-count"><?php esc_html_e( 'Bulk Count', 'stratawp-seo' ); ?></label>
+                    <input type="number" id="swps-bulk-count" value="1" min="1" max="5" class="small-text" <?php echo ! $has_api_key ? 'disabled' : ''; ?> />
+                </div>
+            </div>
+
+            <!-- Rate limit indicator -->
+            <div id="swps-rate-limit" class="swps-rate-limit" style="display: none;"></div>
+
             <div class="swps-generate-actions">
                 <button
                     type="button"
@@ -45,6 +66,26 @@ $schedule    = SWPS_Cron::get_schedule_info();
                 >
                     <span class="dashicons dashicons-edit-large" style="margin-top: 4px;"></span>
                     <?php esc_html_e( 'Generate Post', 'stratawp-seo' ); ?>
+                </button>
+
+                <button
+                    type="button"
+                    id="swps-preview-btn"
+                    class="button button-secondary button-hero"
+                    <?php echo ! $has_api_key ? 'disabled' : ''; ?>
+                >
+                    <span class="dashicons dashicons-visibility" style="margin-top: 4px;"></span>
+                    <?php esc_html_e( 'Preview', 'stratawp-seo' ); ?>
+                </button>
+
+                <button
+                    type="button"
+                    id="swps-bulk-btn"
+                    class="button button-secondary"
+                    <?php echo ! $has_api_key ? 'disabled' : ''; ?>
+                >
+                    <span class="dashicons dashicons-controls-repeat" style="margin-top: 4px;"></span>
+                    <?php esc_html_e( 'Bulk Generate', 'stratawp-seo' ); ?>
                 </button>
 
                 <button
@@ -141,6 +182,27 @@ $schedule    = SWPS_Cron::get_schedule_info();
             </div>
         </div>
 
+        <?php if ( get_option( 'swps_cost_tracking', false ) ) : ?>
+        <!-- Cost Stats Card -->
+        <div class="swps-card swps-card-cost">
+            <h2><?php esc_html_e( 'Cost This Month', 'stratawp-seo' ); ?></h2>
+            <div class="swps-stats-grid">
+                <div class="swps-stat">
+                    <span class="swps-stat-number">$<?php echo esc_html( number_format( $cost_stats['total_cost'], 2 ) ); ?></span>
+                    <span class="swps-stat-label"><?php esc_html_e( 'Spent', 'stratawp-seo' ); ?></span>
+                </div>
+                <div class="swps-stat">
+                    <span class="swps-stat-number"><?php echo esc_html( $cost_stats['generation_count'] ); ?></span>
+                    <span class="swps-stat-label"><?php esc_html_e( 'Generations', 'stratawp-seo' ); ?></span>
+                </div>
+                <div class="swps-stat">
+                    <span class="swps-stat-number"><?php echo esc_html( number_format( $cost_stats['total_input_tokens'] + $cost_stats['total_output_tokens'] ) ); ?></span>
+                    <span class="swps-stat-label"><?php esc_html_e( 'Tokens', 'stratawp-seo' ); ?></span>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
     </div>
 
     <!-- Results section -->
@@ -175,6 +237,10 @@ $schedule    = SWPS_Cron::get_schedule_info();
                 <td><strong><?php esc_html_e( 'Internal Links:', 'stratawp-seo' ); ?></strong></td>
                 <td id="swps-result-links"></td>
             </tr>
+            <tr id="swps-result-cost-row" style="display: none;">
+                <td><strong><?php esc_html_e( 'Cost:', 'stratawp-seo' ); ?></strong></td>
+                <td id="swps-result-cost"></td>
+            </tr>
         </table>
 
         <div class="swps-result-actions">
@@ -194,6 +260,33 @@ $schedule    = SWPS_Cron::get_schedule_info();
     <div id="swps-analysis" class="swps-card" style="display: none;">
         <h2><?php esc_html_e( 'Site Content Analysis', 'stratawp-seo' ); ?></h2>
         <pre id="swps-analysis-data" class="swps-code-block"></pre>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="swps-preview-modal" class="swps-modal" style="display: none;">
+        <div class="swps-modal-overlay"></div>
+        <div class="swps-modal-dialog swps-modal-large">
+            <div class="swps-modal-header">
+                <h2 id="swps-preview-title"><?php esc_html_e( 'Post Preview', 'stratawp-seo' ); ?></h2>
+                <button type="button" class="swps-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="swps-modal-body">
+                <div class="swps-preview-meta">
+                    <p><strong><?php esc_html_e( 'Focus Keyword:', 'stratawp-seo' ); ?></strong> <span id="swps-preview-keyword"></span></p>
+                    <p><strong><?php esc_html_e( 'Meta Description:', 'stratawp-seo' ); ?></strong> <span id="swps-preview-meta"></span></p>
+                </div>
+                <div id="swps-preview-content" class="swps-preview-content"></div>
+            </div>
+            <div class="swps-modal-footer">
+                <button type="button" id="swps-preview-publish" class="button button-primary">
+                    <span class="dashicons dashicons-yes" style="margin-top: 4px;"></span>
+                    <?php esc_html_e( 'Publish This', 'stratawp-seo' ); ?>
+                </button>
+                <button type="button" class="button swps-modal-close">
+                    <?php esc_html_e( 'Close', 'stratawp-seo' ); ?>
+                </button>
+            </div>
+        </div>
     </div>
 
 </div>

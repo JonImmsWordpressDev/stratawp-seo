@@ -176,15 +176,11 @@ class SWPS_Settings {
         ] );
 
         $this->add_field( 'word_count_min', __( 'Minimum Word Count', 'stratawp-seo' ), 'number', 'swps_content_section', [
-            'min' => 300,
-            'max' => 5000,
-            'step' => 100,
+            'min' => 300, 'max' => 5000, 'step' => 100,
         ] );
 
         $this->add_field( 'word_count_max', __( 'Maximum Word Count', 'stratawp-seo' ), 'number', 'swps_content_section', [
-            'min' => 500,
-            'max' => 8000,
-            'step' => 100,
+            'min' => 500, 'max' => 8000, 'step' => 100,
         ] );
 
         $this->add_field( 'internal_links_min', __( 'Min Internal Links', 'stratawp-seo' ), 'number', 'swps_content_section', [
@@ -241,6 +237,37 @@ class SWPS_Settings {
             'max'         => 5,
             'description' => __( 'Number of posts to generate each time (max 5).', 'stratawp-seo' ),
         ] );
+
+        // --- Advanced Section (v2.0) ---
+        add_settings_section( 'swps_advanced_section', __( 'Advanced Settings', 'stratawp-seo' ), [ $this, 'render_advanced_section' ], 'stratawp-seo' );
+
+        $this->add_field( 'default_template', __( 'Default Content Template', 'stratawp-seo' ), 'select', 'swps_advanced_section', [
+            'options'     => SWPS_Templates::get_options(),
+            'description' => __( 'Default template for generated content. Can be overridden per generation.', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'rate_limit', __( 'Rate Limit Cooldown', 'stratawp-seo' ), 'number', 'swps_advanced_section', [
+            'min'         => 0,
+            'max'         => 600,
+            'description' => __( 'Seconds to wait between generations (prevents accidental double-clicks). 0 to disable.', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'duplicate_check', __( 'Duplicate Detection', 'stratawp-seo' ), 'checkbox', 'swps_advanced_section', [
+            'label' => __( 'Check for duplicate titles before creating posts (85% similarity threshold)', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'cost_tracking', __( 'Cost Tracking', 'stratawp-seo' ), 'checkbox', 'swps_advanced_section', [
+            'label' => __( 'Track token usage and estimated costs per generation', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'jon_ai_endpoint', __( 'Remote Content Endpoint', 'stratawp-seo' ), 'text', 'swps_advanced_section', [
+            'placeholder' => 'https://example.com/wp-json/jon-ai/v1/create-posts',
+            'description' => __( 'Optional: Remote endpoint for duplicate checking against an external site.', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'jon_ai_secret', __( 'Remote Content Secret', 'stratawp-seo' ), 'password', 'swps_advanced_section', [
+            'description' => __( 'Authentication secret for the remote content endpoint. Stored encrypted.', 'stratawp-seo' ),
+        ] );
     }
 
     /**
@@ -258,7 +285,7 @@ class SWPS_Settings {
         $option_name = "swps_{$key}";
 
         register_setting( 'stratawp-seo', $option_name, [
-            'sanitize_callback' => $this->get_sanitize_callback( $type ),
+            'sanitize_callback' => $this->get_sanitize_callback( $type, $key ),
         ] );
 
         $field_args = array_merge( $args, [
@@ -267,7 +294,6 @@ class SWPS_Settings {
             'name' => $option_name,
         ] );
 
-        // Support row_class → maps to WP's 'class' key on the <tr>.
         $extra = [];
         if ( ! empty( $args['row_class'] ) ) {
             $extra['class'] = $args['row_class'];
@@ -286,7 +312,17 @@ class SWPS_Settings {
     /**
      * Get the appropriate sanitize callback for a field type.
      */
-    private function get_sanitize_callback( string $type ): callable {
+    private function get_sanitize_callback( string $type, string $key = '' ): callable {
+        // Encrypt the jon_ai_secret on save.
+        if ( $key === 'jon_ai_secret' ) {
+            return function ( $value ) {
+                if ( empty( $value ) ) {
+                    return '';
+                }
+                return SWPS_Encryption::encrypt( sanitize_text_field( $value ) );
+            };
+        }
+
         return match ( $type ) {
             'checkbox' => function ( $value ) {
                 return $value ? 1 : 0;
@@ -308,6 +344,11 @@ class SWPS_Settings {
         $type  = $args['type'];
         $value = get_option( $name, '' );
         $desc  = $args['description'] ?? '';
+
+        // Decrypt jon_ai_secret for display.
+        if ( $args['key'] === 'jon_ai_secret' && ! empty( $value ) && SWPS_Encryption::is_encrypted( $value ) ) {
+            $value = ''; // Don't display encrypted values, show empty.
+        }
 
         switch ( $type ) {
             case 'text':
@@ -430,6 +471,24 @@ class SWPS_Settings {
         }
     }
 
+    public function render_advanced_section(): void {
+        echo '<p>' . esc_html__( 'Advanced features for duplicate detection, rate limiting, cost tracking, and remote integration.', 'stratawp-seo' ) . '</p>';
+
+        // Show encryption status.
+        $secret = get_option( 'swps_jon_ai_secret', '' );
+        if ( ! empty( $secret ) ) {
+            $is_encrypted = SWPS_Encryption::is_encrypted( $secret );
+            printf(
+                '<div class="notice notice-%s inline"><p>%s %s</p></div>',
+                $is_encrypted ? 'success' : 'warning',
+                esc_html__( 'Remote secret:', 'stratawp-seo' ),
+                $is_encrypted
+                    ? esc_html__( 'Stored encrypted.', 'stratawp-seo' )
+                    : esc_html__( 'Not encrypted — save settings to encrypt.', 'stratawp-seo' )
+            );
+        }
+    }
+
     /**
      * Render the main settings page.
      */
@@ -438,7 +497,6 @@ class SWPS_Settings {
             return;
         }
 
-        // Handle schedule update on save.
         if ( isset( $_GET['settings-updated'] ) && $_GET['settings-updated'] ) {
             if ( get_option( 'swps_cron_enabled' ) ) {
                 SWPS_Cron::schedule();
@@ -462,7 +520,7 @@ class SWPS_Settings {
     }
 
     /**
-     * Show admin notices — provider-aware.
+     * Show admin notices.
      */
     public function admin_notices(): void {
         $screen = get_current_screen();
@@ -471,7 +529,6 @@ class SWPS_Settings {
             return;
         }
 
-        // Check for API key on the active AI provider.
         $ai_provider = SWPS_Provider_Factory::create_ai_provider();
         if ( empty( $ai_provider->get_api_key() ) ) {
             printf(
@@ -484,7 +541,6 @@ class SWPS_Settings {
             );
         }
 
-        // Check for site niche.
         if ( empty( get_option( 'swps_site_niche' ) ) ) {
             printf(
                 '<div class="notice notice-info"><p><strong>%s</strong> %s</p></div>',

@@ -16,20 +16,142 @@ class SWPS_Generator {
     private SWPS_AI_Provider $api;
     private SWPS_Analyzer $analyzer;
     private SWPS_Image_Provider $images;
+    private SWPS_Duplicate_Checker $duplicate_checker;
+    private SWPS_Rate_Limiter $rate_limiter;
+    private SWPS_Cost_Tracker $cost_tracker;
 
-    public function __construct( SWPS_AI_Provider $api, SWPS_Analyzer $analyzer, SWPS_Image_Provider $images ) {
-        $this->api      = $api;
-        $this->analyzer = $analyzer;
-        $this->images   = $images;
+    public function __construct(
+        SWPS_AI_Provider $api,
+        SWPS_Analyzer $analyzer,
+        SWPS_Image_Provider $images,
+        SWPS_Duplicate_Checker $duplicate_checker,
+        SWPS_Rate_Limiter $rate_limiter,
+        SWPS_Cost_Tracker $cost_tracker
+    ) {
+        $this->api               = $api;
+        $this->analyzer          = $analyzer;
+        $this->images            = $images;
+        $this->duplicate_checker = $duplicate_checker;
+        $this->rate_limiter      = $rate_limiter;
+        $this->cost_tracker      = $cost_tracker;
     }
 
     /**
      * Generate a complete blog post and save it as a WP draft.
      *
-     * @param string $topic Optional specific topic. If empty, AI picks one.
+     * @param string $topic    Optional specific topic. If empty, AI picks one.
+     * @param string $template Content template slug.
      * @return array|WP_Error Post data on success, error on failure.
      */
-    public function generate_post( string $topic = '' ): array|WP_Error {
+    public function generate_post( string $topic = '', string $template = 'auto' ): array|WP_Error {
+        // Fire before_generate action.
+        SWPS_Hooks::do_before_generate( $topic, $template );
+
+        // Check rate limit.
+        if ( ! $this->rate_limiter->can_generate() ) {
+            $remaining = $this->rate_limiter->get_remaining_seconds();
+            $error = new WP_Error(
+                'swps_rate_limited',
+                sprintf( __( 'Rate limited. Please wait %d seconds before generating again.', 'stratawp-seo' ), $remaining )
+            );
+            SWPS_Hooks::do_generation_failed( $error, $topic, $template );
+            return $error;
+        }
+
+        // Build prompts and call AI.
+        $ai_result = $this->call_ai( $topic, $template );
+
+        if ( is_wp_error( $ai_result ) ) {
+            $this->log( 'Generation failed: ' . $ai_result->get_error_message() );
+            SWPS_Hooks::do_generation_failed( $ai_result, $topic, $template );
+            return $ai_result;
+        }
+
+        // Apply AI response filter.
+        $ai_result = SWPS_Hooks::filter_ai_response( $ai_result, $topic );
+
+        // Check for duplicates.
+        if ( ! empty( $ai_result['title'] ) ) {
+            $duplicate = $this->duplicate_checker->is_duplicate( $ai_result['title'] );
+            if ( false !== $duplicate ) {
+                $error = new WP_Error(
+                    'swps_duplicate',
+                    sprintf( __( 'Duplicate detected: "%s" is too similar to existing title "%s"', 'stratawp-seo' ), $ai_result['title'], $duplicate )
+                );
+                SWPS_Hooks::do_generation_failed( $error, $topic, $template );
+                return $error;
+            }
+        }
+
+        // Lock rate limiter.
+        $this->rate_limiter->lock();
+
+        // Validate required fields.
+        $required = [ 'title', 'content_html', 'meta_description', 'slug' ];
+        foreach ( $required as $field ) {
+            if ( empty( $ai_result[ $field ] ) ) {
+                $error = new WP_Error(
+                    'swps_missing_field',
+                    sprintf( __( 'AI response missing required field: %s', 'stratawp-seo' ), $field )
+                );
+                SWPS_Hooks::do_generation_failed( $error, $topic, $template );
+                return $error;
+            }
+        }
+
+        // Create the WordPress post.
+        $post_data = $this->create_wp_post( $ai_result, $template );
+
+        if ( is_wp_error( $post_data ) ) {
+            SWPS_Hooks::do_generation_failed( $post_data, $topic, $template );
+            return $post_data;
+        }
+
+        $this->log( sprintf( 'Generated post #%d: "%s"', $post_data['post_id'], $ai_result['title'] ) );
+
+        // Fire after_generate action.
+        SWPS_Hooks::do_after_generate( $post_data, $topic, $template );
+
+        return $post_data;
+    }
+
+    /**
+     * Preview content without creating a post.
+     *
+     * @param string $topic    Optional topic.
+     * @param string $template Content template slug.
+     * @return array|WP_Error AI result data or error.
+     */
+    public function preview_content( string $topic = '', string $template = 'auto' ): array|WP_Error {
+        // Check rate limit.
+        if ( ! $this->rate_limiter->can_generate() ) {
+            $remaining = $this->rate_limiter->get_remaining_seconds();
+            return new WP_Error(
+                'swps_rate_limited',
+                sprintf( __( 'Rate limited. Please wait %d seconds.', 'stratawp-seo' ), $remaining )
+            );
+        }
+
+        $ai_result = $this->call_ai( $topic, $template );
+
+        if ( is_wp_error( $ai_result ) ) {
+            return $ai_result;
+        }
+
+        // Lock rate limiter.
+        $this->rate_limiter->lock();
+
+        return $ai_result;
+    }
+
+    /**
+     * Call the AI provider with built prompts.
+     *
+     * @param string $topic    Topic.
+     * @param string $template Template slug.
+     * @return array|WP_Error Parsed AI response or error.
+     */
+    private function call_ai( string $topic, string $template ): array|WP_Error {
         // Gather site context.
         $site_context   = $this->analyzer->build_context_for_prompt();
         $linkable_posts = $this->analyzer->get_linkable_posts();
@@ -58,48 +180,39 @@ class SWPS_Generator {
 
         // Build the user prompt.
         $user_prompt = $this->build_user_prompt(
-            $topic,
-            $site_context,
-            $links_context,
-            $niche,
-            $keywords,
-            $min_words,
-            $max_words,
-            $min_links,
-            $max_links,
-            $include_faq,
-            $include_toc
+            $topic, $site_context, $links_context, $niche, $keywords,
+            $min_words, $max_words, $min_links, $max_links, $include_faq, $include_toc
         );
 
-        // Call Claude.
+        // Apply template modifiers.
+        if ( $template === 'auto' ) {
+            $template = get_option( 'swps_default_template', 'auto' );
+        }
+        [ $system_prompt, $user_prompt ] = SWPS_Templates::apply( $system_prompt, $user_prompt, $template );
+
+        // Apply hook filters.
+        $system_prompt = SWPS_Hooks::filter_system_prompt( $system_prompt, $tone, $style );
+        $user_prompt   = SWPS_Hooks::filter_user_prompt( $user_prompt, $topic, $site_context );
+
+        // Call AI.
         $result = $this->api->chat_json( $system_prompt, $user_prompt, 8192 );
 
         if ( is_wp_error( $result ) ) {
-            $this->log( 'Generation failed: ' . $result->get_error_message() );
             return $result;
         }
 
-        // Validate required fields.
-        $required = [ 'title', 'content_html', 'meta_description', 'slug' ];
-        foreach ( $required as $field ) {
-            if ( empty( $result[ $field ] ) ) {
-                return new WP_Error(
-                    'swps_missing_field',
-                    sprintf( __( 'AI response missing required field: %s', 'stratawp-seo' ), $field )
-                );
-            }
+        // Track costs if the API response includes token usage.
+        $model = get_option( 'swps_model', '' );
+        if ( ! empty( $result['_usage'] ) ) {
+            $this->cost_tracker->track(
+                $model,
+                $result['_usage']['input_tokens'] ?? 0,
+                $result['_usage']['output_tokens'] ?? 0
+            );
+            unset( $result['_usage'] );
         }
 
-        // Create the WordPress post.
-        $post_data = $this->create_wp_post( $result );
-
-        if ( is_wp_error( $post_data ) ) {
-            return $post_data;
-        }
-
-        $this->log( sprintf( 'Generated post #%d: "%s"', $post_data['post_id'], $result['title'] ) );
-
-        return $post_data;
+        return $result;
     }
 
     /**
@@ -138,6 +251,7 @@ Required JSON structure:
   "suggested_tags": ["tag1", "tag2", "tag3"],
   "suggested_category": "Best fitting category name",
   "internal_links_used": [{"anchor_text": "text", "url": "url"}],
+  "external_links": [{"anchor_text": "text", "url": "url", "source": "source name"}],
   "faq_schema": [{"question": "Q?", "answer": "A."}],
   "estimated_word_count": 1500
 }
@@ -145,6 +259,7 @@ Required JSON structure:
 CRITICAL RULES:
 - content_html must use proper HTML tags: <h2>, <h3>, <p>, <ul>, <ol>, <li>, <a>, <strong>, <em>
 - Internal links must use <a href="URL">anchor text</a> format with REAL URLs from the provided list
+- Include 2-4 external links to authoritative, relevant sources (real websites, documentation, or industry resources)
 - Never use H1 tags in content_html
 - Every internal link must point to a URL from the provided existing pages list
 - Include a table of contents at the start if requested
@@ -190,6 +305,7 @@ PROMPT;
         $prompt .= "REQUIREMENTS:\n";
         $prompt .= "- Word count: {$min_words}-{$max_words} words\n";
         $prompt .= "- Include {$min_links}-{$max_links} internal links to existing pages listed above\n";
+        $prompt .= "- Include 2-4 external links to authoritative sources (real websites, documentation, or industry publications)\n";
 
         if ( $include_toc ) {
             $prompt .= "- Include a table of contents (HTML list with anchor links to each H2) at the beginning\n";
@@ -210,10 +326,11 @@ PROMPT;
     /**
      * Create a WordPress post from the AI-generated data.
      *
-     * @param array $ai_result The parsed JSON from Claude.
+     * @param array  $ai_result The parsed JSON from Claude.
+     * @param string $template  The template used.
      * @return array|WP_Error Post data or error.
      */
-    private function create_wp_post( array $ai_result ): array|WP_Error {
+    private function create_wp_post( array $ai_result, string $template = 'auto' ): array|WP_Error {
         $post_status = get_option( 'swps_post_status', 'draft' );
         $post_author = (int) get_option( 'swps_post_author', get_current_user_id() );
         $category_id = (int) get_option( 'swps_post_category', 0 );
@@ -224,7 +341,6 @@ PROMPT;
             if ( $cat > 0 ) {
                 $category_id = $cat;
             } elseif ( $category_id === 0 ) {
-                // Use the suggested category if no default is set, create it.
                 $new_cat = wp_create_category( $ai_result['suggested_category'] );
                 if ( ! is_wp_error( $new_cat ) ) {
                     $category_id = $new_cat;
@@ -234,8 +350,7 @@ PROMPT;
 
         $content = $ai_result['content_html'];
 
-        // Insert the post.
-        $post_id = wp_insert_post( [
+        $post_data = [
             'post_title'    => sanitize_text_field( $ai_result['title'] ),
             'post_content'  => wp_kses_post( $content ),
             'post_excerpt'  => sanitize_text_field( $ai_result['excerpt'] ?? '' ),
@@ -244,7 +359,12 @@ PROMPT;
             'post_name'     => sanitize_title( $ai_result['slug'] ),
             'post_category' => $category_id ? [ $category_id ] : [],
             'post_type'     => 'post',
-        ], true );
+        ];
+
+        // Apply post data filter.
+        $post_data = SWPS_Hooks::filter_post_data( $post_data, $ai_result );
+
+        $post_id = wp_insert_post( $post_data, true );
 
         if ( is_wp_error( $post_id ) ) {
             return $post_id;
@@ -259,11 +379,8 @@ PROMPT;
         $meta_desc     = sanitize_text_field( $ai_result['meta_description'] ?? '' );
         $focus_keyword = sanitize_text_field( $ai_result['focus_keyword'] ?? '' );
 
-        // Yoast SEO meta.
         update_post_meta( $post_id, '_yoast_wpseo_metadesc', $meta_desc );
         update_post_meta( $post_id, '_yoast_wpseo_focuskw', $focus_keyword );
-
-        // RankMath meta.
         update_post_meta( $post_id, 'rank_math_description', $meta_desc );
         update_post_meta( $post_id, 'rank_math_focus_keyword', $focus_keyword );
 
@@ -273,22 +390,42 @@ PROMPT;
         update_post_meta( $post_id, '_swps_focus_keyword', $focus_keyword );
         update_post_meta( $post_id, '_swps_secondary_keywords', $ai_result['secondary_keywords'] ?? [] );
         update_post_meta( $post_id, '_swps_internal_links', $ai_result['internal_links_used'] ?? [] );
+        update_post_meta( $post_id, '_swps_external_links', $ai_result['external_links'] ?? [] );
+        update_post_meta( $post_id, '_swps_template', $template );
 
-        // Store FAQ schema as post meta (rendered in <head> via wp_head hook).
+        // Store FAQ schema as post meta.
         if ( ! empty( $ai_result['faq_schema'] ) ) {
-            $schema = $this->build_faq_schema( $ai_result['title'], $ai_result['faq_schema'] );
-            update_post_meta( $post_id, '_swps_faq_schema', $schema );
+            $schema_data = $this->build_faq_schema_data( $ai_result['title'], $ai_result['faq_schema'] );
+            $schema_data = SWPS_Hooks::filter_faq_schema( $schema_data, $ai_result['title'], $ai_result['faq_schema'] );
+            $schema_tag  = '<script type="application/ld+json">' . wp_json_encode( $schema_data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) . '</script>';
+            update_post_meta( $post_id, '_swps_faq_schema', $schema_tag );
+        }
+
+        // Track cost per post.
+        $model = get_option( 'swps_model', '' );
+        if ( ! empty( $ai_result['_usage'] ) ) {
+            $this->cost_tracker->track(
+                $model,
+                $ai_result['_usage']['input_tokens'] ?? 0,
+                $ai_result['_usage']['output_tokens'] ?? 0,
+                $post_id
+            );
         }
 
         // Set featured image.
         if ( get_option( 'swps_featured_images', 1 ) ) {
             $image_query = $focus_keyword ?: $ai_result['title'];
+            $image_query = SWPS_Hooks::filter_image_query( $image_query, $post_id );
+
             $image_result = $this->images->set_featured_image( $post_id, $image_query );
 
             if ( is_wp_error( $image_result ) ) {
                 $this->log( 'Featured image failed: ' . $image_result->get_error_message() );
             }
         }
+
+        // Fire post_created action.
+        SWPS_Hooks::do_post_created( $post_id, $ai_result, $post_data );
 
         return [
             'post_id'          => $post_id,
@@ -299,18 +436,20 @@ PROMPT;
             'focus_keyword'    => $focus_keyword,
             'meta_description' => $meta_desc,
             'internal_links'   => $ai_result['internal_links_used'] ?? [],
+            'external_links'   => $ai_result['external_links'] ?? [],
             'word_count'       => $ai_result['estimated_word_count'] ?? 0,
+            'template'         => $template,
         ];
     }
 
     /**
-     * Build FAQ schema JSON-LD.
+     * Build FAQ schema data array.
      *
      * @param string $title     Post title.
      * @param array  $faq_items Array of [{question, answer}].
-     * @return string Script tag with JSON-LD.
+     * @return array Schema data.
      */
-    private function build_faq_schema( string $title, array $faq_items ): string {
+    private function build_faq_schema_data( string $title, array $faq_items ): array {
         $schema = [
             '@context'   => 'https://schema.org',
             '@type'      => 'FAQPage',
@@ -329,27 +468,23 @@ PROMPT;
             ];
         }
 
-        return '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) . '</script>';
+        return $schema;
     }
 
     /**
      * Log a message.
-     *
-     * @param string $message Message to log.
      */
     private function log( string $message ): void {
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
             error_log( '[StrataWP SEO] ' . $message );
         }
 
-        // Also store in options for the admin UI log.
         $log   = get_option( 'swps_generation_log', [] );
         $log[] = [
             'time'    => current_time( 'mysql' ),
             'message' => $message,
         ];
 
-        // Keep last 50 entries.
         $log = array_slice( $log, -50 );
         update_option( 'swps_generation_log', $log );
     }
