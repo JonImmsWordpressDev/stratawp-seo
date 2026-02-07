@@ -12,7 +12,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SWPS_API {
 
     private const API_URL = 'https://api.anthropic.com/v1/messages';
-    private const MODEL   = 'claude-sonnet-4-5-20250514';
+
+    /**
+     * Get the selected AI model.
+     */
+    private function get_model(): string {
+        return get_option( 'swps_model', 'claude-opus-4-6' );
+    }
 
     /**
      * Send a message to Claude and get a response.
@@ -30,7 +36,7 @@ class SWPS_API {
         }
 
         $body = [
-            'model'      => self::MODEL,
+            'model'      => $this->get_model(),
             'max_tokens' => $max_tokens,
             'system'     => $system_prompt,
             'messages'   => [
@@ -122,7 +128,7 @@ class SWPS_API {
                 'anthropic-version' => '2023-06-01',
             ],
             'body' => wp_json_encode( [
-                'model'      => self::MODEL,
+                'model'      => $this->get_model(),
                 'max_tokens' => 10,
                 'messages'   => [
                     [ 'role' => 'user', 'content' => 'Say "ok"' ],

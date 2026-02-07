@@ -70,7 +70,7 @@ final class StrataWP_SEO {
      * Enqueue admin CSS and JS on our settings page only.
      */
     public function enqueue_admin_assets( string $hook ): void {
-        if ( 'toplevel_page_stratawp-seo' !== $hook && 'seo-buddy_page_swps-generate' !== $hook ) {
+        if ( ! str_contains( $hook, 'stratawp-seo' ) && ! str_contains( $hook, 'swps-generate' ) ) {
             return;
         }
 

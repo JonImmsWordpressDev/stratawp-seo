@@ -12,7 +12,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SWPS_API {
 
     private const API_URL = 'https://api.anthropic.com/v1/messages';
-    private const MODEL   = 'claude-sonnet-4-5-20250514';
+    private function get_model(): string {
+    	return get_option( 'swps_model', 'claude-opus-4-6' );
+	}
 
     /**
      * Send a message to Claude and get a response.

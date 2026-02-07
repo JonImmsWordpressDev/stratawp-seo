@@ -61,6 +61,15 @@ class SWPS_Settings {
             'description' => __( 'Get your API key from <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a>', 'stratawp-seo' ),
         ] );
 
+        $this->add_field( 'model', __( 'AI Model', 'stratawp-seo' ), 'select', 'swps_api_section', [
+            'options' => [
+                'claude-opus-4-6'            => __( 'Claude Opus 4.6 (Most powerful, higher cost)', 'stratawp-seo' ),
+                'claude-sonnet-4-5-20250929' => __( 'Claude Sonnet 4.5 (Great balance of quality & cost)', 'stratawp-seo' ),
+                'claude-haiku-4-5-20251001'  => __( 'Claude Haiku 4.5 (Fastest, lowest cost)', 'stratawp-seo' ),
+            ],
+            'description' => __( 'Opus produces the best content but costs more per generation. Sonnet is recommended for most users.', 'stratawp-seo' ),
+        ] );
+
         // --- Site Details Section ---
         add_settings_section( 'swps_site_section', __( 'Site Details', 'stratawp-seo' ), [ $this, 'render_site_section' ], 'stratawp-seo' );
 
