@@ -12,6 +12,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 abstract class SWPS_AI_Provider {
 
     /**
+     * Last API call usage data (set by providers after successful calls).
+     *
+     * @var array{input_tokens: int, output_tokens: int}|null
+     */
+    protected ?array $last_usage = null;
+
+    /**
      * Send a message to the AI and get a text response.
      *
      * @param string $system_prompt The system instructions.
@@ -60,6 +67,8 @@ abstract class SWPS_AI_Provider {
      * @return array|WP_Error Parsed JSON array or error.
      */
     public function chat_json( string $system_prompt, string $user_message, int $max_tokens = 4096 ): array|WP_Error {
+        $this->last_usage = null;
+
         $response = $this->chat( $system_prompt, $user_message, $max_tokens );
 
         if ( is_wp_error( $response ) ) {
@@ -77,6 +86,11 @@ abstract class SWPS_AI_Provider {
                 'swps_json_parse_error',
                 sprintf( __( 'Failed to parse AI response as JSON: %s', 'stratawp-seo' ), json_last_error_msg() )
             );
+        }
+
+        // Inject usage data from the provider if available.
+        if ( ! empty( $this->last_usage ) ) {
+            $decoded['_usage'] = $this->last_usage;
         }
 
         return $decoded;

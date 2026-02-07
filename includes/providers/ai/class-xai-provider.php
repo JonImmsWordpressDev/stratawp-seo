@@ -86,6 +86,14 @@ class SWPS_XAI_Provider extends SWPS_AI_Provider {
             return new WP_Error( 'swps_empty_response', __( 'Received empty response from Grok.', 'stratawp-seo' ) );
         }
 
+        // Store usage data for cost tracking.
+        if ( ! empty( $body['usage'] ) ) {
+            $this->last_usage = [
+                'input_tokens'  => (int) ( $body['usage']['prompt_tokens'] ?? 0 ),
+                'output_tokens' => (int) ( $body['usage']['completion_tokens'] ?? 0 ),
+            ];
+        }
+
         return $body['choices'][0]['message']['content'];
     }
 

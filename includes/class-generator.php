@@ -201,17 +201,6 @@ class SWPS_Generator {
             return $result;
         }
 
-        // Track costs if the API response includes token usage.
-        $model = get_option( 'swps_model', '' );
-        if ( ! empty( $result['_usage'] ) ) {
-            $this->cost_tracker->track(
-                $model,
-                $result['_usage']['input_tokens'] ?? 0,
-                $result['_usage']['output_tokens'] ?? 0
-            );
-            unset( $result['_usage'] );
-        }
-
         return $result;
     }
 
@@ -402,14 +391,13 @@ PROMPT;
         }
 
         // Track cost per post.
+        $cost = null;
         $model = get_option( 'swps_model', '' );
         if ( ! empty( $ai_result['_usage'] ) ) {
-            $this->cost_tracker->track(
-                $model,
-                $ai_result['_usage']['input_tokens'] ?? 0,
-                $ai_result['_usage']['output_tokens'] ?? 0,
-                $post_id
-            );
+            $input_tokens  = $ai_result['_usage']['input_tokens'] ?? 0;
+            $output_tokens = $ai_result['_usage']['output_tokens'] ?? 0;
+            $this->cost_tracker->track( $model, $input_tokens, $output_tokens, $post_id );
+            $cost = $this->cost_tracker->calculate_cost( $model, $input_tokens, $output_tokens );
         }
 
         // Set featured image.
@@ -439,6 +427,7 @@ PROMPT;
             'external_links'   => $ai_result['external_links'] ?? [],
             'word_count'       => $ai_result['estimated_word_count'] ?? 0,
             'template'         => $template,
+            'cost'             => $cost,
         ];
     }
 
