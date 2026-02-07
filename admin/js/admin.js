@@ -1,6 +1,7 @@
 (function($) {
     'use strict';
 
+    // --- Generate page elements ---
     const $generateBtn    = $('#swps-generate-btn');
     const $analyzeBtn     = $('#swps-analyze-btn');
     const $generateAnother = $('#swps-generate-another');
@@ -12,6 +13,12 @@
     const $errorMessage   = $('#swps-error-message');
     const $result         = $('#swps-result');
     const $analysis       = $('#swps-analysis');
+
+    // --- Settings page elements ---
+    const $aiProvider     = $('select[name="swps_ai_provider"]');
+    const $imageProvider  = $('select[name="swps_image_provider"]');
+    const $featuredImages = $('input[name="swps_featured_images"]');
+    const $modelSelect    = $('select[name="swps_model"]');
 
     // Progress messages to cycle through during generation.
     const progressMessages = [
@@ -26,9 +33,97 @@
     let progressInterval = null;
     let messageIndex = 0;
 
-    /**
-     * Start the progress animation.
-     */
+    // =====================================================================
+    // Settings page: AI provider switching
+    // =====================================================================
+
+    function updateAIKeyVisibility() {
+        if (!$aiProvider.length) return;
+
+        const slug = $aiProvider.val();
+
+        // Hide all AI key rows, then show the active one.
+        $('.swps-ai-key-row').closest('tr').hide();
+        $('.swps-provider-' + slug).closest('tr').show();
+    }
+
+    function loadModelsForProvider(slug) {
+        if (!$modelSelect.length) return;
+
+        var currentModel = swpsAdmin.current_model || $modelSelect.val();
+
+        $modelSelect.prop('disabled', true);
+
+        $.ajax({
+            url: swpsAdmin.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'swps_get_models',
+                nonce: swpsAdmin.nonce,
+                provider: slug,
+            },
+            success: function(response) {
+                if (response.success) {
+                    $modelSelect.empty();
+                    $.each(response.data, function(id, name) {
+                        $modelSelect.append(
+                            $('<option>').val(id).text(name)
+                        );
+                    });
+
+                    // Try to restore previous selection if it exists in the new list.
+                    if ($modelSelect.find('option[value="' + currentModel + '"]').length) {
+                        $modelSelect.val(currentModel);
+                    }
+                }
+            },
+            complete: function() {
+                $modelSelect.prop('disabled', false);
+            }
+        });
+    }
+
+    if ($aiProvider.length) {
+        $aiProvider.on('change', function() {
+            updateAIKeyVisibility();
+            loadModelsForProvider($(this).val());
+        });
+
+        // Initial state on page load.
+        updateAIKeyVisibility();
+    }
+
+    // =====================================================================
+    // Settings page: Image provider switching
+    // =====================================================================
+
+    function updateImageKeyVisibility() {
+        if (!$imageProvider.length) return;
+
+        var slug = $imageProvider.val();
+        var imagesEnabled = $featuredImages.is(':checked');
+
+        // Hide all image key rows.
+        $('.swps-image-key-row').closest('tr').hide();
+
+        // Show the active provider's key row only if featured images are enabled.
+        if (imagesEnabled) {
+            $('.swps-image-provider-' + slug).closest('tr').show();
+        }
+    }
+
+    if ($imageProvider.length) {
+        $imageProvider.on('change', updateImageKeyVisibility);
+        $featuredImages.on('change', updateImageKeyVisibility);
+
+        // Initial state on page load.
+        updateImageKeyVisibility();
+    }
+
+    // =====================================================================
+    // Generate page: progress animation
+    // =====================================================================
+
     function startProgress() {
         messageIndex = 0;
         $progress.slideDown(200);

@@ -24,8 +24,35 @@ define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 
 /**
  * Autoload plugin classes.
+ *
+ * Base classes must load before providers; providers before factory;
+ * factory before legacy aliases; legacy aliases before consumer classes.
  */
+
+// Abstract base classes.
+require_once SWPS_PLUGIN_DIR . 'includes/class-ai-provider.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-image-provider.php';
+
+// Concrete AI providers.
+require_once SWPS_PLUGIN_DIR . 'includes/providers/ai/class-anthropic-provider.php';
+require_once SWPS_PLUGIN_DIR . 'includes/providers/ai/class-openai-provider.php';
+require_once SWPS_PLUGIN_DIR . 'includes/providers/ai/class-google-provider.php';
+require_once SWPS_PLUGIN_DIR . 'includes/providers/ai/class-xai-provider.php';
+
+// Concrete image providers.
+require_once SWPS_PLUGIN_DIR . 'includes/providers/images/class-unsplash-provider.php';
+require_once SWPS_PLUGIN_DIR . 'includes/providers/images/class-pexels-provider.php';
+require_once SWPS_PLUGIN_DIR . 'includes/providers/images/class-pixabay-provider.php';
+require_once SWPS_PLUGIN_DIR . 'includes/providers/images/class-dalle-provider.php';
+
+// Factory.
+require_once SWPS_PLUGIN_DIR . 'includes/class-provider-factory.php';
+
+// Legacy aliases (must load after concrete providers they extend).
 require_once SWPS_PLUGIN_DIR . 'includes/class-api.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-images.php';
+
+// Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-analyzer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-generator.php';
@@ -42,7 +69,8 @@ final class StrataWP_SEO {
     public SWPS_Generator $generator;
     public SWPS_Cron $cron;
     public SWPS_Analyzer $analyzer;
-    public SWPS_API $api;
+    public SWPS_AI_Provider $api;
+    public SWPS_Image_Provider $images;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -52,18 +80,49 @@ final class StrataWP_SEO {
     }
 
     private function __construct() {
-        $this->api       = new SWPS_API();
+        $this->maybe_migrate_legacy_options();
+
+        $this->api       = SWPS_Provider_Factory::create_ai_provider();
+        $this->images    = SWPS_Provider_Factory::create_image_provider();
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer();
-        $this->generator = new SWPS_Generator( $this->api, $this->analyzer );
+        $this->generator = new SWPS_Generator( $this->api, $this->analyzer, $this->images );
         $this->cron      = new SWPS_Cron( $this->generator );
 
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
         add_action( 'wp_ajax_swps_generate_post', [ $this, 'ajax_generate_post' ] );
         add_action( 'wp_ajax_swps_analyze_site', [ $this, 'ajax_analyze_site' ] );
+        add_action( 'wp_ajax_swps_get_models', [ $this, 'ajax_get_models' ] );
 
         // Add settings link to plugins page.
         add_filter( 'plugin_action_links_' . SWPS_PLUGIN_BASENAME, [ $this, 'add_settings_link' ] );
+    }
+
+    /**
+     * Migrate legacy option names for existing installs.
+     *
+     * Copies swps_api_key → swps_anthropic_api_key, sets default providers.
+     */
+    private function maybe_migrate_legacy_options(): void {
+        if ( get_option( 'swps_provider_migrated' ) ) {
+            return;
+        }
+
+        // Migrate Anthropic API key.
+        $legacy_key = get_option( 'swps_api_key', '' );
+        if ( ! empty( $legacy_key ) && empty( get_option( 'swps_anthropic_api_key', '' ) ) ) {
+            update_option( 'swps_anthropic_api_key', $legacy_key );
+        }
+
+        // Set default providers if not already set.
+        if ( false === get_option( 'swps_ai_provider' ) ) {
+            update_option( 'swps_ai_provider', 'anthropic' );
+        }
+        if ( false === get_option( 'swps_image_provider' ) ) {
+            update_option( 'swps_image_provider', 'unsplash' );
+        }
+
+        update_option( 'swps_provider_migrated', 1 );
     }
 
     /**
@@ -90,8 +149,10 @@ final class StrataWP_SEO {
         );
 
         wp_localize_script( 'swps-admin', 'swpsAdmin', [
-            'ajax_url' => admin_url( 'admin-ajax.php' ),
-            'nonce'    => wp_create_nonce( 'swps_nonce' ),
+            'ajax_url'            => admin_url( 'admin-ajax.php' ),
+            'nonce'               => wp_create_nonce( 'swps_nonce' ),
+            'current_ai_provider' => get_option( 'swps_ai_provider', 'anthropic' ),
+            'current_model'       => get_option( 'swps_model', '' ),
         ] );
     }
 
@@ -132,6 +193,22 @@ final class StrataWP_SEO {
     }
 
     /**
+     * AJAX handler: Get models for a given AI provider slug.
+     */
+    public function ajax_get_models(): void {
+        check_ajax_referer( 'swps_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Insufficient permissions.' ] );
+        }
+
+        $provider = sanitize_text_field( $_POST['provider'] ?? '' );
+        $models   = SWPS_Provider_Factory::get_models_for_provider( $provider );
+
+        wp_send_json_success( $models );
+    }
+
+    /**
      * Add settings link on plugins list page.
      */
     public function add_settings_link( array $links ): array {
@@ -147,7 +224,18 @@ final class StrataWP_SEO {
 function swps_activate(): void {
     // Set default options.
     $defaults = [
-        'api_key'            => '',
+        'ai_provider'        => 'anthropic',
+        'image_provider'     => 'unsplash',
+        'anthropic_api_key'  => '',
+        'openai_api_key'     => '',
+        'google_api_key'     => '',
+        'xai_api_key'        => '',
+        'unsplash_api_key'   => '',
+        'pexels_api_key'     => '',
+        'pixabay_api_key'    => '',
+        'dalle_api_key'      => '',
+        'model'              => 'claude-sonnet-4-5-20250929',
+        'featured_images'    => 1,
         'site_niche'         => '',
         'site_description'   => '',
         'tone'               => 'professional',

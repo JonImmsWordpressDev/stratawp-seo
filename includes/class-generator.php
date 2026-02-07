@@ -13,12 +13,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class SWPS_Generator {
 
-    private SWPS_API $api;
+    private SWPS_AI_Provider $api;
     private SWPS_Analyzer $analyzer;
+    private SWPS_Image_Provider $images;
 
-    public function __construct( SWPS_API $api, SWPS_Analyzer $analyzer ) {
+    public function __construct( SWPS_AI_Provider $api, SWPS_Analyzer $analyzer, SWPS_Image_Provider $images ) {
         $this->api      = $api;
         $this->analyzer = $analyzer;
+        $this->images   = $images;
     }
 
     /**
@@ -278,6 +280,16 @@ PROMPT;
         update_post_meta( $post_id, '_swps_focus_keyword', $focus_keyword );
         update_post_meta( $post_id, '_swps_secondary_keywords', $ai_result['secondary_keywords'] ?? [] );
         update_post_meta( $post_id, '_swps_internal_links', $ai_result['internal_links_used'] ?? [] );
+
+        // Set featured image from Unsplash.
+        if ( get_option( 'swps_featured_images', 1 ) ) {
+            $image_query = $focus_keyword ?: $ai_result['title'];
+            $image_result = $this->images->set_featured_image( $post_id, $image_query );
+
+            if ( is_wp_error( $image_result ) ) {
+                $this->log( 'Featured image failed: ' . $image_result->get_error_message() );
+            }
+        }
 
         return [
             'post_id'          => $post_id,

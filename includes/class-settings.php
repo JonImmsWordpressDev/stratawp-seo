@@ -54,20 +54,67 @@ class SWPS_Settings {
      * Register all settings.
      */
     public function register_settings(): void {
-        // --- API Section ---
-        add_settings_section( 'swps_api_section', __( 'API Configuration', 'stratawp-seo' ), [ $this, 'render_api_section' ], 'stratawp-seo' );
+        // --- AI Provider Section ---
+        add_settings_section( 'swps_ai_section', __( 'AI Provider', 'stratawp-seo' ), [ $this, 'render_ai_section' ], 'stratawp-seo' );
 
-        $this->add_field( 'api_key', __( 'Anthropic API Key', 'stratawp-seo' ), 'password', 'swps_api_section', [
-            'description' => __( 'Get your API key from <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a>', 'stratawp-seo' ),
+        $this->add_field( 'ai_provider', __( 'AI Provider', 'stratawp-seo' ), 'select', 'swps_ai_section', [
+            'options' => SWPS_Provider_Factory::get_ai_provider_options(),
         ] );
 
-        $this->add_field( 'model', __( 'AI Model', 'stratawp-seo' ), 'select', 'swps_api_section', [
-            'options' => [
-                'claude-opus-4-6'            => __( 'Claude Opus 4.6 (Most powerful, higher cost)', 'stratawp-seo' ),
-                'claude-sonnet-4-5-20250929' => __( 'Claude Sonnet 4.5 (Great balance of quality & cost)', 'stratawp-seo' ),
-                'claude-haiku-4-5-20251001'  => __( 'Claude Haiku 4.5 (Fastest, lowest cost)', 'stratawp-seo' ),
-            ],
-            'description' => __( 'Opus produces the best content but costs more per generation. Sonnet is recommended for most users.', 'stratawp-seo' ),
+        $this->add_field( 'anthropic_api_key', __( 'Anthropic API Key', 'stratawp-seo' ), 'password', 'swps_ai_section', [
+            'description' => __( 'Get your API key from <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a>', 'stratawp-seo' ),
+            'row_class'   => 'swps-ai-key-row swps-provider-anthropic',
+        ] );
+
+        $this->add_field( 'openai_api_key', __( 'OpenAI API Key', 'stratawp-seo' ), 'password', 'swps_ai_section', [
+            'description' => __( 'Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a>', 'stratawp-seo' ),
+            'row_class'   => 'swps-ai-key-row swps-provider-openai',
+        ] );
+
+        $this->add_field( 'google_api_key', __( 'Google API Key', 'stratawp-seo' ), 'password', 'swps_ai_section', [
+            'description' => __( 'Get your API key from <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>', 'stratawp-seo' ),
+            'row_class'   => 'swps-ai-key-row swps-provider-google',
+        ] );
+
+        $this->add_field( 'xai_api_key', __( 'xAI API Key', 'stratawp-seo' ), 'password', 'swps_ai_section', [
+            'description' => __( 'Get your API key from <a href="https://console.x.ai/" target="_blank">console.x.ai</a>', 'stratawp-seo' ),
+            'row_class'   => 'swps-ai-key-row swps-provider-xai',
+        ] );
+
+        $this->add_field( 'model', __( 'AI Model', 'stratawp-seo' ), 'select', 'swps_ai_section', [
+            'options'     => $this->get_current_model_options(),
+            'description' => __( 'Model list updates automatically when you change providers.', 'stratawp-seo' ),
+        ] );
+
+        // --- Featured Images Section ---
+        add_settings_section( 'swps_images_section', __( 'Featured Images', 'stratawp-seo' ), [ $this, 'render_images_section' ], 'stratawp-seo' );
+
+        $this->add_field( 'featured_images', __( 'Auto Featured Images', 'stratawp-seo' ), 'checkbox', 'swps_images_section', [
+            'label' => __( 'Automatically fetch a relevant featured image for each generated post', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'image_provider', __( 'Image Provider', 'stratawp-seo' ), 'select', 'swps_images_section', [
+            'options' => SWPS_Provider_Factory::get_image_provider_options(),
+        ] );
+
+        $this->add_field( 'unsplash_api_key', __( 'Unsplash API Key', 'stratawp-seo' ), 'password', 'swps_images_section', [
+            'description' => __( 'Get a free API key from <a href="https://unsplash.com/developers" target="_blank">unsplash.com/developers</a>', 'stratawp-seo' ),
+            'row_class'   => 'swps-image-key-row swps-image-provider-unsplash',
+        ] );
+
+        $this->add_field( 'pexels_api_key', __( 'Pexels API Key', 'stratawp-seo' ), 'password', 'swps_images_section', [
+            'description' => __( 'Get a free API key from <a href="https://www.pexels.com/api/" target="_blank">pexels.com/api</a>', 'stratawp-seo' ),
+            'row_class'   => 'swps-image-key-row swps-image-provider-pexels',
+        ] );
+
+        $this->add_field( 'pixabay_api_key', __( 'Pixabay API Key', 'stratawp-seo' ), 'password', 'swps_images_section', [
+            'description' => __( 'Get a free API key from <a href="https://pixabay.com/api/docs/" target="_blank">pixabay.com/api</a>', 'stratawp-seo' ),
+            'row_class'   => 'swps-image-key-row swps-image-provider-pixabay',
+        ] );
+
+        $this->add_field( 'dalle_api_key', __( 'DALL-E API Key', 'stratawp-seo' ), 'password', 'swps_images_section', [
+            'description' => __( 'Uses your OpenAI key by default. Add a separate key here to override. Get one from <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a>', 'stratawp-seo' ),
+            'row_class'   => 'swps-image-key-row swps-image-provider-dalle',
         ] );
 
         // --- Site Details Section ---
@@ -197,6 +244,14 @@ class SWPS_Settings {
     }
 
     /**
+     * Get model options for the currently active AI provider.
+     */
+    private function get_current_model_options(): array {
+        $slug = get_option( 'swps_ai_provider', 'anthropic' );
+        return SWPS_Provider_Factory::get_models_for_provider( $slug );
+    }
+
+    /**
      * Helper to register a setting field.
      */
     private function add_field( string $key, string $title, string $type, string $section, array $args = [] ): void {
@@ -206,17 +261,25 @@ class SWPS_Settings {
             'sanitize_callback' => $this->get_sanitize_callback( $type ),
         ] );
 
+        $field_args = array_merge( $args, [
+            'key'  => $key,
+            'type' => $type,
+            'name' => $option_name,
+        ] );
+
+        // Support row_class → maps to WP's 'class' key on the <tr>.
+        $extra = [];
+        if ( ! empty( $args['row_class'] ) ) {
+            $extra['class'] = $args['row_class'];
+        }
+
         add_settings_field(
             $option_name,
             $title,
             [ $this, 'render_field' ],
             'stratawp-seo',
             $section,
-            array_merge( $args, [
-                'key'  => $key,
-                'type' => $type,
-                'name' => $option_name,
-            ] )
+            array_merge( $field_args, $extra )
         );
     }
 
@@ -280,8 +343,8 @@ class SWPS_Settings {
                 break;
 
             case 'select':
-                printf( '<select name="%s">', esc_attr( $name ) );
-                foreach ( $args['options'] as $val => $label ) {
+                printf( '<select name="%s" id="%s">', esc_attr( $name ), esc_attr( $name ) );
+                foreach ( ( $args['options'] ?? [] ) as $val => $label ) {
                     printf(
                         '<option value="%s" %s>%s</option>',
                         esc_attr( $val ),
@@ -335,8 +398,12 @@ class SWPS_Settings {
 
     // --- Section descriptions ---
 
-    public function render_api_section(): void {
-        echo '<p>' . esc_html__( 'Connect to the Anthropic Claude API to power AI content generation.', 'stratawp-seo' ) . '</p>';
+    public function render_ai_section(): void {
+        echo '<p>' . esc_html__( 'Choose your AI provider and enter your API key.', 'stratawp-seo' ) . '</p>';
+    }
+
+    public function render_images_section(): void {
+        echo '<p>' . esc_html__( 'Configure automatic featured images for generated posts.', 'stratawp-seo' ) . '</p>';
     }
 
     public function render_site_section(): void {
@@ -395,7 +462,7 @@ class SWPS_Settings {
     }
 
     /**
-     * Show admin notices.
+     * Show admin notices — provider-aware.
      */
     public function admin_notices(): void {
         $screen = get_current_screen();
@@ -404,12 +471,16 @@ class SWPS_Settings {
             return;
         }
 
-        // Check for API key.
-        if ( empty( get_option( 'swps_api_key' ) ) ) {
+        // Check for API key on the active AI provider.
+        $ai_provider = SWPS_Provider_Factory::create_ai_provider();
+        if ( empty( $ai_provider->get_api_key() ) ) {
             printf(
                 '<div class="notice notice-warning"><p><strong>%s</strong> %s</p></div>',
                 esc_html__( 'StrataWP SEO:', 'stratawp-seo' ),
-                esc_html__( 'Please enter your Anthropic API key to get started.', 'stratawp-seo' )
+                sprintf(
+                    esc_html__( 'Please enter your %s API key to get started.', 'stratawp-seo' ),
+                    esc_html( $ai_provider->get_name() )
+                )
             );
         }
 

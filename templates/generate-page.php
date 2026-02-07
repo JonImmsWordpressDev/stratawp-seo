@@ -1,5 +1,5 @@
 <?php
-$has_api_key = ! empty( get_option( 'swps_api_key' ) );
+$has_api_key = ! empty( SWPS_Provider_Factory::create_ai_provider()->get_api_key() );
 $has_niche   = ! empty( get_option( 'swps_site_niche' ) );
 $schedule    = SWPS_Cron::get_schedule_info();
 ?>
@@ -12,7 +12,7 @@ $schedule    = SWPS_Cron::get_schedule_info();
     <?php if ( ! $has_api_key ) : ?>
         <div class="notice notice-error">
             <p><?php printf(
-                __( 'You need to <a href="%s">add your Anthropic API key</a> before generating content.', 'stratawp-seo' ),
+                __( 'You need to <a href="%s">add your AI provider API key</a> before generating content.', 'stratawp-seo' ),
                 esc_url( admin_url( 'admin.php?page=stratawp-seo' ) )
             ); ?></p>
         </div>
