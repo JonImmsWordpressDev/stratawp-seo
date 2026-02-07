@@ -93,6 +93,7 @@ final class StrataWP_SEO {
         add_action( 'wp_ajax_swps_generate_post', [ $this, 'ajax_generate_post' ] );
         add_action( 'wp_ajax_swps_analyze_site', [ $this, 'ajax_analyze_site' ] );
         add_action( 'wp_ajax_swps_get_models', [ $this, 'ajax_get_models' ] );
+        add_action( 'wp_head', [ $this, 'output_faq_schema' ] );
 
         // Add settings link to plugins page.
         add_filter( 'plugin_action_links_' . SWPS_PLUGIN_BASENAME, [ $this, 'add_settings_link' ] );
@@ -206,6 +207,22 @@ final class StrataWP_SEO {
         $models   = SWPS_Provider_Factory::get_models_for_provider( $provider );
 
         wp_send_json_success( $models );
+    }
+
+    /**
+     * Output FAQ schema JSON-LD in <head> for generated posts.
+     */
+    public function output_faq_schema(): void {
+        if ( ! is_singular( 'post' ) ) {
+            return;
+        }
+
+        $schema = get_post_meta( get_the_ID(), '_swps_faq_schema', true );
+
+        if ( ! empty( $schema ) ) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-built JSON-LD script tag.
+            echo $schema . "\n";
+        }
     }
 
     /**

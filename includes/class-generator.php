@@ -232,14 +232,7 @@ PROMPT;
             }
         }
 
-        // Build post content with optional FAQ schema.
         $content = $ai_result['content_html'];
-
-        // Add FAQ schema as a script block if present.
-        if ( ! empty( $ai_result['faq_schema'] ) ) {
-            $schema = $this->build_faq_schema( $ai_result['title'], $ai_result['faq_schema'] );
-            $content .= "\n\n<!-- StrataWP SEO FAQ Schema -->\n" . $schema;
-        }
 
         // Insert the post.
         $post_id = wp_insert_post( [
@@ -281,7 +274,13 @@ PROMPT;
         update_post_meta( $post_id, '_swps_secondary_keywords', $ai_result['secondary_keywords'] ?? [] );
         update_post_meta( $post_id, '_swps_internal_links', $ai_result['internal_links_used'] ?? [] );
 
-        // Set featured image from Unsplash.
+        // Store FAQ schema as post meta (rendered in <head> via wp_head hook).
+        if ( ! empty( $ai_result['faq_schema'] ) ) {
+            $schema = $this->build_faq_schema( $ai_result['title'], $ai_result['faq_schema'] );
+            update_post_meta( $post_id, '_swps_faq_schema', $schema );
+        }
+
+        // Set featured image.
         if ( get_option( 'swps_featured_images', 1 ) ) {
             $image_query = $focus_keyword ?: $ai_result['title'];
             $image_result = $this->images->set_featured_image( $post_id, $image_query );
