@@ -143,23 +143,37 @@ class SWPS_Cron {
 
     /**
      * Calculate the next run timestamp based on desired day and time.
+     *
+     * For daily frequency, schedules the next occurrence of the time
+     * (today if it hasn't passed, otherwise tomorrow). For weekly+
+     * frequencies, schedules the next occurrence of the specified day.
      */
     private static function calculate_next_run( string $day, string $time ): int {
-        $timezone = wp_timezone();
-        $now      = new DateTime( 'now', $timezone );
+        $timezone  = wp_timezone();
+        $now       = new DateTime( 'now', $timezone );
+        $frequency = get_option( 'swps_cron_frequency', 'weekly' );
 
         list( $hour, $minute ) = explode( ':', $time );
 
-        $next = new DateTime( "next {$day}", $timezone );
-        $next->setTime( (int) $hour, (int) $minute, 0 );
-
-        $diff = $now->diff( $next );
-        if ( $diff->days > 7 ) {
+        if ( 'daily' === $frequency ) {
+            // For daily: use today's date at the specified time, or tomorrow if past.
             $next = clone $now;
             $next->setTime( (int) $hour, (int) $minute, 0 );
             if ( $next <= $now ) {
                 $next->modify( '+1 day' );
             }
+            return $next->getTimestamp();
+        }
+
+        // For weekly+ frequencies: schedule on the specified day.
+        $next = new DateTime( "next {$day}", $timezone );
+        $next->setTime( (int) $hour, (int) $minute, 0 );
+
+        // If "next $day" overshoots (e.g. today is that day but time hasn't passed).
+        $today_at_time = clone $now;
+        $today_at_time->setTime( (int) $hour, (int) $minute, 0 );
+        if ( strtolower( $now->format( 'l' ) ) === strtolower( $day ) && $today_at_time > $now ) {
+            return $today_at_time->getTimestamp();
         }
 
         return $next->getTimestamp();
