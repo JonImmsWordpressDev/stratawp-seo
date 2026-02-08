@@ -196,10 +196,11 @@ class SWPS_Analyzer {
     /**
      * Build a condensed text representation of the site for Claude's context.
      *
+     * @param int $max_posts Maximum posts to include in context.
      * @return string Formatted site context string.
      */
-    public function build_context_for_prompt(): string {
-        $cache_key = 'context_prompt';
+    public function build_context_for_prompt( int $max_posts = 20 ): string {
+        $cache_key = 'context_prompt_' . $max_posts;
 
         if ( $this->cache ) {
             $cached = $this->cache->get( $cache_key );
@@ -208,7 +209,7 @@ class SWPS_Analyzer {
             }
         }
 
-        $summary = $this->get_site_summary();
+        $summary = $this->get_site_summary( $max_posts );
         $info    = $summary['site_info'];
 
         $context = "=== SITE INFORMATION ===\n";
@@ -255,7 +256,7 @@ class SWPS_Analyzer {
         $posts = get_posts( [
             'post_type'      => [ 'post', 'page' ],
             'post_status'    => 'publish',
-            'posts_per_page' => 100,
+            'posts_per_page' => 30,
             'orderby'        => 'date',
             'order'          => 'DESC',
         ] );

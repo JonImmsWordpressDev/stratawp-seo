@@ -81,6 +81,20 @@ abstract class SWPS_AI_Provider {
 
         $decoded = json_decode( $cleaned, true );
 
+        // If JSON parsing fails, try sanitizing control characters inside string values.
+        if ( json_last_error() !== JSON_ERROR_NONE ) {
+            $sanitized = preg_replace_callback(
+                '/"((?:[^"\\\\]|\\\\.)*)"/s',
+                function ( $m ) {
+                    $val = $m[1];
+                    $val = str_replace( [ "\n", "\r", "\t" ], [ '\\n', '\\r', '\\t' ], $val );
+                    return '"' . $val . '"';
+                },
+                $cleaned
+            );
+            $decoded = json_decode( $sanitized, true );
+        }
+
         if ( json_last_error() !== JSON_ERROR_NONE ) {
             return new WP_Error(
                 'swps_json_parse_error',

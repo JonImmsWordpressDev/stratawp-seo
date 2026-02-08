@@ -152,8 +152,8 @@ class SWPS_Generator {
      * @return array|WP_Error Parsed AI response or error.
      */
     private function call_ai( string $topic, string $template ): array|WP_Error {
-        // Gather site context.
-        $site_context   = $this->analyzer->build_context_for_prompt();
+        // Gather site context (limit posts to keep prompt under timeout threshold).
+        $site_context   = $this->analyzer->build_context_for_prompt( 20 );
         $linkable_posts = $this->analyzer->get_linkable_posts();
 
         // Get user preferences.
@@ -174,7 +174,7 @@ class SWPS_Generator {
         // Build linkable posts reference.
         $links_context = "=== EXISTING PAGES FOR INTERNAL LINKING ===\n";
         $links_context .= "You MUST include natural internal links to these pages where relevant:\n";
-        foreach ( array_slice( $linkable_posts, 0, 50 ) as $link ) {
+        foreach ( $linkable_posts as $link ) {
             $links_context .= "- \"{$link['title']}\" → {$link['url']}\n";
         }
 
@@ -194,7 +194,8 @@ class SWPS_Generator {
         $system_prompt = SWPS_Hooks::filter_system_prompt( $system_prompt, $tone, $style );
         $user_prompt   = SWPS_Hooks::filter_user_prompt( $user_prompt, $topic, $site_context );
 
-        // Call AI.
+        // Call AI with 8192 tokens for complete posts with full JSON structure.
+        // Input is kept lean (20 posts, 30 linkable) to stay under 120s timeout.
         $result = $this->api->chat_json( $system_prompt, $user_prompt, 8192 );
 
         if ( is_wp_error( $result ) ) {
