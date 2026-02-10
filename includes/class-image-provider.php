@@ -96,8 +96,19 @@ abstract class SWPS_Image_Provider {
             return $tmp;
         }
 
+        // Convert to WebP for optimized file size.
+        $webp_tmp = $this->convert_to_webp( $tmp );
+
+        if ( $webp_tmp !== $tmp ) {
+            @unlink( $tmp );
+            $tmp = $webp_tmp;
+            $ext = '.webp';
+        } else {
+            $ext = '.jpg';
+        }
+
         $file_array = [
-            'name'     => sanitize_title( $filename ) . '.jpg',
+            'name'     => sanitize_title( $filename ) . $ext,
             'tmp_name' => $tmp,
         ];
 
@@ -122,5 +133,43 @@ abstract class SWPS_Image_Provider {
         set_post_thumbnail( $post_id, $attachment_id );
 
         return $attachment_id;
+    }
+
+    /**
+     * Convert an image file to WebP format.
+     *
+     * @param string $file_path Path to the source image file.
+     * @return string Path to the WebP file on success, or the original path on failure.
+     */
+    protected function convert_to_webp( string $file_path ): string {
+        if ( ! function_exists( 'imagewebp' ) ) {
+            return $file_path;
+        }
+
+        $image_data = file_get_contents( $file_path );
+        if ( false === $image_data ) {
+            return $file_path;
+        }
+
+        $image = @imagecreatefromstring( $image_data );
+        if ( false === $image ) {
+            return $file_path;
+        }
+
+        // Preserve transparency (for PNG sources).
+        imagepalettetotruecolor( $image );
+        imagealphablending( $image, true );
+        imagesavealpha( $image, true );
+
+        $webp_path = $file_path . '.webp';
+
+        if ( ! imagewebp( $image, $webp_path, 85 ) ) {
+            imagedestroy( $image );
+            return $file_path;
+        }
+
+        imagedestroy( $image );
+
+        return $webp_path;
     }
 }
