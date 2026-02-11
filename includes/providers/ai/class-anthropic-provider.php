@@ -53,7 +53,7 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
         ];
 
         $response = wp_remote_post( self::API_URL, [
-            'timeout' => 120,
+            'timeout' => 180,
             'headers' => [
                 'Content-Type'      => 'application/json',
                 'x-api-key'        => $api_key,
@@ -91,6 +91,10 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
                 'output_tokens' => (int) ( $body['usage']['output_tokens'] ?? 0 ),
             ];
         }
+
+        // Store stop reason for truncation detection.
+        // Anthropic: 'end_turn', 'max_tokens', 'stop_sequence'.
+        $this->last_stop_reason = $body['stop_reason'] ?? null;
 
         return $body['content'][0]['text'];
     }

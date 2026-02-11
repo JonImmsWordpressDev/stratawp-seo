@@ -57,7 +57,7 @@ class SWPS_OpenAI_Provider extends SWPS_AI_Provider {
         ];
 
         $response = wp_remote_post( self::API_URL, [
-            'timeout' => 120,
+            'timeout' => 180,
             'headers' => [
                 'Content-Type'  => 'application/json',
                 'Authorization' => 'Bearer ' . $api_key,
@@ -94,6 +94,11 @@ class SWPS_OpenAI_Provider extends SWPS_AI_Provider {
                 'output_tokens' => (int) ( $body['usage']['completion_tokens'] ?? 0 ),
             ];
         }
+
+        // Store stop reason for truncation detection.
+        // OpenAI: 'stop', 'length' (truncated), 'content_filter'.
+        $finish_reason = $body['choices'][0]['finish_reason'] ?? null;
+        $this->last_stop_reason = ( $finish_reason === 'length' ) ? 'max_tokens' : $finish_reason;
 
         return $body['choices'][0]['message']['content'];
     }

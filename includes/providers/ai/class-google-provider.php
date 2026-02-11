@@ -63,7 +63,7 @@ class SWPS_Google_Provider extends SWPS_AI_Provider {
         ];
 
         $response = wp_remote_post( $url, [
-            'timeout' => 120,
+            'timeout' => 180,
             'headers' => [
                 'Content-Type' => 'application/json',
             ],
@@ -99,6 +99,11 @@ class SWPS_Google_Provider extends SWPS_AI_Provider {
                 'output_tokens' => (int) ( $body['usageMetadata']['candidatesTokenCount'] ?? 0 ),
             ];
         }
+
+        // Store stop reason for truncation detection.
+        // Gemini: 'STOP', 'MAX_TOKENS', 'SAFETY', 'RECITATION'.
+        $finish_reason = $body['candidates'][0]['finishReason'] ?? null;
+        $this->last_stop_reason = ( $finish_reason === 'MAX_TOKENS' ) ? 'max_tokens' : $finish_reason;
 
         return $body['candidates'][0]['content']['parts'][0]['text'];
     }

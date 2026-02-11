@@ -19,6 +19,12 @@ abstract class SWPS_AI_Provider {
     protected ?array $last_usage = null;
 
     /**
+     * Stop reason from the last API call (e.g., 'end_turn', 'max_tokens').
+     * Set by providers after successful calls.
+     */
+    protected ?string $last_stop_reason = null;
+
+    /**
      * Send a message to the AI and get a text response.
      *
      * @param string $system_prompt The system instructions.
@@ -67,7 +73,8 @@ abstract class SWPS_AI_Provider {
      * @return array|WP_Error Parsed JSON array or error.
      */
     public function chat_json( string $system_prompt, string $user_message, int $max_tokens = 4096 ): array|WP_Error {
-        $this->last_usage = null;
+        $this->last_usage       = null;
+        $this->last_stop_reason = null;
 
         $response = $this->chat( $system_prompt, $user_message, $max_tokens );
 
@@ -75,31 +82,21 @@ abstract class SWPS_AI_Provider {
             return $response;
         }
 
-        // Strip markdown code fences if present.
-        $cleaned = preg_replace( '/^```(?:json)?\s*/', '', trim( $response ) );
-        $cleaned = preg_replace( '/\s*```$/', '', $cleaned );
-
-        $decoded = json_decode( $cleaned, true );
-
-        // If JSON parsing fails, try sanitizing control characters inside string values.
-        if ( json_last_error() !== JSON_ERROR_NONE ) {
-            $sanitized = preg_replace_callback(
-                '/"((?:[^"\\\\]|\\\\.)*)"/s',
-                function ( $m ) {
-                    $val = $m[1];
-                    $val = str_replace( [ "\n", "\r", "\t" ], [ '\\n', '\\r', '\\t' ], $val );
-                    return '"' . $val . '"';
-                },
-                $cleaned
+        // Detect truncation before parsing — the AI hit max_tokens.
+        if ( $this->last_stop_reason === 'max_tokens' ) {
+            return new WP_Error(
+                'swps_response_truncated',
+                sprintf(
+                    __( 'AI response was truncated (hit %d token limit). Try reducing word count or increasing the token budget.', 'stratawp-seo' ),
+                    $max_tokens
+                )
             );
-            $decoded = json_decode( $sanitized, true );
         }
 
-        if ( json_last_error() !== JSON_ERROR_NONE ) {
-            return new WP_Error(
-                'swps_json_parse_error',
-                sprintf( __( 'Failed to parse AI response as JSON: %s', 'stratawp-seo' ), json_last_error_msg() )
-            );
+        $decoded = $this->parse_json_response( $response );
+
+        if ( is_wp_error( $decoded ) ) {
+            return $decoded;
         }
 
         // Inject usage data from the provider if available.
@@ -108,6 +105,81 @@ abstract class SWPS_AI_Provider {
         }
 
         return $decoded;
+    }
+
+    /**
+     * Parse an AI response string as JSON with multiple fallback strategies.
+     *
+     * @param string $response The raw AI response text.
+     * @return array|WP_Error Parsed JSON array or error.
+     */
+    protected function parse_json_response( string $response ): array|WP_Error {
+        $cleaned = trim( $response );
+
+        // Strip BOM if present.
+        $cleaned = ltrim( $cleaned, "\xEF\xBB\xBF" );
+
+        // Strip markdown code fences if present.
+        $cleaned = preg_replace( '/^```(?:json)?\s*/s', '', $cleaned );
+        $cleaned = preg_replace( '/\s*```\s*$/s', '', $cleaned );
+        $cleaned = trim( $cleaned );
+
+        // Strip any text before the first { or after the last }.
+        $first_brace = strpos( $cleaned, '{' );
+        $last_brace  = strrpos( $cleaned, '}' );
+        if ( $first_brace !== false && $last_brace !== false && $last_brace > $first_brace ) {
+            $cleaned = substr( $cleaned, $first_brace, $last_brace - $first_brace + 1 );
+        }
+
+        // Attempt 1: Direct parse.
+        $decoded = json_decode( $cleaned, true );
+        if ( json_last_error() === JSON_ERROR_NONE ) {
+            return $decoded;
+        }
+
+        // Attempt 2: Sanitize control characters inside JSON string values.
+        // Replace literal control chars (0x00-0x1F) that aren't already escaped.
+        $sanitized = preg_replace_callback(
+            '/"((?:[^"\\\\]|\\\\.)*)"/s',
+            function ( $m ) {
+                $val = $m[1];
+                // Escape literal control characters that break JSON.
+                $val = str_replace(
+                    [ "\n", "\r", "\t", "\x08", "\x0C" ],
+                    [ '\\n', '\\r', '\\t', '\\b', '\\f' ],
+                    $val
+                );
+                // Remove any remaining control characters (0x00-0x1F) except already-escaped ones.
+                $val = preg_replace( '/[\x00-\x1F]/', '', $val );
+                return '"' . $val . '"';
+            },
+            $cleaned
+        );
+
+        $decoded = json_decode( $sanitized, true );
+        if ( json_last_error() === JSON_ERROR_NONE ) {
+            return $decoded;
+        }
+
+        // Attempt 3: Try with JSON_INVALID_UTF8_SUBSTITUTE to handle encoding issues.
+        $decoded = json_decode( $sanitized, true, 512, JSON_INVALID_UTF8_SUBSTITUTE );
+        if ( json_last_error() === JSON_ERROR_NONE ) {
+            return $decoded;
+        }
+
+        // All attempts failed — return error with diagnostic info.
+        $len  = strlen( $cleaned );
+        $tail = $len > 120 ? substr( $cleaned, -120 ) : $cleaned;
+
+        return new WP_Error(
+            'swps_json_parse_error',
+            sprintf(
+                __( 'Failed to parse AI response as JSON: %s [len=%d, tail="%s"]', 'stratawp-seo' ),
+                json_last_error_msg(),
+                $len,
+                $tail
+            )
+        );
     }
 
     /**

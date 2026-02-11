@@ -194,9 +194,10 @@ class SWPS_Generator {
         $system_prompt = SWPS_Hooks::filter_system_prompt( $system_prompt, $tone, $style );
         $user_prompt   = SWPS_Hooks::filter_user_prompt( $user_prompt, $topic, $site_context );
 
-        // Call AI with 8192 tokens for complete posts with full JSON structure.
-        // Input is kept lean (20 posts, 30 linkable) to stay under 120s timeout.
-        $result = $this->api->chat_json( $system_prompt, $user_prompt, 8192 );
+        // Call AI with 16384 tokens for complete posts with full JSON structure.
+        // 8192 was causing truncation for longer posts (1900-3000 words + metadata).
+        // Input is kept lean (20 posts, 30 linkable) to stay within timeout.
+        $result = $this->api->chat_json( $system_prompt, $user_prompt, 16384 );
 
         if ( is_wp_error( $result ) ) {
             return $result;
