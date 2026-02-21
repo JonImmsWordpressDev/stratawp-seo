@@ -167,6 +167,8 @@ class SWPS_Generator {
         $max_links   = (int) get_option( 'swps_internal_links_max', 6 );
         $include_faq = (bool) get_option( 'swps_include_faq_schema', true );
         $include_toc = (bool) get_option( 'swps_include_toc', true );
+        $include_takeaways = (bool) get_option( 'swps_include_takeaways', false );
+        $takeaways_count   = (int) get_option( 'swps_takeaways_count', 5 );
 
         // Build the system prompt.
         $system_prompt = $this->build_system_prompt( $tone, $style );
@@ -181,7 +183,8 @@ class SWPS_Generator {
         // Build the user prompt.
         $user_prompt = $this->build_user_prompt(
             $topic, $site_context, $links_context, $niche, $keywords,
-            $min_words, $max_words, $min_links, $max_links, $include_faq, $include_toc
+            $min_words, $max_words, $min_links, $max_links, $include_faq, $include_toc,
+            $include_takeaways, $takeaways_count
         );
 
         // Apply template modifiers.
@@ -244,6 +247,7 @@ Required JSON structure:
   "internal_links_used": [{"anchor_text": "text", "url": "url"}],
   "external_links": [{"anchor_text": "text", "url": "url", "source": "source name"}],
   "faq_schema": [{"question": "Q?", "answer": "A."}],
+  "key_takeaways": ["Concise actionable insight 1", "Insight 2"],
   "estimated_word_count": 1500
 }
 
@@ -255,6 +259,7 @@ CRITICAL RULES:
 - Every internal link must point to a URL from the provided existing pages list
 - Include a table of contents at the start if requested
 - Include FAQ section at the end if requested
+- If key takeaways are requested, include a key_takeaways array with concise, actionable bullet points (each under 20 words) summarizing the post's most valuable insights
 - Write comprehensive, valuable content — not thin filler
 PROMPT;
 
@@ -275,7 +280,9 @@ PROMPT;
         int $min_links,
         int $max_links,
         bool $include_faq,
-        bool $include_toc
+        bool $include_toc,
+        bool $include_takeaways = false,
+        int $takeaways_count = 5
     ): string {
         $prompt = $site_context . "\n" . $links_context . "\n";
 
@@ -304,6 +311,10 @@ PROMPT;
 
         if ( $include_faq ) {
             $prompt .= "- Include a FAQ section at the end with 3-5 questions (also populate the faq_schema field for structured data)\n";
+        }
+
+        if ( $include_takeaways ) {
+            $prompt .= "- Include {$takeaways_count} key takeaways — concise, actionable bullet points summarizing the post's most important insights (also populate the key_takeaways JSON field)\n";
         }
 
         $prompt .= "- Use proper heading hierarchy (H2 for main sections, H3 for subsections)\n";
@@ -340,6 +351,11 @@ PROMPT;
         }
 
         $content = $ai_result['content_html'];
+
+        // Inject key takeaways block if enabled.
+        if ( get_option( 'swps_include_takeaways', false ) && ! empty( $ai_result['key_takeaways'] ) ) {
+            $content = $this->inject_takeaways( $content, $ai_result['key_takeaways'] );
+        }
 
         $post_data = [
             'post_title'    => sanitize_text_field( $ai_result['title'] ),
@@ -383,6 +399,11 @@ PROMPT;
         update_post_meta( $post_id, '_swps_internal_links', $ai_result['internal_links_used'] ?? [] );
         update_post_meta( $post_id, '_swps_external_links', $ai_result['external_links'] ?? [] );
         update_post_meta( $post_id, '_swps_template', $template );
+
+        // Store key takeaways for schema output.
+        if ( ! empty( $ai_result['key_takeaways'] ) ) {
+            update_post_meta( $post_id, '_swps_key_takeaways', array_map( 'sanitize_text_field', $ai_result['key_takeaways'] ) );
+        }
 
         // Store FAQ schema as post meta.
         if ( ! empty( $ai_result['faq_schema'] ) ) {
@@ -431,6 +452,46 @@ PROMPT;
             'template'         => $template,
             'cost'             => $cost,
         ];
+    }
+
+    /**
+     * Inject a key takeaways block into content HTML.
+     *
+     * Inserts before the first <h2> tag (after intro paragraphs).
+     *
+     * @param string $content   The post content HTML.
+     * @param array  $takeaways Array of takeaway strings.
+     * @return string Modified content with takeaways injected.
+     */
+    private function inject_takeaways( string $content, array $takeaways ): string {
+        $takeaways_html = $this->build_takeaways_html( $takeaways );
+
+        // Find the first <h2> tag — insert before it.
+        $h2_pos = stripos( $content, '<h2' );
+        if ( $h2_pos === false ) {
+            // No H2 found — prepend to content.
+            return $takeaways_html . $content;
+        }
+
+        return substr( $content, 0, $h2_pos ) . $takeaways_html . substr( $content, $h2_pos );
+    }
+
+    /**
+     * Build the key takeaways HTML block.
+     *
+     * @param array $takeaways Array of takeaway strings.
+     * @return string HTML markup.
+     */
+    private function build_takeaways_html( array $takeaways ): string {
+        $items = '';
+        foreach ( $takeaways as $takeaway ) {
+            $items .= '<li>' . esc_html( $takeaway ) . '</li>';
+        }
+
+        return '<div class="swps-key-takeaways">'
+             . '<h3>' . esc_html__( 'Key Takeaways', 'stratawp-seo' ) . '</h3>'
+             . '<ul>' . $items . '</ul>'
+             . '</div>';
     }
 
     /**

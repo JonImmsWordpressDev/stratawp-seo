@@ -199,6 +199,20 @@ class SWPS_Settings {
             'label' => __( 'Add a linked table of contents at the top of each post', 'stratawp-seo' ),
         ] );
 
+        $this->add_field( 'include_takeaways', __( 'Include Key Takeaways', 'stratawp-seo' ), 'checkbox', 'swps_content_section', [
+            'label' => __( 'Add a key takeaways section after the intro (concise bullet points summarizing the post)', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'takeaways_count', __( 'Takeaway Count', 'stratawp-seo' ), 'number', 'swps_content_section', [
+            'min'         => 3,
+            'max'         => 7,
+            'description' => __( 'Number of key takeaway bullet points to generate (3-7).', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'takeaways_schema', __( 'Takeaways Schema Markup', 'stratawp-seo' ), 'checkbox', 'swps_content_section', [
+            'label' => __( 'Output ItemList JSON-LD structured data for key takeaways (for rich snippets)', 'stratawp-seo' ),
+        ] );
+
         // --- Schedule Section ---
         add_settings_section( 'swps_schedule_section', __( 'Auto-Publishing Schedule', 'stratawp-seo' ), [ $this, 'render_schedule_section' ], 'stratawp-seo' );
 

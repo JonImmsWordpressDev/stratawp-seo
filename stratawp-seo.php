@@ -145,6 +145,9 @@ final class StrataWP_SEO {
         // Admin assets.
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
 
+        // Frontend assets.
+        add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_frontend_assets' ] );
+
         // AJAX handlers — original.
         add_action( 'wp_ajax_swps_generate_post', [ $this, 'ajax_generate_post' ] );
         add_action( 'wp_ajax_swps_analyze_site', [ $this, 'ajax_analyze_site' ] );
@@ -157,6 +160,7 @@ final class StrataWP_SEO {
 
         // Frontend.
         add_action( 'wp_head', [ $this, 'output_faq_schema' ] );
+        add_action( 'wp_head', [ $this, 'output_takeaways_schema' ] );
 
         // Plugins page link.
         add_filter( 'plugin_action_links_' . SWPS_PLUGIN_BASENAME, [ $this, 'add_settings_link' ] );
@@ -221,6 +225,22 @@ final class StrataWP_SEO {
             'templates'           => SWPS_Templates::get_options(),
             'rate_limit_remaining' => $this->rate_limiter->get_remaining_seconds(),
         ] );
+    }
+
+    /**
+     * Enqueue frontend CSS on single posts.
+     */
+    public function enqueue_frontend_assets(): void {
+        if ( ! is_singular( 'post' ) ) {
+            return;
+        }
+
+        wp_enqueue_style(
+            'swps-frontend',
+            SWPS_PLUGIN_URL . 'css/frontend.css',
+            [],
+            SWPS_VERSION
+        );
     }
 
     /**
@@ -372,6 +392,47 @@ final class StrataWP_SEO {
     }
 
     /**
+     * Output Key Takeaways ItemList schema JSON-LD in <head>.
+     */
+    public function output_takeaways_schema(): void {
+        if ( ! is_singular( 'post' ) ) {
+            return;
+        }
+
+        if ( ! get_option( 'swps_takeaways_schema', 1 ) ) {
+            return;
+        }
+
+        $takeaways = get_post_meta( get_the_ID(), '_swps_key_takeaways', true );
+        if ( empty( $takeaways ) || ! is_array( $takeaways ) ) {
+            return;
+        }
+
+        $schema = [
+            '@context'        => 'https://schema.org',
+            '@type'           => 'ItemList',
+            'name'            => __( 'Key Takeaways', 'stratawp-seo' ),
+            'numberOfItems'   => count( $takeaways ),
+            'itemListElement' => [],
+        ];
+
+        foreach ( $takeaways as $index => $takeaway ) {
+            $schema['itemListElement'][] = [
+                '@type'    => 'ListItem',
+                'position' => $index + 1,
+                'name'     => $takeaway,
+            ];
+        }
+
+        $schema = SWPS_Hooks::filter_takeaways_schema( $schema, $takeaways );
+
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-built JSON-LD script tag.
+        echo '<script type="application/ld+json">'
+           . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
+           . '</script>' . "\n";
+    }
+
+    /**
      * Add settings link on plugins list page.
      */
     public function add_settings_link( array $links ): array {
@@ -412,6 +473,9 @@ function swps_activate(): void {
         'include_toc'        => 1,
         'internal_links_min' => 3,
         'internal_links_max' => 6,
+        'include_takeaways'  => 0,
+        'takeaways_count'    => 5,
+        'takeaways_schema'   => 1,
         'cron_enabled'       => 0,
         'cron_frequency'     => 'weekly',
         'cron_day'           => 'monday',

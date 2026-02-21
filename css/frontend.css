@@ -1,0 +1,34 @@
+/**
+ * StrataWP SEO — Frontend Styles
+ *
+ * Default styling for AI-generated content blocks.
+ * Site owners can override these in their theme.
+ */
+
+.swps-key-takeaways {
+    background: #f8fafc;
+    border-left: 4px solid #3b82f6;
+    border-radius: 8px;
+    padding: 1.5rem 2rem;
+    margin: 2rem 0;
+}
+
+.swps-key-takeaways h3 {
+    margin: 0 0 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.swps-key-takeaways ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.swps-key-takeaways li {
+    margin-bottom: 0.5rem;
+    line-height: 1.6;
+}
+
+.swps-key-takeaways li:last-child {
+    margin-bottom: 0;
+}

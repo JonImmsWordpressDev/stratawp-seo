@@ -70,6 +70,17 @@ class SWPS_Hooks {
     }
 
     /**
+     * Apply the takeaways schema filter.
+     *
+     * @param array $schema    The ItemList schema array.
+     * @param array $takeaways The raw takeaways array.
+     * @return array Filtered schema.
+     */
+    public static function filter_takeaways_schema( array $schema, array $takeaways ): array {
+        return apply_filters( 'swps_takeaways_schema', $schema, $takeaways );
+    }
+
+    /**
      * Apply the AI response filter.
      *
      * @param array  $response The parsed AI JSON response.
