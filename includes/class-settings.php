@@ -274,6 +274,12 @@ class SWPS_Settings {
             'label' => __( 'Track token usage and estimated costs per generation', 'stratawp-seo' ),
         ] );
 
+        $this->add_field( 'min_content_score', __( 'Minimum Content Score', 'stratawp-seo' ), 'number', 'swps_advanced_section', [
+            'min'         => 0,
+            'max'         => 100,
+            'description' => __( 'Posts scoring below this threshold are saved as drafts. Set to 0 to disable.', 'stratawp-seo' ),
+        ] );
+
         $this->add_field( 'jon_ai_endpoint', __( 'Remote Content Endpoint', 'stratawp-seo' ), 'text', 'swps_advanced_section', [
             'placeholder' => 'https://example.com/wp-json/jon-ai/v1/create-posts',
             'description' => __( 'Optional: Remote endpoint for duplicate checking against an external site.', 'stratawp-seo' ),

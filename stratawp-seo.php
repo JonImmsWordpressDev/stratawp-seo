@@ -230,6 +230,7 @@ final class StrataWP_SEO {
             'current_model'       => get_option( 'swps_model', '' ),
             'templates'           => SWPS_Templates::get_options(),
             'rate_limit_remaining' => $this->rate_limiter->get_remaining_seconds(),
+            'min_content_score'   => get_option( 'swps_min_content_score', 0 ),
         ] );
     }
 
@@ -519,6 +520,7 @@ function swps_activate(): void {
         'duplicate_check'    => 0,
         'default_template'   => 'auto',
         'cost_tracking'      => 0,
+        'min_content_score'  => 0,
         'jon_ai_endpoint'    => '',
         'jon_ai_secret'      => '',
     ];

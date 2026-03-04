@@ -1,6 +1,12 @@
 (function($) {
     'use strict';
 
+    function swpsScoreBadge(score) {
+        if (score === null || score === undefined) return '';
+        var cls = score >= 80 ? 'excellent' : (score >= 60 ? 'good' : 'poor');
+        return '<span class="swps-score-badge swps-score-badge--' + cls + '">Score: ' + score + '/100</span>';
+    }
+
     // --- Generate page elements ---
     const $generateBtn    = $('#swps-generate-btn');
     const $analyzeBtn     = $('#swps-analyze-btn');
@@ -280,6 +286,19 @@
             $('#swps-result-cost-row').show();
         } else {
             $('#swps-result-cost-row').hide();
+        }
+
+        // Content score badge.
+        if (data.content_score !== null && data.content_score !== undefined) {
+            var scoreHtml = swpsScoreBadge(data.content_score);
+            var minScore = parseInt(swpsAdmin.min_content_score, 10) || 0;
+            if (minScore > 0 && data.content_score < minScore) {
+                scoreHtml += '<p class="swps-score-blocked-notice">Below minimum (' + minScore + ') — saved as draft.</p>';
+            }
+            $('#swps-result-score').html(scoreHtml);
+            $('#swps-result-score-row').show();
+        } else {
+            $('#swps-result-score-row').hide();
         }
 
         // Action URLs.
