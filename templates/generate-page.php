@@ -241,6 +241,10 @@ $templates   = SWPS_Templates::get_options();
                 <td><strong><?php esc_html_e( 'Cost:', 'stratawp-seo' ); ?></strong></td>
                 <td id="swps-result-cost"></td>
             </tr>
+            <tr id="swps-result-score-row" style="display: none;">
+                <td><strong><?php esc_html_e( 'Content Score:', 'stratawp-seo' ); ?></strong></td>
+                <td id="swps-result-score"></td>
+            </tr>
         </table>
 
         <div class="swps-result-actions">

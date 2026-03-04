@@ -48,6 +48,15 @@ class SWPS_Settings {
             'swps-generate',
             [ $this, 'render_generate_page' ]
         );
+
+        add_submenu_page(
+            'stratawp-seo',
+            __( 'Voice Profiles', 'stratawp-seo' ),
+            __( 'Voice Profiles', 'stratawp-seo' ),
+            'manage_options',
+            'swps-voice-profiles',
+            [ $this, 'render_voice_profiles_page' ]
+        );
     }
 
     /**
@@ -117,6 +126,23 @@ class SWPS_Settings {
             'row_class'   => 'swps-image-key-row swps-image-provider-dalle',
         ] );
 
+        $this->add_field( 'insert_content_images', __( 'In-Content Images', 'stratawp-seo' ), 'checkbox', 'swps_images_section', [
+            'label' => __( 'Insert contextual images within the post body (in addition to featured image)', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'content_images_count', __( 'Images Per Post', 'stratawp-seo' ), 'number', 'swps_images_section', [
+            'min'         => 1,
+            'max'         => 4,
+            'description' => __( 'Maximum number of in-content images to insert (1-4).', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'image_max_width', __( 'Image Max Width', 'stratawp-seo' ), 'number', 'swps_images_section', [
+            'min'         => 600,
+            'max'         => 2400,
+            'step'        => 100,
+            'description' => __( 'Maximum width in pixels for content images.', 'stratawp-seo' ),
+        ] );
+
         // --- Site Details Section ---
         add_settings_section( 'swps_site_section', __( 'Site Details', 'stratawp-seo' ), [ $this, 'render_site_section' ], 'stratawp-seo' );
 
@@ -144,6 +170,11 @@ class SWPS_Settings {
                 'formal'          => __( 'Formal & Academic', 'stratawp-seo' ),
                 'witty'           => __( 'Witty & Entertaining', 'stratawp-seo' ),
             ],
+        ] );
+
+        $this->add_field( 'voice_profile', __( 'Voice Profile', 'stratawp-seo' ), 'select', 'swps_writing_section', [
+            'options'     => stratawp_seo()->voice_profile->get_options(),
+            'description' => __( 'Select a voice profile to override tone/style settings. <a href="' . admin_url( 'admin.php?page=swps-voice-profiles' ) . '">Manage profiles</a>', 'stratawp-seo' ),
         ] );
 
         $this->add_field( 'writing_style', __( 'Custom Style Notes', 'stratawp-seo' ), 'textarea', 'swps_writing_section', [
@@ -272,6 +303,12 @@ class SWPS_Settings {
 
         $this->add_field( 'cost_tracking', __( 'Cost Tracking', 'stratawp-seo' ), 'checkbox', 'swps_advanced_section', [
             'label' => __( 'Track token usage and estimated costs per generation', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'min_content_score', __( 'Minimum Content Score', 'stratawp-seo' ), 'number', 'swps_advanced_section', [
+            'min'         => 0,
+            'max'         => 100,
+            'description' => __( 'Posts scoring below this threshold are saved as drafts. Set to 0 to disable.', 'stratawp-seo' ),
         ] );
 
         $this->add_field( 'jon_ai_endpoint', __( 'Remote Content Endpoint', 'stratawp-seo' ), 'text', 'swps_advanced_section', [
@@ -561,6 +598,23 @@ class SWPS_Settings {
                 esc_html__( 'StrataWP SEO:', 'stratawp-seo' ),
                 esc_html__( 'Enter your site niche and description for better content generation.', 'stratawp-seo' )
             );
+        }
+    }
+
+    /**
+     * Render the voice profiles page (list or edit).
+     */
+    public function render_voice_profiles_page(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        $action = sanitize_text_field( $_GET['action'] ?? 'list' );
+
+        if ( in_array( $action, [ 'new', 'edit' ], true ) ) {
+            include SWPS_PLUGIN_DIR . 'templates/voice-profile-edit.php';
+        } else {
+            include SWPS_PLUGIN_DIR . 'templates/voice-profiles-page.php';
         }
     }
 }

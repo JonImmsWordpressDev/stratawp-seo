@@ -32,3 +32,20 @@
 .swps-key-takeaways li:last-child {
     margin-bottom: 0;
 }
+
+/* In-Content Images */
+.swps-content-image {
+    margin: 24px 0;
+    text-align: center;
+}
+.swps-content-image img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+}
+.swps-content-image figcaption {
+    margin-top: 8px;
+    font-size: 0.875em;
+    color: #666;
+    font-style: italic;
+}

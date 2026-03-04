@@ -1,6 +1,12 @@
 (function($) {
     'use strict';
 
+    function swpsScoreBadge(score) {
+        if (score === null || score === undefined) return '';
+        var cls = score >= 80 ? 'excellent' : (score >= 60 ? 'good' : 'poor');
+        return '<span class="swps-score-badge swps-score-badge--' + cls + '">Score: ' + score + '/100</span>';
+    }
+
     // --- Generate page elements ---
     const $generateBtn    = $('#swps-generate-btn');
     const $analyzeBtn     = $('#swps-analyze-btn');
@@ -282,6 +288,19 @@
             $('#swps-result-cost-row').hide();
         }
 
+        // Content score badge.
+        if (data.content_score !== null && data.content_score !== undefined) {
+            var scoreHtml = swpsScoreBadge(data.content_score);
+            var minScore = parseInt(swpsAdmin.min_content_score, 10) || 0;
+            if (minScore > 0 && data.content_score < minScore) {
+                scoreHtml += '<p class="swps-score-blocked-notice">Below minimum (' + minScore + ') — saved as draft.</p>';
+            }
+            $('#swps-result-score').html(scoreHtml);
+            $('#swps-result-score-row').show();
+        } else {
+            $('#swps-result-score-row').hide();
+        }
+
         // Action URLs.
         $('#swps-result-edit').attr('href', data.edit_url);
         $('#swps-result-preview').attr('href', data.preview_url);
@@ -482,6 +501,10 @@
         });
     });
 
+    function escHtml(str) {
+        return $('<span>').text(str || '').html();
+    }
+
     function showBulkResults(data) {
         var html = '<h2><span class="dashicons dashicons-yes-alt" style="color: #00a32a;"></span> Bulk Generation Complete</h2>';
         html += '<p><strong>' + data.completed + '</strong> of <strong>' + data.total + '</strong> posts generated successfully.</p>';
@@ -493,11 +516,11 @@
             data.results.forEach(function(r) {
                 html += '<tr>';
                 if (r.success) {
-                    html += '<td>' + r.data.title + '</td>';
+                    html += '<td>' + escHtml(r.data.title) + '</td>';
                     html += '<td><span style="color:#00a32a;">Created</span></td>';
-                    html += '<td><a href="' + r.data.edit_url + '" target="_blank" class="button button-small">Edit</a></td>';
+                    html += '<td><a href="' + escHtml(r.data.edit_url) + '" target="_blank" class="button button-small">Edit</a></td>';
                 } else {
-                    html += '<td colspan="2"><span style="color:#d63638;">Failed: ' + r.message + '</span></td>';
+                    html += '<td colspan="2"><span style="color:#d63638;">Failed: ' + escHtml(r.message) + '</span></td>';
                     html += '<td></td>';
                 }
                 html += '</tr>';
@@ -564,5 +587,36 @@
 
     // Initialize rate limit on page load.
     initRateLimit();
+
+    // Voice Profile form submission.
+    $('#swps-voice-profile-form').on('submit', function(e) {
+        e.preventDefault();
+        var $btn = $('#swps-save-profile');
+        var originalText = $btn.text();
+        $btn.prop('disabled', true).text('Saving...');
+        $.post(swpsAdmin.ajax_url, $(this).serialize() + '&action=swps_save_voice_profile', function(res) {
+            if (res.success) {
+                window.location.href = swpsAdmin.ajax_url.replace('admin-ajax.php', 'admin.php?page=swps-voice-profiles&saved=1');
+            } else {
+                alert(res.data.message || 'Error saving profile.');
+                $btn.prop('disabled', false).text(originalText);
+            }
+        });
+    });
+
+    // Voice Profile delete.
+    $(document).on('click', '.swps-delete-profile', function(e) {
+        e.preventDefault();
+        if (!confirm('Delete this voice profile?')) return;
+        var id = $(this).data('id');
+        $.post(swpsAdmin.ajax_url, { action: 'swps_delete_voice_profile', nonce: swpsAdmin.nonce, profile_id: id }, function(res) {
+            if (res.success) location.reload();
+        });
+    });
+
+    // Formality range slider label.
+    $('#vp-formality').on('input', function() {
+        $('#vp-formality-label').text(this.value + '/10');
+    });
 
 })(jQuery);

@@ -61,6 +61,9 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-duplicate-checker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rate-limiter.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-cost-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-topic-queue.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-content-scorer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-voice-profile.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-image-inserter.php';
 
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
@@ -101,6 +104,9 @@ final class StrataWP_SEO {
     public SWPS_Calendar $calendar;
     public SWPS_Background_Processor $background_processor;
     public SWPS_REST_API $rest_api;
+    public SWPS_Content_Scorer $content_scorer;
+    public SWPS_Voice_Profile $voice_profile;
+    public SWPS_Image_Inserter $image_inserter;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -118,10 +124,13 @@ final class StrataWP_SEO {
         $this->rate_limiter       = new SWPS_Rate_Limiter();
         $this->cost_tracker       = new SWPS_Cost_Tracker();
         $this->topic_queue        = new SWPS_Topic_Queue();
+        $this->content_scorer     = new SWPS_Content_Scorer();
+        $this->voice_profile      = new SWPS_Voice_Profile();
 
         // Initialize providers and core.
         $this->api       = SWPS_Provider_Factory::create_ai_provider();
         $this->images    = SWPS_Provider_Factory::create_image_provider();
+        $this->image_inserter = new SWPS_Image_Inserter( $this->images );
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
@@ -162,6 +171,16 @@ final class StrataWP_SEO {
         add_action( 'wp_head', [ $this, 'output_faq_schema' ] );
         add_action( 'wp_head', [ $this, 'output_takeaways_schema' ] );
 
+        // Content scoring on post creation.
+        add_action( 'swps_post_created', [ $this, 'score_generated_post' ], 10, 3 );
+
+        // Voice profile AJAX.
+        add_action( 'wp_ajax_swps_save_voice_profile', [ $this, 'ajax_save_voice_profile' ] );
+        add_action( 'wp_ajax_swps_delete_voice_profile', [ $this, 'ajax_delete_voice_profile' ] );
+
+        // In-content image insertion on post creation.
+        add_action( 'swps_post_created', [ $this, 'insert_content_images' ], 20, 3 );
+
         // Plugins page link.
         add_filter( 'plugin_action_links_' . SWPS_PLUGIN_BASENAME, [ $this, 'add_settings_link' ] );
 
@@ -198,7 +217,7 @@ final class StrataWP_SEO {
      * Enqueue admin CSS and JS on our pages only.
      */
     public function enqueue_admin_assets( string $hook ): void {
-        if ( ! str_contains( $hook, 'stratawp-seo' ) && ! str_contains( $hook, 'swps-generate' ) ) {
+        if ( ! str_contains( $hook, 'stratawp-seo' ) && ! str_contains( $hook, 'swps-generate' ) && ! str_contains( $hook, 'swps-voice-profiles' ) ) {
             return;
         }
 
@@ -224,6 +243,7 @@ final class StrataWP_SEO {
             'current_model'       => get_option( 'swps_model', '' ),
             'templates'           => SWPS_Templates::get_options(),
             'rate_limit_remaining' => $this->rate_limiter->get_remaining_seconds(),
+            'min_content_score'   => get_option( 'swps_min_content_score', 0 ),
         ] );
     }
 
@@ -440,6 +460,101 @@ final class StrataWP_SEO {
         array_unshift( $links, $settings_link );
         return $links;
     }
+
+    /**
+     * Score a generated post and store results.
+     *
+     * @param int   $post_id   The new post ID.
+     * @param array $ai_result The AI response data.
+     * @param array $post_data The WordPress post data.
+     */
+    public function score_generated_post( int $post_id, array $ai_result, array $post_data ): void {
+        $results = $this->content_scorer->score( $post_id, $ai_result );
+
+        update_post_meta( $post_id, '_swps_content_score', $results['overall_score'] );
+        update_post_meta( $post_id, '_swps_score_details', $results['details'] );
+        update_post_meta( $post_id, '_swps_score_recommendations', $results['recommendations'] );
+
+        // Optional score gate: force draft if below threshold.
+        $min_score = (int) get_option( 'swps_min_content_score', 0 );
+        if ( $min_score > 0 && $results['overall_score'] < $min_score ) {
+            wp_update_post( [
+                'ID'          => $post_id,
+                'post_status' => 'draft',
+            ] );
+            update_post_meta( $post_id, '_swps_score_blocked', true );
+        }
+
+        SWPS_Hooks::do_score_complete( $results, $post_id );
+    }
+
+    /**
+     * Insert contextual images into generated post content.
+     *
+     * @param int   $post_id   The new post ID.
+     * @param array $ai_result The AI response data.
+     * @param array $post_data The WordPress post data.
+     */
+    public function insert_content_images( int $post_id, array $ai_result, array $post_data ): void {
+        $this->image_inserter->insert_images( $post_id, $ai_result );
+    }
+
+    /**
+     * AJAX: Save (create or update) a voice profile.
+     */
+    public function ajax_save_voice_profile(): void {
+        check_ajax_referer( 'swps_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Insufficient permissions.' ] );
+        }
+
+        $profile_id = absint( $_POST['profile_id'] ?? 0 );
+        $name       = sanitize_text_field( $_POST['name'] ?? '' );
+
+        if ( empty( $name ) ) {
+            wp_send_json_error( [ 'message' => 'Profile name is required.' ] );
+        }
+
+        $meta = [
+            'tone'             => sanitize_text_field( $_POST['tone'] ?? 'professional' ),
+            'formality'        => absint( $_POST['formality'] ?? 5 ),
+            'sentence_length'  => sanitize_text_field( $_POST['sentence_length'] ?? 'varied' ),
+            'vocabulary_level' => sanitize_text_field( $_POST['vocabulary_level'] ?? 'moderate' ),
+            'person'           => sanitize_text_field( $_POST['person'] ?? 'second' ),
+            'example_content'  => sanitize_textarea_field( $_POST['example_content'] ?? '' ),
+            'avoid_phrases'    => sanitize_textarea_field( $_POST['avoid_phrases'] ?? '' ),
+            'preferred_phrases' => sanitize_textarea_field( $_POST['preferred_phrases'] ?? '' ),
+        ];
+
+        if ( $profile_id > 0 ) {
+            $result = $this->voice_profile->update( $profile_id, $name, $meta );
+        } else {
+            $result = $this->voice_profile->create( $name, $meta );
+        }
+
+        if ( is_wp_error( $result ) ) {
+            wp_send_json_error( [ 'message' => $result->get_error_message() ] );
+        }
+
+        wp_send_json_success( [ 'profile_id' => $result ] );
+    }
+
+    /**
+     * AJAX: Delete a voice profile.
+     */
+    public function ajax_delete_voice_profile(): void {
+        check_ajax_referer( 'swps_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Insufficient permissions.' ] );
+        }
+
+        $profile_id = absint( $_POST['profile_id'] ?? 0 );
+        $this->voice_profile->delete( $profile_id );
+
+        wp_send_json_success();
+    }
 }
 
 /**
@@ -486,6 +601,11 @@ function swps_activate(): void {
         'duplicate_check'    => 0,
         'default_template'   => 'auto',
         'cost_tracking'      => 0,
+        'min_content_score'  => 0,
+        'voice_profile'      => 0,
+        'insert_content_images' => 0,
+        'content_images_count'  => 2,
+        'image_max_width'       => 1200,
         'jon_ai_endpoint'    => '',
         'jon_ai_secret'      => '',
     ];
@@ -496,8 +616,9 @@ function swps_activate(): void {
         }
     }
 
-    // Register CPT for flush_rewrite_rules.
+    // Register CPTs for flush_rewrite_rules.
     SWPS_Topic_Queue::register_post_type();
+    SWPS_Voice_Profile::register_post_type();
     flush_rewrite_rules();
 
     if ( get_option( 'swps_cron_enabled' ) ) {

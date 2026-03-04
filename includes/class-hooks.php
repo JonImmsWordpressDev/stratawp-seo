@@ -133,4 +133,61 @@ class SWPS_Hooks {
     public static function do_generation_failed( WP_Error $error, string $topic, string $template ): void {
         do_action( 'swps_generation_failed', $error, $topic, $template );
     }
+
+    /**
+     * Apply the score weights filter.
+     *
+     * @param array  $weights   Analyzer weight map.
+     * @param int    $post_id   The post being scored.
+     * @param string $post_type The post type being scored.
+     * @return array Filtered weights.
+     */
+    public static function filter_score_weights( array $weights, int $post_id, string $post_type ): array {
+        return apply_filters( 'swps_score_weights', $weights, $post_id, $post_type );
+    }
+
+    /**
+     * Fire the score_complete action.
+     *
+     * @param array $results Score results array.
+     * @param int   $post_id The scored post ID.
+     */
+    public static function do_score_complete( array $results, int $post_id ): void {
+        do_action( 'swps_score_complete', $results, $post_id );
+    }
+
+    /**
+     * Apply the content images queries filter.
+     *
+     * @param array $queries Visual concept queries keyed by section index.
+     * @param int   $post_id Post ID.
+     * @return array Filtered queries.
+     */
+    public static function filter_content_images_queries( array $queries, int $post_id ): array {
+        return apply_filters( 'swps_content_images_queries', $queries, $post_id );
+    }
+
+    /**
+     * Apply the image selection filter.
+     *
+     * @param array  $image_data     Image data array.
+     * @param int    $post_id        Post ID.
+     * @param string $section_heading Section heading text.
+     * @return array Filtered image data.
+     */
+    public static function filter_image_selection( array $image_data, int $post_id, string $section_heading ): array {
+        return apply_filters( 'swps_image_selection', $image_data, $post_id, $section_heading );
+    }
+
+    /**
+     * Fire the image_inserted action.
+     *
+     * @param int    $attachment_id Attachment ID.
+     * @param int    $post_id       Post ID.
+     * @param string $alt_text      Image alt text.
+     * @param int    $position      Section index where image was inserted.
+     */
+    public static function do_image_inserted( int $attachment_id, int $post_id, string $alt_text, int $position ): void {
+        do_action( 'swps_image_inserted', $attachment_id, $post_id, $alt_text, $position );
+    }
 }
