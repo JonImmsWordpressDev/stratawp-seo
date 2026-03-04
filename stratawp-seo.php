@@ -65,6 +65,18 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-content-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-voice-profile.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-image-inserter.php';
 
+// SEO Audit classes.
+require_once SWPS_PLUGIN_DIR . 'includes/class-audit-module.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-seo-audit.php';
+require_once SWPS_PLUGIN_DIR . 'includes/audit/class-canonical-module.php';
+require_once SWPS_PLUGIN_DIR . 'includes/audit/class-sitemap-module.php';
+require_once SWPS_PLUGIN_DIR . 'includes/audit/class-opengraph-module.php';
+require_once SWPS_PLUGIN_DIR . 'includes/audit/class-twitter-module.php';
+require_once SWPS_PLUGIN_DIR . 'includes/audit/class-robots-module.php';
+require_once SWPS_PLUGIN_DIR . 'includes/audit/class-meta-robots-module.php';
+require_once SWPS_PLUGIN_DIR . 'includes/audit/class-image-seo-module.php';
+require_once SWPS_PLUGIN_DIR . 'includes/audit/class-pagespeed-module.php';
+
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-analyzer.php';
@@ -107,6 +119,7 @@ final class StrataWP_SEO {
     public SWPS_Content_Scorer $content_scorer;
     public SWPS_Voice_Profile $voice_profile;
     public SWPS_Image_Inserter $image_inserter;
+    public SWPS_SEO_Audit $seo_audit;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -131,6 +144,7 @@ final class StrataWP_SEO {
         $this->api       = SWPS_Provider_Factory::create_ai_provider();
         $this->images    = SWPS_Provider_Factory::create_image_provider();
         $this->image_inserter = new SWPS_Image_Inserter( $this->images );
+        $this->seo_audit = new SWPS_SEO_Audit();
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
@@ -181,6 +195,22 @@ final class StrataWP_SEO {
         // In-content image insertion on post creation.
         add_action( 'swps_post_created', [ $this, 'insert_content_images' ], 20, 3 );
 
+        // SEO Audit frontend hooks.
+        add_action( 'wp_head', [ SWPS_Canonical_Module::class, 'output_canonical' ], 1 );
+        add_action( 'wp_head', [ SWPS_OpenGraph_Module::class, 'output_meta_tags' ], 5 );
+        add_action( 'init', [ SWPS_Sitemap_Module::class, 'register_rewrite_rules' ] );
+        add_action( 'template_redirect', [ SWPS_Sitemap_Module::class, 'serve_sitemap' ] );
+        add_action( 'publish_post', [ SWPS_Sitemap_Module::class, 'ping_search_engines' ] );
+        add_filter( 'robots_txt', [ SWPS_Robots_Module::class, 'filter_robots_txt' ], 10, 2 );
+
+        // SEO Audit AJAX handlers.
+        add_action( 'wp_ajax_swps_run_audit', [ $this, 'ajax_run_audit' ] );
+        add_action( 'wp_ajax_swps_fix_module', [ $this, 'ajax_fix_module' ] );
+        add_action( 'wp_ajax_swps_fix_all', [ $this, 'ajax_fix_all' ] );
+
+        // Dashboard widget.
+        add_action( 'wp_dashboard_setup', [ $this, 'register_dashboard_widget' ] );
+
         // Plugins page link.
         add_filter( 'plugin_action_links_' . SWPS_PLUGIN_BASENAME, [ $this, 'add_settings_link' ] );
 
@@ -217,7 +247,7 @@ final class StrataWP_SEO {
      * Enqueue admin CSS and JS on our pages only.
      */
     public function enqueue_admin_assets( string $hook ): void {
-        if ( ! str_contains( $hook, 'stratawp-seo' ) && ! str_contains( $hook, 'swps-generate' ) && ! str_contains( $hook, 'swps-voice-profiles' ) ) {
+        if ( ! str_contains( $hook, 'stratawp-seo' ) && ! str_contains( $hook, 'swps-generate' ) && ! str_contains( $hook, 'swps-voice-profiles' ) && ! str_contains( $hook, 'swps-seo-audit' ) ) {
             return;
         }
 
@@ -555,6 +585,153 @@ final class StrataWP_SEO {
 
         wp_send_json_success();
     }
+
+    /**
+     * Register the SEO Audit dashboard widget.
+     */
+    public function register_dashboard_widget(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        wp_add_dashboard_widget(
+            'swps_audit_widget',
+            __( 'StrataWP SEO — Site Health', 'stratawp-seo' ),
+            [ $this, 'render_dashboard_widget' ]
+        );
+    }
+
+    /**
+     * Render the SEO Audit dashboard widget.
+     */
+    public function render_dashboard_widget(): void {
+        $results  = $this->seo_audit->get_cached_results();
+        $last_run = $this->seo_audit->get_last_run();
+        $modules  = $this->seo_audit->get_modules();
+        $overall  = $results['overall_score'] ?? 0;
+
+        $score_class = $overall >= 80 ? 'excellent' : ( $overall >= 50 ? 'good' : 'poor' );
+
+        if ( empty( $results['modules'] ) ) {
+            echo '<p>' . esc_html__( 'No audit results yet. Run your first audit.', 'stratawp-seo' ) . '</p>';
+            echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=swps-seo-audit' ) ) . '" class="button button-primary">' . esc_html__( 'Run Audit', 'stratawp-seo' ) . '</a></p>';
+            return;
+        }
+
+        printf(
+            '<div class="swps-widget-score swps-score-badge swps-score-badge--%s" style="font-size:16px;padding:8px 16px;margin-bottom:12px;">%s: %d/100</div>',
+            esc_attr( $score_class ),
+            esc_html__( 'Site Health', 'stratawp-seo' ),
+            (int) $overall
+        );
+
+        echo '<table class="widefat striped" style="margin-bottom:12px;">';
+        echo '<tbody>';
+
+        foreach ( $modules as $id => $module ) {
+            $mod_result = $results['modules'][ $id ] ?? null;
+            $mod_status = $mod_result['status'] ?? 'fail';
+            $mod_score  = $mod_result['score'] ?? 0;
+            $issue_count = count( $mod_result['issues'] ?? [] );
+
+            $icon = match ( $mod_status ) {
+                'pass'    => '<span style="color:#00a32a;">&#10003;</span>',
+                'warning' => '<span style="color:#dba617;">&#9888;</span>',
+                default   => '<span style="color:#d63638;">&#10007;</span>',
+            };
+
+            printf(
+                '<tr><td>%s %s</td><td style="text-align:right;">%d/100</td><td style="text-align:right;color:#646970;">%d issues</td></tr>',
+                $icon, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                esc_html( $module->get_label() ),
+                (int) $mod_score,
+                $issue_count
+            );
+        }
+
+        echo '</tbody></table>';
+
+        printf(
+            '<p><a href="%s" class="button">%s</a></p>',
+            esc_url( admin_url( 'admin.php?page=swps-seo-audit' ) ),
+            esc_html__( 'View Details', 'stratawp-seo' )
+        );
+
+        if ( $last_run ) {
+            printf(
+                '<p class="description">%s %s</p>',
+                esc_html__( 'Last audited:', 'stratawp-seo' ),
+                esc_html( human_time_diff( strtotime( $last_run ), current_time( 'timestamp' ) ) . ' ago' )
+            );
+        }
+    }
+
+    /**
+     * AJAX: Run full SEO audit.
+     */
+    public function ajax_run_audit(): void {
+        check_ajax_referer( 'swps_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Insufficient permissions.' ] );
+        }
+
+        $results = $this->seo_audit->run_all();
+
+        wp_send_json_success( $results );
+    }
+
+    /**
+     * AJAX: Fix a single audit module.
+     */
+    public function ajax_fix_module(): void {
+        check_ajax_referer( 'swps_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Insufficient permissions.' ] );
+        }
+
+        $module_id  = sanitize_text_field( $_POST['module_id'] ?? '' );
+        $fix_result = $this->seo_audit->fix_module( $module_id );
+
+        if ( null === $fix_result ) {
+            wp_send_json_error( [ 'message' => 'Module not found or does not support auto-fix.' ] );
+        }
+
+        wp_send_json_success( [
+            'fix'     => $fix_result,
+            'results' => $this->seo_audit->get_cached_results(),
+        ] );
+    }
+
+    /**
+     * AJAX: Fix all fixable audit modules.
+     */
+    public function ajax_fix_all(): void {
+        check_ajax_referer( 'swps_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Insufficient permissions.' ] );
+        }
+
+        $all_fixes = [];
+
+        foreach ( $this->seo_audit->get_modules() as $id => $module ) {
+            if ( $module->can_auto_fix() ) {
+                $cached = $this->seo_audit->get_cached_results();
+                $issues = $cached['modules'][ $id ]['issues'] ?? [];
+
+                if ( ! empty( $issues ) ) {
+                    $all_fixes[ $id ] = $this->seo_audit->fix_module( $id );
+                }
+            }
+        }
+
+        wp_send_json_success( [
+            'fixes'   => $all_fixes,
+            'results' => $this->seo_audit->get_cached_results(),
+        ] );
+    }
 }
 
 /**
@@ -608,6 +785,11 @@ function swps_activate(): void {
         'image_max_width'       => 1200,
         'jon_ai_endpoint'    => '',
         'jon_ai_secret'      => '',
+        // SEO Audit defaults.
+        'audit_auto_canonical'  => 1,
+        'audit_auto_og'         => 1,
+        'audit_auto_sitemap'    => 1,
+        'audit_cron_schedule'   => 'weekly',
     ];
 
     foreach ( $defaults as $key => $value ) {
@@ -619,6 +801,7 @@ function swps_activate(): void {
     // Register CPTs for flush_rewrite_rules.
     SWPS_Topic_Queue::register_post_type();
     SWPS_Voice_Profile::register_post_type();
+    SWPS_SEO_Audit::schedule_cron();
     flush_rewrite_rules();
 
     if ( get_option( 'swps_cron_enabled' ) ) {
@@ -632,6 +815,7 @@ register_activation_hook( __FILE__, 'swps_activate' );
  */
 function swps_deactivate(): void {
     SWPS_Cron::unschedule();
+    SWPS_SEO_Audit::unschedule_cron();
     flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'swps_deactivate' );

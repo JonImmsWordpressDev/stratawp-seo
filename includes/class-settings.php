@@ -57,6 +57,15 @@ class SWPS_Settings {
             'swps-voice-profiles',
             [ $this, 'render_voice_profiles_page' ]
         );
+
+        add_submenu_page(
+            'stratawp-seo',
+            __( 'SEO Audit', 'stratawp-seo' ),
+            __( 'SEO Audit', 'stratawp-seo' ),
+            'manage_options',
+            'swps-seo-audit',
+            [ $this, 'render_audit_page' ]
+        );
     }
 
     /**
@@ -281,6 +290,30 @@ class SWPS_Settings {
             'min'         => 1,
             'max'         => 5,
             'description' => __( 'Number of posts to generate each time (max 5).', 'stratawp-seo' ),
+        ] );
+
+        // --- SEO Audit Section ---
+        add_settings_section( 'swps_audit_section', __( 'SEO Audit', 'stratawp-seo' ), [ $this, 'render_audit_section' ], 'stratawp-seo' );
+
+        $this->add_field( 'audit_auto_canonical', __( 'Auto Canonical Tags', 'stratawp-seo' ), 'checkbox', 'swps_audit_section', [
+            'label' => __( 'Automatically add canonical tags to posts/pages missing them', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'audit_auto_og', __( 'Auto OG/Twitter Tags', 'stratawp-seo' ), 'checkbox', 'swps_audit_section', [
+            'label' => __( 'Automatically output Open Graph and Twitter Card meta tags', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'audit_auto_sitemap', __( 'Sitemap Generation', 'stratawp-seo' ), 'checkbox', 'swps_audit_section', [
+            'label' => __( 'Generate XML sitemap (only when no other sitemap plugin is active)', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'audit_cron_schedule', __( 'Audit Schedule', 'stratawp-seo' ), 'select', 'swps_audit_section', [
+            'options' => [
+                'daily'   => __( 'Daily', 'stratawp-seo' ),
+                'weekly'  => __( 'Weekly', 'stratawp-seo' ),
+                'monthly' => __( 'Monthly', 'stratawp-seo' ),
+            ],
+            'description' => __( 'How often to run the automated SEO audit.', 'stratawp-seo' ),
         ] );
 
         // --- Advanced Section (v2.0) ---
@@ -616,5 +649,17 @@ class SWPS_Settings {
         } else {
             include SWPS_PLUGIN_DIR . 'templates/voice-profiles-page.php';
         }
+    }
+
+    public function render_audit_section(): void {
+        echo '<p>' . esc_html__( 'Configure automatic SEO audit checks and fixes.', 'stratawp-seo' ) . '</p>';
+    }
+
+    public function render_audit_page(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        include SWPS_PLUGIN_DIR . 'templates/audit-page.php';
     }
 }

@@ -190,4 +190,35 @@ class SWPS_Hooks {
     public static function do_image_inserted( int $attachment_id, int $post_id, string $alt_text, int $position ): void {
         do_action( 'swps_image_inserted', $attachment_id, $post_id, $alt_text, $position );
     }
+
+    /**
+     * Apply the audit modules filter.
+     *
+     * @param SWPS_Audit_Module[] $modules Registered modules.
+     * @return SWPS_Audit_Module[]
+     */
+    public static function filter_audit_modules( array $modules ): array {
+        return apply_filters( 'swps_audit_modules', $modules );
+    }
+
+    /**
+     * Apply the audit result filter.
+     *
+     * @param array  $result    Module result array.
+     * @param string $module_id Module ID.
+     * @return array
+     */
+    public static function filter_audit_result( array $result, string $module_id ): array {
+        return apply_filters( 'swps_audit_result', $result, $module_id );
+    }
+
+    /**
+     * Fire the audit_complete action.
+     *
+     * @param array $results All module results.
+     * @param int   $overall Overall score.
+     */
+    public static function do_audit_complete( array $results, int $overall ): void {
+        do_action( 'swps_audit_complete', $results, $overall );
+    }
 }
