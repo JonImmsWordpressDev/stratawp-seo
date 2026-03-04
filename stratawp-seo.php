@@ -63,6 +63,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-cost-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-topic-queue.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-content-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-voice-profile.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-image-inserter.php';
 
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
@@ -105,6 +106,7 @@ final class StrataWP_SEO {
     public SWPS_REST_API $rest_api;
     public SWPS_Content_Scorer $content_scorer;
     public SWPS_Voice_Profile $voice_profile;
+    public SWPS_Image_Inserter $image_inserter;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -128,6 +130,7 @@ final class StrataWP_SEO {
         // Initialize providers and core.
         $this->api       = SWPS_Provider_Factory::create_ai_provider();
         $this->images    = SWPS_Provider_Factory::create_image_provider();
+        $this->image_inserter = new SWPS_Image_Inserter( $this->images );
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
@@ -174,6 +177,9 @@ final class StrataWP_SEO {
         // Voice profile AJAX.
         add_action( 'wp_ajax_swps_save_voice_profile', [ $this, 'ajax_save_voice_profile' ] );
         add_action( 'wp_ajax_swps_delete_voice_profile', [ $this, 'ajax_delete_voice_profile' ] );
+
+        // In-content image insertion on post creation.
+        add_action( 'swps_post_created', [ $this, 'insert_content_images' ], 20, 3 );
 
         // Plugins page link.
         add_filter( 'plugin_action_links_' . SWPS_PLUGIN_BASENAME, [ $this, 'add_settings_link' ] );
@@ -483,6 +489,17 @@ final class StrataWP_SEO {
     }
 
     /**
+     * Insert contextual images into generated post content.
+     *
+     * @param int   $post_id   The new post ID.
+     * @param array $ai_result The AI response data.
+     * @param array $post_data The WordPress post data.
+     */
+    public function insert_content_images( int $post_id, array $ai_result, array $post_data ): void {
+        $this->image_inserter->insert_images( $post_id, $ai_result );
+    }
+
+    /**
      * AJAX: Save (create or update) a voice profile.
      */
     public function ajax_save_voice_profile(): void {
@@ -586,6 +603,9 @@ function swps_activate(): void {
         'cost_tracking'      => 0,
         'min_content_score'  => 0,
         'voice_profile'      => 0,
+        'insert_content_images' => 0,
+        'content_images_count'  => 2,
+        'image_max_width'       => 1200,
         'jon_ai_endpoint'    => '',
         'jon_ai_secret'      => '',
     ];

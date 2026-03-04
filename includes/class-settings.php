@@ -126,6 +126,23 @@ class SWPS_Settings {
             'row_class'   => 'swps-image-key-row swps-image-provider-dalle',
         ] );
 
+        $this->add_field( 'insert_content_images', __( 'In-Content Images', 'stratawp-seo' ), 'checkbox', 'swps_images_section', [
+            'label' => __( 'Insert contextual images within the post body (in addition to featured image)', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'content_images_count', __( 'Images Per Post', 'stratawp-seo' ), 'number', 'swps_images_section', [
+            'min'         => 1,
+            'max'         => 4,
+            'description' => __( 'Maximum number of in-content images to insert (1-4).', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'image_max_width', __( 'Image Max Width', 'stratawp-seo' ), 'number', 'swps_images_section', [
+            'min'         => 600,
+            'max'         => 2400,
+            'step'        => 100,
+            'description' => __( 'Maximum width in pixels for content images.', 'stratawp-seo' ),
+        ] );
+
         // --- Site Details Section ---
         add_settings_section( 'swps_site_section', __( 'Site Details', 'stratawp-seo' ), [ $this, 'render_site_section' ], 'stratawp-seo' );
 
