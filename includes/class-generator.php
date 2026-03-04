@@ -438,6 +438,9 @@ PROMPT;
         // Fire post_created action.
         SWPS_Hooks::do_post_created( $post_id, $ai_result, $post_data );
 
+        // Read back content score (set by swps_post_created hook).
+        $content_score = get_post_meta( $post_id, '_swps_content_score', true );
+
         return [
             'post_id'          => $post_id,
             'title'            => $ai_result['title'],
@@ -451,6 +454,7 @@ PROMPT;
             'word_count'       => $ai_result['estimated_word_count'] ?? 0,
             'template'         => $template,
             'cost'             => $cost,
+            'content_score'    => $content_score ?: null,
         ];
     }
 

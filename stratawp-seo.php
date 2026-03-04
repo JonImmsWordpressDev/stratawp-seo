@@ -61,6 +61,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-duplicate-checker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rate-limiter.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-cost-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-topic-queue.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-content-scorer.php';
 
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
@@ -101,6 +102,7 @@ final class StrataWP_SEO {
     public SWPS_Calendar $calendar;
     public SWPS_Background_Processor $background_processor;
     public SWPS_REST_API $rest_api;
+    public SWPS_Content_Scorer $content_scorer;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -118,6 +120,7 @@ final class StrataWP_SEO {
         $this->rate_limiter       = new SWPS_Rate_Limiter();
         $this->cost_tracker       = new SWPS_Cost_Tracker();
         $this->topic_queue        = new SWPS_Topic_Queue();
+        $this->content_scorer     = new SWPS_Content_Scorer();
 
         // Initialize providers and core.
         $this->api       = SWPS_Provider_Factory::create_ai_provider();
@@ -161,6 +164,9 @@ final class StrataWP_SEO {
         // Frontend.
         add_action( 'wp_head', [ $this, 'output_faq_schema' ] );
         add_action( 'wp_head', [ $this, 'output_takeaways_schema' ] );
+
+        // Content scoring on post creation.
+        add_action( 'swps_post_created', [ $this, 'score_generated_post' ], 10, 3 );
 
         // Plugins page link.
         add_filter( 'plugin_action_links_' . SWPS_PLUGIN_BASENAME, [ $this, 'add_settings_link' ] );
@@ -439,6 +445,33 @@ final class StrataWP_SEO {
         $settings_link = '<a href="' . admin_url( 'admin.php?page=stratawp-seo' ) . '">' . __( 'Settings', 'stratawp-seo' ) . '</a>';
         array_unshift( $links, $settings_link );
         return $links;
+    }
+
+    /**
+     * Score a generated post and store results.
+     *
+     * @param int   $post_id   The new post ID.
+     * @param array $ai_result The AI response data.
+     * @param array $post_data The WordPress post data.
+     */
+    public function score_generated_post( int $post_id, array $ai_result, array $post_data ): void {
+        $results = $this->content_scorer->score( $post_id, $ai_result );
+
+        update_post_meta( $post_id, '_swps_content_score', $results['overall_score'] );
+        update_post_meta( $post_id, '_swps_score_details', $results['details'] );
+        update_post_meta( $post_id, '_swps_score_recommendations', $results['recommendations'] );
+
+        // Optional score gate: force draft if below threshold.
+        $min_score = (int) get_option( 'swps_min_content_score', 0 );
+        if ( $min_score > 0 && $results['overall_score'] < $min_score ) {
+            wp_update_post( [
+                'ID'          => $post_id,
+                'post_status' => 'draft',
+            ] );
+            update_post_meta( $post_id, '_swps_score_blocked', true );
+        }
+
+        SWPS_Hooks::do_score_complete( $results, $post_id );
     }
 }
 

@@ -133,4 +133,25 @@ class SWPS_Hooks {
     public static function do_generation_failed( WP_Error $error, string $topic, string $template ): void {
         do_action( 'swps_generation_failed', $error, $topic, $template );
     }
+
+    /**
+     * Apply the score weights filter.
+     *
+     * @param array  $weights   Analyzer weight map.
+     * @param string $post_type The post type being scored.
+     * @return array Filtered weights.
+     */
+    public static function filter_score_weights( array $weights, string $post_type ): array {
+        return apply_filters( 'swps_score_weights', $weights, $post_type );
+    }
+
+    /**
+     * Fire the score_complete action.
+     *
+     * @param array $results Score results array.
+     * @param int   $post_id The scored post ID.
+     */
+    public static function do_score_complete( array $results, int $post_id ): void {
+        do_action( 'swps_score_complete', $results, $post_id );
+    }
 }
