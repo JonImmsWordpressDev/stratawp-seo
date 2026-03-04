@@ -49,6 +49,7 @@ class SWPS_Content_Scorer {
 		$estimated_words    = (int) ( $ai_result['estimated_word_count'] ?? 0 );
 		$post_type          = get_post_type( $post_id );
 
+		// Note: passes $post_id as extra arg beyond the design doc's ($weights, $post_type) for per-post customization.
 		$weights = apply_filters( 'swps_score_weights', self::DEFAULT_WEIGHTS, $post_id, $post_type );
 
 		$recommendations = [];
@@ -59,7 +60,7 @@ class SWPS_Content_Scorer {
 			'readability'       => $this->analyze_readability( $plain_text, $recommendations ),
 			'heading_structure' => $this->analyze_heading_structure( $content_html, $focus_keyword, $recommendations ),
 			'meta_quality'      => $this->analyze_meta_quality( $title, $meta_description, $focus_keyword, $recommendations ),
-			'internal_links'    => $this->analyze_internal_links( $content_html, $internal_links, $recommendations ),
+			'internal_links'    => $this->analyze_internal_links( $content_html, $recommendations ),
 			'content_depth'     => $this->analyze_content_depth( $plain_text, $content_html, $estimated_words, $recommendations ),
 			'engagement'        => $this->analyze_engagement( $content_html, $plain_text, $recommendations ),
 		];
@@ -186,6 +187,7 @@ class SWPS_Content_Scorer {
 		$avg_sentence_length = $word_count / $sentence_count;
 		$avg_syllables       = $syllable_count / $word_count;
 		$grade_level         = ( 0.39 * $avg_sentence_length ) + ( 11.8 * $avg_syllables ) - 15.59;
+		$grade_level         = max( 0, $grade_level );
 
 		$score = 100;
 
@@ -384,18 +386,42 @@ class SWPS_Content_Scorer {
 	 * Analyze internal linking quality.
 	 *
 	 * Checks link count against the swps_internal_links_min option,
-	 * and penalizes generic anchor text.
+	 * and penalizes generic anchor text on internal links.
 	 *
-	 * @param string   $content_html   The HTML content.
-	 * @param array    $internal_links Links reported by the AI.
-	 * @param string[] $recs           Recommendations array (passed by reference).
+	 * @param string   $content_html The HTML content.
+	 * @param string[] $recs         Recommendations array (passed by reference).
 	 * @return int Score 0-100.
 	 */
-	private function analyze_internal_links( string $content_html, array $internal_links, array &$recs ): int {
-		// Count actual <a> tags in content for internal links.
-		preg_match_all( '/<a\s[^>]*href=["\'][^"\']*["\'][^>]*>(.*?)<\/a>/is', $content_html, $matches );
+	private function analyze_internal_links( string $content_html, array &$recs ): int {
+		// Extract all <a> tags with their hrefs and anchor text.
+		preg_match_all( '/<a\s[^>]*href=["\']([^"\']*)["\'][^>]*>(.*?)<\/a>/is', $content_html, $matches );
 
-		$link_count = count( $matches[0] );
+		$site_url       = home_url();
+		$internal_hrefs = [];
+		$internal_texts = [];
+
+		foreach ( $matches[1] as $index => $href ) {
+			$href_trimmed = trim( $href );
+
+			// Relative paths (starting with /) are internal.
+			$is_internal = false;
+			if ( '' !== $href_trimmed && '/' === $href_trimmed[0] && ( 1 === strlen( $href_trimmed ) || '/' !== $href_trimmed[1] ) ) {
+				$is_internal = true;
+			} elseif ( 0 === mb_strpos( $href_trimmed, $site_url ) ) {
+				// Absolute URL matching the site domain.
+				$is_internal = true;
+			} elseif ( ! preg_match( '/^https?:\/\//i', $href_trimmed ) && ! preg_match( '/^#/', $href_trimmed ) && ! preg_match( '/^mailto:/i', $href_trimmed ) ) {
+				// Non-protocol relative path (e.g., "about-us").
+				$is_internal = true;
+			}
+
+			if ( $is_internal ) {
+				$internal_hrefs[] = $href_trimmed;
+				$internal_texts[] = $matches[2][ $index ];
+			}
+		}
+
+		$link_count = count( $internal_hrefs );
 
 		if ( 0 === $link_count ) {
 			$recs[] = 'No internal links found. Add links to related content on your site.';
@@ -415,11 +441,11 @@ class SWPS_Content_Scorer {
 			);
 		}
 
-		// Check for generic anchor text.
+		// Check for generic anchor text on internal links.
 		$generic_anchors = [ 'click here', 'read more', 'here', 'this', 'link', 'this link', 'learn more', 'more' ];
 		$generic_count   = 0;
 
-		foreach ( $matches[1] as $anchor_text ) {
+		foreach ( $internal_texts as $anchor_text ) {
 			$anchor_clean = mb_strtolower( trim( wp_strip_all_tags( $anchor_text ) ) );
 			if ( in_array( $anchor_clean, $generic_anchors, true ) ) {
 				$generic_count++;
