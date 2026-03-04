@@ -200,7 +200,7 @@ class SWPS_Voice_Profile {
             $parts[] = sprintf( "Match the writing style of this sample:\n\"%s\"", $excerpt );
         }
 
-        $compiled = "VOICE PROFILE — {$profile['name']}:\n" . implode( ' ', $parts );
+        $compiled = "VOICE PROFILE — {$profile['name']}:\n" . implode( "\n", $parts );
 
         return apply_filters( 'swps_voice_compile', $compiled, $profile_id );
     }
@@ -271,6 +271,9 @@ class SWPS_Voice_Profile {
 
             if ( $sanitize ) {
                 $value = call_user_func( $sanitize, $value );
+            } elseif ( is_array( $value ) ) {
+                // Sanitize array elements.
+                $value = array_filter( array_map( 'sanitize_text_field', $value ) );
             } elseif ( is_string( $value ) ) {
                 // Parse comma-separated string into array.
                 $value = array_filter( array_map( 'trim', explode( ',', $value ) ) );
