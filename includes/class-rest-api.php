@@ -92,6 +92,71 @@ class SWPS_REST_API {
                 ],
             ],
         ] );
+
+        // Score endpoints.
+        register_rest_route( self::NAMESPACE, '/score/(?P<id>\d+)', [
+            [
+                'methods'             => 'GET',
+                'callback'            => [ $this, 'get_score' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+                'args'                => [
+                    'id' => [ 'type' => 'integer', 'required' => true, 'sanitize_callback' => 'absint' ],
+                ],
+            ],
+            [
+                'methods'             => 'POST',
+                'callback'            => [ $this, 'score_post' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+                'args'                => [
+                    'id' => [ 'type' => 'integer', 'required' => true, 'sanitize_callback' => 'absint' ],
+                ],
+            ],
+        ] );
+
+        // Voice profile endpoints.
+        register_rest_route( self::NAMESPACE, '/voice-profiles', [
+            [
+                'methods'             => 'GET',
+                'callback'            => [ $this, 'get_voice_profiles' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+            ],
+            [
+                'methods'             => 'POST',
+                'callback'            => [ $this, 'create_voice_profile' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+                'args'                => [
+                    'name'             => [ 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_text_field' ],
+                    'tone'             => [ 'type' => 'string', 'default' => 'professional', 'sanitize_callback' => 'sanitize_text_field' ],
+                    'formality'        => [ 'type' => 'integer', 'default' => 5, 'sanitize_callback' => 'absint' ],
+                    'sentence_length'  => [ 'type' => 'string', 'default' => 'varied', 'sanitize_callback' => 'sanitize_text_field' ],
+                    'vocabulary_level' => [ 'type' => 'string', 'default' => 'moderate', 'sanitize_callback' => 'sanitize_text_field' ],
+                    'person'           => [ 'type' => 'string', 'default' => 'second', 'sanitize_callback' => 'sanitize_text_field' ],
+                    'example_content'  => [ 'type' => 'string', 'default' => '', 'sanitize_callback' => 'sanitize_textarea_field' ],
+                    'avoid_phrases'    => [ 'type' => 'string', 'default' => '', 'sanitize_callback' => 'sanitize_textarea_field' ],
+                    'preferred_phrases' => [ 'type' => 'string', 'default' => '', 'sanitize_callback' => 'sanitize_textarea_field' ],
+                ],
+            ],
+        ] );
+
+        register_rest_route( self::NAMESPACE, '/voice-profiles/(?P<id>\d+)', [
+            [
+                'methods'             => 'PUT',
+                'callback'            => [ $this, 'update_voice_profile' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+                'args'                => [
+                    'id'   => [ 'type' => 'integer', 'required' => true, 'sanitize_callback' => 'absint' ],
+                    'name' => [ 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_text_field' ],
+                ],
+            ],
+            [
+                'methods'             => 'DELETE',
+                'callback'            => [ $this, 'delete_voice_profile' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+                'args'                => [
+                    'id' => [ 'type' => 'integer', 'required' => true, 'sanitize_callback' => 'absint' ],
+                ],
+            ],
+        ] );
     }
 
     /**
@@ -229,6 +294,143 @@ class SWPS_REST_API {
         $topic_id = $request->get_param( 'id' );
 
         $success = $queue->delete_topic( $topic_id );
+
+        return new WP_REST_Response( [
+            'success' => $success,
+        ] );
+    }
+
+    /**
+     * GET /score/{id} - Get stored score for a post.
+     */
+    public function get_score( WP_REST_Request $request ): WP_REST_Response {
+        $post_id = $request->get_param( 'id' );
+
+        $score   = get_post_meta( $post_id, '_swps_content_score', true );
+        $details = get_post_meta( $post_id, '_swps_score_details', true );
+        $recs    = get_post_meta( $post_id, '_swps_score_recommendations', true );
+
+        if ( '' === $score ) {
+            return new WP_REST_Response( [
+                'success' => false,
+                'message' => 'No score found for this post.',
+            ], 404 );
+        }
+
+        return new WP_REST_Response( [
+            'success' => true,
+            'data'    => [
+                'overall_score'   => (int) $score,
+                'details'         => $details ?: [],
+                'recommendations' => $recs ?: [],
+            ],
+        ] );
+    }
+
+    /**
+     * POST /score/{id} - Score an existing post.
+     */
+    public function score_post( WP_REST_Request $request ): WP_REST_Response {
+        $post_id = $request->get_param( 'id' );
+        $post    = get_post( $post_id );
+
+        if ( ! $post ) {
+            return new WP_REST_Response( [
+                'success' => false,
+                'message' => 'Post not found.',
+            ], 404 );
+        }
+
+        // Build a minimal ai_result from the existing post.
+        $ai_result = [
+            'title'               => $post->post_title,
+            'content_html'        => $post->post_content,
+            'meta_description'    => get_post_meta( $post_id, '_yoast_wpseo_metadesc', true )
+                                  ?: get_post_meta( $post_id, 'rank_math_description', true )
+                                  ?: '',
+            'focus_keyword'       => get_post_meta( $post_id, '_swps_focus_keyword', true )
+                                  ?: get_post_meta( $post_id, '_yoast_wpseo_focuskw', true )
+                                  ?: get_post_meta( $post_id, 'rank_math_focus_keyword', true )
+                                  ?: '',
+            'secondary_keywords'  => get_post_meta( $post_id, '_swps_secondary_keywords', true ) ?: [],
+            'internal_links_used' => get_post_meta( $post_id, '_swps_internal_links', true ) ?: [],
+            'estimated_word_count' => str_word_count( wp_strip_all_tags( $post->post_content ) ),
+        ];
+
+        $scorer  = stratawp_seo()->content_scorer;
+        $results = $scorer->score( $post_id, $ai_result );
+
+        update_post_meta( $post_id, '_swps_content_score', $results['overall_score'] );
+        update_post_meta( $post_id, '_swps_score_details', $results['details'] );
+        update_post_meta( $post_id, '_swps_score_recommendations', $results['recommendations'] );
+
+        SWPS_Hooks::do_score_complete( $results, $post_id );
+
+        return new WP_REST_Response( [
+            'success' => true,
+            'data'    => $results,
+        ] );
+    }
+
+    /**
+     * GET /voice-profiles - List all voice profiles.
+     */
+    public function get_voice_profiles(): WP_REST_Response {
+        $profiles = stratawp_seo()->voice_profile->get_all();
+
+        return new WP_REST_Response( [
+            'success' => true,
+            'data'    => $profiles,
+            'count'   => count( $profiles ),
+        ] );
+    }
+
+    /**
+     * POST /voice-profiles - Create a voice profile.
+     */
+    public function create_voice_profile( WP_REST_Request $request ): WP_REST_Response {
+        $vp     = stratawp_seo()->voice_profile;
+        $result = $vp->create( $request->get_param( 'name' ), $request->get_params() );
+
+        if ( is_wp_error( $result ) ) {
+            return new WP_REST_Response( [
+                'success' => false,
+                'message' => $result->get_error_message(),
+            ], 500 );
+        }
+
+        return new WP_REST_Response( [
+            'success' => true,
+            'data'    => $vp->get( $result ),
+        ], 201 );
+    }
+
+    /**
+     * PUT /voice-profiles/{id} - Update a voice profile.
+     */
+    public function update_voice_profile( WP_REST_Request $request ): WP_REST_Response {
+        $vp     = stratawp_seo()->voice_profile;
+        $result = $vp->update( $request->get_param( 'id' ), $request->get_param( 'name' ), $request->get_params() );
+
+        if ( is_wp_error( $result ) ) {
+            return new WP_REST_Response( [
+                'success' => false,
+                'message' => $result->get_error_message(),
+            ], 500 );
+        }
+
+        return new WP_REST_Response( [
+            'success' => true,
+            'data'    => $vp->get( $result ),
+        ] );
+    }
+
+    /**
+     * DELETE /voice-profiles/{id} - Delete a voice profile.
+     */
+    public function delete_voice_profile( WP_REST_Request $request ): WP_REST_Response {
+        $vp      = stratawp_seo()->voice_profile;
+        $success = $vp->delete( $request->get_param( 'id' ) );
 
         return new WP_REST_Response( [
             'success' => $success,
