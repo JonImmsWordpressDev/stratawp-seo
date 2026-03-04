@@ -62,6 +62,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-rate-limiter.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-cost-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-topic-queue.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-content-scorer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-voice-profile.php';
 
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
@@ -103,6 +104,7 @@ final class StrataWP_SEO {
     public SWPS_Background_Processor $background_processor;
     public SWPS_REST_API $rest_api;
     public SWPS_Content_Scorer $content_scorer;
+    public SWPS_Voice_Profile $voice_profile;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -121,6 +123,7 @@ final class StrataWP_SEO {
         $this->cost_tracker       = new SWPS_Cost_Tracker();
         $this->topic_queue        = new SWPS_Topic_Queue();
         $this->content_scorer     = new SWPS_Content_Scorer();
+        $this->voice_profile      = new SWPS_Voice_Profile();
 
         // Initialize providers and core.
         $this->api       = SWPS_Provider_Factory::create_ai_provider();
@@ -168,6 +171,10 @@ final class StrataWP_SEO {
         // Content scoring on post creation.
         add_action( 'swps_post_created', [ $this, 'score_generated_post' ], 10, 3 );
 
+        // Voice profile AJAX.
+        add_action( 'wp_ajax_swps_save_voice_profile', [ $this, 'ajax_save_voice_profile' ] );
+        add_action( 'wp_ajax_swps_delete_voice_profile', [ $this, 'ajax_delete_voice_profile' ] );
+
         // Plugins page link.
         add_filter( 'plugin_action_links_' . SWPS_PLUGIN_BASENAME, [ $this, 'add_settings_link' ] );
 
@@ -204,7 +211,7 @@ final class StrataWP_SEO {
      * Enqueue admin CSS and JS on our pages only.
      */
     public function enqueue_admin_assets( string $hook ): void {
-        if ( ! str_contains( $hook, 'stratawp-seo' ) && ! str_contains( $hook, 'swps-generate' ) ) {
+        if ( ! str_contains( $hook, 'stratawp-seo' ) && ! str_contains( $hook, 'swps-generate' ) && ! str_contains( $hook, 'swps-voice-profiles' ) ) {
             return;
         }
 
@@ -474,6 +481,63 @@ final class StrataWP_SEO {
 
         SWPS_Hooks::do_score_complete( $results, $post_id );
     }
+
+    /**
+     * AJAX: Save (create or update) a voice profile.
+     */
+    public function ajax_save_voice_profile(): void {
+        check_ajax_referer( 'swps_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Insufficient permissions.' ] );
+        }
+
+        $profile_id = absint( $_POST['profile_id'] ?? 0 );
+        $name       = sanitize_text_field( $_POST['name'] ?? '' );
+
+        if ( empty( $name ) ) {
+            wp_send_json_error( [ 'message' => 'Profile name is required.' ] );
+        }
+
+        $meta = [
+            'tone'             => sanitize_text_field( $_POST['tone'] ?? 'professional' ),
+            'formality'        => absint( $_POST['formality'] ?? 5 ),
+            'sentence_length'  => sanitize_text_field( $_POST['sentence_length'] ?? 'varied' ),
+            'vocabulary_level' => sanitize_text_field( $_POST['vocabulary_level'] ?? 'moderate' ),
+            'person'           => sanitize_text_field( $_POST['person'] ?? 'second' ),
+            'example_content'  => sanitize_textarea_field( $_POST['example_content'] ?? '' ),
+            'avoid_phrases'    => sanitize_textarea_field( $_POST['avoid_phrases'] ?? '' ),
+            'preferred_phrases' => sanitize_textarea_field( $_POST['preferred_phrases'] ?? '' ),
+        ];
+
+        if ( $profile_id > 0 ) {
+            $result = $this->voice_profile->update( $profile_id, $name, $meta );
+        } else {
+            $result = $this->voice_profile->create( $name, $meta );
+        }
+
+        if ( is_wp_error( $result ) ) {
+            wp_send_json_error( [ 'message' => $result->get_error_message() ] );
+        }
+
+        wp_send_json_success( [ 'profile_id' => $result ] );
+    }
+
+    /**
+     * AJAX: Delete a voice profile.
+     */
+    public function ajax_delete_voice_profile(): void {
+        check_ajax_referer( 'swps_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Insufficient permissions.' ] );
+        }
+
+        $profile_id = absint( $_POST['profile_id'] ?? 0 );
+        $this->voice_profile->delete( $profile_id );
+
+        wp_send_json_success();
+    }
 }
 
 /**
@@ -521,6 +585,7 @@ function swps_activate(): void {
         'default_template'   => 'auto',
         'cost_tracking'      => 0,
         'min_content_score'  => 0,
+        'voice_profile'      => 0,
         'jon_ai_endpoint'    => '',
         'jon_ai_secret'      => '',
     ];

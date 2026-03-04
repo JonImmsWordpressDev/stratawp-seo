@@ -584,4 +584,33 @@
     // Initialize rate limit on page load.
     initRateLimit();
 
+    // Voice Profile form submission.
+    $('#swps-voice-profile-form').on('submit', function(e) {
+        e.preventDefault();
+        var $btn = $('#swps-save-profile').prop('disabled', true).text('Saving...');
+        $.post(swpsAdmin.ajax_url, $(this).serialize() + '&action=swps_save_voice_profile', function(res) {
+            if (res.success) {
+                window.location.href = swpsAdmin.ajax_url.replace('admin-ajax.php', 'admin.php?page=swps-voice-profiles&saved=1');
+            } else {
+                alert(res.data.message || 'Error saving profile.');
+                $btn.prop('disabled', false).text('Save Profile');
+            }
+        });
+    });
+
+    // Voice Profile delete.
+    $(document).on('click', '.swps-delete-profile', function(e) {
+        e.preventDefault();
+        if (!confirm('Delete this voice profile?')) return;
+        var id = $(this).data('id');
+        $.post(swpsAdmin.ajax_url, { action: 'swps_delete_voice_profile', nonce: swpsAdmin.nonce, profile_id: id }, function(res) {
+            if (res.success) location.reload();
+        });
+    });
+
+    // Formality range slider label.
+    $('#vp-formality').on('input', function() {
+        $('#vp-formality-label').text(this.value + '/10');
+    });
+
 })(jQuery);

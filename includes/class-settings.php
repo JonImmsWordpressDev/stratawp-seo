@@ -48,6 +48,15 @@ class SWPS_Settings {
             'swps-generate',
             [ $this, 'render_generate_page' ]
         );
+
+        add_submenu_page(
+            'stratawp-seo',
+            __( 'Voice Profiles', 'stratawp-seo' ),
+            __( 'Voice Profiles', 'stratawp-seo' ),
+            'manage_options',
+            'swps-voice-profiles',
+            [ $this, 'render_voice_profiles_page' ]
+        );
     }
 
     /**
@@ -144,6 +153,11 @@ class SWPS_Settings {
                 'formal'          => __( 'Formal & Academic', 'stratawp-seo' ),
                 'witty'           => __( 'Witty & Entertaining', 'stratawp-seo' ),
             ],
+        ] );
+
+        $this->add_field( 'voice_profile', __( 'Voice Profile', 'stratawp-seo' ), 'select', 'swps_writing_section', [
+            'options'     => stratawp_seo()->voice_profile->get_options(),
+            'description' => __( 'Select a voice profile to override tone/style settings. <a href="' . admin_url( 'admin.php?page=swps-voice-profiles' ) . '">Manage profiles</a>', 'stratawp-seo' ),
         ] );
 
         $this->add_field( 'writing_style', __( 'Custom Style Notes', 'stratawp-seo' ), 'textarea', 'swps_writing_section', [
@@ -567,6 +581,23 @@ class SWPS_Settings {
                 esc_html__( 'StrataWP SEO:', 'stratawp-seo' ),
                 esc_html__( 'Enter your site niche and description for better content generation.', 'stratawp-seo' )
             );
+        }
+    }
+
+    /**
+     * Render the voice profiles page (list or edit).
+     */
+    public function render_voice_profiles_page(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        $action = sanitize_text_field( $_GET['action'] ?? 'list' );
+
+        if ( in_array( $action, [ 'new', 'edit' ], true ) ) {
+            include SWPS_PLUGIN_DIR . 'templates/voice-profile-edit.php';
+        } else {
+            include SWPS_PLUGIN_DIR . 'templates/voice-profiles-page.php';
         }
     }
 }
