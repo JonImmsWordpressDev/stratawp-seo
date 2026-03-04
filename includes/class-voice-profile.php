@@ -80,6 +80,11 @@ class SWPS_Voice_Profile {
      * @return int|WP_Error Post ID or error.
      */
     public function update( int $profile_id, string $name, array $meta ): int|WP_Error {
+        $post = get_post( $profile_id );
+        if ( ! $post || self::POST_TYPE !== $post->post_type ) {
+            return new WP_Error( 'invalid_profile', __( 'Voice profile not found.', 'stratawp-seo' ) );
+        }
+
         $result = wp_update_post( [
             'ID'         => $profile_id,
             'post_title' => sanitize_text_field( $name ),
@@ -100,6 +105,11 @@ class SWPS_Voice_Profile {
      * @return bool
      */
     public function delete( int $profile_id ): bool {
+        $post = get_post( $profile_id );
+        if ( ! $post || self::POST_TYPE !== $post->post_type ) {
+            return false;
+        }
+
         // If this was the active profile, clear the option.
         if ( (int) get_option( 'swps_voice_profile', 0 ) === $profile_id ) {
             update_option( 'swps_voice_profile', 0 );
@@ -159,10 +169,15 @@ class SWPS_Voice_Profile {
             return '';
         }
 
+        // Strip newlines/control chars to prevent prompt injection.
+        $clean = static function ( string $s ): string {
+            return wp_strip_all_tags( preg_replace( '/[\r\n\t]+/', ' ', $s ) );
+        };
+
         $parts = [];
 
         if ( ! empty( $profile['tone'] ) ) {
-            $parts[] = sprintf( 'Write in a %s tone.', $profile['tone'] );
+            $parts[] = sprintf( 'Write in a %s tone.', $clean( $profile['tone'] ) );
         }
 
         if ( ! empty( $profile['formality'] ) ) {
@@ -170,11 +185,11 @@ class SWPS_Voice_Profile {
         }
 
         if ( ! empty( $profile['sentence_length'] ) ) {
-            $parts[] = sprintf( 'Use %s sentences.', $profile['sentence_length'] );
+            $parts[] = sprintf( 'Use %s sentences.', $clean( $profile['sentence_length'] ) );
         }
 
         if ( ! empty( $profile['vocabulary_level'] ) ) {
-            $parts[] = sprintf( 'Vocabulary: %s.', $profile['vocabulary_level'] );
+            $parts[] = sprintf( 'Vocabulary: %s.', $clean( $profile['vocabulary_level'] ) );
         }
 
         if ( ! empty( $profile['person'] ) ) {
@@ -182,25 +197,27 @@ class SWPS_Voice_Profile {
                 'first'  => 'first person (I/we)',
                 'second' => 'second person (you)',
                 'third'  => 'third person (they/one)',
-                default  => $profile['person'] . ' person',
+                default  => $clean( $profile['person'] ) . ' person',
             };
             $parts[] = sprintf( 'Write in %s.', $label );
         }
 
         if ( ! empty( $profile['avoid_phrases'] ) ) {
-            $parts[] = sprintf( 'Never use these phrases: %s.', implode( ', ', $profile['avoid_phrases'] ) );
+            $sanitized = array_map( $clean, (array) $profile['avoid_phrases'] );
+            $parts[] = sprintf( 'Never use these phrases: %s.', implode( ', ', $sanitized ) );
         }
 
         if ( ! empty( $profile['preferred_phrases'] ) ) {
-            $parts[] = sprintf( 'Prefer these expressions: %s.', implode( ', ', $profile['preferred_phrases'] ) );
+            $sanitized = array_map( $clean, (array) $profile['preferred_phrases'] );
+            $parts[] = sprintf( 'Prefer these expressions: %s.', implode( ', ', $sanitized ) );
         }
 
         if ( ! empty( $profile['example_content'] ) ) {
-            $excerpt = mb_substr( $profile['example_content'], 0, 500 );
+            $excerpt = $clean( mb_substr( $profile['example_content'], 0, 500 ) );
             $parts[] = sprintf( "Match the writing style of this sample:\n\"%s\"", $excerpt );
         }
 
-        $compiled = "VOICE PROFILE — {$profile['name']}:\n" . implode( "\n", $parts );
+        $compiled = "VOICE PROFILE — {$clean( $profile['name'] )}:\n" . implode( "\n", $parts );
 
         return apply_filters( 'swps_voice_compile', $compiled, $profile_id );
     }
@@ -227,7 +244,22 @@ class SWPS_Voice_Profile {
         }
 
         // Replace the generic TONE line with the compiled voice profile.
-        $prompt = preg_replace( '/^TONE:.*$/m', $voice_block, $prompt, 1 );
+        // Use callback to avoid backreference interpretation in replacement.
+        $replaced = false;
+        $prompt   = preg_replace_callback(
+            '/^TONE:.*$/m',
+            function () use ( $voice_block, &$replaced ) {
+                $replaced = true;
+                return $voice_block;
+            },
+            $prompt,
+            1
+        );
+
+        // Append if no TONE line was found.
+        if ( ! $replaced ) {
+            $prompt .= "\n\n" . $voice_block;
+        }
 
         return $prompt;
     }
@@ -291,7 +323,7 @@ class SWPS_Voice_Profile {
             'id'               => $post->ID,
             'name'             => $post->post_title,
             'tone'             => get_post_meta( $post->ID, '_swps_vp_tone', true ) ?: '',
-            'formality'        => (int) get_post_meta( $post->ID, '_swps_vp_formality', true ) ?: 5,
+            'formality'        => ( '' !== ( $f = get_post_meta( $post->ID, '_swps_vp_formality', true ) ) ) ? (int) $f : 5,
             'sentence_length'  => get_post_meta( $post->ID, '_swps_vp_sentence_length', true ) ?: 'varied',
             'vocabulary_level' => get_post_meta( $post->ID, '_swps_vp_vocabulary_level', true ) ?: 'moderate',
             'person'           => get_post_meta( $post->ID, '_swps_vp_person', true ) ?: 'second',
