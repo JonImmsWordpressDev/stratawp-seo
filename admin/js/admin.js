@@ -587,13 +587,15 @@
     // Voice Profile form submission.
     $('#swps-voice-profile-form').on('submit', function(e) {
         e.preventDefault();
-        var $btn = $('#swps-save-profile').prop('disabled', true).text('Saving...');
+        var $btn = $('#swps-save-profile');
+        var originalText = $btn.text();
+        $btn.prop('disabled', true).text('Saving...');
         $.post(swpsAdmin.ajax_url, $(this).serialize() + '&action=swps_save_voice_profile', function(res) {
             if (res.success) {
                 window.location.href = swpsAdmin.ajax_url.replace('admin-ajax.php', 'admin.php?page=swps-voice-profiles&saved=1');
             } else {
                 alert(res.data.message || 'Error saving profile.');
-                $btn.prop('disabled', false).text('Save Profile');
+                $btn.prop('disabled', false).text(originalText);
             }
         });
     });
