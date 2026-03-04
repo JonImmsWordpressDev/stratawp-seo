@@ -735,7 +735,7 @@
             url: swpsAdmin.ajax_url,
             type: 'POST',
             data: {
-                action: 'swps_run_audit',
+                action: 'swps_get_audit_results',
                 nonce: swpsAdmin.nonce,
             },
             success: function(response) {

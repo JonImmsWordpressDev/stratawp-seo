@@ -46,7 +46,7 @@ $score_class = $overall >= 80 ? 'excellent' : ( $overall >= 50 ? 'good' : 'poor'
 					<?php
 					printf(
 						esc_html__( 'Last audited: %s', 'stratawp-seo' ),
-						esc_html( human_time_diff( strtotime( $last_run ), current_time( 'timestamp' ) ) . ' ago' )
+						esc_html( human_time_diff( strtotime( $last_run ), time() ) . ' ago' )
 					);
 					?>
 				</span>

@@ -35,6 +35,20 @@ class SWPS_SEO_Audit {
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_default_modules' ], 20 );
 		add_action( self::CRON_HOOK, [ $this, 'run_all' ] );
+		add_filter( 'cron_schedules', [ $this, 'register_custom_schedules' ] );
+	}
+
+	/**
+	 * Register custom cron schedules needed by the audit.
+	 */
+	public function register_custom_schedules( array $schedules ): array {
+		if ( ! isset( $schedules['swps_monthly'] ) ) {
+			$schedules['swps_monthly'] = [
+				'interval' => 30 * DAY_IN_SECONDS,
+				'display'  => __( 'Monthly', 'stratawp-seo' ),
+			];
+		}
+		return $schedules;
 	}
 
 	/**

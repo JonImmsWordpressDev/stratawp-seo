@@ -205,6 +205,7 @@ final class StrataWP_SEO {
 
         // SEO Audit AJAX handlers.
         add_action( 'wp_ajax_swps_run_audit', [ $this, 'ajax_run_audit' ] );
+        add_action( 'wp_ajax_swps_get_audit_results', [ $this, 'ajax_get_audit_results' ] );
         add_action( 'wp_ajax_swps_fix_module', [ $this, 'ajax_fix_module' ] );
         add_action( 'wp_ajax_swps_fix_all', [ $this, 'ajax_fix_all' ] );
 
@@ -247,6 +248,12 @@ final class StrataWP_SEO {
      * Enqueue admin CSS and JS on our pages only.
      */
     public function enqueue_admin_assets( string $hook ): void {
+        // Load only CSS on the Dashboard (for the audit widget).
+        if ( 'index.php' === $hook ) {
+            wp_enqueue_style( 'swps-admin', SWPS_PLUGIN_URL . 'admin/css/admin.css', [], SWPS_VERSION );
+            return;
+        }
+
         if ( ! str_contains( $hook, 'stratawp-seo' ) && ! str_contains( $hook, 'swps-generate' ) && ! str_contains( $hook, 'swps-voice-profiles' ) && ! str_contains( $hook, 'swps-seo-audit' ) ) {
             return;
         }
@@ -661,7 +668,7 @@ final class StrataWP_SEO {
             printf(
                 '<p class="description">%s %s</p>',
                 esc_html__( 'Last audited:', 'stratawp-seo' ),
-                esc_html( human_time_diff( strtotime( $last_run ), current_time( 'timestamp' ) ) . ' ago' )
+                esc_html( human_time_diff( strtotime( $last_run ), time() ) . ' ago' )
             );
         }
     }
@@ -679,6 +686,19 @@ final class StrataWP_SEO {
         $results = $this->seo_audit->run_all();
 
         wp_send_json_success( $results );
+    }
+
+    /**
+     * AJAX: Get cached audit results without re-running.
+     */
+    public function ajax_get_audit_results(): void {
+        check_ajax_referer( 'swps_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Insufficient permissions.' ] );
+        }
+
+        wp_send_json_success( $this->seo_audit->get_cached_results() );
     }
 
     /**

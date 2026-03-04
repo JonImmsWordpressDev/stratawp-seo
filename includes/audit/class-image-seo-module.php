@@ -49,7 +49,7 @@ class SWPS_Image_SEO_Module extends SWPS_Audit_Module {
 		foreach ( $attachments as $attachment ) {
 			$alt = get_post_meta( $attachment->ID, '_wp_attachment_image_alt', true );
 
-			if ( empty( trim( $alt ) ) ) {
+			if ( '' === trim( (string) $alt ) ) {
 				$missing_alt++;
 				$fixable_ids[] = $attachment->ID;
 
@@ -81,7 +81,7 @@ class SWPS_Image_SEO_Module extends SWPS_Audit_Module {
 
 		$total   = count( $attachments );
 		$failing = $missing_alt + $bad_filenames;
-		$score   = $total > 0 ? (int) round( ( ( $total - $failing ) / $total ) * 100 ) : 100;
+		$score   = $total > 0 ? max( 0, (int) round( ( ( $total - $failing ) / $total ) * 100 ) ) : 100;
 
 		return [
 			'score'   => $score,

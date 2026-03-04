@@ -33,7 +33,10 @@ class SWPS_Robots_Module extends SWPS_Audit_Module {
 		$has_physical = file_exists( ABSPATH . 'robots.txt' );
 
 		if ( $has_physical ) {
-			$content = file_get_contents( ABSPATH . 'robots.txt' );
+			$content = file_get_contents( ABSPATH . 'robots.txt' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			if ( false === $content ) {
+				$content = '';
+			}
 
 			// Check for blocking /wp-content/.
 			if ( false !== stripos( $content, 'disallow: /wp-content/' ) ) {
