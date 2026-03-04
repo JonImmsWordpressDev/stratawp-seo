@@ -616,8 +616,9 @@ function swps_activate(): void {
         }
     }
 
-    // Register CPT for flush_rewrite_rules.
+    // Register CPTs for flush_rewrite_rules.
     SWPS_Topic_Queue::register_post_type();
+    SWPS_Voice_Profile::register_post_type();
     flush_rewrite_rules();
 
     if ( get_option( 'swps_cron_enabled' ) ) {

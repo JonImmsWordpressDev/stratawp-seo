@@ -307,7 +307,8 @@ class SWPS_Voice_Profile {
                 // Sanitize array elements.
                 $value = array_filter( array_map( 'sanitize_text_field', $value ) );
             } elseif ( is_string( $value ) ) {
-                // Parse comma-separated string into array.
+                // Normalize newlines to commas, then parse comma-separated string into array.
+                $value = str_replace( [ "\r\n", "\r", "\n" ], ',', $value );
                 $value = array_filter( array_map( 'trim', explode( ',', $value ) ) );
             }
 

@@ -138,11 +138,12 @@ class SWPS_Hooks {
      * Apply the score weights filter.
      *
      * @param array  $weights   Analyzer weight map.
+     * @param int    $post_id   The post being scored.
      * @param string $post_type The post type being scored.
      * @return array Filtered weights.
      */
-    public static function filter_score_weights( array $weights, string $post_type ): array {
-        return apply_filters( 'swps_score_weights', $weights, $post_type );
+    public static function filter_score_weights( array $weights, int $post_id, string $post_type ): array {
+        return apply_filters( 'swps_score_weights', $weights, $post_id, $post_type );
     }
 
     /**

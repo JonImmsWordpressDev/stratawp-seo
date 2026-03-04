@@ -334,10 +334,10 @@ class SWPS_REST_API {
         $post_id = $request->get_param( 'id' );
         $post    = get_post( $post_id );
 
-        if ( ! $post ) {
+        if ( ! $post || 'post' !== $post->post_type ) {
             return new WP_REST_Response( [
                 'success' => false,
-                'message' => 'Post not found.',
+                'message' => 'Post not found or not a blog post.',
             ], 404 );
         }
 

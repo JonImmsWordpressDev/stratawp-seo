@@ -501,6 +501,10 @@
         });
     });
 
+    function escHtml(str) {
+        return $('<span>').text(str || '').html();
+    }
+
     function showBulkResults(data) {
         var html = '<h2><span class="dashicons dashicons-yes-alt" style="color: #00a32a;"></span> Bulk Generation Complete</h2>';
         html += '<p><strong>' + data.completed + '</strong> of <strong>' + data.total + '</strong> posts generated successfully.</p>';
@@ -512,11 +516,11 @@
             data.results.forEach(function(r) {
                 html += '<tr>';
                 if (r.success) {
-                    html += '<td>' + r.data.title + '</td>';
+                    html += '<td>' + escHtml(r.data.title) + '</td>';
                     html += '<td><span style="color:#00a32a;">Created</span></td>';
-                    html += '<td><a href="' + r.data.edit_url + '" target="_blank" class="button button-small">Edit</a></td>';
+                    html += '<td><a href="' + escHtml(r.data.edit_url) + '" target="_blank" class="button button-small">Edit</a></td>';
                 } else {
-                    html += '<td colspan="2"><span style="color:#d63638;">Failed: ' + r.message + '</span></td>';
+                    html += '<td colspan="2"><span style="color:#d63638;">Failed: ' + escHtml(r.message) + '</span></td>';
                     html += '<td></td>';
                 }
                 html += '</tr>';

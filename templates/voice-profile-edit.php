@@ -80,14 +80,14 @@ if ( ! $is_new && ! $profile ) {
             <tr>
                 <th><label for="vp-avoid"><?php esc_html_e( 'Avoid Phrases', 'stratawp-seo' ); ?></label></th>
                 <td>
-                    <textarea id="vp-avoid" name="avoid_phrases" class="large-text" rows="2" placeholder="<?php esc_attr_e( 'game-changer, leverage, synergy, cutting-edge', 'stratawp-seo' ); ?>"><?php echo esc_attr( implode( ', ', $profile['avoid_phrases'] ?? [] ) ); ?></textarea>
+                    <textarea id="vp-avoid" name="avoid_phrases" class="large-text" rows="2" placeholder="<?php esc_attr_e( 'game-changer, leverage, synergy, cutting-edge', 'stratawp-seo' ); ?>"><?php echo esc_textarea( implode( ', ', $profile['avoid_phrases'] ?? [] ) ); ?></textarea>
                     <p class="description"><?php esc_html_e( 'Comma-separated list of phrases the AI should never use.', 'stratawp-seo' ); ?></p>
                 </td>
             </tr>
             <tr>
                 <th><label for="vp-prefer"><?php esc_html_e( 'Preferred Phrases', 'stratawp-seo' ); ?></label></th>
                 <td>
-                    <textarea id="vp-prefer" name="preferred_phrases" class="large-text" rows="2" placeholder="<?php esc_attr_e( 'practical, straightforward, hands-on', 'stratawp-seo' ); ?>"><?php echo esc_attr( implode( ', ', $profile['preferred_phrases'] ?? [] ) ); ?></textarea>
+                    <textarea id="vp-prefer" name="preferred_phrases" class="large-text" rows="2" placeholder="<?php esc_attr_e( 'practical, straightforward, hands-on', 'stratawp-seo' ); ?>"><?php echo esc_textarea( implode( ', ', $profile['preferred_phrases'] ?? [] ) ); ?></textarea>
                     <p class="description"><?php esc_html_e( 'Comma-separated list of preferred expressions.', 'stratawp-seo' ); ?></p>
                 </td>
             </tr>
