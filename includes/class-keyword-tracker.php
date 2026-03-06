@@ -103,18 +103,14 @@ class SWPS_Keyword_Tracker {
 
 		$data = [
 			'keyword'     => $keyword,
+			'post_id'     => $post_id ?: null,
 			'position'    => null,
 			'clicks'      => 0,
 			'impressions' => 0,
 			'ctr'         => 0,
 			'date'        => gmdate( 'Y-m-d' ),
 		];
-		$formats = [ '%s', '%f', '%d', '%d', '%f', '%s' ];
-
-		if ( $post_id ) {
-			$data['post_id'] = $post_id;
-			$formats[]       = '%d';
-		}
+		$formats = [ '%s', '%d', '%f', '%d', '%d', '%f', '%s' ];
 
 		return (bool) $wpdb->insert( $wpdb->prefix . self::TABLE, $data, $formats );
 	}
@@ -325,7 +321,7 @@ class SWPS_Keyword_Tracker {
 		if ( preg_match( '/\[.*\]/s', $text, $json_match ) ) {
 			$suggestions = json_decode( $json_match[0], true );
 			if ( is_array( $suggestions ) ) {
-				return apply_filters( 'swps_keyword_suggestions', $suggestions, $seed_topic );
+				return SWPS_Hooks::filter_keyword_suggestions( $suggestions, $seed_topic );
 			}
 		}
 

@@ -37,6 +37,11 @@ class SWPS_Meta_Editor {
             add_filter( 'document_title_parts', [ $this, 'filter_title_parts' ], 20 );
         }
 
+        // Auto-generate meta on publish if setting is enabled.
+        if ( get_option( 'swps_meta_auto_generate', 0 ) ) {
+            add_action( 'transition_post_status', [ $this, 'maybe_auto_generate' ], 10, 3 );
+        }
+
         // Admin notice if conflict detected.
         if ( $this->conflict ) {
             add_action( 'admin_notices', [ $this, 'conflict_notice' ] );
@@ -117,7 +122,7 @@ class SWPS_Meta_Editor {
             '_swps_focus_keyword'       => 'sanitize_text_field',
             '_swps_secondary_keywords'  => 'sanitize_text_field',
             '_swps_canonical_url'       => 'esc_url_raw',
-            '_swps_robots'              => 'sanitize_text_field',
+            '_swps_robots'              => [ $this, 'sanitize_robots' ],
             '_swps_breadcrumb_title'    => 'sanitize_text_field',
             '_swps_social_title'        => 'sanitize_text_field',
             '_swps_social_description'  => 'sanitize_textarea_field',
@@ -154,7 +159,7 @@ class SWPS_Meta_Editor {
         $robots     = get_post_meta( $post_id, '_swps_robots', true );
 
         // Meta description.
-        $meta_desc = apply_filters( 'swps_meta_description', $meta_desc, $post_id );
+        $meta_desc = SWPS_Hooks::filter_meta_description( $meta_desc, $post_id );
         if ( ! empty( $meta_desc ) ) {
             printf( '<meta name="description" content="%s" />' . "\n", esc_attr( $meta_desc ) );
         }
@@ -167,7 +172,7 @@ class SWPS_Meta_Editor {
         }
 
         // Robots.
-        $robots = apply_filters( 'swps_meta_robots', $robots, $post_id );
+        $robots = SWPS_Hooks::filter_meta_robots( $robots, $post_id );
         if ( ! empty( $robots ) && 'index, follow' !== $robots ) {
             printf( '<meta name="robots" content="%s" />' . "\n", esc_attr( $robots ) );
         }
@@ -188,7 +193,7 @@ class SWPS_Meta_Editor {
         }
 
         $custom = get_post_meta( get_the_ID(), '_swps_meta_title', true );
-        $custom = apply_filters( 'swps_meta_title', $custom, get_the_ID() );
+        $custom = SWPS_Hooks::filter_meta_title( $custom, get_the_ID() );
 
         return ! empty( $custom ) ? $custom : $title;
     }
@@ -202,7 +207,7 @@ class SWPS_Meta_Editor {
         }
 
         $custom = get_post_meta( get_the_ID(), '_swps_meta_title', true );
-        $custom = apply_filters( 'swps_meta_title', $custom, get_the_ID() );
+        $custom = SWPS_Hooks::filter_meta_title( $custom, get_the_ID() );
 
         if ( ! empty( $custom ) ) {
             $parts['title'] = $custom;
@@ -284,6 +289,75 @@ class SWPS_Meta_Editor {
         echo '<div class="notice notice-info"><p>';
         esc_html_e( 'StrataWP SEO: Meta tag output is disabled because another SEO plugin (Yoast, RankMath, or AIOSEO) is active. The meta editor fields are still saved for reference.', 'stratawp-seo' );
         echo '</p></div>';
+    }
+
+    /**
+     * Sanitize robots meta value against allowed options.
+     */
+    public function sanitize_robots( string $value ): string {
+        $allowed = [ '', 'noindex, follow', 'index, nofollow', 'noindex, nofollow' ];
+        return in_array( $value, $allowed, true ) ? $value : '';
+    }
+
+    /**
+     * Auto-generate meta title/description when a post transitions to publish.
+     */
+    public function maybe_auto_generate( string $new_status, string $old_status, WP_Post $post ): void {
+        if ( 'publish' !== $new_status || 'publish' === $old_status ) {
+            return;
+        }
+
+        if ( ! in_array( $post->post_type, $this->get_enabled_post_types(), true ) ) {
+            return;
+        }
+
+        // Only generate if both fields are empty.
+        $existing_title = get_post_meta( $post->ID, '_swps_meta_title', true );
+        $existing_desc  = get_post_meta( $post->ID, '_swps_meta_description', true );
+        if ( ! empty( $existing_title ) || ! empty( $existing_desc ) ) {
+            return;
+        }
+
+        $content = wp_strip_all_tags( $post->post_content );
+        $content = mb_substr( $content, 0, 2000 );
+
+        $focus_keyword = get_post_meta( $post->ID, '_swps_focus_keyword', true );
+
+        $prompt = sprintf(
+            "Generate an SEO-optimized meta title (50-60 chars) and meta description (140-160 chars) for this blog post.\n\n"
+            . "Post title: %s\n"
+            . "Focus keyword: %s\n"
+            . "Content excerpt: %s\n\n"
+            . "Requirements:\n"
+            . "- Include the focus keyword naturally in both title and description\n"
+            . "- Meta title: compelling, under 60 characters\n"
+            . "- Meta description: actionable, includes a call to read, under 160 characters\n\n"
+            . "Return JSON only: {\"meta_title\":\"...\",\"meta_description\":\"...\"}",
+            $post->post_title,
+            $focus_keyword ?: '(none specified)',
+            $content
+        );
+
+        $api      = SWPS_Provider_Factory::create_ai_provider();
+        $response = $api->generate( $prompt, 'You are an SEO copywriting expert. Return only valid JSON.' );
+
+        if ( is_wp_error( $response ) ) {
+            return;
+        }
+
+        $text = $response['content'] ?? '';
+        $json_match = [];
+        if ( preg_match( '/\{.*\}/s', $text, $json_match ) ) {
+            $result = json_decode( $json_match[0], true );
+            if ( is_array( $result ) ) {
+                if ( ! empty( $result['meta_title'] ) ) {
+                    update_post_meta( $post->ID, '_swps_meta_title', sanitize_text_field( $result['meta_title'] ) );
+                }
+                if ( ! empty( $result['meta_description'] ) ) {
+                    update_post_meta( $post->ID, '_swps_meta_description', sanitize_textarea_field( $result['meta_description'] ) );
+                }
+            }
+        }
     }
 
     /**

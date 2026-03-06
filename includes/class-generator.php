@@ -403,7 +403,9 @@ PROMPT;
             $meta_title = mb_substr( $ai_result['title'], 0, 60 );
         }
         update_post_meta( $post_id, '_swps_meta_title', $meta_title );
-        update_post_meta( $post_id, '_swps_secondary_keywords', $ai_result['secondary_keywords'] ?? [] );
+        $secondary = $ai_result['secondary_keywords'] ?? [];
+        $secondary_str = is_array( $secondary ) ? implode( ', ', array_map( 'sanitize_text_field', $secondary ) ) : sanitize_text_field( $secondary );
+        update_post_meta( $post_id, '_swps_secondary_keywords', $secondary_str );
         update_post_meta( $post_id, '_swps_internal_links', $ai_result['internal_links_used'] ?? [] );
         update_post_meta( $post_id, '_swps_external_links', $ai_result['external_links'] ?? [] );
         update_post_meta( $post_id, '_swps_template', $template );

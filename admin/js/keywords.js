@@ -23,7 +23,7 @@
 
             res.data.forEach(function (kw) {
                 var postLink = kw.post_title
-                    ? '<a href="' + kw.post_url + '">' + escHtml(kw.post_title) + '</a>'
+                    ? '<a href="' + escAttr(kw.post_url) + '">' + escHtml(kw.post_title) + '</a>'
                     : '<em>None</em>';
                 var pos = kw.position !== null ? parseFloat(kw.position).toFixed(1) : '—';
                 var row = '<tr>';
