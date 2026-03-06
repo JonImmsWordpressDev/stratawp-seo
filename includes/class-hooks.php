@@ -252,4 +252,37 @@ class SWPS_Hooks {
     public static function do_audit_complete( array $results, int $overall ): void {
         do_action( 'swps_audit_complete', $results, $overall );
     }
+
+    /**
+     * Apply the analytics tracking data filter.
+     *
+     * @param array $data    Tracking data array.
+     * @param int   $post_id Post ID.
+     * @return array Filtered data. Return empty array to block.
+     */
+    public static function filter_analytics_track( array $data, int $post_id ): array {
+        return apply_filters( 'swps_analytics_track', $data, $post_id );
+    }
+
+    /**
+     * Apply the analytics exclude filter.
+     *
+     * @param bool $exclude Whether to exclude this page.
+     * @param int  $post_id Post ID.
+     * @return bool
+     */
+    public static function filter_analytics_exclude( bool $exclude, int $post_id ): bool {
+        return apply_filters( 'swps_analytics_exclude', $exclude, $post_id );
+    }
+
+    /**
+     * Apply the GSC data filter.
+     *
+     * @param array  $data     GSC response data.
+     * @param string $property GSC property URL.
+     * @return array Filtered data.
+     */
+    public static function filter_gsc_data( array $data, string $property ): array {
+        return apply_filters( 'swps_gsc_data', $data, $property );
+    }
 }

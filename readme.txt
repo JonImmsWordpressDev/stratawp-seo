@@ -1,14 +1,14 @@
 === StrataWP SEO ===
 Contributors: jonimms
-Tags: seo, ai, content generator, structured data, schema
+Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 2.1.0
+Stable tag: 2.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, structured data, and technical SEO.
+AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, structured data, analytics, and technical SEO.
 
 == Description ==
 
@@ -55,6 +55,17 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 * **WebSite schema** — with optional SearchAction for Google sitelinks searchbox
 * **Organization/Person schema** — configurable entity type with logo and social profiles
 * **Conflict detection** — auto-disables when Yoast SEO, RankMath, or All in One SEO is active
+
+= Analytics & Search Console =
+
+* **On-site analytics** — cookie-free, GDPR-friendly page view tracking (no external services)
+* **Time on page & scroll depth** — understand how visitors engage with your content
+* **Bounce rate detection** — identify pages losing visitors within 10 seconds
+* **Google Search Console** — OAuth integration for clicks, impressions, CTR, and search position data
+* **Unified dashboard** — site-wide overview with charts, metric cards, and date range filtering
+* **Per-post analytics** — metabox on every post editor with views, time, scroll depth, and top queries
+* **Views column** — sortable "Views (30d)" column in the posts list table
+* **Configurable retention** — keep data for 30, 90, 180, or 365 days
 
 = Developer Features =
 
@@ -103,14 +114,33 @@ The plugin itself is free/included. You pay only for AI API usage. A typical 1,5
 
 Yes. Use the `swps_audit_modules` filter to register your own audit module. Your module should extend the `SWPS_Audit_Module` abstract class.
 
+= Is the on-site analytics GDPR compliant? =
+
+Yes. The built-in analytics tracker is cookie-free and does not use any external tracking services. No personal data is stored. No consent banner is required.
+
+= Do I need Google Search Console credentials? =
+
+No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
+
 == Screenshots ==
 
 1. Settings page — configure AI provider, site details, and writing preferences
 2. Generate Content — create posts on demand with topic and template selection
 3. SEO Audit — 8-module technical audit with scores and one-click fixes
 4. Schema JSON-LD — automatic structured data output in page source
+5. Analytics Dashboard — page views, time on page, scroll depth, bounce rate, and GSC data
+6. Post Analytics — per-post metabox with views, engagement metrics, and top search queries
 
 == Changelog ==
+
+= 2.2.0 =
+* Added on-site analytics tracking (page views, time on page, scroll depth, bounce rate)
+* Added Google Search Console OAuth integration (clicks, impressions, CTR, position)
+* Added unified analytics dashboard with charts, metric cards, and date range filtering
+* Added per-post analytics metabox on the post editor
+* Added sortable "Views (30d)" column on the posts list table
+* Added configurable data retention (30/90/180/365 days) with automatic pruning
+* Added 3 new developer hooks for analytics extensibility
 
 = 2.1.0 =
 * Added Schema / Structured Data (Article, Breadcrumb, WebSite, Organization/Person JSON-LD)
@@ -147,6 +177,9 @@ Yes. Use the `swps_audit_modules` filter to register your own audit module. Your
 * Scheduled publishing
 
 == Upgrade Notice ==
+
+= 2.2.0 =
+Adds on-site analytics tracking and Google Search Console integration with a unified dashboard. Cookie-free, GDPR-friendly. No breaking changes.
 
 = 2.1.0 =
 Adds automatic JSON-LD structured data for Article, Breadcrumb, WebSite, and Organization/Person schema types. No breaking changes.

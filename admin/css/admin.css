@@ -530,3 +530,125 @@
         text-align: center;
     }
 }
+
+/* ===================== Analytics Dashboard ===================== */
+
+.swps-analytics-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 16px 0;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.swps-date-range {
+    display: flex;
+    gap: 4px;
+}
+
+.swps-range-btn.active {
+    background: #2271b1;
+    color: #fff;
+    border-color: #2271b1;
+}
+
+.swps-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.swps-gsc-status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+}
+
+.swps-gsc-connected {
+    color: #00a32a;
+}
+
+.swps-metric-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.swps-metric-card {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.swps-metric-label {
+    font-size: 12px;
+    color: #646970;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.swps-metric-value {
+    font-size: 28px;
+    font-weight: 600;
+    color: #1d2327;
+    line-height: 1.2;
+}
+
+.swps-metric-change {
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.swps-change-up {
+    color: #00a32a;
+}
+
+.swps-change-down {
+    color: #d63638;
+}
+
+.swps-chart-container {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 16px;
+    margin-bottom: 24px;
+}
+
+.swps-chart {
+    width: 100%;
+    min-height: 250px;
+}
+
+.swps-analytics-section {
+    margin-bottom: 24px;
+}
+
+.swps-loading {
+    color: #646970;
+    text-align: center;
+    padding: 16px;
+}
+
+/* Analytics metabox */
+.swps-metabox-stats {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.swps-metabox-stats td {
+    padding: 4px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 13px;
+}
+
+.swps-metabox-stats td:last-child {
+    text-align: right;
+}

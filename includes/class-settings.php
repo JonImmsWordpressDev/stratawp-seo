@@ -351,13 +351,43 @@ class SWPS_Settings {
 
         $this->add_field( 'schema_logo', __( 'Logo URL', 'stratawp-seo' ), 'text', 'swps_schema_section', [
             'placeholder' => 'https://example.com/logo.png',
-            'description' => __( 'Full URL to your logo image (minimum 112×112px). Used for Organization schema and Article publisher.', 'stratawp-seo' ),
+            'description' => __( 'Full URL to your logo image (minimum 112x112px). Used for Organization schema and Article publisher.', 'stratawp-seo' ),
         ] );
 
         $this->add_field( 'schema_social_profiles', __( 'Social Profiles', 'stratawp-seo' ), 'textarea', 'swps_schema_section', [
             'rows'        => 4,
             'placeholder' => "https://facebook.com/yourpage\nhttps://twitter.com/yourhandle\nhttps://linkedin.com/company/yourcompany",
             'description' => __( 'One social profile URL per line. Populates the sameAs property.', 'stratawp-seo' ),
+        ] );
+
+        // --- Analytics Section ---
+        add_settings_section( 'swps_analytics_section', __( 'Analytics', 'stratawp-seo' ), [ $this, 'render_analytics_section' ], 'stratawp-seo' );
+
+        $this->add_field( 'analytics_enabled', __( 'Enable On-Site Tracking', 'stratawp-seo' ), 'checkbox', 'swps_analytics_section', [
+            'label' => __( 'Track page views, time on page, scroll depth, and bounce rate (cookie-free, GDPR-friendly)', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'analytics_retention', __( 'Data Retention', 'stratawp-seo' ), 'select', 'swps_analytics_section', [
+            'options' => [
+                '30'  => __( '30 days', 'stratawp-seo' ),
+                '90'  => __( '90 days', 'stratawp-seo' ),
+                '180' => __( '180 days', 'stratawp-seo' ),
+                '365' => __( '365 days', 'stratawp-seo' ),
+            ],
+            'description' => __( 'How long to keep analytics data. Older data is automatically pruned.', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'analytics_exclude_admins', __( 'Exclude Admins', 'stratawp-seo' ), 'checkbox', 'swps_analytics_section', [
+            'label' => __( 'Don\'t track visits from logged-in administrators', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'gsc_client_id', __( 'Google OAuth Client ID', 'stratawp-seo' ), 'text', 'swps_analytics_section', [
+            'placeholder' => 'xxxx.apps.googleusercontent.com',
+            'description' => __( 'Create OAuth credentials in your <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a>. Set the redirect URI to: <code>' . admin_url( 'admin.php?swps_gsc_callback=1' ) . '</code>', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'gsc_client_secret', __( 'Google OAuth Client Secret', 'stratawp-seo' ), 'password', 'swps_analytics_section', [
+            'description' => __( 'Stored encrypted. After saving, connect via the Analytics page.', 'stratawp-seo' ),
         ] );
 
         // --- Advanced Section (v2.0) ---
@@ -442,7 +472,7 @@ class SWPS_Settings {
      */
     private function get_sanitize_callback( string $type, string $key = '' ): callable {
         // Encrypt the jon_ai_secret on save.
-        if ( $key === 'jon_ai_secret' ) {
+        if ( $key === 'jon_ai_secret' || $key === 'gsc_client_secret' ) {
             return function ( $value ) {
                 if ( empty( $value ) ) {
                     return '';
@@ -473,9 +503,9 @@ class SWPS_Settings {
         $value = get_option( $name, '' );
         $desc  = $args['description'] ?? '';
 
-        // Decrypt jon_ai_secret for display.
-        if ( $args['key'] === 'jon_ai_secret' && ! empty( $value ) && SWPS_Encryption::is_encrypted( $value ) ) {
-            $value = ''; // Don't display encrypted values, show empty.
+        // Don't display encrypted values — show empty field instead.
+        if ( in_array( $args['key'], [ 'jon_ai_secret', 'gsc_client_secret' ], true ) && ! empty( $value ) && SWPS_Encryption::is_encrypted( $value ) ) {
+            $value = '';
         }
 
         switch ( $type ) {
@@ -599,6 +629,21 @@ class SWPS_Settings {
         }
     }
 
+    public function render_audit_section(): void {
+        echo '<p>' . esc_html__( 'Configure automatic SEO audit checks and fixes.', 'stratawp-seo' ) . '</p>';
+    }
+
+    /**
+     * Render the Schema settings section description.
+     */
+    public function render_schema_section(): void {
+        echo '<p>' . esc_html__( 'Automatic JSON-LD structured data for rich results in Google. Disabled automatically when Yoast SEO, RankMath, or All in One SEO is active.', 'stratawp-seo' ) . '</p>';
+    }
+
+    public function render_analytics_section(): void {
+        echo '<p>' . esc_html__( 'On-site analytics tracking and Google Search Console integration.', 'stratawp-seo' ) . '</p>';
+    }
+
     public function render_advanced_section(): void {
         echo '<p>' . esc_html__( 'Advanced features for duplicate detection, rate limiting, cost tracking, and remote integration.', 'stratawp-seo' ) . '</p>';
 
@@ -693,17 +738,6 @@ class SWPS_Settings {
         } else {
             include SWPS_PLUGIN_DIR . 'templates/voice-profiles-page.php';
         }
-    }
-
-    /**
-     * Render the Schema settings section description.
-     */
-    public function render_schema_section(): void {
-        echo '<p>' . esc_html__( 'Automatic JSON-LD structured data for rich results in Google. Disabled automatically when Yoast SEO, RankMath, or All in One SEO is active.', 'stratawp-seo' ) . '</p>';
-    }
-
-    public function render_audit_section(): void {
-        echo '<p>' . esc_html__( 'Configure automatic SEO audit checks and fixes.', 'stratawp-seo' ) . '</p>';
     }
 
     public function render_audit_page(): void {

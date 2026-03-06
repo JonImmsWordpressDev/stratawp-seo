@@ -2,7 +2,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, and technical SEO — on autopilot.
 
-[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -20,6 +20,10 @@
 | SEO Audit Dashboard | Schema JSON-LD Output |
 |---|---|
 | ![Audit](screenshots/audit-page.png) | ![Schema](screenshots/schema-output.png) |
+
+| Analytics Dashboard | Post Analytics Metabox |
+|---|---|
+| ![Analytics](screenshots/analytics-page.png) | ![Metabox](screenshots/analytics-metabox.png) |
 
 ---
 
@@ -61,6 +65,18 @@
 - **WebSite schema** — with optional SearchAction for Google sitelinks searchbox
 - **Organization/Person schema** — configurable entity type with logo and social profiles
 - **Conflict detection** — auto-disables when Yoast SEO, RankMath, or All in One SEO is active
+
+### Analytics & Search Console
+- **On-site analytics** — cookie-free, GDPR-friendly page view tracking (no external services)
+- **Time on page** — tracks how long visitors spend on each page
+- **Scroll depth** — measures how far visitors scroll through your content
+- **Bounce rate** — detects visitors who leave without interacting
+- **Google Search Console** — OAuth integration for clicks, impressions, CTR, and search position data
+- **Unified dashboard** — site-wide overview with SVG charts, metric cards, and date range filtering (7/30/90 days)
+- **Top pages & queries** — see your best-performing content and search terms at a glance
+- **Per-post analytics** — metabox on every post editor with views, time, scroll depth, and top GSC queries
+- **Views column** — sortable "Views (30d)" column in the posts list table
+- **Configurable retention** — keep data for 30, 90, 180, or 365 days with automatic pruning
 
 ### Developer Features
 - **20+ filters and actions** — extend every part of the generation pipeline
@@ -180,6 +196,18 @@ The more detail you provide here, the more relevant and targeted your generated 
 | **Name** | Organization or person name (defaults to site name) |
 | **Logo URL** | Full URL to logo image (min 112x112px) |
 | **Social Profiles** | One URL per line — populates the `sameAs` property |
+
+### Analytics
+
+| Setting | Description |
+|---|---|
+| **Enable On-Site Tracking** | Track page views, time on page, scroll depth, and bounce rate (cookie-free, GDPR-friendly) |
+| **Data Retention** | How long to keep analytics data: 30, 90, 180, or 365 days |
+| **Exclude Admins** | Don't track visits from logged-in administrators |
+| **Google OAuth Client ID** | OAuth client ID from Google Cloud Console for Search Console integration |
+| **Google OAuth Client Secret** | OAuth client secret (stored encrypted) |
+
+After saving your Google OAuth credentials, visit **StrataWP SEO > Analytics** to connect your Search Console property.
 
 ### Advanced Settings
 
@@ -386,6 +414,36 @@ add_filter( 'swps_audit_result', function( array $result, string $module_id ): a
 }, 10, 2 );
 ```
 
+#### Analytics
+
+**`swps_analytics_track`** — Filter tracking data before storage. Return empty array to block the hit.
+
+```php
+add_filter( 'swps_analytics_track', function( array $data, int $post_id ): array {
+    // Block tracking for specific post types
+    if ( get_post_type( $post_id ) === 'page' ) {
+        return [];
+    }
+    return $data;
+}, 10, 2 );
+```
+
+**`swps_analytics_exclude`** — Filter whether to exclude a page from tracking.
+
+```php
+add_filter( 'swps_analytics_exclude', function( bool $exclude, int $post_id ): bool {
+    return $exclude;
+}, 10, 2 );
+```
+
+**`swps_gsc_data`** — Filter Google Search Console API response data.
+
+```php
+add_filter( 'swps_gsc_data', function( array $data, string $property ): array {
+    return $data;
+}, 10, 2 );
+```
+
 #### Content Scoring
 
 **`swps_score_weights`** — Adjust content scoring weights.
@@ -491,9 +549,26 @@ Yes — use the `swps_audit_modules` filter to register your own audit module. Y
 
 Currently, Article schema outputs on standard `post` type only. Breadcrumb schema works on all post types and taxonomies. You can extend schema output for custom post types using the `swps_schema_article` filter.
 
+### Is the on-site analytics GDPR compliant?
+
+Yes. The built-in analytics tracker is cookie-free and does not use any external tracking services. No personal data is stored — it records only page URL, referrer, time on page, scroll depth, and bounce status. No consent banner is required.
+
+### Do I need Google Search Console credentials?
+
+No — GSC integration is optional. The on-site analytics (page views, time on page, scroll depth, bounce rate) works entirely without any external services. Add Google OAuth credentials only if you want to see search clicks, impressions, CTR, and ranking data alongside your on-site metrics.
+
 ---
 
 ## Changelog
+
+### 2.2.0
+- Added on-site analytics tracking (page views, time on page, scroll depth, bounce rate)
+- Added Google Search Console OAuth integration (clicks, impressions, CTR, position)
+- Added unified analytics dashboard with SVG charts, metric cards, and date range filtering
+- Added per-post analytics metabox on the post editor
+- Added sortable "Views (30d)" column on the posts list table
+- Added configurable data retention (30/90/180/365 days) with automatic pruning
+- Added 3 new developer hooks (`swps_analytics_track`, `swps_analytics_exclude`, `swps_gsc_data`)
 
 ### 2.1.0
 - Added Schema / Structured Data (Article, Breadcrumb, WebSite, Organization/Person JSON-LD)
