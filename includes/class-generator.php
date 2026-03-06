@@ -394,7 +394,15 @@ PROMPT;
         // Store StrataWP SEO metadata.
         update_post_meta( $post_id, '_swps_generated', true );
         update_post_meta( $post_id, '_swps_generated_at', current_time( 'mysql' ) );
+        update_post_meta( $post_id, '_swps_meta_description', $meta_desc );
         update_post_meta( $post_id, '_swps_focus_keyword', $focus_keyword );
+
+        // Generate meta title (shortened post title if AI didn't provide one).
+        $meta_title = sanitize_text_field( $ai_result['meta_title'] ?? '' );
+        if ( empty( $meta_title ) ) {
+            $meta_title = mb_substr( $ai_result['title'], 0, 60 );
+        }
+        update_post_meta( $post_id, '_swps_meta_title', $meta_title );
         update_post_meta( $post_id, '_swps_secondary_keywords', $ai_result['secondary_keywords'] ?? [] );
         update_post_meta( $post_id, '_swps_internal_links', $ai_result['internal_links_used'] ?? [] );
         update_post_meta( $post_id, '_swps_external_links', $ai_result['external_links'] ?? [] );
