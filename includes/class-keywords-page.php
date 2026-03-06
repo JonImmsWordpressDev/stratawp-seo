@@ -91,6 +91,9 @@ class SWPS_Keywords_Page {
         }
 
         $keyword = sanitize_text_field( $_POST['keyword'] ?? '' );
+        if ( empty( $keyword ) ) {
+            wp_send_json_error( [ 'message' => 'Keyword is required.' ] );
+        }
         $this->tracker->untrack_keyword( $keyword );
         wp_send_json_success();
     }
@@ -103,6 +106,9 @@ class SWPS_Keywords_Page {
 
         $keyword = sanitize_text_field( $_POST['keyword'] ?? '' );
         $post_id = absint( $_POST['post_id'] ?? 0 );
+        if ( empty( $keyword ) || ! $post_id ) {
+            wp_send_json_error( [ 'message' => 'Keyword and post ID are required.' ] );
+        }
         $this->tracker->link_to_post( $keyword, $post_id );
         wp_send_json_success();
     }
@@ -114,7 +120,10 @@ class SWPS_Keywords_Page {
         }
 
         $keyword = sanitize_text_field( $_POST['keyword'] ?? '' );
-        $days    = absint( $_POST['days'] ?? 90 );
+        if ( empty( $keyword ) ) {
+            wp_send_json_error( [ 'message' => 'Keyword is required.' ] );
+        }
+        $days    = max( 7, absint( $_POST['days'] ?? 90 ) );
         $history = $this->tracker->get_keyword_history( $keyword, $days );
         wp_send_json_success( $history );
     }
@@ -129,12 +138,15 @@ class SWPS_Keywords_Page {
 
         // Enrich with post titles.
         foreach ( $keywords as &$kw ) {
+            $kw['post_title'] = '';
+            $kw['post_url']   = '';
             if ( ! empty( $kw['post_id'] ) ) {
                 $post = get_post( (int) $kw['post_id'] );
                 $kw['post_title'] = $post ? $post->post_title : '';
                 $kw['post_url']   = $post ? get_edit_post_link( $post->ID, 'raw' ) : '';
             }
         }
+        unset( $kw );
 
         wp_send_json_success( $keywords );
     }
@@ -148,11 +160,13 @@ class SWPS_Keywords_Page {
         $opportunities = $this->tracker->get_opportunities();
 
         foreach ( $opportunities as &$opp ) {
+            $opp['post_title'] = '';
             if ( ! empty( $opp['post_id'] ) ) {
                 $post = get_post( (int) $opp['post_id'] );
                 $opp['post_title'] = $post ? $post->post_title : '';
             }
         }
+        unset( $opp );
 
         wp_send_json_success( $opportunities );
     }
