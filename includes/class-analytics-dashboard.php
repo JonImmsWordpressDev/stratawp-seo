@@ -18,8 +18,8 @@ class SWPS_Analytics_Dashboard {
         $this->tracker        = $tracker;
         $this->search_console = $search_console;
 
-        // Admin menu.
-        add_action( 'admin_menu', [ $this, 'register_menu' ] );
+        // Admin menu — priority 20 so parent menu (registered at 10) exists first.
+        add_action( 'admin_menu', [ $this, 'register_menu' ], 20 );
 
         // AJAX endpoints.
         add_action( 'wp_ajax_swps_analytics_overview', [ $this, 'ajax_overview' ] );
