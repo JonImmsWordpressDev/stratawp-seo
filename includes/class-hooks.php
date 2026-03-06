@@ -192,6 +192,68 @@ class SWPS_Hooks {
     }
 
     /**
+     * Apply the audit modules filter.
+     *
+     * @param SWPS_Audit_Module[] $modules Registered modules.
+     * @return SWPS_Audit_Module[]
+     */
+    public static function filter_audit_modules( array $modules ): array {
+        return apply_filters( 'swps_audit_modules', $modules );
+    }
+
+    /**
+     * Apply the audit result filter.
+     *
+     * @param array  $result    Module result array.
+     * @param string $module_id Module ID.
+     * @return array
+     */
+    public static function filter_audit_result( array $result, string $module_id ): array {
+        return apply_filters( 'swps_audit_result', $result, $module_id );
+    }
+
+    /**
+     * Apply the Article schema filter.
+     *
+     * @param array $schema  Article schema array.
+     * @param int   $post_id Post ID.
+     * @return array Filtered schema.
+     */
+    public static function filter_schema_article( array $schema, int $post_id ): array {
+        return apply_filters( 'swps_schema_article', $schema, $post_id );
+    }
+
+    /**
+     * Apply the Breadcrumb schema filter.
+     *
+     * @param array $schema BreadcrumbList schema array.
+     * @return array Filtered schema.
+     */
+    public static function filter_schema_breadcrumb( array $schema ): array {
+        return apply_filters( 'swps_schema_breadcrumb', $schema );
+    }
+
+    /**
+     * Apply the Organization/Person schema filter.
+     *
+     * @param array $schema Organization or Person schema array.
+     * @return array Filtered schema.
+     */
+    public static function filter_schema_organization( array $schema ): array {
+        return apply_filters( 'swps_schema_organization', $schema );
+    }
+
+    /**
+     * Fire the audit_complete action.
+     *
+     * @param array $results All module results.
+     * @param int   $overall Overall score.
+     */
+    public static function do_audit_complete( array $results, int $overall ): void {
+        do_action( 'swps_audit_complete', $results, $overall );
+    }
+
+    /**
      * Apply the analytics tracking data filter.
      *
      * @param array $data    Tracking data array.

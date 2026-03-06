@@ -57,6 +57,15 @@ class SWPS_Settings {
             'swps-voice-profiles',
             [ $this, 'render_voice_profiles_page' ]
         );
+
+        add_submenu_page(
+            'stratawp-seo',
+            __( 'SEO Audit', 'stratawp-seo' ),
+            __( 'SEO Audit', 'stratawp-seo' ),
+            'manage_options',
+            'swps-seo-audit',
+            [ $this, 'render_audit_page' ]
+        );
     }
 
     /**
@@ -281,6 +290,74 @@ class SWPS_Settings {
             'min'         => 1,
             'max'         => 5,
             'description' => __( 'Number of posts to generate each time (max 5).', 'stratawp-seo' ),
+        ] );
+
+        // --- SEO Audit Section ---
+        add_settings_section( 'swps_audit_section', __( 'SEO Audit', 'stratawp-seo' ), [ $this, 'render_audit_section' ], 'stratawp-seo' );
+
+        $this->add_field( 'audit_auto_canonical', __( 'Auto Canonical Tags', 'stratawp-seo' ), 'checkbox', 'swps_audit_section', [
+            'label' => __( 'Automatically add canonical tags to posts/pages missing them', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'audit_auto_og', __( 'Auto OG/Twitter Tags', 'stratawp-seo' ), 'checkbox', 'swps_audit_section', [
+            'label' => __( 'Automatically output Open Graph and Twitter Card meta tags', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'audit_auto_sitemap', __( 'Sitemap Generation', 'stratawp-seo' ), 'checkbox', 'swps_audit_section', [
+            'label' => __( 'Generate XML sitemap (only when no other sitemap plugin is active)', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'audit_cron_schedule', __( 'Audit Schedule', 'stratawp-seo' ), 'select', 'swps_audit_section', [
+            'options' => [
+                'daily'   => __( 'Daily', 'stratawp-seo' ),
+                'weekly'  => __( 'Weekly', 'stratawp-seo' ),
+                'monthly' => __( 'Monthly', 'stratawp-seo' ),
+            ],
+            'description' => __( 'How often to run the automated SEO audit.', 'stratawp-seo' ),
+        ] );
+
+        // --- Schema / Structured Data Section ---
+        add_settings_section( 'swps_schema_section', __( 'Schema / Structured Data', 'stratawp-seo' ), [ $this, 'render_schema_section' ], 'stratawp-seo' );
+
+        $this->add_field( 'schema_enabled', __( 'Enable Schema Markup', 'stratawp-seo' ), 'checkbox', 'swps_schema_section', [
+            'label' => __( 'Output JSON-LD structured data on all posts and pages (auto-disabled when Yoast, RankMath, or AIOSEO is active)', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'schema_article_type', __( 'Article Type', 'stratawp-seo' ), 'select', 'swps_schema_section', [
+            'options' => [
+                'Article'      => __( 'Article', 'stratawp-seo' ),
+                'BlogPosting'  => __( 'BlogPosting', 'stratawp-seo' ),
+                'NewsArticle'  => __( 'NewsArticle', 'stratawp-seo' ),
+            ],
+            'description' => __( 'Schema type for blog posts. Most sites should use Article.', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'schema_searchbox', __( 'Sitelinks Searchbox', 'stratawp-seo' ), 'checkbox', 'swps_schema_section', [
+            'label' => __( 'Add SearchAction to enable Google sitelinks search box on your homepage', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'schema_entity_type', __( 'Site Represents', 'stratawp-seo' ), 'select', 'swps_schema_section', [
+            'options' => [
+                'Organization' => __( 'Organization', 'stratawp-seo' ),
+                'Person'       => __( 'Person', 'stratawp-seo' ),
+            ],
+            'description' => __( 'Does this website represent an organization or an individual?', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'schema_name', __( 'Name', 'stratawp-seo' ), 'text', 'swps_schema_section', [
+            'placeholder' => get_bloginfo( 'name' ),
+            'description' => __( 'Organization or person name. Leave blank to use your site name.', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'schema_logo', __( 'Logo URL', 'stratawp-seo' ), 'text', 'swps_schema_section', [
+            'placeholder' => 'https://example.com/logo.png',
+            'description' => __( 'Full URL to your logo image (minimum 112x112px). Used for Organization schema and Article publisher.', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'schema_social_profiles', __( 'Social Profiles', 'stratawp-seo' ), 'textarea', 'swps_schema_section', [
+            'rows'        => 4,
+            'placeholder' => "https://facebook.com/yourpage\nhttps://twitter.com/yourhandle\nhttps://linkedin.com/company/yourcompany",
+            'description' => __( 'One social profile URL per line. Populates the sameAs property.', 'stratawp-seo' ),
         ] );
 
         // --- Analytics Section ---
@@ -552,6 +629,17 @@ class SWPS_Settings {
         }
     }
 
+    public function render_audit_section(): void {
+        echo '<p>' . esc_html__( 'Configure automatic SEO audit checks and fixes.', 'stratawp-seo' ) . '</p>';
+    }
+
+    /**
+     * Render the Schema settings section description.
+     */
+    public function render_schema_section(): void {
+        echo '<p>' . esc_html__( 'Automatic JSON-LD structured data for rich results in Google. Disabled automatically when Yoast SEO, RankMath, or All in One SEO is active.', 'stratawp-seo' ) . '</p>';
+    }
+
     public function render_analytics_section(): void {
         echo '<p>' . esc_html__( 'On-site analytics tracking and Google Search Console integration.', 'stratawp-seo' ) . '</p>';
     }
@@ -650,5 +738,13 @@ class SWPS_Settings {
         } else {
             include SWPS_PLUGIN_DIR . 'templates/voice-profiles-page.php';
         }
+    }
+
+    public function render_audit_page(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        include SWPS_PLUGIN_DIR . 'templates/audit-page.php';
     }
 }

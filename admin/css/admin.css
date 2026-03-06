@@ -406,7 +406,132 @@
     margin-top: 4px;
 }
 
-/* --- Analytics Dashboard --- */
+/* ===================== SEO Audit ===================== */
+
+.swps-audit-header {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    margin: 20px 0;
+    padding: 24px;
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+}
+
+.swps-audit-score-circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #fff;
+}
+
+.swps-audit-score--excellent { background: #00a32a; }
+.swps-audit-score--good { background: #dba617; color: #1d2327; }
+.swps-audit-score--poor { background: #d63638; }
+
+.swps-audit-score-number {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.swps-audit-score-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
+
+.swps-audit-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.swps-audit-last-run {
+    color: #646970;
+    font-size: 13px;
+}
+
+.swps-audit-modules {
+    display: grid;
+    gap: 16px;
+}
+
+.swps-audit-module-card {
+    padding: 16px 24px;
+}
+
+.swps-audit-module-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.swps-audit-module-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.swps-audit-module-info .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+.swps-audit-module-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.swps-audit-module-summary {
+    color: #646970;
+    margin: 8px 0 0;
+    font-size: 13px;
+}
+
+.swps-audit-issues {
+    margin-top: 12px;
+}
+
+.swps-audit-issues .widefat td {
+    font-size: 13px;
+}
+
+.swps-issue-link {
+    margin-left: 8px;
+    font-size: 12px;
+}
+
+.swps-issue-fixable {
+    width: 30px;
+    text-align: center;
+}
+
+.swps-issue-fixable .dashicons {
+    color: #2271b1;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+@media (max-width: 782px) {
+    .swps-audit-header {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+/* ===================== Analytics Dashboard ===================== */
 
 .swps-analytics-toolbar {
     display: flex;

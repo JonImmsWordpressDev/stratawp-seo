@@ -157,6 +157,29 @@ class SWPS_REST_API {
                 ],
             ],
         ] );
+
+        // Audit endpoints.
+        register_rest_route( self::NAMESPACE, '/audit', [
+            [
+                'methods'             => 'GET',
+                'callback'            => [ $this, 'get_audit' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+            ],
+            [
+                'methods'             => 'POST',
+                'callback'            => [ $this, 'run_audit' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+            ],
+        ] );
+
+        register_rest_route( self::NAMESPACE, '/audit/fix/(?P<module_id>[a-z_]+)', [
+            'methods'             => 'POST',
+            'callback'            => [ $this, 'fix_audit_module' ],
+            'permission_callback' => [ $this, 'check_permissions' ],
+            'args'                => [
+                'module_id' => [ 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_text_field' ],
+            ],
+        ] );
     }
 
     /**
@@ -434,6 +457,58 @@ class SWPS_REST_API {
 
         return new WP_REST_Response( [
             'success' => $success,
+        ] );
+    }
+
+    /**
+     * GET /audit - Get cached audit results.
+     */
+    public function get_audit(): WP_REST_Response {
+        $audit = stratawp_seo()->seo_audit;
+
+        return new WP_REST_Response( [
+            'success' => true,
+            'data'    => $audit->get_cached_results(),
+            'last_run' => $audit->get_last_run(),
+        ] );
+    }
+
+    /**
+     * POST /audit - Run a fresh audit.
+     */
+    public function run_audit(): WP_REST_Response {
+        $audit   = stratawp_seo()->seo_audit;
+        $results = $audit->run_all();
+
+        return new WP_REST_Response( [
+            'success'  => true,
+            'data'     => $results,
+            'last_run' => $audit->get_last_run(),
+        ] );
+    }
+
+    /**
+     * POST /audit/fix/{module_id} - Auto-fix a specific module.
+     */
+    public function fix_audit_module( WP_REST_Request $request ): WP_REST_Response {
+        $audit     = stratawp_seo()->seo_audit;
+        $module_id = $request->get_param( 'module_id' );
+
+        $fix_result = $audit->fix_module( $module_id );
+
+        if ( null === $fix_result ) {
+            return new WP_REST_Response( [
+                'success' => false,
+                'message' => 'Module not found or does not support auto-fix.',
+            ], 404 );
+        }
+
+        return new WP_REST_Response( [
+            'success' => true,
+            'data'    => [
+                'fix'     => $fix_result,
+                'results' => $audit->get_cached_results(),
+            ],
         ] );
     }
 }
