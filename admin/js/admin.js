@@ -619,4 +619,148 @@
         $('#vp-formality-label').text(this.value + '/10');
     });
 
+    // =====================================================================
+    // SEO Audit page
+    // =====================================================================
+
+    var $auditProgress = $('#swps-audit-progress');
+
+    // Toggle issues.
+    $(document).on('click', '.swps-toggle-issues', function() {
+        var moduleId = $(this).data('module');
+        var $issues = $('#swps-issues-' + moduleId);
+        $issues.slideToggle(200);
+        var $icon = $(this).find('.dashicons');
+        $icon.toggleClass('dashicons-arrow-down-alt2 dashicons-arrow-up-alt2');
+    });
+
+    // Run Audit.
+    $('#swps-run-audit').on('click', function() {
+        var $btn = $(this);
+        $btn.prop('disabled', true);
+        $auditProgress.slideDown(200);
+
+        $.ajax({
+            url: swpsAdmin.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'swps_run_audit',
+                nonce: swpsAdmin.nonce,
+            },
+            timeout: 120000,
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert(response.data.message || 'Audit failed.');
+                }
+            },
+            error: function() {
+                alert('Audit request failed.');
+            },
+            complete: function() {
+                $btn.prop('disabled', false);
+                $auditProgress.slideUp(200);
+            }
+        });
+    });
+
+    // Fix single module.
+    $(document).on('click', '.swps-fix-module', function() {
+        var $btn = $(this);
+        var moduleId = $btn.data('module');
+        $btn.prop('disabled', true).text('Fixing...');
+
+        $.ajax({
+            url: swpsAdmin.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'swps_fix_module',
+                nonce: swpsAdmin.nonce,
+                module_id: moduleId,
+            },
+            timeout: 60000,
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert(response.data.message || 'Fix failed.');
+                    $btn.prop('disabled', false).text('Fix');
+                }
+            },
+            error: function() {
+                alert('Fix request failed.');
+                $btn.prop('disabled', false).text('Fix');
+            }
+        });
+    });
+
+    // Fix All.
+    $('#swps-fix-all').on('click', function() {
+        if (!confirm('Run auto-fix for all fixable modules?')) return;
+
+        var $btn = $(this);
+        $btn.prop('disabled', true).text('Fixing all...');
+        $auditProgress.slideDown(200);
+
+        $.ajax({
+            url: swpsAdmin.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'swps_fix_all',
+                nonce: swpsAdmin.nonce,
+            },
+            timeout: 120000,
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert('Fix all failed.');
+                }
+            },
+            error: function() {
+                alert('Fix all request failed.');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).text('Fix All');
+                $auditProgress.slideUp(200);
+            }
+        });
+    });
+
+    // Export CSV.
+    $('#swps-export-csv').on('click', function() {
+        // Fetch current cached results via AJAX to build CSV.
+        $.ajax({
+            url: swpsAdmin.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'swps_get_audit_results',
+                nonce: swpsAdmin.nonce,
+            },
+            success: function(response) {
+                if (!response.success) return;
+
+                var csv = 'Module,Score,Status,Issues\n';
+                var modules = response.data.modules || {};
+
+                for (var id in modules) {
+                    var mod = modules[id];
+                    var issueMessages = (mod.issues || []).map(function(i) { return i.message; }).join('; ');
+                    csv += '"' + id + '",' + mod.score + ',"' + mod.status + '","' + issueMessages.replace(/"/g, '""') + '"\n';
+                }
+
+                csv += '\nOverall Score,' + response.data.overall_score + '\n';
+
+                var blob = new Blob([csv], { type: 'text/csv' });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'swps-seo-audit-' + new Date().toISOString().slice(0, 10) + '.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        });
+    });
+
 })(jQuery);
