@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 2.0.0
+ * Version: 2.1.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'SWPS_VERSION', '2.0.0' );
+define( 'SWPS_VERSION', '2.1.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -77,6 +77,9 @@ require_once SWPS_PLUGIN_DIR . 'includes/audit/class-meta-robots-module.php';
 require_once SWPS_PLUGIN_DIR . 'includes/audit/class-image-seo-module.php';
 require_once SWPS_PLUGIN_DIR . 'includes/audit/class-pagespeed-module.php';
 
+// Schema structured data.
+require_once SWPS_PLUGIN_DIR . 'includes/class-schema.php';
+
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-analyzer.php';
@@ -120,6 +123,7 @@ final class StrataWP_SEO {
     public SWPS_Voice_Profile $voice_profile;
     public SWPS_Image_Inserter $image_inserter;
     public SWPS_SEO_Audit $seo_audit;
+    public SWPS_Schema $schema;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -145,6 +149,7 @@ final class StrataWP_SEO {
         $this->images    = SWPS_Provider_Factory::create_image_provider();
         $this->image_inserter = new SWPS_Image_Inserter( $this->images );
         $this->seo_audit = new SWPS_SEO_Audit();
+        $this->schema    = new SWPS_Schema();
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
@@ -810,6 +815,14 @@ function swps_activate(): void {
         'audit_auto_og'         => 1,
         'audit_auto_sitemap'    => 1,
         'audit_cron_schedule'   => 'weekly',
+        // Schema defaults.
+        'schema_enabled'         => 1,
+        'schema_article_type'    => 'Article',
+        'schema_searchbox'       => 1,
+        'schema_entity_type'     => 'Organization',
+        'schema_name'            => '',
+        'schema_logo'            => '',
+        'schema_social_profiles' => '',
     ];
 
     foreach ( $defaults as $key => $value ) {
