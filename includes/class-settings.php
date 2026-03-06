@@ -283,6 +283,36 @@ class SWPS_Settings {
             'description' => __( 'Number of posts to generate each time (max 5).', 'stratawp-seo' ),
         ] );
 
+        // --- Analytics Section ---
+        add_settings_section( 'swps_analytics_section', __( 'Analytics', 'stratawp-seo' ), [ $this, 'render_analytics_section' ], 'stratawp-seo' );
+
+        $this->add_field( 'analytics_enabled', __( 'Enable On-Site Tracking', 'stratawp-seo' ), 'checkbox', 'swps_analytics_section', [
+            'label' => __( 'Track page views, time on page, scroll depth, and bounce rate (cookie-free, GDPR-friendly)', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'analytics_retention', __( 'Data Retention', 'stratawp-seo' ), 'select', 'swps_analytics_section', [
+            'options' => [
+                '30'  => __( '30 days', 'stratawp-seo' ),
+                '90'  => __( '90 days', 'stratawp-seo' ),
+                '180' => __( '180 days', 'stratawp-seo' ),
+                '365' => __( '365 days', 'stratawp-seo' ),
+            ],
+            'description' => __( 'How long to keep analytics data. Older data is automatically pruned.', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'analytics_exclude_admins', __( 'Exclude Admins', 'stratawp-seo' ), 'checkbox', 'swps_analytics_section', [
+            'label' => __( 'Don\'t track visits from logged-in administrators', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'gsc_client_id', __( 'Google OAuth Client ID', 'stratawp-seo' ), 'text', 'swps_analytics_section', [
+            'placeholder' => 'xxxx.apps.googleusercontent.com',
+            'description' => __( 'Create OAuth credentials in your <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a>. Set the redirect URI to: <code>' . admin_url( 'admin.php?swps_gsc_callback=1' ) . '</code>', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'gsc_client_secret', __( 'Google OAuth Client Secret', 'stratawp-seo' ), 'password', 'swps_analytics_section', [
+            'description' => __( 'Stored encrypted. After saving, connect via the Analytics page.', 'stratawp-seo' ),
+        ] );
+
         // --- Advanced Section (v2.0) ---
         add_settings_section( 'swps_advanced_section', __( 'Advanced Settings', 'stratawp-seo' ), [ $this, 'render_advanced_section' ], 'stratawp-seo' );
 
@@ -365,7 +395,7 @@ class SWPS_Settings {
      */
     private function get_sanitize_callback( string $type, string $key = '' ): callable {
         // Encrypt the jon_ai_secret on save.
-        if ( $key === 'jon_ai_secret' ) {
+        if ( $key === 'jon_ai_secret' || $key === 'gsc_client_secret' ) {
             return function ( $value ) {
                 if ( empty( $value ) ) {
                     return '';
@@ -520,6 +550,10 @@ class SWPS_Settings {
                 esc_html( $schedule['next_run'] )
             );
         }
+    }
+
+    public function render_analytics_section(): void {
+        echo '<p>' . esc_html__( 'On-site analytics tracking and Google Search Console integration.', 'stratawp-seo' ) . '</p>';
     }
 
     public function render_advanced_section(): void {

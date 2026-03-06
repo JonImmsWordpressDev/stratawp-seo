@@ -65,6 +65,11 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-content-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-voice-profile.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-image-inserter.php';
 
+// Analytics.
+require_once SWPS_PLUGIN_DIR . 'includes/class-analytics-tracker.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-search-console.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-analytics-dashboard.php';
+
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-analyzer.php';
@@ -107,6 +112,9 @@ final class StrataWP_SEO {
     public SWPS_Content_Scorer $content_scorer;
     public SWPS_Voice_Profile $voice_profile;
     public SWPS_Image_Inserter $image_inserter;
+    public SWPS_Analytics_Tracker $analytics_tracker;
+    public SWPS_Search_Console $search_console;
+    public SWPS_Analytics_Dashboard $analytics_dashboard;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -131,6 +139,9 @@ final class StrataWP_SEO {
         $this->api       = SWPS_Provider_Factory::create_ai_provider();
         $this->images    = SWPS_Provider_Factory::create_image_provider();
         $this->image_inserter = new SWPS_Image_Inserter( $this->images );
+        $this->analytics_tracker   = new SWPS_Analytics_Tracker();
+        $this->search_console      = new SWPS_Search_Console();
+        $this->analytics_dashboard = new SWPS_Analytics_Dashboard( $this->analytics_tracker, $this->search_console );
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
@@ -217,7 +228,7 @@ final class StrataWP_SEO {
      * Enqueue admin CSS and JS on our pages only.
      */
     public function enqueue_admin_assets( string $hook ): void {
-        if ( ! str_contains( $hook, 'stratawp-seo' ) && ! str_contains( $hook, 'swps-generate' ) && ! str_contains( $hook, 'swps-voice-profiles' ) ) {
+        if ( ! str_contains( $hook, 'stratawp-seo' ) && ! str_contains( $hook, 'swps-generate' ) && ! str_contains( $hook, 'swps-voice-profiles' ) && ! str_contains( $hook, 'swps-analytics' ) && ! in_array( $hook, [ 'post.php', 'post-new.php' ], true ) ) {
             return;
         }
 
@@ -245,6 +256,17 @@ final class StrataWP_SEO {
             'rate_limit_remaining' => $this->rate_limiter->get_remaining_seconds(),
             'min_content_score'   => get_option( 'swps_min_content_score', 0 ),
         ] );
+
+        // Analytics dashboard JS.
+        if ( str_contains( $hook, 'swps-analytics' ) || in_array( $hook, [ 'post.php', 'post-new.php' ], true ) ) {
+            wp_enqueue_script(
+                'swps-analytics',
+                SWPS_PLUGIN_URL . 'admin/js/analytics.js',
+                [ 'jquery' ],
+                SWPS_VERSION,
+                true
+            );
+        }
     }
 
     /**
@@ -608,6 +630,12 @@ function swps_activate(): void {
         'image_max_width'       => 1200,
         'jon_ai_endpoint'    => '',
         'jon_ai_secret'      => '',
+        // Analytics defaults.
+        'analytics_enabled'        => 1,
+        'analytics_retention'      => 90,
+        'analytics_exclude_admins' => 1,
+        'gsc_client_id'            => '',
+        'gsc_client_secret'        => '',
     ];
 
     foreach ( $defaults as $key => $value ) {
@@ -621,6 +649,10 @@ function swps_activate(): void {
     SWPS_Voice_Profile::register_post_type();
     flush_rewrite_rules();
 
+    SWPS_Analytics_Tracker::create_tables();
+    SWPS_Analytics_Tracker::schedule_cron();
+    SWPS_Search_Console::schedule_cron();
+
     if ( get_option( 'swps_cron_enabled' ) ) {
         SWPS_Cron::schedule();
     }
@@ -632,6 +664,8 @@ register_activation_hook( __FILE__, 'swps_activate' );
  */
 function swps_deactivate(): void {
     SWPS_Cron::unschedule();
+    SWPS_Analytics_Tracker::unschedule_cron();
+    SWPS_Search_Console::unschedule_cron();
     flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'swps_deactivate' );
