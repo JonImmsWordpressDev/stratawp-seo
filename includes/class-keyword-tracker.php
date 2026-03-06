@@ -40,7 +40,7 @@ class SWPS_Keyword_Tracker {
 			ctr FLOAT NOT NULL DEFAULT 0,
 			date DATE NOT NULL,
 			PRIMARY KEY (id),
-			KEY idx_keyword_date (keyword, date),
+			UNIQUE KEY idx_keyword_date (keyword, date),
 			KEY idx_post_id (post_id)
 		) {$charset};";
 
@@ -101,19 +101,22 @@ class SWPS_Keyword_Tracker {
 			return true; // Already tracking.
 		}
 
-		return (bool) $wpdb->insert(
-			$wpdb->prefix . self::TABLE,
-			[
-				'keyword'     => $keyword,
-				'post_id'     => $post_id ?: null,
-				'position'    => null,
-				'clicks'      => 0,
-				'impressions' => 0,
-				'ctr'         => 0,
-				'date'        => gmdate( 'Y-m-d' ),
-			],
-			[ '%s', '%d', '%f', '%d', '%d', '%f', '%s' ]
-		);
+		$data = [
+			'keyword'     => $keyword,
+			'position'    => null,
+			'clicks'      => 0,
+			'impressions' => 0,
+			'ctr'         => 0,
+			'date'        => gmdate( 'Y-m-d' ),
+		];
+		$formats = [ '%s', '%f', '%d', '%d', '%f', '%s' ];
+
+		if ( $post_id ) {
+			$data['post_id'] = $post_id;
+			$formats[]       = '%d';
+		}
+
+		return (bool) $wpdb->insert( $wpdb->prefix . self::TABLE, $data, $formats );
 	}
 
 	/**
@@ -126,7 +129,7 @@ class SWPS_Keyword_Tracker {
 		global $wpdb;
 		return (bool) $wpdb->delete(
 			$wpdb->prefix . self::TABLE,
-			[ 'keyword' => strtolower( trim( $keyword ) ) ],
+			[ 'keyword' => sanitize_text_field( strtolower( trim( $keyword ) ) ) ],
 			[ '%s' ]
 		);
 	}
@@ -143,7 +146,7 @@ class SWPS_Keyword_Tracker {
 		return (bool) $wpdb->update(
 			$wpdb->prefix . self::TABLE,
 			[ 'post_id' => $post_id ],
-			[ 'keyword' => strtolower( trim( $keyword ) ) ],
+			[ 'keyword' => sanitize_text_field( strtolower( trim( $keyword ) ) ) ],
 			[ '%d' ],
 			[ '%s' ]
 		);
@@ -195,7 +198,7 @@ class SWPS_Keyword_Tracker {
 			 FROM {$table}
 			 WHERE keyword = %s AND date >= %s
 			 ORDER BY date ASC",
-			strtolower( trim( $keyword ) ),
+			sanitize_text_field( strtolower( trim( $keyword ) ) ),
 			$since
 		), ARRAY_A );
 
@@ -266,7 +269,7 @@ class SWPS_Keyword_Tracker {
 		foreach ( $keywords as $keyword ) {
 			$gsc_row = $gsc_queries[ $keyword ] ?? null;
 
-			$wpdb->insert(
+			$wpdb->replace(
 				$table,
 				[
 					'keyword'     => $keyword,
