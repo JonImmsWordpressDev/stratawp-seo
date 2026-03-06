@@ -360,6 +360,22 @@ class SWPS_Settings {
             'description' => __( 'One social profile URL per line. Populates the sameAs property.', 'stratawp-seo' ),
         ] );
 
+        // --- SEO Meta Section ---
+        add_settings_section( 'swps_meta_section', __( 'SEO Meta', 'stratawp-seo' ), [ $this, 'render_meta_section' ], 'stratawp-seo' );
+
+        $this->add_field( 'meta_editor_enabled', __( 'Enable Meta Editor', 'stratawp-seo' ), 'checkbox', 'swps_meta_section', [
+            'label' => __( 'Show SEO meta fields (title, description, social, robots) on post and page editors', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'meta_editor_post_types', __( 'Post Types', 'stratawp-seo' ), 'text', 'swps_meta_section', [
+            'placeholder' => 'post,page',
+            'description' => __( 'Comma-separated post types to show the meta editor on. Default: post,page', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'meta_auto_generate', __( 'Auto-Generate Meta', 'stratawp-seo' ), 'checkbox', 'swps_meta_section', [
+            'label' => __( 'Automatically generate meta title and description via AI when publishing a post without them', 'stratawp-seo' ),
+        ] );
+
         // --- Analytics Section ---
         add_settings_section( 'swps_analytics_section', __( 'Analytics', 'stratawp-seo' ), [ $this, 'render_analytics_section' ], 'stratawp-seo' );
 
@@ -388,6 +404,15 @@ class SWPS_Settings {
 
         $this->add_field( 'gsc_client_secret', __( 'Google OAuth Client Secret', 'stratawp-seo' ), 'password', 'swps_analytics_section', [
             'description' => __( 'Stored encrypted. After saving, connect via the Analytics page.', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'keyword_tracking_frequency', __( 'Keyword Sync Frequency', 'stratawp-seo' ), 'select', 'swps_analytics_section', [
+            'options' => [
+                'daily'   => __( 'Daily', 'stratawp-seo' ),
+                'weekly'  => __( 'Weekly', 'stratawp-seo' ),
+                'monthly' => __( 'Monthly', 'stratawp-seo' ),
+            ],
+            'description' => __( 'How often to sync tracked keyword positions from Google Search Console.', 'stratawp-seo' ),
         ] );
 
         // --- Advanced Section (v2.0) ---
@@ -647,6 +672,10 @@ class SWPS_Settings {
      */
     public function render_schema_section(): void {
         echo '<p>' . esc_html__( 'Automatic JSON-LD structured data for rich results in Google. Disabled automatically when Yoast SEO, RankMath, or All in One SEO is active.', 'stratawp-seo' ) . '</p>';
+    }
+
+    public function render_meta_section(): void {
+        echo '<p>' . esc_html__( 'Per-post SEO meta fields for titles, descriptions, social previews, and robots directives. Auto-disabled when Yoast, RankMath, or AIOSEO is active.', 'stratawp-seo' ) . '</p>';
     }
 
     public function render_analytics_section(): void {

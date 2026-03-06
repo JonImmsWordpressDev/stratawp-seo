@@ -285,4 +285,39 @@ class SWPS_Hooks {
     public static function filter_gsc_data( array $data, string $property ): array {
         return apply_filters( 'swps_gsc_data', $data, $property );
     }
+
+    /**
+     * Apply the meta title filter.
+     */
+    public static function filter_meta_title( string $title, int $post_id ): string {
+        return apply_filters( 'swps_meta_title', $title, $post_id );
+    }
+
+    /**
+     * Apply the meta description filter.
+     */
+    public static function filter_meta_description( string $description, int $post_id ): string {
+        return apply_filters( 'swps_meta_description', $description, $post_id );
+    }
+
+    /**
+     * Apply the meta robots filter.
+     */
+    public static function filter_meta_robots( string $robots, int $post_id ): string {
+        return apply_filters( 'swps_meta_robots', $robots, $post_id );
+    }
+
+    /**
+     * Apply the keyword suggestions filter.
+     */
+    public static function filter_keyword_suggestions( array $suggestions, string $seed ): array {
+        return apply_filters( 'swps_keyword_suggestions', $suggestions, $seed );
+    }
+
+    /**
+     * Apply the SEO checklist filter.
+     */
+    public static function filter_seo_checklist( array $items, int $post_id ): array {
+        return apply_filters( 'swps_seo_checklist', $items, $post_id );
+    }
 }
