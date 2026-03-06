@@ -4,11 +4,11 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 2.2.0
+Stable tag: 2.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, structured data, analytics, and technical SEO.
+AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, structured data, analytics, keyword tracking, meta editing, and technical SEO.
 
 == Description ==
 
@@ -56,6 +56,24 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 * **Organization/Person schema** — configurable entity type with logo and social profiles
 * **Conflict detection** — auto-disables when Yoast SEO, RankMath, or All in One SEO is active
 
+= Keyword Research & Tracking =
+
+* **AI-powered keyword suggestions** — generate keyword ideas from seed topics using your configured AI provider
+* **GSC-powered rank tracking** — sync keyword rankings from Google Search Console automatically
+* **Striking distance opportunities** — identify keywords ranking in positions 8-20 with the best potential for quick wins
+
+= SEO Meta Editor =
+
+* **Per-post meta title/description** — set custom SEO titles and descriptions on every post and page
+* **Live SERP preview** — real-time Google search result preview as you type
+* **Character counters** — visual indicators for optimal meta title and description length
+* **SEO checklist** — focus keyword analysis with actionable recommendations in the post editor
+* **Social previews** — Open Graph and Twitter Card meta with per-post overrides
+* **Canonical URL & robots meta** — per-post canonical URL and noindex/nofollow controls
+* **Breadcrumb title override** — customize the breadcrumb label per post
+* **AI Generate button** — one-click AI-powered meta title and description generation
+* **Conflict detection** — auto-disables meta tag output when Yoast SEO, RankMath, or All in One SEO is active
+
 = Analytics & Search Console =
 
 * **On-site analytics** — cookie-free, GDPR-friendly page view tracking (no external services)
@@ -69,7 +87,7 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 
 = Developer Features =
 
-* **20+ filters and actions** — extend every part of the generation pipeline
+* **25+ filters and actions** — extend every part of the generation pipeline
 * **WP-CLI commands** — generate, analyze, manage queue, and check status from the terminal
 * **REST API** — programmatic access to generation and audit features
 * **Cost tracking** — monitor token usage and estimated API costs
@@ -114,6 +132,10 @@ The plugin itself is free/included. You pay only for AI API usage. A typical 1,5
 
 Yes. Use the `swps_audit_modules` filter to register your own audit module. Your module should extend the `SWPS_Audit_Module` abstract class.
 
+= Can I use the meta editor alongside Yoast/RankMath? =
+
+Yes! StrataWP SEO automatically detects these plugins and disables its own meta tag output to prevent conflicts. The meta editor fields are still available for reference, but frontend output is deferred to the other plugin.
+
 = Is the on-site analytics GDPR compliant? =
 
 Yes. The built-in analytics tracker is cookie-free and does not use any external tracking services. No personal data is stored. No consent banner is required.
@@ -130,8 +152,20 @@ No. GSC integration is optional. The on-site analytics works entirely without an
 4. Schema JSON-LD — automatic structured data output in page source
 5. Analytics Dashboard — page views, time on page, scroll depth, bounce rate, and GSC data
 6. Post Analytics — per-post metabox with views, engagement metrics, and top search queries
+7. Keyword Research — AI-powered suggestions and GSC rank tracking with striking distance opportunities
+8. SEO Meta Editor — per-post meta title, description, SERP preview, and SEO checklist
 
 == Changelog ==
+
+= 2.3.0 =
+* Added: Keyword Research & Tracking — AI-powered keyword suggestions and GSC rank tracking
+* Added: SEO Meta Editor — per-post meta title, description, social previews, and robots controls
+* Added: Live SERP preview with character counters in post editor
+* Added: SEO checklist with focus keyword analysis
+* Added: Striking distance keyword opportunities (position 8-20)
+* Added: AI-powered meta title/description generation
+* Added: Conflict detection — auto-disables meta output when Yoast/RankMath/AIOSEO is active
+* Added: 5 new developer hooks for meta/keyword extensibility
 
 = 2.2.0 =
 * Added on-site analytics tracking (page views, time on page, scroll depth, bounce rate)
@@ -177,6 +211,9 @@ No. GSC integration is optional. The on-site analytics works entirely without an
 * Scheduled publishing
 
 == Upgrade Notice ==
+
+= 2.3.0 =
+Adds Keyword Research & Tracking with AI-powered suggestions and GSC rank tracking, plus a full SEO Meta Editor with SERP preview, social previews, and conflict detection. No breaking changes.
 
 = 2.2.0 =
 Adds on-site analytics tracking and Google Search Console integration with a unified dashboard. Cookie-free, GDPR-friendly. No breaking changes.
