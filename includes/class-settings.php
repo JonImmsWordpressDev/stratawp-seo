@@ -473,9 +473,11 @@ class SWPS_Settings {
     private function get_sanitize_callback( string $type, string $key = '' ): callable {
         // Encrypt the jon_ai_secret on save.
         if ( $key === 'jon_ai_secret' || $key === 'gsc_client_secret' ) {
-            return function ( $value ) {
+            $option_name = "swps_{$key}";
+            return function ( $value ) use ( $option_name ) {
                 if ( empty( $value ) ) {
-                    return '';
+                    // Preserve existing encrypted value when field submitted empty.
+                    return get_option( $option_name, '' );
                 }
                 return SWPS_Encryption::encrypt( sanitize_text_field( $value ) );
             };
