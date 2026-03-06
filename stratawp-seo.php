@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 2.2.0
+ * Version: 2.3.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'SWPS_VERSION', '2.2.0' );
+define( 'SWPS_VERSION', '2.3.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -85,6 +85,11 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-analytics-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-search-console.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-analytics-dashboard.php';
 
+// Keywords & Meta Editor.
+require_once SWPS_PLUGIN_DIR . 'includes/class-keyword-tracker.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-keywords-page.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-meta-editor.php';
+
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-analyzer.php';
@@ -132,6 +137,9 @@ final class StrataWP_SEO {
     public SWPS_Analytics_Tracker $analytics_tracker;
     public SWPS_Search_Console $search_console;
     public SWPS_Analytics_Dashboard $analytics_dashboard;
+    public SWPS_Keyword_Tracker $keyword_tracker;
+    public SWPS_Keywords_Page $keywords_page;
+    public SWPS_Meta_Editor $meta_editor;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -161,6 +169,9 @@ final class StrataWP_SEO {
         $this->analytics_tracker   = new SWPS_Analytics_Tracker();
         $this->search_console      = new SWPS_Search_Console();
         $this->analytics_dashboard = new SWPS_Analytics_Dashboard( $this->analytics_tracker, $this->search_console );
+        $this->keyword_tracker = new SWPS_Keyword_Tracker( $this->search_console );
+        $this->keywords_page   = new SWPS_Keywords_Page( $this->keyword_tracker );
+        $this->meta_editor     = new SWPS_Meta_Editor();
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
@@ -214,6 +225,10 @@ final class StrataWP_SEO {
         // SEO Audit frontend hooks.
         add_action( 'wp_head', [ SWPS_Canonical_Module::class, 'output_canonical' ], 1 );
         add_action( 'wp_head', [ SWPS_OpenGraph_Module::class, 'output_meta_tags' ], 5 );
+        // Disable audit OG output when meta editor handles it.
+        if ( get_option( 'swps_meta_editor_enabled', 1 ) && ! defined( 'WPSEO_VERSION' ) && ! defined( 'RANK_MATH_VERSION' ) && ! defined( 'AIOSEO_VERSION' ) ) {
+            remove_action( 'wp_head', [ SWPS_OpenGraph_Module::class, 'output_meta_tags' ], 5 );
+        }
         add_action( 'init', [ SWPS_Sitemap_Module::class, 'register_rewrite_rules' ] );
         add_action( 'template_redirect', [ SWPS_Sitemap_Module::class, 'serve_sitemap' ] );
         add_action( 'publish_post', [ SWPS_Sitemap_Module::class, 'ping_search_engines' ] );
@@ -270,7 +285,7 @@ final class StrataWP_SEO {
             return;
         }
 
-        if ( ! str_contains( $hook, 'stratawp-seo' ) && ! str_contains( $hook, 'swps-generate' ) && ! str_contains( $hook, 'swps-voice-profiles' ) && ! str_contains( $hook, 'swps-seo-audit' ) && ! str_contains( $hook, 'swps-analytics' ) && ! in_array( $hook, [ 'post.php', 'post-new.php' ], true ) ) {
+        if ( ! str_contains( $hook, 'stratawp-seo' ) && ! str_contains( $hook, 'swps-generate' ) && ! str_contains( $hook, 'swps-voice-profiles' ) && ! str_contains( $hook, 'swps-seo-audit' ) && ! str_contains( $hook, 'swps-analytics' ) && ! str_contains( $hook, 'swps-keywords' ) && ! in_array( $hook, [ 'post.php', 'post-new.php' ], true ) ) {
             return;
         }
 
@@ -297,6 +312,7 @@ final class StrataWP_SEO {
             'templates'           => SWPS_Templates::get_options(),
             'rate_limit_remaining' => $this->rate_limiter->get_remaining_seconds(),
             'min_content_score'   => get_option( 'swps_min_content_score', 0 ),
+            'generate_url'        => admin_url( 'admin.php?page=swps-generate' ),
         ] );
 
         // Analytics dashboard JS.
@@ -304,6 +320,28 @@ final class StrataWP_SEO {
             wp_enqueue_script(
                 'swps-analytics',
                 SWPS_PLUGIN_URL . 'admin/js/analytics.js',
+                [ 'jquery', 'swps-admin' ],
+                SWPS_VERSION,
+                true
+            );
+        }
+
+        // Keywords page JS.
+        if ( str_contains( $hook, 'swps-keywords' ) ) {
+            wp_enqueue_script(
+                'swps-keywords',
+                SWPS_PLUGIN_URL . 'admin/js/keywords.js',
+                [ 'jquery', 'swps-admin' ],
+                SWPS_VERSION,
+                true
+            );
+        }
+
+        // Meta editor JS on post edit screens.
+        if ( in_array( $hook, [ 'post.php', 'post-new.php' ], true ) ) {
+            wp_enqueue_script(
+                'swps-meta-editor',
+                SWPS_PLUGIN_URL . 'admin/js/meta-editor.js',
                 [ 'jquery', 'swps-admin' ],
                 SWPS_VERSION,
                 true
@@ -851,6 +889,11 @@ function swps_activate(): void {
         'analytics_exclude_admins' => 1,
         'gsc_client_id'            => '',
         'gsc_client_secret'        => '',
+        // Keywords & Meta defaults.
+        'meta_editor_enabled'          => 1,
+        'meta_editor_post_types'       => 'post,page',
+        'meta_auto_generate'           => 0,
+        'keyword_tracking_frequency'   => 'weekly',
     ];
 
     foreach ( $defaults as $key => $value ) {
@@ -868,6 +911,8 @@ function swps_activate(): void {
     SWPS_Analytics_Tracker::create_tables();
     SWPS_Analytics_Tracker::schedule_cron();
     SWPS_Search_Console::schedule_cron();
+    SWPS_Keyword_Tracker::create_tables();
+    SWPS_Keyword_Tracker::schedule_cron();
 
     if ( get_option( 'swps_cron_enabled' ) ) {
         SWPS_Cron::schedule();
@@ -883,6 +928,7 @@ function swps_deactivate(): void {
     SWPS_SEO_Audit::unschedule_cron();
     SWPS_Analytics_Tracker::unschedule_cron();
     SWPS_Search_Console::unschedule_cron();
+    SWPS_Keyword_Tracker::unschedule_cron();
     flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'swps_deactivate' );

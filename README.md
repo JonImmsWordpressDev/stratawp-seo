@@ -2,7 +2,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, and technical SEO — on autopilot.
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -66,6 +66,23 @@
 - **Organization/Person schema** — configurable entity type with logo and social profiles
 - **Conflict detection** — auto-disables when Yoast SEO, RankMath, or All in One SEO is active
 
+### Keyword Research & Tracking
+- **AI-powered keyword suggestions** — generate keyword ideas from seed topics using your configured AI provider
+- **GSC-powered rank tracking** — sync keyword rankings from Google Search Console automatically
+- **Striking distance opportunities** — identify keywords ranking in positions 8-20 with the best potential for quick wins
+
+### SEO Meta Editor
+- **Per-post meta title/description** — set custom SEO titles and descriptions on every post and page
+- **Live SERP preview** — real-time Google search result preview as you type
+- **Character counters** — visual indicators for optimal meta title and description length
+- **SEO checklist** — focus keyword analysis with actionable recommendations in the post editor
+- **Social previews** — Open Graph and Twitter Card meta with per-post overrides
+- **Canonical URL** — set a custom canonical URL per post
+- **Robots meta** — per-post noindex/nofollow controls
+- **Breadcrumb title override** — customize the breadcrumb label per post
+- **AI Generate button** — one-click AI-powered meta title and description generation
+- **Conflict detection** — auto-disables meta tag output when Yoast SEO, RankMath, or All in One SEO is active
+
 ### Analytics & Search Console
 - **On-site analytics** — cookie-free, GDPR-friendly page view tracking (no external services)
 - **Time on page** — tracks how long visitors spend on each page
@@ -79,7 +96,7 @@
 - **Configurable retention** — keep data for 30, 90, 180, or 365 days with automatic pruning
 
 ### Developer Features
-- **20+ filters and actions** — extend every part of the generation pipeline
+- **25+ filters and actions** — extend every part of the generation pipeline
 - **WP-CLI commands** — generate, analyze, manage queue, and check status from the terminal
 - **REST API** — programmatic access to generation and audit features
 - **Cost tracking** — monitor token usage and estimated API costs
@@ -196,6 +213,20 @@ The more detail you provide here, the more relevant and targeted your generated 
 | **Name** | Organization or person name (defaults to site name) |
 | **Logo URL** | Full URL to logo image (min 112x112px) |
 | **Social Profiles** | One URL per line — populates the `sameAs` property |
+
+### SEO Meta Editor
+
+| Setting | Description |
+|---|---|
+| **Meta Editor Enabled** (`swps_meta_editor_enabled`) | Enable/disable the meta editor metabox on post edit screens |
+| **Meta Editor Post Types** (`swps_meta_editor_post_types`) | Comma-separated list of post types that show the meta editor (default: `post,page`) |
+| **Auto-Generate Meta** (`swps_meta_auto_generate`) | Automatically generate meta title and description when a post is published |
+
+### Keyword Tracking
+
+| Setting | Description |
+|---|---|
+| **Keyword Sync Frequency** (`swps_keyword_tracking_frequency`) | How often to sync keyword data from Google Search Console (daily, weekly, or monthly) |
 
 ### Analytics
 
@@ -444,6 +475,58 @@ add_filter( 'swps_gsc_data', function( array $data, string $property ): array {
 }, 10, 2 );
 ```
 
+#### SEO Meta Editor
+
+**`swps_meta_title`** — Filter the meta title output for a post.
+
+```php
+add_filter( 'swps_meta_title', function( string $title, int $post_id ): string {
+    return $title . ' | My Brand';
+}, 10, 2 );
+```
+
+**`swps_meta_description`** — Filter the meta description output for a post.
+
+```php
+add_filter( 'swps_meta_description', function( string $description, int $post_id ): string {
+    return $description;
+}, 10, 2 );
+```
+
+**`swps_meta_robots`** — Filter the robots meta directives for a post.
+
+```php
+add_filter( 'swps_meta_robots', function( string $robots, int $post_id ): string {
+    if ( get_post_type( $post_id ) === 'landing_page' ) {
+        return 'noindex, nofollow';
+    }
+    return $robots;
+}, 10, 2 );
+```
+
+**`swps_seo_checklist`** — Filter or add SEO checklist items in the meta editor metabox.
+
+```php
+add_filter( 'swps_seo_checklist', function( array $items, int $post_id ): array {
+    $items[] = [
+        'label'  => 'Has a CTA in the first paragraph',
+        'status' => 'pass',
+    ];
+    return $items;
+}, 10, 2 );
+```
+
+#### Keyword Research
+
+**`swps_keyword_suggestions`** — Filter AI-generated keyword suggestions.
+
+```php
+add_filter( 'swps_keyword_suggestions', function( array $keywords, string $seed_topic ): array {
+    // Remove branded terms
+    return array_filter( $keywords, fn( $kw ) => stripos( $kw, 'brand' ) === false );
+}, 10, 2 );
+```
+
 #### Content Scoring
 
 **`swps_score_weights`** — Adjust content scoring weights.
@@ -545,6 +628,10 @@ The plugin itself is free/included. You pay only for AI API usage. A typical 1,5
 
 Yes — use the `swps_audit_modules` filter to register your own audit module. Your module should extend the `SWPS_Audit_Module` abstract class.
 
+### Can I use the meta editor alongside Yoast/RankMath?
+
+Yes! StrataWP SEO automatically detects these plugins and disables its own meta tag output to prevent conflicts. The meta editor fields are still available for reference, but frontend output is deferred to the other plugin.
+
 ### Does the schema markup support custom post types?
 
 Currently, Article schema outputs on standard `post` type only. Breadcrumb schema works on all post types and taxonomies. You can extend schema output for custom post types using the `swps_schema_article` filter.
@@ -560,6 +647,16 @@ No — GSC integration is optional. The on-site analytics (page views, time on p
 ---
 
 ## Changelog
+
+### 2.3.0
+- Added: Keyword Research & Tracking — AI-powered keyword suggestions and GSC rank tracking
+- Added: SEO Meta Editor — per-post meta title, description, social previews, and robots controls
+- Added: Live SERP preview with character counters in post editor
+- Added: SEO checklist with focus keyword analysis
+- Added: Striking distance keyword opportunities (position 8-20)
+- Added: AI-powered meta title/description generation
+- Added: Conflict detection — auto-disables meta output when Yoast/RankMath/AIOSEO is active
+- Added: 5 new developer hooks for meta/keyword extensibility
 
 ### 2.2.0
 - Added on-site analytics tracking (page views, time on page, scroll depth, bounce rate)
