@@ -24,7 +24,7 @@ class SWPS_Analytics_Tracker {
         add_action( 'wp_ajax_nopriv_swps_track', [ $this, 'ajax_track' ] );
 
         // Frontend tracking script.
-        add_action( 'wp_footer', [ $this, 'enqueue_tracker' ], 99 );
+        add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_tracker' ] );
 
         // Aggregation cron.
         add_action( self::CRON_HOOK, [ $this, 'aggregate_and_prune' ] );

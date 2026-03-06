@@ -304,7 +304,7 @@ final class StrataWP_SEO {
             wp_enqueue_script(
                 'swps-analytics',
                 SWPS_PLUGIN_URL . 'admin/js/analytics.js',
-                [ 'jquery' ],
+                [ 'jquery', 'swps-admin' ],
                 SWPS_VERSION,
                 true
             );
