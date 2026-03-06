@@ -259,15 +259,14 @@ class SWPS_Meta_Editor {
         );
 
         $api      = SWPS_Provider_Factory::create_ai_provider();
-        $response = $api->generate( $prompt, 'You are an SEO copywriting expert. Return only valid JSON.' );
+        $response = $api->chat( 'You are an SEO copywriting expert. Return only valid JSON.', $prompt, 1024 );
 
         if ( is_wp_error( $response ) ) {
             wp_send_json_error( [ 'message' => $response->get_error_message() ] );
         }
 
-        $text = $response['content'] ?? '';
         $json_match = [];
-        if ( preg_match( '/\{.*\}/s', $text, $json_match ) ) {
+        if ( preg_match( '/\{.*\}/s', $response, $json_match ) ) {
             $result = json_decode( $json_match[0], true );
             if ( is_array( $result ) ) {
                 wp_send_json_success( $result );
@@ -307,6 +306,11 @@ class SWPS_Meta_Editor {
             return;
         }
 
+        // Skip posts created by the StrataWP generator — it handles meta itself.
+        if ( defined( 'SWPS_GENERATING' ) && SWPS_GENERATING ) {
+            return;
+        }
+
         if ( ! in_array( $post->post_type, $this->get_enabled_post_types(), true ) ) {
             return;
         }
@@ -339,15 +343,14 @@ class SWPS_Meta_Editor {
         );
 
         $api      = SWPS_Provider_Factory::create_ai_provider();
-        $response = $api->generate( $prompt, 'You are an SEO copywriting expert. Return only valid JSON.' );
+        $response = $api->chat( 'You are an SEO copywriting expert. Return only valid JSON.', $prompt, 1024 );
 
         if ( is_wp_error( $response ) ) {
             return;
         }
 
-        $text = $response['content'] ?? '';
         $json_match = [];
-        if ( preg_match( '/\{.*\}/s', $text, $json_match ) ) {
+        if ( preg_match( '/\{.*\}/s', $response, $json_match ) ) {
             $result = json_decode( $json_match[0], true );
             if ( is_array( $result ) ) {
                 if ( ! empty( $result['meta_title'] ) ) {

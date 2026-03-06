@@ -81,34 +81,45 @@
         btn.prop('disabled', true);
         spinner.addClass('is-active');
 
-        $.post(swpsAdmin.ajax_url, {
-            action: 'swps_suggest_keywords',
-            nonce: swpsAdmin.nonce,
-            seed_topic: seed
-        }, function (res) {
-            btn.prop('disabled', false);
-            spinner.removeClass('is-active');
+        $.ajax({
+            url: swpsAdmin.ajax_url,
+            method: 'POST',
+            timeout: 120000,
+            data: {
+                action: 'swps_suggest_keywords',
+                nonce: swpsAdmin.nonce,
+                seed_topic: seed
+            },
+            success: function (res) {
+                btn.prop('disabled', false);
+                spinner.removeClass('is-active');
 
-            if (!res.success) {
-                alert(res.data.message || 'Failed to get suggestions.');
-                return;
+                if (!res.success) {
+                    alert(res.data.message || 'Failed to get suggestions.');
+                    return;
+                }
+
+                var table = $('#swps-suggestions-table');
+                var tbody = table.find('tbody');
+                tbody.empty();
+                table.show();
+
+                res.data.forEach(function (s) {
+                    var row = '<tr>';
+                    row += '<td><strong>' + escHtml(s.keyword) + '</strong></td>';
+                    row += '<td><span class="swps-intent-badge swps-intent-' + escAttr(s.intent) + '">' + escHtml(s.intent) + '</span></td>';
+                    row += '<td>' + escHtml(s.difficulty) + '</td>';
+                    row += '<td>' + escHtml(s.suggested_title) + '</td>';
+                    row += '<td><button class="button button-small swps-track-btn" data-keyword="' + escAttr(s.keyword) + '">Track</button></td>';
+                    row += '</tr>';
+                    tbody.append(row);
+                });
+            },
+            error: function () {
+                btn.prop('disabled', false);
+                spinner.removeClass('is-active');
+                alert('Request failed. Please check your AI provider settings and try again.');
             }
-
-            var table = $('#swps-suggestions-table');
-            var tbody = table.find('tbody');
-            tbody.empty();
-            table.show();
-
-            res.data.forEach(function (s) {
-                var row = '<tr>';
-                row += '<td><strong>' + escHtml(s.keyword) + '</strong></td>';
-                row += '<td><span class="swps-intent-badge swps-intent-' + escAttr(s.intent) + '">' + escHtml(s.intent) + '</span></td>';
-                row += '<td>' + escHtml(s.difficulty) + '</td>';
-                row += '<td>' + escHtml(s.suggested_title) + '</td>';
-                row += '<td><button class="button button-small swps-track-btn" data-keyword="' + escAttr(s.keyword) + '">Track</button></td>';
-                row += '</tr>';
-                tbody.append(row);
-            });
         });
     });
 

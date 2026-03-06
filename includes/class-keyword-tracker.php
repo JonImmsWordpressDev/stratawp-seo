@@ -308,13 +308,13 @@ class SWPS_Keyword_Tracker {
 			$seed_topic
 		);
 
-		$response = $api->generate( $prompt, 'You are an SEO keyword research expert. Return only valid JSON.' );
+		$response = $api->chat( 'You are an SEO keyword research expert. Return only valid JSON.', $prompt, 2048 );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$text = $response['content'] ?? '';
+		$text = $response;
 
 		// Extract JSON from response.
 		$json_match = [];

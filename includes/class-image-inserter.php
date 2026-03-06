@@ -141,13 +141,14 @@ class SWPS_Image_Inserter {
     }
 
     /**
-     * Split content into sections by H2 tags.
+     * Split content into sections by H2 headings.
+     *
+     * Handles both Gutenberg block markup (<!-- wp:heading -->) and raw HTML (<h2>).
      *
      * @param string $content HTML content.
      * @return array Array of section HTML strings.
      */
     private function split_by_headings( string $content ): array {
-        // Split on <h2 but keep the delimiter.
         $parts = preg_split( '/(?=<h2[\s>])/i', $content );
         return array_values( array_filter( $parts, fn( $p ) => trim( $p ) !== '' ) );
     }
