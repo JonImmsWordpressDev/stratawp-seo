@@ -426,9 +426,9 @@ class SWPS_Settings {
         $value = get_option( $name, '' );
         $desc  = $args['description'] ?? '';
 
-        // Decrypt jon_ai_secret for display.
-        if ( $args['key'] === 'jon_ai_secret' && ! empty( $value ) && SWPS_Encryption::is_encrypted( $value ) ) {
-            $value = ''; // Don't display encrypted values, show empty.
+        // Don't display encrypted values — show empty field instead.
+        if ( in_array( $args['key'], [ 'jon_ai_secret', 'gsc_client_secret' ], true ) && ! empty( $value ) && SWPS_Encryption::is_encrypted( $value ) ) {
+            $value = '';
         }
 
         switch ( $type ) {
