@@ -505,8 +505,10 @@ class SWPS_Settings {
         $value = get_option( $name, '' );
         $desc  = $args['description'] ?? '';
 
-        // Don't display encrypted values — show empty field instead.
+        // Don't display encrypted values — show empty field with saved indicator.
+        $has_encrypted_value = false;
         if ( in_array( $args['key'], [ 'jon_ai_secret', 'gsc_client_secret' ], true ) && ! empty( $value ) && SWPS_Encryption::is_encrypted( $value ) ) {
+            $has_encrypted_value = true;
             $value = '';
         }
 
@@ -590,6 +592,11 @@ class SWPS_Settings {
                     'hide_empty'       => false,
                 ] );
                 break;
+        }
+
+        if ( $has_encrypted_value ) {
+            echo '<span class="dashicons dashicons-yes" style="color:#00a32a;vertical-align:middle;"></span> ';
+            echo '<span style="color:#00a32a;">' . esc_html__( 'Saved (encrypted). Leave blank to keep current value.', 'stratawp-seo' ) . '</span>';
         }
 
         if ( $desc ) {
