@@ -77,6 +77,9 @@ require_once SWPS_PLUGIN_DIR . 'includes/audit/class-meta-robots-module.php';
 require_once SWPS_PLUGIN_DIR . 'includes/audit/class-image-seo-module.php';
 require_once SWPS_PLUGIN_DIR . 'includes/audit/class-pagespeed-module.php';
 
+// Schema structured data.
+require_once SWPS_PLUGIN_DIR . 'includes/class-schema.php';
+
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-analyzer.php';
@@ -120,6 +123,7 @@ final class StrataWP_SEO {
     public SWPS_Voice_Profile $voice_profile;
     public SWPS_Image_Inserter $image_inserter;
     public SWPS_SEO_Audit $seo_audit;
+    public SWPS_Schema $schema;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -145,6 +149,7 @@ final class StrataWP_SEO {
         $this->images    = SWPS_Provider_Factory::create_image_provider();
         $this->image_inserter = new SWPS_Image_Inserter( $this->images );
         $this->seo_audit = new SWPS_SEO_Audit();
+        $this->schema    = new SWPS_Schema();
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
@@ -810,6 +815,14 @@ function swps_activate(): void {
         'audit_auto_og'         => 1,
         'audit_auto_sitemap'    => 1,
         'audit_cron_schedule'   => 'weekly',
+        // Schema defaults.
+        'schema_enabled'         => 1,
+        'schema_article_type'    => 'Article',
+        'schema_searchbox'       => 1,
+        'schema_entity_type'     => 'Organization',
+        'schema_name'            => '',
+        'schema_logo'            => '',
+        'schema_social_profiles' => '',
     ];
 
     foreach ( $defaults as $key => $value ) {
