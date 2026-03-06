@@ -141,13 +141,14 @@ class SWPS_Image_Inserter {
     }
 
     /**
-     * Split content into sections by H2 tags.
+     * Split content into sections by H2 headings.
+     *
+     * Handles both Gutenberg block markup (<!-- wp:heading -->) and raw HTML (<h2>).
      *
      * @param string $content HTML content.
      * @return array Array of section HTML strings.
      */
     private function split_by_headings( string $content ): array {
-        // Split on <h2 but keep the delimiter.
         $parts = preg_split( '/(?=<h2[\s>])/i', $content );
         return array_values( array_filter( $parts, fn( $p ) => trim( $p ) !== '' ) );
     }
@@ -200,9 +201,16 @@ class SWPS_Image_Inserter {
      */
     private function search_image( string $query ): string {
         $provider_slug = get_option( 'swps_image_provider', 'unsplash' );
-        $api_key       = $this->image_provider->get_api_key();
 
-        if ( empty( $api_key ) && $this->image_provider->requires_api_key() ) {
+        // Get the API key for the *selected* provider, not the injected one.
+        $api_key = match ( $provider_slug ) {
+            'unsplash' => (string) get_option( 'swps_unsplash_api_key', '' ),
+            'pexels'   => (string) get_option( 'swps_pexels_api_key', '' ),
+            'pixabay'  => (string) get_option( 'swps_pixabay_api_key', '' ),
+            default    => '',
+        };
+
+        if ( empty( $api_key ) ) {
             return '';
         }
 

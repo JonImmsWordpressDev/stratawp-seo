@@ -371,6 +371,11 @@ PROMPT;
         // Apply post data filter.
         $post_data = SWPS_Hooks::filter_post_data( $post_data, $ai_result );
 
+        // Flag that the generator is creating this post (prevents redundant AI calls from hooks).
+        if ( ! defined( 'SWPS_GENERATING' ) ) {
+            define( 'SWPS_GENERATING', true );
+        }
+
         $post_id = wp_insert_post( $post_data, true );
 
         if ( is_wp_error( $post_id ) ) {
