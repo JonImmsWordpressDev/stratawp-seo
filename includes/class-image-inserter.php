@@ -95,6 +95,7 @@ class SWPS_Image_Inserter {
             // Download and attach.
             $attachment_id = $this->download_image( $image_data['url'], $post_id, $query, $max_width );
             if ( is_wp_error( $attachment_id ) ) {
+                error_log( '[StrataWP SEO] Content images: Download failed for post ' . $post_id . ' — ' . $attachment_id->get_error_message() );
                 continue;
             }
 
@@ -202,6 +203,11 @@ class SWPS_Image_Inserter {
     private function search_image( string $query ): string {
         $provider_slug = get_option( 'swps_image_provider', 'unsplash' );
 
+        // DALL-E generates images instead of searching stock photos.
+        if ( 'dalle' === $provider_slug ) {
+            return $this->generate_dalle_image( $query );
+        }
+
         // Get the API key for the *selected* provider, not the injected one.
         $api_key = match ( $provider_slug ) {
             'unsplash' => (string) get_option( 'swps_unsplash_api_key', '' ),
@@ -211,17 +217,80 @@ class SWPS_Image_Inserter {
         };
 
         if ( empty( $api_key ) ) {
+            error_log( '[StrataWP SEO] Content images: No API key for provider "' . $provider_slug . '".' );
             return '';
         }
 
         $simplified = $this->simplify_query( $query );
 
-        return match ( $provider_slug ) {
+        $url = match ( $provider_slug ) {
             'unsplash' => $this->search_unsplash( $simplified, $api_key ),
             'pexels'   => $this->search_pexels( $simplified, $api_key ),
             'pixabay'  => $this->search_pixabay( $simplified, $api_key ),
             default    => '',
         };
+
+        if ( empty( $url ) ) {
+            error_log( '[StrataWP SEO] Content images: No results from "' . $provider_slug . '" for query "' . $simplified . '".' );
+        }
+
+        return $url;
+    }
+
+    /**
+     * Generate a DALL-E image and return the temporary URL.
+     *
+     * @param string $query Search/concept query.
+     * @return string Image URL or empty string on failure.
+     */
+    private function generate_dalle_image( string $query ): string {
+        $api_key = (string) get_option( 'swps_dalle_api_key', '' );
+
+        if ( empty( $api_key ) ) {
+            $api_key = (string) get_option( 'swps_openai_api_key', '' );
+        }
+
+        if ( empty( $api_key ) ) {
+            error_log( '[StrataWP SEO] Content images: No DALL-E or OpenAI API key configured.' );
+            return '';
+        }
+
+        $prompt = sprintf(
+            'A professional, high-quality photograph for a blog article section about: %s. '
+            . 'Clean, well-lit, visually appealing, suitable for inline content. '
+            . 'No text, watermarks, or logos in the image.',
+            $query
+        );
+
+        $response = wp_remote_post( 'https://api.openai.com/v1/images/generations', [
+            'timeout' => 60,
+            'headers' => [
+                'Content-Type'  => 'application/json',
+                'Authorization' => 'Bearer ' . $api_key,
+            ],
+            'body' => wp_json_encode( [
+                'model'  => 'dall-e-3',
+                'prompt' => $prompt,
+                'size'   => '1024x1024',
+                'n'      => 1,
+            ] ),
+        ] );
+
+        if ( is_wp_error( $response ) ) {
+            error_log( '[StrataWP SEO] Content images: DALL-E request failed — ' . $response->get_error_message() );
+            return '';
+        }
+
+        $status = wp_remote_retrieve_response_code( $response );
+        $body   = json_decode( wp_remote_retrieve_body( $response ), true );
+
+        if ( 200 !== $status ) {
+            $error = $body['error']['message'] ?? 'Unknown DALL-E API error';
+            error_log( '[StrataWP SEO] Content images: DALL-E API error (' . $status . ') — ' . $error );
+            return '';
+        }
+
+        return $body['data'][0]['url'] ?? '';
     }
 
     /**
