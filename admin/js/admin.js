@@ -59,11 +59,6 @@
         // Hide all AI key rows, then show the active one.
         $('.swps-ai-key-row').closest('tr').hide();
         $('.swps-provider-' + slug).closest('tr').show();
-
-        // Also show Google API key if Gemini is selected as image provider.
-        if ($imageProvider.length && $imageProvider.val() === 'gemini' && slug !== 'google') {
-            $('.swps-provider-google').closest('tr').show();
-        }
     }
 
     function loadModelsForProvider(slug) {
@@ -132,10 +127,7 @@
     }
 
     if ($imageProvider.length) {
-        $imageProvider.on('change', function() {
-            updateImageKeyVisibility();
-            updateAIKeyVisibility(); // Show/hide Google key for Gemini images.
-        });
+        $imageProvider.on('change', updateImageKeyVisibility);
         $featuredImages.on('change', updateImageKeyVisibility);
 
         // Initial state on page load.
