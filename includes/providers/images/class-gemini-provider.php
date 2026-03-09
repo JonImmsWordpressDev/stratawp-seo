@@ -124,19 +124,32 @@ class SWPS_Gemini_Image_Provider extends SWPS_Image_Provider {
         }
 
         // Find the image part in the response.
-        $parts = $body['candidates'][0]['content']['parts'] ?? [];
+        $candidates = $body['candidates'] ?? [];
+
+        if ( empty( $candidates ) ) {
+            // Log block reason if present (safety filter, etc.).
+            $block_reason = $body['promptFeedback']['blockReason'] ?? 'unknown';
+            error_log( '[StrataWP SEO] Gemini image: No candidates returned. Block reason: ' . $block_reason );
+            error_log( '[StrataWP SEO] Gemini image: Full response: ' . wp_json_encode( $body ) );
+            return new WP_Error( 'swps_gemini_no_image', __( 'Gemini did not return an image. The prompt may have been blocked.', 'stratawp-seo' ) );
+        }
+
+        $parts = $candidates[0]['content']['parts'] ?? [];
         $image_data = null;
         $mime_type  = 'image/png';
 
         foreach ( $parts as $part ) {
-            if ( ! empty( $part['inline_data']['data'] ) ) {
-                $image_data = $part['inline_data']['data'];
-                $mime_type  = $part['inline_data']['mime_type'] ?? 'image/png';
+            // Check both camelCase and snake_case field names.
+            $inline = $part['inlineData'] ?? $part['inline_data'] ?? null;
+            if ( ! empty( $inline['data'] ) ) {
+                $image_data = $inline['data'];
+                $mime_type  = $inline['mimeType'] ?? $inline['mime_type'] ?? 'image/png';
                 break;
             }
         }
 
         if ( empty( $image_data ) ) {
+            error_log( '[StrataWP SEO] Gemini image: Response has candidates but no image data. Parts: ' . wp_json_encode( $parts ) );
             return new WP_Error( 'swps_gemini_no_image', __( 'Gemini did not return an image.', 'stratawp-seo' ) );
         }
 
