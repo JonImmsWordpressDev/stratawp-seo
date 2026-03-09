@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SWPS_Gemini_Image_Provider extends SWPS_Image_Provider {
 
     private const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
-    private const MODEL    = 'gemini-2.5-flash-preview-image-generation';
+    private const MODEL    = 'gemini-2.5-flash-image';
 
     public function get_slug(): string {
         return 'gemini';
