@@ -54,9 +54,10 @@ class SWPS_Gemini_Image_Provider extends SWPS_Image_Provider {
         }
 
         $prompt = sprintf(
-            'Generate a professional, high-quality blog featured image for an article about: %s. '
-            . 'Photorealistic style, well-lit, visually appealing, suitable for a professional blog header. '
-            . 'No text or watermarks in the image.',
+            'Generate a vivid, eye-catching featured image that directly illustrates the topic: "%s". '
+            . 'Show a specific, concrete scene or subject closely related to this topic — not abstract or generic. '
+            . 'Photorealistic style, rich colors, sharp detail, dramatic lighting. '
+            . 'No text, words, letters, watermarks, or logos anywhere in the image.',
             $query
         );
 

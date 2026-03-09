@@ -155,7 +155,10 @@ class SWPS_Image_Inserter {
     }
 
     /**
-     * Extract a 2-4 word visual concept from a section.
+     * Extract a visual concept from a section.
+     *
+     * For AI image generators (Gemini), returns the full heading + first sentence
+     * for richer context. For stock photo APIs, returns 2-4 keywords.
      *
      * @param string $section HTML of a content section.
      * @return string Search query.
@@ -170,6 +173,22 @@ class SWPS_Image_Inserter {
             $first_para = wp_strip_all_tags( $match[1] );
         }
 
+        $provider_slug = get_option( 'swps_image_provider', 'unsplash' );
+
+        // AI generators benefit from descriptive context.
+        if ( 'gemini' === $provider_slug ) {
+            $concept = trim( $heading );
+            // Add first sentence of the paragraph for more context.
+            if ( ! empty( $first_para ) ) {
+                $first_sentence = strtok( $first_para, '.' );
+                if ( ! empty( $first_sentence ) ) {
+                    $concept .= '. ' . trim( $first_sentence );
+                }
+            }
+            return $concept;
+        }
+
+        // Stock photo APIs work best with short keyword queries.
         $text = $heading . ' ' . $first_para;
         $text = strtolower( wp_strip_all_tags( $text ) );
 
@@ -254,9 +273,10 @@ class SWPS_Image_Inserter {
         }
 
         $prompt = sprintf(
-            'A professional, high-quality photograph for a blog article section about: %s. '
-            . 'Clean, well-lit, visually appealing, suitable for inline content. '
-            . 'No text, watermarks, or logos in the image.',
+            'Generate a photograph that directly depicts: "%s". '
+            . 'Show the actual subject matter — specific, concrete, and visually relevant. '
+            . 'Clean composition, natural lighting, editorial photography style. '
+            . 'No text, words, letters, watermarks, or logos anywhere in the image.',
             $query
         );
 
