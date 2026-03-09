@@ -28,7 +28,7 @@ class SWPS_Provider_Factory {
         'unsplash' => 'SWPS_Unsplash_Provider',
         'pexels'   => 'SWPS_Pexels_Provider',
         'pixabay'  => 'SWPS_Pixabay_Provider',
-        'dalle'    => 'SWPS_DALLE_Provider',
+        'gemini'   => 'SWPS_Gemini_Image_Provider',
     ];
 
     /**

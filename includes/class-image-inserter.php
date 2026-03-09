@@ -203,9 +203,10 @@ class SWPS_Image_Inserter {
     private function search_image( string $query ): string {
         $provider_slug = get_option( 'swps_image_provider', 'unsplash' );
 
-        // DALL-E generates images instead of searching stock photos.
-        if ( 'dalle' === $provider_slug ) {
-            return $this->generate_dalle_image( $query );
+        // Gemini generates images instead of searching stock photos.
+        // Returns a local temp file path (prefixed with /) instead of a URL.
+        if ( 'gemini' === $provider_slug ) {
+            return $this->generate_gemini_image( $query );
         }
 
         // Get the API key for the *selected* provider, not the injected one.
@@ -238,20 +239,17 @@ class SWPS_Image_Inserter {
     }
 
     /**
-     * Generate a DALL-E image and return the temporary URL.
+     * Generate a Gemini image and return a local temp file path.
      *
      * @param string $query Search/concept query.
-     * @return string Image URL or empty string on failure.
+     * @return string Temp file path or empty string on failure.
      */
-    private function generate_dalle_image( string $query ): string {
-        $api_key = (string) get_option( 'swps_dalle_api_key', '' );
+    private function generate_gemini_image( string $query ): string {
+        $provider = new SWPS_Gemini_Image_Provider();
+        $api_key  = $provider->get_api_key();
 
         if ( empty( $api_key ) ) {
-            $api_key = (string) get_option( 'swps_openai_api_key', '' );
-        }
-
-        if ( empty( $api_key ) ) {
-            error_log( '[StrataWP SEO] Content images: No DALL-E or OpenAI API key configured.' );
+            error_log( '[StrataWP SEO] Content images: No Google API key configured for Gemini.' );
             return '';
         }
 
@@ -262,35 +260,14 @@ class SWPS_Image_Inserter {
             $query
         );
 
-        $response = wp_remote_post( 'https://api.openai.com/v1/images/generations', [
-            'timeout' => 60,
-            'headers' => [
-                'Content-Type'  => 'application/json',
-                'Authorization' => 'Bearer ' . $api_key,
-            ],
-            'body' => wp_json_encode( [
-                'model'  => 'dall-e-3',
-                'prompt' => $prompt,
-                'size'   => '1024x1024',
-                'n'      => 1,
-            ] ),
-        ] );
+        $tmp_file = $provider->generate_image( $prompt, $api_key, '16:9' );
 
-        if ( is_wp_error( $response ) ) {
-            error_log( '[StrataWP SEO] Content images: DALL-E request failed — ' . $response->get_error_message() );
+        if ( is_wp_error( $tmp_file ) ) {
+            error_log( '[StrataWP SEO] Content images: Gemini image generation failed — ' . $tmp_file->get_error_message() );
             return '';
         }
 
-        $status = wp_remote_retrieve_response_code( $response );
-        $body   = json_decode( wp_remote_retrieve_body( $response ), true );
-
-        if ( 200 !== $status ) {
-            $error = $body['error']['message'] ?? 'Unknown DALL-E API error';
-            error_log( '[StrataWP SEO] Content images: DALL-E API error (' . $status . ') — ' . $error );
-            return '';
-        }
-
-        return $body['data'][0]['url'] ?? '';
+        return $tmp_file;
     }
 
     /**
@@ -368,22 +345,27 @@ class SWPS_Image_Inserter {
     }
 
     /**
-     * Download an image, convert to WebP, and attach to the post.
+     * Download an image (or use a local temp file), convert to WebP, and attach to the post.
      *
-     * @param string $url      Image URL.
-     * @param int    $post_id  Post to attach to.
-     * @param string $query    The search query (used for filename).
-     * @param int    $max_width Max image width.
+     * @param string $url_or_path Image URL or local temp file path.
+     * @param int    $post_id     Post to attach to.
+     * @param string $query       The search query (used for filename).
+     * @param int    $max_width   Max image width.
      * @return int|WP_Error Attachment ID or error.
      */
-    private function download_image( string $url, int $post_id, string $query, int $max_width ): int|WP_Error {
+    private function download_image( string $url_or_path, int $post_id, string $query, int $max_width ): int|WP_Error {
         require_once ABSPATH . 'wp-admin/includes/media.php';
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/image.php';
 
-        $tmp = download_url( $url );
-        if ( is_wp_error( $tmp ) ) {
-            return $tmp;
+        // Local temp file (from Gemini) or remote URL.
+        if ( file_exists( $url_or_path ) ) {
+            $tmp = $url_or_path;
+        } else {
+            $tmp = download_url( $url_or_path );
+            if ( is_wp_error( $tmp ) ) {
+                return $tmp;
+            }
         }
 
         // Resize if needed.

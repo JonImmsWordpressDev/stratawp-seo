@@ -130,10 +130,7 @@ class SWPS_Settings {
             'row_class'   => 'swps-image-key-row swps-image-provider-pixabay',
         ] );
 
-        $this->add_field( 'dalle_api_key', __( 'DALL-E API Key', 'stratawp-seo' ), 'password', 'swps_images_section', [
-            'description' => __( 'Uses your OpenAI key by default. Add a separate key here to override. Get one from <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a>', 'stratawp-seo' ),
-            'row_class'   => 'swps-image-key-row swps-image-provider-dalle',
-        ] );
+        // Gemini image provider reuses the Google API key — no separate field needed.
 
         $this->add_field( 'insert_content_images', __( 'In-Content Images', 'stratawp-seo' ), 'checkbox', 'swps_images_section', [
             'label' => __( 'Insert contextual images within the post body (in addition to featured image)', 'stratawp-seo' ),
