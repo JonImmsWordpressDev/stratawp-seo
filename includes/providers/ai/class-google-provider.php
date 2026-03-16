@@ -58,7 +58,8 @@ class SWPS_Google_Provider extends SWPS_AI_Provider {
                 ],
             ],
             'generationConfig' => [
-                'maxOutputTokens' => $max_tokens,
+                'maxOutputTokens'  => $max_tokens,
+                'responseMimeType' => $this->requesting_json ? 'application/json' : 'text/plain',
             ],
         ];
 
