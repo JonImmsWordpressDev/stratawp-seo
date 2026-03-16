@@ -55,6 +55,10 @@ class SWPS_XAI_Provider extends SWPS_AI_Provider {
             ],
         ];
 
+        if ( $this->requesting_json ) {
+            $body['response_format'] = [ 'type' => 'json_object' ];
+        }
+
         $response = wp_remote_post( self::API_URL, [
             'timeout' => 180,
             'headers' => [

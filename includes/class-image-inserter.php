@@ -95,6 +95,7 @@ class SWPS_Image_Inserter {
             // Download and attach.
             $attachment_id = $this->download_image( $image_data['url'], $post_id, $query, $max_width );
             if ( is_wp_error( $attachment_id ) ) {
+                error_log( '[StrataWP SEO] Content images: Download failed for post ' . $post_id . ' — ' . $attachment_id->get_error_message() );
                 continue;
             }
 
@@ -154,7 +155,10 @@ class SWPS_Image_Inserter {
     }
 
     /**
-     * Extract a 2-4 word visual concept from a section.
+     * Extract a visual concept from a section.
+     *
+     * For AI image generators (Gemini), returns the full heading + first sentence
+     * for richer context. For stock photo APIs, returns 2-4 keywords.
      *
      * @param string $section HTML of a content section.
      * @return string Search query.
@@ -169,6 +173,22 @@ class SWPS_Image_Inserter {
             $first_para = wp_strip_all_tags( $match[1] );
         }
 
+        $provider_slug = get_option( 'swps_image_provider', 'unsplash' );
+
+        // AI generators benefit from descriptive context.
+        if ( 'gemini' === $provider_slug ) {
+            $concept = trim( $heading );
+            // Add first sentence of the paragraph for more context.
+            if ( ! empty( $first_para ) ) {
+                $first_sentence = strtok( $first_para, '.' );
+                if ( ! empty( $first_sentence ) ) {
+                    $concept .= '. ' . trim( $first_sentence );
+                }
+            }
+            return $concept;
+        }
+
+        // Stock photo APIs work best with short keyword queries.
         $text = $heading . ' ' . $first_para;
         $text = strtolower( wp_strip_all_tags( $text ) );
 
@@ -202,6 +222,12 @@ class SWPS_Image_Inserter {
     private function search_image( string $query ): string {
         $provider_slug = get_option( 'swps_image_provider', 'unsplash' );
 
+        // Gemini generates images instead of searching stock photos.
+        // Returns a local temp file path (prefixed with /) instead of a URL.
+        if ( 'gemini' === $provider_slug ) {
+            return $this->generate_gemini_image( $query );
+        }
+
         // Get the API key for the *selected* provider, not the injected one.
         $api_key = match ( $provider_slug ) {
             'unsplash' => (string) get_option( 'swps_unsplash_api_key', '' ),
@@ -211,17 +237,57 @@ class SWPS_Image_Inserter {
         };
 
         if ( empty( $api_key ) ) {
+            error_log( '[StrataWP SEO] Content images: No API key for provider "' . $provider_slug . '".' );
             return '';
         }
 
         $simplified = $this->simplify_query( $query );
 
-        return match ( $provider_slug ) {
+        $url = match ( $provider_slug ) {
             'unsplash' => $this->search_unsplash( $simplified, $api_key ),
             'pexels'   => $this->search_pexels( $simplified, $api_key ),
             'pixabay'  => $this->search_pixabay( $simplified, $api_key ),
             default    => '',
         };
+
+        if ( empty( $url ) ) {
+            error_log( '[StrataWP SEO] Content images: No results from "' . $provider_slug . '" for query "' . $simplified . '".' );
+        }
+
+        return $url;
+    }
+
+    /**
+     * Generate a Gemini image and return a local temp file path.
+     *
+     * @param string $query Search/concept query.
+     * @return string Temp file path or empty string on failure.
+     */
+    private function generate_gemini_image( string $query ): string {
+        $provider = new SWPS_Gemini_Image_Provider();
+        $api_key  = $provider->get_api_key();
+
+        if ( empty( $api_key ) ) {
+            error_log( '[StrataWP SEO] Content images: No Google API key configured for Gemini.' );
+            return '';
+        }
+
+        $prompt = sprintf(
+            'Generate a photograph that directly depicts: "%s". '
+            . 'Show the actual subject matter — specific, concrete, and visually relevant. '
+            . 'Clean composition, natural lighting, editorial photography style. '
+            . 'No text, words, letters, watermarks, or logos anywhere in the image.',
+            $query
+        );
+
+        $tmp_file = $provider->generate_image( $prompt, $api_key, '16:9' );
+
+        if ( is_wp_error( $tmp_file ) ) {
+            error_log( '[StrataWP SEO] Content images: Gemini image generation failed — ' . $tmp_file->get_error_message() );
+            return '';
+        }
+
+        return $tmp_file;
     }
 
     /**
@@ -299,22 +365,27 @@ class SWPS_Image_Inserter {
     }
 
     /**
-     * Download an image, convert to WebP, and attach to the post.
+     * Download an image (or use a local temp file), convert to WebP, and attach to the post.
      *
-     * @param string $url      Image URL.
-     * @param int    $post_id  Post to attach to.
-     * @param string $query    The search query (used for filename).
-     * @param int    $max_width Max image width.
+     * @param string $url_or_path Image URL or local temp file path.
+     * @param int    $post_id     Post to attach to.
+     * @param string $query       The search query (used for filename).
+     * @param int    $max_width   Max image width.
      * @return int|WP_Error Attachment ID or error.
      */
-    private function download_image( string $url, int $post_id, string $query, int $max_width ): int|WP_Error {
+    private function download_image( string $url_or_path, int $post_id, string $query, int $max_width ): int|WP_Error {
         require_once ABSPATH . 'wp-admin/includes/media.php';
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/image.php';
 
-        $tmp = download_url( $url );
-        if ( is_wp_error( $tmp ) ) {
-            return $tmp;
+        // Local temp file (from Gemini) or remote URL.
+        if ( file_exists( $url_or_path ) ) {
+            $tmp = $url_or_path;
+        } else {
+            $tmp = download_url( $url_or_path );
+            if ( is_wp_error( $tmp ) ) {
+                return $tmp;
+            }
         }
 
         // Resize if needed.

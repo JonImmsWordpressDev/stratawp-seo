@@ -40,16 +40,26 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
             return new WP_Error( 'swps_no_api_key', __( 'Please enter your Anthropic API key in StrataWP SEO settings.', 'stratawp-seo' ) );
         }
 
+        $messages = [
+            [
+                'role'    => 'user',
+                'content' => $user_message,
+            ],
+        ];
+
+        // Prefill with opening brace to guide Claude toward valid JSON output.
+        if ( $this->requesting_json ) {
+            $messages[] = [
+                'role'    => 'assistant',
+                'content' => '{',
+            ];
+        }
+
         $body = [
             'model'      => $this->get_validated_model(),
             'max_tokens' => $max_tokens,
             'system'     => $system_prompt,
-            'messages'   => [
-                [
-                    'role'    => 'user',
-                    'content' => $user_message,
-                ],
-            ],
+            'messages'   => $messages,
         ];
 
         $response = wp_remote_post( self::API_URL, [
@@ -96,7 +106,14 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
         // Anthropic: 'end_turn', 'max_tokens', 'stop_sequence'.
         $this->last_stop_reason = $body['stop_reason'] ?? null;
 
-        return $body['content'][0]['text'];
+        $text = $body['content'][0]['text'];
+
+        // When using JSON prefill, prepend the opening brace we sent as assistant content.
+        if ( $this->requesting_json ) {
+            $text = '{' . $text;
+        }
+
+        return $text;
     }
 
     public function test_key( string $api_key ): bool|WP_Error {

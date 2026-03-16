@@ -130,9 +130,9 @@ class SWPS_Settings {
             'row_class'   => 'swps-image-key-row swps-image-provider-pixabay',
         ] );
 
-        $this->add_field( 'dalle_api_key', __( 'DALL-E API Key', 'stratawp-seo' ), 'password', 'swps_images_section', [
-            'description' => __( 'Uses your OpenAI key by default. Add a separate key here to override. Get one from <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a>', 'stratawp-seo' ),
-            'row_class'   => 'swps-image-key-row swps-image-provider-dalle',
+        $this->add_field( 'google_api_key', __( 'Google API Key', 'stratawp-seo' ), 'password', 'swps_images_section', [
+            'description' => __( 'Uses your Google API key. Get one from <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>', 'stratawp-seo' ),
+            'row_class'   => 'swps-image-key-row swps-image-provider-gemini',
         ] );
 
         $this->add_field( 'insert_content_images', __( 'In-Content Images', 'stratawp-seo' ), 'checkbox', 'swps_images_section', [

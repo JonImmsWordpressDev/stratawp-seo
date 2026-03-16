@@ -43,7 +43,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/providers/ai/class-xai-provider.php';
 require_once SWPS_PLUGIN_DIR . 'includes/providers/images/class-unsplash-provider.php';
 require_once SWPS_PLUGIN_DIR . 'includes/providers/images/class-pexels-provider.php';
 require_once SWPS_PLUGIN_DIR . 'includes/providers/images/class-pixabay-provider.php';
-require_once SWPS_PLUGIN_DIR . 'includes/providers/images/class-dalle-provider.php';
+require_once SWPS_PLUGIN_DIR . 'includes/providers/images/class-gemini-provider.php';
 
 // Factory.
 require_once SWPS_PLUGIN_DIR . 'includes/class-provider-factory.php';
@@ -833,7 +833,7 @@ function swps_activate(): void {
         'unsplash_api_key'   => '',
         'pexels_api_key'     => '',
         'pixabay_api_key'    => '',
-        'dalle_api_key'      => '',
+        // Gemini image provider reuses google_api_key — no separate key needed.
         'model'              => 'claude-sonnet-4-5-20250929',
         'featured_images'    => 1,
         'site_niche'         => '',
