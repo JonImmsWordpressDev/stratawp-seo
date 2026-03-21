@@ -139,4 +139,32 @@ if ( ! defined( 'ABSPATH' ) ) {
             </div>
         </div>
     </details>
+
+    <!-- Sitemap -->
+    <div class="swps-field-group">
+        <h4><?php esc_html_e( 'Sitemap', 'stratawp-seo' ); ?></h4>
+        <label>
+            <input type="checkbox" name="swps_sitemap_exclude" value="1" <?php checked( $sitemap_exclude ); ?>>
+            <?php esc_html_e( 'Exclude from sitemap', 'stratawp-seo' ); ?>
+        </label>
+        <p>
+            <label><?php esc_html_e( 'Priority:', 'stratawp-seo' ); ?>
+                <select name="swps_sitemap_priority">
+                    <option value=""><?php esc_html_e( 'Auto', 'stratawp-seo' ); ?></option>
+                    <?php foreach ( [ '1.0', '0.9', '0.8', '0.7', '0.6', '0.5', '0.4', '0.3', '0.2', '0.1' ] as $p ) : ?>
+                        <option value="<?php echo esc_attr( $p ); ?>" <?php selected( $sitemap_priority, $p ); ?>><?php echo esc_html( $p ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+        </p>
+        <p>
+            <label><?php esc_html_e( 'Change Frequency:', 'stratawp-seo' ); ?>
+                <select name="swps_sitemap_changefreq">
+                    <?php foreach ( [ '' => 'Auto', 'always' => 'Always', 'hourly' => 'Hourly', 'daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly', 'yearly' => 'Yearly', 'never' => 'Never' ] as $val => $label ) : ?>
+                        <option value="<?php echo esc_attr( $val ); ?>" <?php selected( $sitemap_changefreq, $val ); ?>><?php echo esc_html( $label ); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+        </p>
+    </div>
 </div>

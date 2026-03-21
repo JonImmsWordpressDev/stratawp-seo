@@ -90,6 +90,11 @@ class SWPS_Meta_Editor {
         $social_desc       = get_post_meta( $post->ID, '_swps_social_description', true );
         $social_image      = get_post_meta( $post->ID, '_swps_social_image', true );
 
+        // Sitemap controls.
+        $sitemap_exclude    = get_post_meta( $post->ID, '_swps_sitemap_exclude', true );
+        $sitemap_priority   = get_post_meta( $post->ID, '_swps_sitemap_priority', true );
+        $sitemap_changefreq = get_post_meta( $post->ID, '_swps_sitemap_changefreq', true );
+
         if ( $this->conflict ) {
             echo '<div class="notice notice-warning inline"><p>';
             esc_html_e( 'Meta output is disabled because another SEO plugin is active. Fields are saved but not output on the frontend.', 'stratawp-seo' );
@@ -139,6 +144,15 @@ class SWPS_Meta_Editor {
                 }
             }
         }
+
+        // Sitemap meta.
+        update_post_meta( $post_id, '_swps_sitemap_exclude', ! empty( $_POST['swps_sitemap_exclude'] ) ? 1 : 0 );
+
+        $priority = isset( $_POST['swps_sitemap_priority'] ) ? sanitize_text_field( $_POST['swps_sitemap_priority'] ) : '';
+        update_post_meta( $post_id, '_swps_sitemap_priority', $priority );
+
+        $changefreq = isset( $_POST['swps_sitemap_changefreq'] ) ? sanitize_text_field( $_POST['swps_sitemap_changefreq'] ) : '';
+        update_post_meta( $post_id, '_swps_sitemap_changefreq', $changefreq );
     }
 
     /**

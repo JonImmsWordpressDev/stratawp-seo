@@ -94,8 +94,11 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-meta-editor.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-head-cleanup.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rss-optimizer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-taxonomy-meta.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-sitemap-manager.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-search-appearance.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-breadcrumbs.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-redirect-manager.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-redirect-admin.php';
 
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
@@ -150,8 +153,10 @@ final class StrataWP_SEO {
     public SWPS_Head_Cleanup $head_cleanup;
     public SWPS_RSS_Optimizer $rss_optimizer;
     public SWPS_Taxonomy_Meta $taxonomy_meta;
+    public SWPS_Sitemap_Manager $sitemap_manager;
     public SWPS_Search_Appearance $search_appearance;
     public SWPS_Breadcrumbs $breadcrumbs;
+    public SWPS_Redirect_Manager $redirect_manager;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -187,8 +192,10 @@ final class StrataWP_SEO {
         $this->head_cleanup    = new SWPS_Head_Cleanup();
         $this->rss_optimizer   = new SWPS_RSS_Optimizer();
         $this->taxonomy_meta      = new SWPS_Taxonomy_Meta();
+        $this->sitemap_manager    = new SWPS_Sitemap_Manager();
         $this->search_appearance  = new SWPS_Search_Appearance();
         $this->breadcrumbs        = new SWPS_Breadcrumbs();
+        $this->redirect_manager   = new SWPS_Redirect_Manager();
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
@@ -208,6 +215,9 @@ final class StrataWP_SEO {
 
         // Register CPT.
         add_action( 'init', [ SWPS_Topic_Queue::class, 'register_post_type' ] );
+
+        // Redirect 404 log pruning cron.
+        add_action( 'swps_prune_404_logs', [ SWPS_Redirect_Manager::class, 'prune_404_logs' ] );
 
         // Admin assets.
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
@@ -246,9 +256,10 @@ final class StrataWP_SEO {
         if ( get_option( 'swps_meta_editor_enabled', 1 ) && ! defined( 'WPSEO_VERSION' ) && ! defined( 'RANK_MATH_VERSION' ) && ! defined( 'AIOSEO_VERSION' ) ) {
             remove_action( 'wp_head', [ SWPS_OpenGraph_Module::class, 'output_meta_tags' ], 5 );
         }
-        add_action( 'init', [ SWPS_Sitemap_Module::class, 'register_rewrite_rules' ] );
-        add_action( 'template_redirect', [ SWPS_Sitemap_Module::class, 'serve_sitemap' ] );
-        add_action( 'publish_post', [ SWPS_Sitemap_Module::class, 'ping_search_engines' ] );
+        // Sitemap generation/serving/pinging now handled by SWPS_Sitemap_Manager.
+        // add_action( 'init', [ SWPS_Sitemap_Module::class, 'register_rewrite_rules' ] );
+        // add_action( 'template_redirect', [ SWPS_Sitemap_Module::class, 'serve_sitemap' ] );
+        // add_action( 'publish_post', [ SWPS_Sitemap_Module::class, 'ping_search_engines' ] );
         add_filter( 'robots_txt', [ SWPS_Robots_Module::class, 'filter_robots_txt' ], 10, 2 );
 
         // SEO Audit AJAX handlers.
@@ -368,6 +379,11 @@ final class StrataWP_SEO {
         // Search Appearance page JS.
         if ( 'stratawp-seo_page_swps-search-appearance' === $hook ) {
             wp_enqueue_script( 'swps-search-appearance', SWPS_PLUGIN_URL . 'admin/js/search-appearance.js', [], SWPS_VERSION, true );
+        }
+
+        // Redirects page JS.
+        if ( 'stratawp-seo_page_swps-redirects' === $hook ) {
+            wp_enqueue_script( 'swps-redirects', SWPS_PLUGIN_URL . 'admin/js/redirects.js', [], SWPS_VERSION, true );
         }
     }
 
@@ -925,6 +941,8 @@ function swps_activate(): void {
         'breadcrumbs_enabled'    => 1,
         'breadcrumbs_separator'  => '&raquo;',
         'breadcrumbs_home_label' => 'Home',
+        // Redirect defaults.
+        'auto_redirect_slug_change' => 1,
     ];
 
     foreach ( $defaults as $key => $value ) {
@@ -937,6 +955,7 @@ function swps_activate(): void {
     SWPS_Topic_Queue::register_post_type();
     SWPS_Voice_Profile::register_post_type();
     SWPS_SEO_Audit::schedule_cron();
+    SWPS_Sitemap_Manager::generate_indexnow_key();
     flush_rewrite_rules();
 
     SWPS_Analytics_Tracker::create_tables();
@@ -944,6 +963,12 @@ function swps_activate(): void {
     SWPS_Search_Console::schedule_cron();
     SWPS_Keyword_Tracker::create_tables();
     SWPS_Keyword_Tracker::schedule_cron();
+
+    SWPS_Redirect_Manager::create_tables();
+
+    if ( ! wp_next_scheduled( 'swps_prune_404_logs' ) ) {
+        wp_schedule_event( time(), 'daily', 'swps_prune_404_logs' );
+    }
 
     if ( get_option( 'swps_cron_enabled' ) ) {
         SWPS_Cron::schedule();

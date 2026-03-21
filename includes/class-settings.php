@@ -75,6 +75,15 @@ class SWPS_Settings {
             'swps-search-appearance',
             [ $this, 'render_search_appearance_page' ]
         );
+
+        add_submenu_page(
+            'stratawp-seo',
+            __( 'Redirects', 'stratawp-seo' ),
+            __( 'Redirects', 'stratawp-seo' ),
+            'manage_options',
+            'swps-redirects',
+            [ SWPS_Redirect_Admin::class, 'render' ]
+        );
     }
 
     /**
@@ -484,6 +493,13 @@ class SWPS_Settings {
         $this->add_field( 'rss_before', __( 'Content Before Post in RSS', 'stratawp-seo' ), 'textarea', 'swps_rss_section' );
         $this->add_field( 'rss_after', __( 'Content After Post in RSS', 'stratawp-seo' ), 'textarea', 'swps_rss_section' );
 
+        // --- Sitemap Settings Section ---
+        add_settings_section( 'swps_sitemap_section', __( 'Sitemaps', 'stratawp-seo' ), [ $this, 'render_sitemap_section' ], 'stratawp-seo' );
+
+        $this->add_field( 'sitemap_exclude_images', __( 'Exclude Images from Sitemap', 'stratawp-seo' ), 'checkbox', 'swps_sitemap_section' );
+        $this->add_field( 'sitemap_exclude_author', __( 'Exclude Author Sitemap', 'stratawp-seo' ), 'checkbox', 'swps_sitemap_section' );
+        $this->add_field( 'auto_redirect_slug_change', __( 'Auto-redirect on slug change', 'stratawp-seo' ), 'checkbox', 'swps_sitemap_section' );
+
         // --- Search Appearance Settings (separate options group) ---
         register_setting( 'swps_search_appearance', 'swps_title_separator', [ 'sanitize_callback' => 'sanitize_text_field' ] );
 
@@ -764,6 +780,14 @@ class SWPS_Settings {
 
     public function render_rss_section(): void {
         echo '<p>' . esc_html__( 'Add content before or after posts in your RSS feed. Available variables: %%post_link%%, %%blog_link%%, %%blog_name%%', 'stratawp-seo' ) . '</p>';
+    }
+
+    public function render_sitemap_section(): void {
+        $index_url = home_url( '/sitemap_index.xml' );
+        echo '<p>' . sprintf(
+            esc_html__( 'Your sitemap index: %s', 'stratawp-seo' ),
+            '<a href="' . esc_url( $index_url ) . '" target="_blank">' . esc_url( $index_url ) . '</a>'
+        ) . '</p>';
     }
 
     /**
