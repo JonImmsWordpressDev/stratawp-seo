@@ -468,6 +468,12 @@ class SWPS_Settings {
         foreach ( $cleanup_fields as $key => $label ) {
             $this->add_field( $key, $label, 'checkbox', 'swps_cleanup_section' );
         }
+
+        // --- RSS Optimization Section ---
+        add_settings_section( 'swps_rss_section', __( 'RSS Feed', 'stratawp-seo' ), [ $this, 'render_rss_section' ], 'stratawp-seo' );
+
+        $this->add_field( 'rss_before', __( 'Content Before Post in RSS', 'stratawp-seo' ), 'textarea', 'swps_rss_section' );
+        $this->add_field( 'rss_after', __( 'Content After Post in RSS', 'stratawp-seo' ), 'textarea', 'swps_rss_section' );
     }
 
     /**
@@ -719,6 +725,10 @@ class SWPS_Settings {
 
     public function render_cleanup_section(): void {
         echo '<p>' . esc_html__( 'Remove unnecessary items from your site\'s <head> section to reduce page size.', 'stratawp-seo' ) . '</p>';
+    }
+
+    public function render_rss_section(): void {
+        echo '<p>' . esc_html__( 'Add content before or after posts in your RSS feed. Available variables: %%post_link%%, %%blog_link%%, %%blog_name%%', 'stratawp-seo' ) . '</p>';
     }
 
     /**

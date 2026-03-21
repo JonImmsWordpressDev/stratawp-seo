@@ -92,6 +92,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-meta-editor.php';
 
 // v3.0 classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-head-cleanup.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-rss-optimizer.php';
 
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
@@ -144,6 +145,7 @@ final class StrataWP_SEO {
     public SWPS_Keywords_Page $keywords_page;
     public SWPS_Meta_Editor $meta_editor;
     public SWPS_Head_Cleanup $head_cleanup;
+    public SWPS_RSS_Optimizer $rss_optimizer;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -177,6 +179,7 @@ final class StrataWP_SEO {
         $this->keywords_page   = new SWPS_Keywords_Page( $this->keyword_tracker );
         $this->meta_editor     = new SWPS_Meta_Editor();
         $this->head_cleanup    = new SWPS_Head_Cleanup();
+        $this->rss_optimizer   = new SWPS_RSS_Optimizer();
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
@@ -899,6 +902,9 @@ function swps_activate(): void {
         'meta_editor_post_types'       => 'post,page',
         'meta_auto_generate'           => 0,
         'keyword_tracking_frequency'   => 'weekly',
+        // RSS Feed defaults.
+        'rss_before' => '',
+        'rss_after'  => 'The post %%post_link%% appeared first on %%blog_link%%.',
     ];
 
     foreach ( $defaults as $key => $value ) {
