@@ -45,3 +45,13 @@ if ( function_exists( 'as_unschedule_all_actions' ) ) {
     as_unschedule_all_actions( 'swps_process_topic' );
     as_unschedule_all_actions( 'swps_generate_scheduled_post' );
 }
+
+// 7. Drop v3.0 custom tables.
+$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}swps_redirects" );
+$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}swps_404_log" );
+
+// 8. Remove term meta.
+$wpdb->query( "DELETE FROM {$wpdb->termmeta} WHERE meta_key LIKE '\_swps\_%'" );
+
+// 9. Unschedule v3.0 cron events.
+wp_unschedule_hook( 'swps_prune_404_logs' );
