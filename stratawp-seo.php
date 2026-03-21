@@ -94,6 +94,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-meta-editor.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-head-cleanup.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rss-optimizer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-taxonomy-meta.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-search-appearance.php';
 
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
@@ -148,6 +149,7 @@ final class StrataWP_SEO {
     public SWPS_Head_Cleanup $head_cleanup;
     public SWPS_RSS_Optimizer $rss_optimizer;
     public SWPS_Taxonomy_Meta $taxonomy_meta;
+    public SWPS_Search_Appearance $search_appearance;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -182,7 +184,8 @@ final class StrataWP_SEO {
         $this->meta_editor     = new SWPS_Meta_Editor();
         $this->head_cleanup    = new SWPS_Head_Cleanup();
         $this->rss_optimizer   = new SWPS_RSS_Optimizer();
-        $this->taxonomy_meta   = new SWPS_Taxonomy_Meta();
+        $this->taxonomy_meta      = new SWPS_Taxonomy_Meta();
+        $this->search_appearance  = new SWPS_Search_Appearance();
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
@@ -357,6 +360,11 @@ final class StrataWP_SEO {
                 SWPS_VERSION,
                 true
             );
+        }
+
+        // Search Appearance page JS.
+        if ( 'stratawp-seo_page_swps-search-appearance' === $hook ) {
+            wp_enqueue_script( 'swps-search-appearance', SWPS_PLUGIN_URL . 'admin/js/search-appearance.js', [], SWPS_VERSION, true );
         }
     }
 
@@ -908,6 +916,8 @@ function swps_activate(): void {
         // RSS Feed defaults.
         'rss_before' => '',
         'rss_after'  => 'The post %%post_link%% appeared first on %%blog_link%%.',
+        // Search Appearance defaults.
+        'title_separator' => '-',
     ];
 
     foreach ( $defaults as $key => $value ) {

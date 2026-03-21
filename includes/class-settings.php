@@ -66,6 +66,15 @@ class SWPS_Settings {
             'swps-seo-audit',
             [ $this, 'render_audit_page' ]
         );
+
+        add_submenu_page(
+            'stratawp-seo',
+            __( 'Search Appearance', 'stratawp-seo' ),
+            __( 'Search Appearance', 'stratawp-seo' ),
+            'manage_options',
+            'swps-search-appearance',
+            [ $this, 'render_search_appearance_page' ]
+        );
     }
 
     /**
@@ -474,6 +483,27 @@ class SWPS_Settings {
 
         $this->add_field( 'rss_before', __( 'Content Before Post in RSS', 'stratawp-seo' ), 'textarea', 'swps_rss_section' );
         $this->add_field( 'rss_after', __( 'Content After Post in RSS', 'stratawp-seo' ), 'textarea', 'swps_rss_section' );
+
+        // --- Search Appearance Settings (separate options group) ---
+        register_setting( 'swps_search_appearance', 'swps_title_separator', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+
+        foreach ( get_post_types( [ 'public' => true ] ) as $pt ) {
+            if ( 'attachment' === $pt ) continue;
+            register_setting( 'swps_search_appearance', "swps_title_template_{$pt}", [ 'sanitize_callback' => 'sanitize_text_field' ] );
+            register_setting( 'swps_search_appearance', "swps_desc_template_{$pt}", [ 'sanitize_callback' => 'sanitize_textarea_field' ] );
+            register_setting( 'swps_search_appearance', "swps_noindex_{$pt}", [ 'sanitize_callback' => 'absint' ] );
+        }
+
+        foreach ( get_taxonomies( [ 'public' => true ] ) as $tax ) {
+            if ( 'post_format' === $tax ) continue;
+            register_setting( 'swps_search_appearance', "swps_title_template_{$tax}", [ 'sanitize_callback' => 'sanitize_text_field' ] );
+            register_setting( 'swps_search_appearance', "swps_noindex_{$tax}", [ 'sanitize_callback' => 'absint' ] );
+        }
+
+        register_setting( 'swps_search_appearance', 'swps_title_template_search', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'swps_search_appearance', 'swps_title_template_404', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'swps_search_appearance', 'swps_title_template_author', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'swps_search_appearance', 'swps_title_template_date', [ 'sanitize_callback' => 'sanitize_text_field' ] );
     }
 
     /**
@@ -815,5 +845,9 @@ class SWPS_Settings {
         }
 
         include SWPS_PLUGIN_DIR . 'templates/audit-page.php';
+    }
+
+    public function render_search_appearance_page(): void {
+        include SWPS_PLUGIN_DIR . 'templates/search-appearance-page.php';
     }
 }
