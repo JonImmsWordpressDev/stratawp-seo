@@ -93,6 +93,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-meta-editor.php';
 // v3.0 classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-head-cleanup.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rss-optimizer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-taxonomy-meta.php';
 
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
@@ -146,6 +147,7 @@ final class StrataWP_SEO {
     public SWPS_Meta_Editor $meta_editor;
     public SWPS_Head_Cleanup $head_cleanup;
     public SWPS_RSS_Optimizer $rss_optimizer;
+    public SWPS_Taxonomy_Meta $taxonomy_meta;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -180,6 +182,7 @@ final class StrataWP_SEO {
         $this->meta_editor     = new SWPS_Meta_Editor();
         $this->head_cleanup    = new SWPS_Head_Cleanup();
         $this->rss_optimizer   = new SWPS_RSS_Optimizer();
+        $this->taxonomy_meta   = new SWPS_Taxonomy_Meta();
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
