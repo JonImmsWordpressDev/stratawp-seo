@@ -85,6 +85,42 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 * **Views column** — sortable "Views (30d)" column in the posts list table
 * **Configurable retention** — keep data for 30, 90, 180, or 365 days
 
+= Full Sitemap System =
+
+* **Sitemap index** — post type, taxonomy, and author sub-sitemaps
+* **Per-URL control** — configurable priority and changefreq per URL
+* **Image sitemap entries** — image metadata included in sitemap output
+* **IndexNow support** — instant indexing notification on publish/update
+
+= Search Appearance =
+
+* **Title/description templates** — configurable templates for all content types with template variables
+* **Title separator picker** — choose your preferred title separator character
+
+= Taxonomy & Archive SEO =
+
+* **Archive meta** — meta title, description, canonical URL, robots directives, and OG tags on category/tag/taxonomy edit screens
+* **Frontend output** — all archive meta rendered on archive pages
+
+= Redirect Manager =
+
+* **301/302/307/410 redirects** — exact and regex matching
+* **404 monitoring** — error log with one-click redirect creation
+* **Auto-redirect** — automatic redirect on slug change
+
+= Frontend Breadcrumbs =
+
+* **HTML breadcrumbs** — output with inline schema markup
+* **Flexible integration** — template function, shortcode, and configurable separator/home label
+
+= RSS Feed Optimization =
+
+* **Before/after content** — configurable content injected around RSS feed items with template variables
+
+= wp_head Cleanup =
+
+* **Toggle-based removal** — WP generator tag, RSD link, shortlink, REST API link, oEmbed, and emoji scripts
+
 = Developer Features =
 
 * **25+ filters and actions** — extend every part of the generation pipeline
@@ -157,6 +193,15 @@ No. GSC integration is optional. The on-site analytics works entirely without an
 
 == Changelog ==
 
+= 3.0.0 =
+* Added: Full Sitemap System — sitemap index with post type, taxonomy, and author sub-sitemaps. Per-URL priority/changefreq control. Image sitemap entries. IndexNow support for instant indexing.
+* Added: Search Appearance — configurable title/description templates for all content types with template variables. Title separator picker.
+* Added: Taxonomy & Archive SEO — meta title, description, canonical URL, robots directives, and OG tags on category/tag/taxonomy edit screens with frontend output on archive pages.
+* Added: Redirect Manager — 301/302/307/410 redirects with exact and regex matching. 404 error monitoring with one-click redirect creation. Auto-redirect on slug change.
+* Added: Frontend Breadcrumbs — HTML breadcrumb output with inline schema markup. Template function, shortcode, and configurable separator/home label.
+* Added: RSS Feed Optimization — configurable before/after content in RSS feed items with template variables.
+* Added: wp_head Cleanup — toggle-based removal of WP generator tag, RSD link, shortlink, REST API link, oEmbed, and emoji scripts.
+
 = 2.3.0 =
 * Added: Keyword Research & Tracking — AI-powered keyword suggestions and GSC rank tracking
 * Added: SEO Meta Editor — per-post meta title, description, social previews, and robots controls
@@ -211,6 +256,9 @@ No. GSC integration is optional. The on-site analytics works entirely without an
 * Scheduled publishing
 
 == Upgrade Notice ==
+
+= 3.0.0 =
+Major release adding full sitemap system, search appearance templates, taxonomy/archive SEO, redirect manager, frontend breadcrumbs, RSS feed optimization, and wp_head cleanup. No breaking changes to existing features.
 
 = 2.3.0 =
 Adds Keyword Research & Tracking with AI-powered suggestions and GSC rank tracking, plus a full SEO Meta Editor with SERP preview, social previews, and conflict detection. No breaking changes.
