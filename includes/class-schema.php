@@ -53,7 +53,7 @@ class SWPS_Schema {
             $this->article_schema();
         }
 
-        if ( ! is_front_page() ) {
+        if ( ! is_front_page() && ! class_exists( 'SWPS_Breadcrumbs' ) ) {
             $this->breadcrumb_schema();
         }
     }

@@ -95,6 +95,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-head-cleanup.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rss-optimizer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-taxonomy-meta.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-search-appearance.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-breadcrumbs.php';
 
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
@@ -150,6 +151,7 @@ final class StrataWP_SEO {
     public SWPS_RSS_Optimizer $rss_optimizer;
     public SWPS_Taxonomy_Meta $taxonomy_meta;
     public SWPS_Search_Appearance $search_appearance;
+    public SWPS_Breadcrumbs $breadcrumbs;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -186,6 +188,7 @@ final class StrataWP_SEO {
         $this->rss_optimizer   = new SWPS_RSS_Optimizer();
         $this->taxonomy_meta      = new SWPS_Taxonomy_Meta();
         $this->search_appearance  = new SWPS_Search_Appearance();
+        $this->breadcrumbs        = new SWPS_Breadcrumbs();
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
@@ -918,6 +921,10 @@ function swps_activate(): void {
         'rss_after'  => 'The post %%post_link%% appeared first on %%blog_link%%.',
         // Search Appearance defaults.
         'title_separator' => '-',
+        // Breadcrumb defaults.
+        'breadcrumbs_enabled'    => 1,
+        'breadcrumbs_separator'  => '&raquo;',
+        'breadcrumbs_home_label' => 'Home',
     ];
 
     foreach ( $defaults as $key => $value ) {

@@ -504,6 +504,11 @@ class SWPS_Settings {
         register_setting( 'swps_search_appearance', 'swps_title_template_404', [ 'sanitize_callback' => 'sanitize_text_field' ] );
         register_setting( 'swps_search_appearance', 'swps_title_template_author', [ 'sanitize_callback' => 'sanitize_text_field' ] );
         register_setting( 'swps_search_appearance', 'swps_title_template_date', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+
+        // Breadcrumb settings.
+        register_setting( 'swps_search_appearance', 'swps_breadcrumbs_enabled', [ 'sanitize_callback' => 'absint' ] );
+        register_setting( 'swps_search_appearance', 'swps_breadcrumbs_separator', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'swps_search_appearance', 'swps_breadcrumbs_home_label', [ 'sanitize_callback' => 'sanitize_text_field' ] );
     }
 
     /**

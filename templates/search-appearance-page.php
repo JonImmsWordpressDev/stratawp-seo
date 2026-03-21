@@ -143,6 +143,37 @@ if ( ! defined( 'ABSPATH' ) ) {
             </tr>
         </table>
 
+        <h2><?php esc_html_e( 'Breadcrumbs', 'stratawp-seo' ); ?></h2>
+        <table class="form-table">
+            <tr>
+                <th scope="row"><?php esc_html_e( 'Enable Breadcrumbs', 'stratawp-seo' ); ?></th>
+                <td>
+                    <label>
+                        <input type="checkbox" name="swps_breadcrumbs_enabled" value="1"
+                            <?php checked( get_option( 'swps_breadcrumbs_enabled', 1 ) ); ?>>
+                        <?php esc_html_e( 'Enable HTML breadcrumb output', 'stratawp-seo' ); ?>
+                    </label>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="swps-breadcrumbs-sep"><?php esc_html_e( 'Separator', 'stratawp-seo' ); ?></label></th>
+                <td>
+                    <input type="text" id="swps-breadcrumbs-sep" name="swps_breadcrumbs_separator" class="small-text"
+                        value="<?php echo esc_attr( get_option( 'swps_breadcrumbs_separator', '&raquo;' ) ); ?>">
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="swps-breadcrumbs-home"><?php esc_html_e( 'Home Label', 'stratawp-seo' ); ?></label></th>
+                <td>
+                    <input type="text" id="swps-breadcrumbs-home" name="swps_breadcrumbs_home_label" class="regular-text"
+                        value="<?php echo esc_attr( get_option( 'swps_breadcrumbs_home_label', 'Home' ) ); ?>">
+                </td>
+            </tr>
+        </table>
+        <p class="description">
+            <?php esc_html_e( 'Use swps_breadcrumbs() in your theme template or the [swps_breadcrumbs] shortcode to display breadcrumbs.', 'stratawp-seo' ); ?>
+        </p>
+
         <?php submit_button(); ?>
     </form>
 
