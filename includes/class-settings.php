@@ -451,6 +451,23 @@ class SWPS_Settings {
         $this->add_field( 'jon_ai_secret', __( 'Remote Content Secret', 'stratawp-seo' ), 'password', 'swps_advanced_section', [
             'description' => __( 'Authentication secret for the remote content endpoint. Stored encrypted.', 'stratawp-seo' ),
         ] );
+
+        // --- Head Cleanup Section ---
+        add_settings_section( 'swps_cleanup_section', __( 'Head Cleanup', 'stratawp-seo' ), [ $this, 'render_cleanup_section' ], 'stratawp-seo' );
+
+        $cleanup_fields = [
+            'cleanup_generator' => __( 'Remove WP Generator Tag', 'stratawp-seo' ),
+            'cleanup_rsd'       => __( 'Remove RSD/EditURI Link', 'stratawp-seo' ),
+            'cleanup_wlw'       => __( 'Remove Windows Live Writer Link', 'stratawp-seo' ),
+            'cleanup_shortlink' => __( 'Remove Shortlink', 'stratawp-seo' ),
+            'cleanup_rest_api'  => __( 'Remove REST API Link', 'stratawp-seo' ),
+            'cleanup_oembed'    => __( 'Remove oEmbed Discovery', 'stratawp-seo' ),
+            'cleanup_emoji'     => __( 'Remove Emoji Scripts & Styles', 'stratawp-seo' ),
+        ];
+
+        foreach ( $cleanup_fields as $key => $label ) {
+            $this->add_field( $key, $label, 'checkbox', 'swps_cleanup_section' );
+        }
     }
 
     /**
@@ -698,6 +715,10 @@ class SWPS_Settings {
                     : esc_html__( 'Not encrypted — save settings to encrypt.', 'stratawp-seo' )
             );
         }
+    }
+
+    public function render_cleanup_section(): void {
+        echo '<p>' . esc_html__( 'Remove unnecessary items from your site\'s <head> section to reduce page size.', 'stratawp-seo' ) . '</p>';
     }
 
     /**

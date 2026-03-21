@@ -90,6 +90,9 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-keyword-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-keywords-page.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-meta-editor.php';
 
+// v3.0 classes.
+require_once SWPS_PLUGIN_DIR . 'includes/class-head-cleanup.php';
+
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-analyzer.php';
@@ -140,6 +143,7 @@ final class StrataWP_SEO {
     public SWPS_Keyword_Tracker $keyword_tracker;
     public SWPS_Keywords_Page $keywords_page;
     public SWPS_Meta_Editor $meta_editor;
+    public SWPS_Head_Cleanup $head_cleanup;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -172,6 +176,7 @@ final class StrataWP_SEO {
         $this->keyword_tracker = new SWPS_Keyword_Tracker( $this->search_console );
         $this->keywords_page   = new SWPS_Keywords_Page( $this->keyword_tracker );
         $this->meta_editor     = new SWPS_Meta_Editor();
+        $this->head_cleanup    = new SWPS_Head_Cleanup();
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
