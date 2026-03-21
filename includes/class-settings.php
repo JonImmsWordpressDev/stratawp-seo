@@ -66,6 +66,24 @@ class SWPS_Settings {
             'swps-seo-audit',
             [ $this, 'render_audit_page' ]
         );
+
+        add_submenu_page(
+            'stratawp-seo',
+            __( 'Search Appearance', 'stratawp-seo' ),
+            __( 'Search Appearance', 'stratawp-seo' ),
+            'manage_options',
+            'swps-search-appearance',
+            [ $this, 'render_search_appearance_page' ]
+        );
+
+        add_submenu_page(
+            'stratawp-seo',
+            __( 'Redirects', 'stratawp-seo' ),
+            __( 'Redirects', 'stratawp-seo' ),
+            'manage_options',
+            'swps-redirects',
+            [ SWPS_Redirect_Admin::class, 'render' ]
+        );
     }
 
     /**
@@ -451,6 +469,62 @@ class SWPS_Settings {
         $this->add_field( 'jon_ai_secret', __( 'Remote Content Secret', 'stratawp-seo' ), 'password', 'swps_advanced_section', [
             'description' => __( 'Authentication secret for the remote content endpoint. Stored encrypted.', 'stratawp-seo' ),
         ] );
+
+        // --- Head Cleanup Section ---
+        add_settings_section( 'swps_cleanup_section', __( 'Head Cleanup', 'stratawp-seo' ), [ $this, 'render_cleanup_section' ], 'stratawp-seo' );
+
+        $cleanup_fields = [
+            'cleanup_generator' => __( 'Remove WP Generator Tag', 'stratawp-seo' ),
+            'cleanup_rsd'       => __( 'Remove RSD/EditURI Link', 'stratawp-seo' ),
+            'cleanup_wlw'       => __( 'Remove Windows Live Writer Link', 'stratawp-seo' ),
+            'cleanup_shortlink' => __( 'Remove Shortlink', 'stratawp-seo' ),
+            'cleanup_rest_api'  => __( 'Remove REST API Link', 'stratawp-seo' ),
+            'cleanup_oembed'    => __( 'Remove oEmbed Discovery', 'stratawp-seo' ),
+            'cleanup_emoji'     => __( 'Remove Emoji Scripts & Styles', 'stratawp-seo' ),
+        ];
+
+        foreach ( $cleanup_fields as $key => $label ) {
+            $this->add_field( $key, $label, 'checkbox', 'swps_cleanup_section' );
+        }
+
+        // --- RSS Optimization Section ---
+        add_settings_section( 'swps_rss_section', __( 'RSS Feed', 'stratawp-seo' ), [ $this, 'render_rss_section' ], 'stratawp-seo' );
+
+        $this->add_field( 'rss_before', __( 'Content Before Post in RSS', 'stratawp-seo' ), 'textarea', 'swps_rss_section' );
+        $this->add_field( 'rss_after', __( 'Content After Post in RSS', 'stratawp-seo' ), 'textarea', 'swps_rss_section' );
+
+        // --- Sitemap Settings Section ---
+        add_settings_section( 'swps_sitemap_section', __( 'Sitemaps', 'stratawp-seo' ), [ $this, 'render_sitemap_section' ], 'stratawp-seo' );
+
+        $this->add_field( 'sitemap_exclude_images', __( 'Exclude Images from Sitemap', 'stratawp-seo' ), 'checkbox', 'swps_sitemap_section' );
+        $this->add_field( 'sitemap_exclude_author', __( 'Exclude Author Sitemap', 'stratawp-seo' ), 'checkbox', 'swps_sitemap_section' );
+        $this->add_field( 'auto_redirect_slug_change', __( 'Auto-redirect on slug change', 'stratawp-seo' ), 'checkbox', 'swps_sitemap_section' );
+
+        // --- Search Appearance Settings (separate options group) ---
+        register_setting( 'swps_search_appearance', 'swps_title_separator', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+
+        foreach ( get_post_types( [ 'public' => true ] ) as $pt ) {
+            if ( 'attachment' === $pt ) continue;
+            register_setting( 'swps_search_appearance', "swps_title_template_{$pt}", [ 'sanitize_callback' => 'sanitize_text_field' ] );
+            register_setting( 'swps_search_appearance', "swps_desc_template_{$pt}", [ 'sanitize_callback' => 'sanitize_textarea_field' ] );
+            register_setting( 'swps_search_appearance', "swps_noindex_{$pt}", [ 'sanitize_callback' => 'absint' ] );
+        }
+
+        foreach ( get_taxonomies( [ 'public' => true ] ) as $tax ) {
+            if ( 'post_format' === $tax ) continue;
+            register_setting( 'swps_search_appearance', "swps_title_template_{$tax}", [ 'sanitize_callback' => 'sanitize_text_field' ] );
+            register_setting( 'swps_search_appearance', "swps_noindex_{$tax}", [ 'sanitize_callback' => 'absint' ] );
+        }
+
+        register_setting( 'swps_search_appearance', 'swps_title_template_search', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'swps_search_appearance', 'swps_title_template_404', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'swps_search_appearance', 'swps_title_template_author', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'swps_search_appearance', 'swps_title_template_date', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+
+        // Breadcrumb settings.
+        register_setting( 'swps_search_appearance', 'swps_breadcrumbs_enabled', [ 'sanitize_callback' => 'absint' ] );
+        register_setting( 'swps_search_appearance', 'swps_breadcrumbs_separator', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'swps_search_appearance', 'swps_breadcrumbs_home_label', [ 'sanitize_callback' => 'sanitize_text_field' ] );
     }
 
     /**
@@ -700,6 +774,22 @@ class SWPS_Settings {
         }
     }
 
+    public function render_cleanup_section(): void {
+        echo '<p>' . esc_html__( 'Remove unnecessary items from your site\'s <head> section to reduce page size.', 'stratawp-seo' ) . '</p>';
+    }
+
+    public function render_rss_section(): void {
+        echo '<p>' . esc_html__( 'Add content before or after posts in your RSS feed. Available variables: %%post_link%%, %%blog_link%%, %%blog_name%%', 'stratawp-seo' ) . '</p>';
+    }
+
+    public function render_sitemap_section(): void {
+        $index_url = home_url( '/sitemap_index.xml' );
+        echo '<p>' . sprintf(
+            esc_html__( 'Your sitemap index: %s', 'stratawp-seo' ),
+            '<a href="' . esc_url( $index_url ) . '" target="_blank">' . esc_url( $index_url ) . '</a>'
+        ) . '</p>';
+    }
+
     /**
      * Render the main settings page.
      */
@@ -784,5 +874,9 @@ class SWPS_Settings {
         }
 
         include SWPS_PLUGIN_DIR . 'templates/audit-page.php';
+    }
+
+    public function render_search_appearance_page(): void {
+        include SWPS_PLUGIN_DIR . 'templates/search-appearance-page.php';
     }
 }

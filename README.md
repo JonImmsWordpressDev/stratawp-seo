@@ -2,7 +2,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, and technical SEO — on autopilot.
 
-[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -51,6 +51,35 @@
 - **Topic queue** — pre-load topics with scheduled dates and template preferences
 - **Content calendar** — visual overview of scheduled and generated content
 - **Bulk generation** — generate up to 5 posts in one click
+
+### Full Sitemap System
+- **Sitemap index** — post type, taxonomy, and author sub-sitemaps
+- **Per-URL control** — configurable priority and changefreq per URL
+- **Image sitemap entries** — image metadata included in sitemap output
+- **IndexNow support** — instant indexing notification on publish/update
+
+### Search Appearance
+- **Title/description templates** — configurable templates for all content types with template variables
+- **Title separator picker** — choose your preferred title separator character
+
+### Taxonomy & Archive SEO
+- **Archive meta** — meta title, description, canonical URL, robots directives, and OG tags on category/tag/taxonomy edit screens
+- **Frontend output** — all archive meta rendered on archive pages
+
+### Redirect Manager
+- **301/302/307/410 redirects** — exact and regex matching
+- **404 monitoring** — error log with one-click redirect creation
+- **Auto-redirect** — automatic redirect on slug change
+
+### Frontend Breadcrumbs
+- **HTML breadcrumbs** — output with inline schema markup
+- **Flexible integration** — template function, shortcode, and configurable separator/home label
+
+### RSS Feed Optimization
+- **Before/after content** — configurable content injected around RSS feed items with template variables
+
+### wp_head Cleanup
+- **Toggle-based removal** — WP generator tag, RSD link, shortlink, REST API link, oEmbed, and emoji scripts
 
 ### Technical SEO Audit
 - **8 audit modules** — Canonical URLs, XML Sitemap, Open Graph, Twitter Cards, Robots.txt, Meta Robots, Image SEO, Page Speed Hints
@@ -647,6 +676,16 @@ No — GSC integration is optional. The on-site analytics (page views, time on p
 ---
 
 ## Changelog
+
+### 3.0.0 — Yoast Replacement
+
+- **Full Sitemap System** — Sitemap index with post type, taxonomy, and author sub-sitemaps. Per-URL priority/changefreq control. Image sitemap entries. IndexNow support for instant indexing.
+- **Search Appearance** — Configurable title/description templates for all content types with template variables. Title separator picker.
+- **Taxonomy & Archive SEO** — Meta title, description, canonical URL, robots directives, and OG tags on category/tag/taxonomy edit screens with frontend output on archive pages.
+- **Redirect Manager** — 301/302/307/410 redirects with exact and regex matching. 404 error monitoring with one-click redirect creation. Auto-redirect on slug change.
+- **Frontend Breadcrumbs** — HTML breadcrumb output with inline schema markup. Template function, shortcode, and configurable separator/home label.
+- **RSS Feed Optimization** — Configurable before/after content in RSS feed items with template variables.
+- **wp_head Cleanup** — Toggle-based removal of WP generator tag, RSD link, shortlink, REST API link, oEmbed, and emoji scripts.
 
 ### 2.3.0
 - Added: Keyword Research & Tracking — AI-powered keyword suggestions and GSC rank tracking
