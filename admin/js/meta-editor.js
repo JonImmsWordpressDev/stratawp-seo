@@ -147,6 +147,10 @@
             if (res.data.meta_description) {
                 $metaDesc.val(res.data.meta_description);
             }
+            if (res.data.focus_keyword) {
+                $focusKw.val(res.data.focus_keyword);
+                updateChecklist();
+            }
 
             updatePreview();
         });

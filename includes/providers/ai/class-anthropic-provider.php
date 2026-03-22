@@ -48,7 +48,11 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
         ];
 
         // Prefill with opening brace to guide Claude toward valid JSON output.
-        if ( $this->requesting_json ) {
+        // Note: Some models (e.g., claude-opus-4-6) do not support assistant prefill.
+        $model = $this->get_validated_model();
+        $supports_prefill = ( false === strpos( $model, 'opus-4-6' ) );
+
+        if ( $this->requesting_json && $supports_prefill ) {
             $messages[] = [
                 'role'    => 'assistant',
                 'content' => '{',
@@ -109,7 +113,7 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
         $text = $body['content'][0]['text'];
 
         // When using JSON prefill, prepend the opening brace we sent as assistant content.
-        if ( $this->requesting_json ) {
+        if ( $this->requesting_json && $supports_prefill ) {
             $text = '{' . $text;
         }
 

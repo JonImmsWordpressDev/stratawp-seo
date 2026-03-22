@@ -350,16 +350,16 @@ class SWPS_Content_Scorer {
 		if ( 0 === $meta_length ) {
 			$score -= 30;
 			$recs[] = 'Meta description is missing. Add a compelling meta description.';
-		} elseif ( $meta_length < 150 ) {
+		} elseif ( $meta_length < 147 ) {
 			$score -= 15;
 			$recs[] = sprintf(
-				'Meta description is too short (%d chars). Aim for 150-160 characters.',
+				'Meta description is too short (%d chars). Aim for 147-160 characters.',
 				$meta_length
 			);
 		} elseif ( $meta_length > 160 ) {
 			$score -= 10;
 			$recs[] = sprintf(
-				'Meta description is too long (%d chars). It may be truncated. Aim for 150-160 characters.',
+				'Meta description is too long (%d chars). It may be truncated. Aim for 147-160 characters.',
 				$meta_length
 			);
 		}
@@ -705,14 +705,25 @@ class SWPS_Content_Scorer {
 		// Check 5: Description length (150-160 chars).
 		$desc_len = mb_strlen( $meta_desc );
 		$checks['desc_length'] = [
-			'pass'  => $desc_len >= 150 && $desc_len <= 160,
-			'label' => __( 'Meta description length (150-160 chars)', 'stratawp-seo' ),
+			'pass'  => $desc_len >= 147 && $desc_len <= 160,
+			'label' => __( 'Meta description length (147-160 chars)', 'stratawp-seo' ),
 			'value' => sprintf( '%d chars', $desc_len ),
 		];
 
 		// Check 6: Keyword in first paragraph.
+		// Strip TOC, key takeaways, and other structural blocks before finding the first real <p>.
+		$content_for_para = $content_html;
+		// Remove TOC nav/div blocks.
+		$content_for_para = preg_replace( '/<nav[^>]*class="[^"]*table-of-contents[^"]*"[^>]*>.*?<\/nav>/is', '', $content_for_para );
+		$content_for_para = preg_replace( '/<div[^>]*class="[^"]*table-of-contents[^"]*"[^>]*>.*?<\/div>/is', '', $content_for_para );
+		$content_for_para = preg_replace( '/<div[^>]*id="[^"]*toc[^"]*"[^>]*>.*?<\/div>/is', '', $content_for_para );
+		// Remove key takeaways block.
+		$content_for_para = preg_replace( '/<div[^>]*class="[^"]*swps-key-takeaways[^"]*"[^>]*>.*?<\/div>/is', '', $content_for_para );
+		// Remove any leading <ul>/<ol> blocks (TOC lists without wrapper).
+		$content_for_para = preg_replace( '/\A\s*<[uo]l[^>]*>.*?<\/[uo]l>/is', '', $content_for_para );
+
 		$first_para_pass = false;
-		if ( preg_match( '/<p[^>]*>(.*?)<\/p>/is', $content_html, $p_match ) ) {
+		if ( preg_match( '/<p[^>]*>(.*?)<\/p>/is', $content_for_para, $p_match ) ) {
 			$first_para_text = mb_strtolower( wp_strip_all_tags( $p_match[1] ) );
 			$first_para_pass = false !== mb_strpos( $first_para_text, $keyword_lower );
 		}
