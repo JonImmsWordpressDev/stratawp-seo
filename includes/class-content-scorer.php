@@ -628,4 +628,239 @@ class SWPS_Content_Scorer {
 
 		return $total;
 	}
+
+	/**
+	 * Score an existing post's SEO quality across 14 checks.
+	 *
+	 * Unlike score() which evaluates AI-generated content at creation time,
+	 * this method evaluates any published/drafted post against SEO best practices.
+	 *
+	 * @param int $post_id The WordPress post ID.
+	 * @return array {
+	 *     @type int    $score   Overall score 0-100.
+	 *     @type string $status  'good' | 'needs_work' | 'poor' | 'no_keyword'
+	 *     @type array  $checks  Keyed array of check results.
+	 * }
+	 */
+	public function score_post( int $post_id ): array {
+		$post = get_post( $post_id );
+
+		if ( ! $post ) {
+			return [
+				'score'  => 0,
+				'status' => 'poor',
+				'checks' => [],
+			];
+		}
+
+		$focus_keyword   = get_post_meta( $post_id, '_swps_focus_keyword', true );
+		$meta_title      = get_post_meta( $post_id, '_swps_meta_title', true );
+		$meta_desc       = get_post_meta( $post_id, '_swps_meta_description', true );
+		$social_image    = get_post_meta( $post_id, '_swps_social_image', true );
+		$content_html    = $post->post_content;
+		$plain_text      = wp_strip_all_tags( $content_html );
+		$keyword_lower   = mb_strtolower( trim( $focus_keyword ) );
+		$min_words       = (int) get_option( 'swps_seo_score_content_min', 300 );
+
+		// Check 1: Focus keyword set.
+		$has_keyword = ! empty( $keyword_lower );
+		$checks = [];
+
+		$checks['focus_keyword_set'] = [
+			'pass'  => $has_keyword,
+			'label' => __( 'Focus keyword set', 'stratawp-seo' ),
+		];
+
+		if ( ! $has_keyword ) {
+			$result = [
+				'score'  => 0,
+				'status' => 'no_keyword',
+				'checks' => $checks,
+			];
+			update_post_meta( $post_id, '_swps_seo_score', $result );
+			update_post_meta( $post_id, '_swps_seo_score_value', 0 );
+			return $result;
+		}
+
+		// Check 2: Keyword in meta title.
+		$checks['keyword_in_title'] = [
+			'pass'  => ! empty( $meta_title ) && false !== mb_strpos( mb_strtolower( $meta_title ), $keyword_lower ),
+			'label' => __( 'Keyword in meta title', 'stratawp-seo' ),
+		];
+
+		// Check 3: Keyword in meta description.
+		$checks['keyword_in_desc'] = [
+			'pass'  => ! empty( $meta_desc ) && false !== mb_strpos( mb_strtolower( $meta_desc ), $keyword_lower ),
+			'label' => __( 'Keyword in meta description', 'stratawp-seo' ),
+		];
+
+		// Check 4: Title length (50-60 chars).
+		$title_len = mb_strlen( $meta_title );
+		$checks['title_length'] = [
+			'pass'  => $title_len >= 50 && $title_len <= 60,
+			'label' => __( 'Meta title length (50-60 chars)', 'stratawp-seo' ),
+			'value' => sprintf( '%d chars', $title_len ),
+		];
+
+		// Check 5: Description length (150-160 chars).
+		$desc_len = mb_strlen( $meta_desc );
+		$checks['desc_length'] = [
+			'pass'  => $desc_len >= 150 && $desc_len <= 160,
+			'label' => __( 'Meta description length (150-160 chars)', 'stratawp-seo' ),
+			'value' => sprintf( '%d chars', $desc_len ),
+		];
+
+		// Check 6: Keyword in first paragraph.
+		$first_para_pass = false;
+		if ( preg_match( '/<p[^>]*>(.*?)<\/p>/is', $content_html, $p_match ) ) {
+			$first_para_text = mb_strtolower( wp_strip_all_tags( $p_match[1] ) );
+			$first_para_pass = false !== mb_strpos( $first_para_text, $keyword_lower );
+		}
+		$checks['keyword_first_para'] = [
+			'pass'  => $first_para_pass,
+			'label' => __( 'Keyword in first paragraph', 'stratawp-seo' ),
+		];
+
+		// Check 7: Keyword in at least one H2.
+		$h2_pass = false;
+		if ( preg_match_all( '/<h2[^>]*>(.*?)<\/h2>/is', $content_html, $h2_matches ) ) {
+			foreach ( $h2_matches[1] as $h2_text ) {
+				if ( false !== mb_strpos( mb_strtolower( wp_strip_all_tags( $h2_text ) ), $keyword_lower ) ) {
+					$h2_pass = true;
+					break;
+				}
+			}
+		}
+		$checks['keyword_in_h2'] = [
+			'pass'  => $h2_pass,
+			'label' => __( 'Keyword in an H2 heading', 'stratawp-seo' ),
+		];
+
+		// Check 8: Content length.
+		$word_count = str_word_count( $plain_text );
+		$checks['content_length'] = [
+			'pass'  => $word_count >= $min_words,
+			'label' => sprintf( __( 'Content length (min %d words)', 'stratawp-seo' ), $min_words ),
+			'value' => sprintf( '%s words', number_format_i18n( $word_count ) ),
+		];
+
+		// Check 9: Internal links present.
+		$site_url        = home_url();
+		$has_internal     = false;
+		$has_external     = false;
+		$has_alt_keyword  = false;
+
+		if ( preg_match_all( '/<a\s[^>]*href=["\']([^"\']*)["\'][^>]*>/is', $content_html, $link_matches ) ) {
+			foreach ( $link_matches[1] as $href ) {
+				$href = trim( $href );
+				if ( empty( $href ) || '#' === $href[0] || 0 === strpos( $href, 'mailto:' ) ) {
+					continue;
+				}
+				$is_external = preg_match( '/^https?:\/\//i', $href ) && 0 !== mb_strpos( $href, $site_url );
+				if ( $is_external ) {
+					$has_external = true;
+				} else {
+					$has_internal = true;
+				}
+			}
+		}
+
+		$checks['internal_links'] = [
+			'pass'  => $has_internal,
+			'label' => __( 'Internal link present', 'stratawp-seo' ),
+		];
+
+		// Check 10: External links present.
+		$checks['external_links'] = [
+			'pass'  => $has_external,
+			'label' => __( 'External link present', 'stratawp-seo' ),
+		];
+
+		// Check 11: Image alt text contains keyword.
+		if ( preg_match_all( '/<img\s[^>]*alt=["\']([^"\']*)["\'][^>]*>/is', $content_html, $img_matches ) ) {
+			foreach ( $img_matches[1] as $alt ) {
+				if ( false !== mb_strpos( mb_strtolower( $alt ), $keyword_lower ) ) {
+					$has_alt_keyword = true;
+					break;
+				}
+			}
+		}
+		$checks['image_alt_keyword'] = [
+			'pass'  => $has_alt_keyword,
+			'label' => __( 'Image alt text contains keyword', 'stratawp-seo' ),
+		];
+
+		// Check 12: Slug contains keyword.
+		$slug_words   = explode( ' ', $keyword_lower );
+		$slug         = $post->post_name;
+		$slug_pass    = true;
+		foreach ( $slug_words as $word ) {
+			$word = trim( $word );
+			if ( ! empty( $word ) && false === mb_strpos( $slug, sanitize_title( $word ) ) ) {
+				$slug_pass = false;
+				break;
+			}
+		}
+		$checks['slug_keyword'] = [
+			'pass'  => $slug_pass,
+			'label' => __( 'Slug contains keyword', 'stratawp-seo' ),
+		];
+
+		// Check 13: OG image set.
+		$checks['og_image_set'] = [
+			'pass'  => ! empty( $social_image ),
+			'label' => __( 'OG image is set', 'stratawp-seo' ),
+		];
+
+		// Check 14: Readability (Flesch-Kincaid grade 6-10).
+		$readability_pass = false;
+		$grade_value      = '';
+		if ( str_word_count( $plain_text ) >= 10 ) {
+			$recs = [];
+			$readability_score = $this->analyze_readability( $plain_text, $recs );
+			$sentences      = preg_split( '/[.!?]+/', $plain_text, -1, PREG_SPLIT_NO_EMPTY );
+			$sentence_count = max( count( $sentences ), 1 );
+			$wc             = str_word_count( $plain_text );
+			$syllables      = $this->count_syllables( $plain_text );
+			$grade          = max( 0, ( 0.39 * ( $wc / $sentence_count ) ) + ( 11.8 * ( $syllables / $wc ) ) - 15.59 );
+			$readability_pass = ( $grade >= 6 && $grade <= 10 );
+			$grade_value      = sprintf( 'Grade %.0f', $grade );
+		}
+		$checks['readability'] = [
+			'pass'  => $readability_pass,
+			'label' => __( 'Readability score OK', 'stratawp-seo' ),
+			'value' => $grade_value,
+		];
+
+		// Calculate score: each check worth equal weight.
+		$passed = 0;
+		foreach ( $checks as $check ) {
+			if ( $check['pass'] ) {
+				$passed++;
+			}
+		}
+		$total_checks = count( $checks );
+		$score        = ( $total_checks > 0 ) ? (int) round( ( $passed / $total_checks ) * 100 ) : 0;
+
+		// Determine status.
+		if ( $score >= 80 ) {
+			$status = 'good';
+		} elseif ( $score >= 50 ) {
+			$status = 'needs_work';
+		} else {
+			$status = 'poor';
+		}
+
+		$result = [
+			'score'  => $score,
+			'status' => $status,
+			'checks' => $checks,
+		];
+
+		// Cache the result.
+		update_post_meta( $post_id, '_swps_seo_score', $result );
+		update_post_meta( $post_id, '_swps_seo_score_value', $score );
+
+		return $result;
+	}
 }
