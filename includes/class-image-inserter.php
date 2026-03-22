@@ -31,9 +31,10 @@ class SWPS_Image_Inserter {
             return;
         }
 
-        $content   = get_post_field( 'post_content', $post_id );
-        $max_images = (int) get_option( 'swps_content_images_count', 2 );
-        $max_width  = (int) get_option( 'swps_image_max_width', 1200 );
+        $content       = get_post_field( 'post_content', $post_id );
+        $max_images    = (int) get_option( 'swps_content_images_count', 2 );
+        $max_width     = (int) get_option( 'swps_image_max_width', 1200 );
+        $focus_keyword = get_post_meta( $post_id, '_swps_focus_keyword', true );
 
         if ( empty( $content ) || $max_images < 1 ) {
             return;
@@ -99,8 +100,11 @@ class SWPS_Image_Inserter {
                 continue;
             }
 
-            // Set alt text.
+            // Set alt text — ensure focus keyword is included for SEO.
             $alt_text = sanitize_text_field( $image_data['alt'] ?? $query );
+            if ( ! empty( $focus_keyword ) && false === mb_stripos( $alt_text, $focus_keyword ) ) {
+                $alt_text = $alt_text . ' - ' . $focus_keyword;
+            }
             update_post_meta( $attachment_id, '_wp_attachment_image_alt', $alt_text );
 
             // Build the figure HTML.

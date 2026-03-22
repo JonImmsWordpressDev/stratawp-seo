@@ -525,6 +525,18 @@ class SWPS_Settings {
         register_setting( 'swps_search_appearance', 'swps_breadcrumbs_enabled', [ 'sanitize_callback' => 'absint' ] );
         register_setting( 'swps_search_appearance', 'swps_breadcrumbs_separator', [ 'sanitize_callback' => 'sanitize_text_field' ] );
         register_setting( 'swps_search_appearance', 'swps_breadcrumbs_home_label', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+
+        // SEO Column settings.
+        register_setting( 'swps_search_appearance', 'swps_seo_column_post_types', [
+            'sanitize_callback' => function ( $value ) {
+                return is_array( $value ) ? array_map( 'sanitize_text_field', $value ) : [ 'post', 'page' ];
+            },
+            'default' => [ 'post', 'page' ],
+        ] );
+        register_setting( 'swps_search_appearance', 'swps_seo_score_content_min', [
+            'sanitize_callback' => 'absint',
+            'default' => 300,
+        ] );
     }
 
     /**

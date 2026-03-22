@@ -174,6 +174,39 @@ if ( ! defined( 'ABSPATH' ) ) {
             <?php esc_html_e( 'Use swps_breadcrumbs() in your theme template or the [swps_breadcrumbs] shortcode to display breadcrumbs.', 'stratawp-seo' ); ?>
         </p>
 
+        <h2><?php esc_html_e( 'Post List SEO Column', 'stratawp-seo' ); ?></h2>
+        <table class="form-table">
+            <tr>
+                <th scope="row"><?php esc_html_e( 'Enable SEO Column', 'stratawp-seo' ); ?></th>
+                <td>
+                    <?php
+                    $enabled_types = (array) get_option( 'swps_seo_column_post_types', [ 'post', 'page' ] );
+                    $all_types     = get_post_types( [ 'public' => true ], 'objects' );
+                    foreach ( $all_types as $pt ) :
+                        if ( 'attachment' === $pt->name ) continue;
+                    ?>
+                        <label style="display: block; margin-bottom: 6px;">
+                            <input type="checkbox" name="swps_seo_column_post_types[]"
+                                value="<?php echo esc_attr( $pt->name ); ?>"
+                                <?php checked( in_array( $pt->name, $enabled_types, true ) ); ?>>
+                            <?php echo esc_html( $pt->labels->name ); ?>
+                        </label>
+                    <?php endforeach; ?>
+                    <p class="description"><?php esc_html_e( 'Show the SEO score column on these post type list screens.', 'stratawp-seo' ); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="swps-seo-content-min"><?php esc_html_e( 'Minimum Content Length', 'stratawp-seo' ); ?></label></th>
+                <td>
+                    <input type="number" id="swps-seo-content-min" name="swps_seo_score_content_min"
+                        value="<?php echo esc_attr( get_option( 'swps_seo_score_content_min', 300 ) ); ?>"
+                        min="100" max="5000" step="50" class="small-text">
+                    <span><?php esc_html_e( 'words', 'stratawp-seo' ); ?></span>
+                    <p class="description"><?php esc_html_e( 'Minimum word count for the content length check in the SEO score.', 'stratawp-seo' ); ?></p>
+                </td>
+            </tr>
+        </table>
+
         <?php submit_button(); ?>
     </form>
 
