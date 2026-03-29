@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 3.4.0
+ * Version: 3.5.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'SWPS_VERSION', '3.4.0' );
+define( 'SWPS_VERSION', '3.5.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -100,6 +100,10 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-breadcrumbs.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-redirect-manager.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-redirect-admin.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-post-list-seo.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-link-keyword-engine.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-link-ai-engine.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-internal-links.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-internal-links-admin.php';
 
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
@@ -159,6 +163,8 @@ final class StrataWP_SEO {
     public SWPS_Breadcrumbs $breadcrumbs;
     public SWPS_Redirect_Manager $redirect_manager;
     public SWPS_Post_List_SEO $post_list_seo;
+    public SWPS_Internal_Links $internal_links;
+    public SWPS_Internal_Links_Admin $internal_links_admin;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -202,6 +208,10 @@ final class StrataWP_SEO {
         if ( is_admin() ) {
             $this->post_list_seo = new SWPS_Post_List_SEO( $this->content_scorer );
         }
+        $link_keyword_engine = new SWPS_Link_Keyword_Engine();
+        $link_ai_engine      = new SWPS_Link_AI_Engine( $this->api, $this->cost_tracker );
+        $this->internal_links = new SWPS_Internal_Links( $link_keyword_engine, $link_ai_engine );
+        $this->internal_links_admin = new SWPS_Internal_Links_Admin( $this->internal_links );
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
@@ -971,6 +981,9 @@ function swps_activate(): void {
     SWPS_Keyword_Tracker::schedule_cron();
 
     SWPS_Redirect_Manager::create_tables();
+    SWPS_Link_Keyword_Engine::create_tables();
+    SWPS_Internal_Links::create_tables();
+    SWPS_Internal_Links::schedule_cron();
 
     if ( ! wp_next_scheduled( 'swps_prune_404_logs' ) ) {
         wp_schedule_event( time(), 'daily', 'swps_prune_404_logs' );

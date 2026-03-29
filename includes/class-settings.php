@@ -537,6 +537,32 @@ class SWPS_Settings {
             'sanitize_callback' => 'absint',
             'default' => 300,
         ] );
+
+        // Internal Links settings.
+        register_setting( 'swps_settings', 'swps_internal_links_enabled', [
+            'type'    => 'boolean',
+            'default' => true,
+        ] );
+        register_setting( 'swps_settings', 'swps_internal_links_post_types', [
+            'type'    => 'array',
+            'default' => [ 'post', 'page' ],
+        ] );
+        register_setting( 'swps_settings', 'swps_link_relevance_threshold', [
+            'type'    => 'number',
+            'default' => 0.3,
+        ] );
+        register_setting( 'swps_settings', 'swps_link_max_suggestions', [
+            'type'    => 'integer',
+            'default' => 10,
+        ] );
+        register_setting( 'swps_settings', 'swps_internal_links_in_generation', [
+            'type'    => 'boolean',
+            'default' => true,
+        ] );
+        register_setting( 'swps_settings', 'swps_link_ai_batch_size', [
+            'type'    => 'integer',
+            'default' => 10,
+        ] );
     }
 
     /**
