@@ -398,7 +398,7 @@ class SWPS_Redirect_Manager {
         // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
         $wpdb->query( $wpdb->prepare(
             "DELETE FROM {$table} WHERE id IN ({$placeholders})",
-            $ids
+            ...$ids
         ) );
 
         wp_send_json_success();
@@ -425,7 +425,7 @@ class SWPS_Redirect_Manager {
         // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
         $rows = $wpdb->get_results( $wpdb->prepare(
             "SELECT id, url FROM {$table} WHERE id IN ({$placeholders})",
-            $ids
+            ...$ids
         ) );
 
         foreach ( $rows as $row ) {
@@ -439,7 +439,7 @@ class SWPS_Redirect_Manager {
         // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
         $wpdb->query( $wpdb->prepare(
             "DELETE FROM {$table} WHERE id IN ({$placeholders})",
-            $ids
+            ...$ids
         ) );
 
         wp_send_json_success();
