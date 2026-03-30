@@ -99,6 +99,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-search-appearance.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-breadcrumbs.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-redirect-manager.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-redirect-admin.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-sitemap-admin.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-post-list-seo.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-link-keyword-engine.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-link-ai-engine.php';
@@ -163,6 +164,7 @@ final class StrataWP_SEO {
     public SWPS_Breadcrumbs $breadcrumbs;
     public SWPS_Redirect_Manager $redirect_manager;
     public SWPS_Post_List_SEO $post_list_seo;
+    public SWPS_Sitemap_Admin $sitemap_admin;
     public SWPS_Internal_Links $internal_links;
     public SWPS_Internal_Links_Admin $internal_links_admin;
 
@@ -204,6 +206,7 @@ final class StrataWP_SEO {
         $this->search_appearance  = new SWPS_Search_Appearance();
         $this->breadcrumbs        = new SWPS_Breadcrumbs();
         $this->redirect_manager   = new SWPS_Redirect_Manager();
+        $this->sitemap_admin      = new SWPS_Sitemap_Admin();
 
         if ( is_admin() ) {
             $this->post_list_seo = new SWPS_Post_List_SEO( $this->content_scorer );
@@ -400,6 +403,10 @@ final class StrataWP_SEO {
         // Redirects page JS.
         if ( 'stratawp-seo_page_swps-redirects' === $hook ) {
             wp_enqueue_script( 'swps-redirects', SWPS_PLUGIN_URL . 'admin/js/redirects.js', [], SWPS_VERSION, true );
+        }
+
+        if ( 'stratawp-seo_page_swps-sitemaps' === $hook ) {
+            wp_enqueue_script( 'swps-sitemaps', SWPS_PLUGIN_URL . 'admin/js/sitemaps.js', [], SWPS_VERSION, true );
         }
     }
 

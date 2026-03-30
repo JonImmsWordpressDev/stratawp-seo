@@ -15,7 +15,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class SWPS_Sitemap_Manager {
 
-    private const URLS_PER_SITEMAP = 1000;
+    private function get_urls_per_sitemap(): int {
+        return (int) get_option( 'swps_sitemap_urls_per_page', 1000 );
+    }
 
     public function __construct() {
         // Disable WP core sitemaps to prevent conflict detection from blocking us.
@@ -124,7 +126,7 @@ class SWPS_Sitemap_Manager {
             }
 
             $count = $this->get_post_type_count( $pt );
-            $pages = max( 1, (int) ceil( $count / self::URLS_PER_SITEMAP ) );
+            $pages = max( 1, (int) ceil( $count / $this->get_urls_per_sitemap() ) );
 
             for ( $i = 1; $i <= $pages; $i++ ) {
                 $suffix = $i > 1 ? $i : '';
@@ -171,12 +173,12 @@ class SWPS_Sitemap_Manager {
      * Render a post type sub-sitemap.
      */
     private function render_post_type_sitemap( string $post_type, int $page ): void {
-        $offset = ( $page - 1 ) * self::URLS_PER_SITEMAP;
+        $offset = ( $page - 1 ) * $this->get_urls_per_sitemap();
 
         $posts = get_posts( [
             'post_type'      => $post_type,
             'post_status'    => 'publish',
-            'posts_per_page' => self::URLS_PER_SITEMAP,
+            'posts_per_page' => $this->get_urls_per_sitemap(),
             'offset'         => $offset,
             'orderby'        => 'modified',
             'order'          => 'DESC',
@@ -239,7 +241,7 @@ class SWPS_Sitemap_Manager {
         $terms = get_terms( [
             'taxonomy'   => $taxonomy,
             'hide_empty' => true,
-            'number'     => self::URLS_PER_SITEMAP,
+            'number'     => $this->get_urls_per_sitemap(),
         ] );
 
         echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
