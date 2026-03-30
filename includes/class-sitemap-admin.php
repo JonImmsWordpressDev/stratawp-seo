@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SWPS_Sitemap_Admin {
 
 	public function __construct() {
-		add_action( 'admin_menu', [ $this, 'register_menu' ] );
+		add_action( 'admin_menu', [ $this, 'register_menu' ], 20 );
 		add_action( 'admin_init', [ $this, 'register_settings' ] );
 		add_action( 'wp_ajax_swps_get_sitemaps', [ $this, 'ajax_get_sitemaps' ] );
 		add_action( 'wp_ajax_swps_toggle_sitemap', [ $this, 'ajax_toggle_sitemap' ] );
