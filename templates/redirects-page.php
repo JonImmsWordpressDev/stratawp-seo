@@ -65,11 +65,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 
     <div id="tab-404s" class="swps-tab-content" style="display:none;">
         <h3><?php esc_html_e( '404 Errors', 'stratawp-seo' ); ?></h3>
+
+        <!-- Bulk actions bar -->
+        <div class="swps-404-bulk-bar" style="display:none; margin-bottom:12px; padding:8px 12px; background:#f0f6fc; border:1px solid #c3c4c7; border-radius:4px;">
+            <span id="swps-404-selected-count">0</span> <?php esc_html_e( 'selected', 'stratawp-seo' ); ?> —
+            <button class="button button-small" id="swps-bulk-dismiss-404s"><?php esc_html_e( 'Dismiss Selected', 'stratawp-seo' ); ?></button>
+            <button class="button button-small" id="swps-bulk-redirect-404s"><?php esc_html_e( 'Redirect Selected to...', 'stratawp-seo' ); ?></button>
+            <span id="swps-bulk-redirect-target-wrap" style="display:none;">
+                <input type="text" id="swps-bulk-redirect-target" class="regular-text" placeholder="<?php esc_attr_e( '/target-page', 'stratawp-seo' ); ?>">
+                <button class="button button-primary button-small" id="swps-bulk-redirect-confirm"><?php esc_html_e( 'Go', 'stratawp-seo' ); ?></button>
+                <button class="button button-small" id="swps-bulk-redirect-cancel"><?php esc_html_e( 'Cancel', 'stratawp-seo' ); ?></button>
+            </span>
+        </div>
+
         <table class="widefat striped" id="swps-404s-table">
             <thead>
                 <tr>
+                    <th style="width:30px;"><input type="checkbox" id="swps-404-select-all"></th>
                     <th><?php esc_html_e( 'URL', 'stratawp-seo' ); ?></th>
+                    <th><?php esc_html_e( 'Referrer', 'stratawp-seo' ); ?></th>
                     <th><?php esc_html_e( 'Hits', 'stratawp-seo' ); ?></th>
+                    <th><?php esc_html_e( 'Suggested Target', 'stratawp-seo' ); ?></th>
                     <th><?php esc_html_e( 'Last Seen', 'stratawp-seo' ); ?></th>
                     <th><?php esc_html_e( 'Actions', 'stratawp-seo' ); ?></th>
                 </tr>

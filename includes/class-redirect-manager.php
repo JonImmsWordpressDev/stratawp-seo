@@ -37,6 +37,9 @@ class SWPS_Redirect_Manager {
         add_action( 'wp_ajax_swps_get_redirects', [ $this, 'ajax_get_redirects' ] );
         add_action( 'wp_ajax_swps_get_404s', [ $this, 'ajax_get_404s' ] );
         add_action( 'wp_ajax_swps_delete_404', [ $this, 'ajax_delete_404' ] );
+        add_action( 'wp_ajax_swps_suggest_redirect_target', [ $this, 'ajax_suggest_redirect_target' ] );
+        add_action( 'wp_ajax_swps_bulk_delete_404s', [ $this, 'ajax_bulk_delete_404s' ] );
+        add_action( 'wp_ajax_swps_bulk_redirect_404s', [ $this, 'ajax_bulk_redirect_404s' ] );
     }
 
     /**
@@ -269,6 +272,12 @@ class SWPS_Redirect_Manager {
         $table = $wpdb->prefix . self::LOG_TABLE;
         $logs = $wpdb->get_results( "SELECT * FROM {$table} ORDER BY count DESC LIMIT 100" );
 
+        foreach ( $logs as $log ) {
+            $suggestions             = $this->find_similar_posts( $log->url );
+            $log->suggested_target   = ! empty( $suggestions ) ? $suggestions[0]['url'] : '';
+            $log->suggestions        = $suggestions;
+        }
+
         wp_send_json_success( $logs );
     }
 
@@ -283,6 +292,156 @@ class SWPS_Redirect_Manager {
         $id    = (int) ( $_POST['id'] ?? 0 );
 
         $wpdb->delete( $table, [ 'id' => $id ], [ '%d' ] );
+        wp_send_json_success();
+    }
+
+    /**
+     * Find existing posts/pages similar to a given 404 URL.
+     *
+     * @param string $url The 404 URL to find matches for.
+     * @return array<int, array{title: string, url: string}>
+     */
+    private function find_similar_posts( string $url ): array {
+        global $wpdb;
+
+        // Extract slug from the last path segment.
+        $path = wp_parse_url( $url, PHP_URL_PATH ) ?? '';
+        $slug = basename( $path );
+
+        // Strip common extensions.
+        $slug = preg_replace( '/\.(html?|php|aspx)$/i', '', $slug );
+        $slug = sanitize_title( $slug );
+
+        if ( empty( $slug ) ) {
+            return [];
+        }
+
+        $results = $this->query_posts_by_slug( $slug );
+
+        // Fallback: split on hyphens and use the longest part (min 3 chars).
+        if ( empty( $results ) && strpos( $slug, '-' ) !== false ) {
+            $parts       = explode( '-', $slug );
+            $longest     = '';
+            foreach ( $parts as $part ) {
+                if ( strlen( $part ) >= 3 && strlen( $part ) > strlen( $longest ) ) {
+                    $longest = $part;
+                }
+            }
+            if ( ! empty( $longest ) ) {
+                $results = $this->query_posts_by_slug( $longest );
+            }
+        }
+
+        $suggestions = [];
+        foreach ( array_slice( $results, 0, 5 ) as $post ) {
+            $suggestions[] = [
+                'title' => $post->post_title,
+                'url'   => get_permalink( $post ),
+            ];
+        }
+
+        return $suggestions;
+    }
+
+    /**
+     * Query published posts/pages whose post_name matches a slug pattern.
+     *
+     * @param string $slug Slug to match against.
+     * @return array<int, \WP_Post>
+     */
+    private function query_posts_by_slug( string $slug ): array {
+        global $wpdb;
+
+        $like = '%' . $wpdb->esc_like( $slug ) . '%';
+
+        return $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM {$wpdb->posts}
+             WHERE post_status = 'publish'
+               AND post_type IN ('post', 'page')
+               AND post_name LIKE %s
+             ORDER BY (post_name = %s) DESC, post_date DESC
+             LIMIT 5",
+            $like,
+            $slug
+        ) ) ?? [];
+    }
+
+    public function ajax_suggest_redirect_target(): void {
+        check_ajax_referer( 'swps_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( 'Unauthorized' );
+        }
+
+        $url         = sanitize_text_field( wp_unslash( $_POST['url'] ?? '' ) );
+        $suggestions = $this->find_similar_posts( $url );
+
+        wp_send_json_success( $suggestions );
+    }
+
+    public function ajax_bulk_delete_404s(): void {
+        check_ajax_referer( 'swps_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( 'Unauthorized' );
+        }
+
+        $ids = array_map( 'absint', (array) ( $_POST['ids'] ?? [] ) );
+        $ids = array_filter( $ids );
+
+        if ( empty( $ids ) ) {
+            wp_send_json_error( 'No IDs provided.' );
+        }
+
+        global $wpdb;
+        $table        = $wpdb->prefix . self::LOG_TABLE;
+        $placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+
+        // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+        $wpdb->query( $wpdb->prepare(
+            "DELETE FROM {$table} WHERE id IN ({$placeholders})",
+            ...$ids
+        ) );
+
+        wp_send_json_success();
+    }
+
+    public function ajax_bulk_redirect_404s(): void {
+        check_ajax_referer( 'swps_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( 'Unauthorized' );
+        }
+
+        $ids    = array_map( 'absint', (array) ( $_POST['ids'] ?? [] ) );
+        $ids    = array_filter( $ids );
+        $target = sanitize_text_field( wp_unslash( $_POST['target'] ?? '' ) );
+
+        if ( empty( $ids ) || empty( $target ) ) {
+            wp_send_json_error( 'IDs and target are required.' );
+        }
+
+        global $wpdb;
+        $table        = $wpdb->prefix . self::LOG_TABLE;
+        $placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+
+        // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+        $rows = $wpdb->get_results( $wpdb->prepare(
+            "SELECT id, url FROM {$table} WHERE id IN ({$placeholders})",
+            ...$ids
+        ) );
+
+        foreach ( $rows as $row ) {
+            $source = wp_parse_url( $row->url, PHP_URL_PATH );
+            if ( $source ) {
+                $this->add_redirect( $source, $target, 301 );
+            }
+        }
+
+        // Delete the processed 404 entries.
+        // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+        $wpdb->query( $wpdb->prepare(
+            "DELETE FROM {$table} WHERE id IN ({$placeholders})",
+            ...$ids
+        ) );
+
         wp_send_json_success();
     }
 

@@ -926,3 +926,34 @@
     margin-left: 8px;
     color: #666;
 }
+
+/* === v3.6 Sitemaps Page === */
+.swps-sitemaps-page .nav-tab-wrapper { margin-bottom: 0; }
+.swps-sitemaps-page #swps-sitemaps-table td { vertical-align: middle; }
+
+/* === v3.6 Enhanced 404 Tab === */
+.swps-404-bulk-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.swps-inline-redirect-row td {
+    border-left: 3px solid #2271b1;
+}
+
+.swps-suggestion-chips .button {
+    background: #e7f5ff;
+    border-color: #b6d4fe;
+    color: #1971c2;
+}
+
+.swps-suggestion-chips .button:hover {
+    background: #d0ebff;
+    border-color: #74c0fc;
+}
+
+#swps-404s-table .swps-404-checkbox {
+    margin: 0;
+}
