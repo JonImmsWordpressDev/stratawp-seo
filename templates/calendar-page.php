@@ -4,10 +4,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 ?>
 <div class="wrap swps-wrap swps-calendar-wrap">
-    <h1>
-        <span class="dashicons dashicons-calendar-alt" style="font-size: 28px; margin-right: 8px;"></span>
-        <?php esc_html_e( 'Content Calendar', 'stratawp-seo' ); ?>
-    </h1>
+    <div class="swps-page-header">
+        <span class="swps-page-header-orb"></span>
+        <span class="swps-page-header-orb"></span>
+        <h1>
+            <span class="dashicons dashicons-calendar-alt"></span>
+            <?php esc_html_e( 'Content Calendar', 'stratawp-seo' ); ?>
+        </h1>
+        <p><?php esc_html_e( 'Plan your content schedule — click any date to add a topic', 'stratawp-seo' ); ?></p>
+    </div>
 
     <div class="swps-header-bar">
         <p><?php esc_html_e( 'Plan your content schedule. Click any date to add a topic, drag to reschedule, click a topic to view details.', 'stratawp-seo' ); ?></p>

@@ -1,8 +1,13 @@
 <div class="wrap swps-wrap">
-    <h1>
-        <span class="dashicons dashicons-superhero-alt" style="font-size: 28px; margin-right: 8px;"></span>
-        <?php esc_html_e( 'StrataWP SEO — Settings', 'stratawp-seo' ); ?>
-    </h1>
+    <div class="swps-page-header">
+        <span class="swps-page-header-orb"></span>
+        <span class="swps-page-header-orb"></span>
+        <h1>
+            <span class="dashicons dashicons-superhero-alt"></span>
+            <?php esc_html_e( 'StrataWP SEO — Settings', 'stratawp-seo' ); ?>
+        </h1>
+        <p><?php esc_html_e( 'Configure your AI-powered SEO content generator', 'stratawp-seo' ); ?></p>
+    </div>
 
     <div class="swps-header-bar">
         <p><?php esc_html_e( 'Configure your AI-powered SEO content generator. Fill in your site details and preferences, then head to', 'stratawp-seo' ); ?>

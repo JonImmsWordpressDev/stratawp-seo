@@ -18,7 +18,12 @@ $overall  = $results['overall_score'] ?? 0;
 $score_class = $overall >= 80 ? 'excellent' : ( $overall >= 50 ? 'good' : 'poor' );
 ?>
 <div class="wrap swps-wrap">
-	<h1><?php esc_html_e( 'SEO Audit', 'stratawp-seo' ); ?></h1>
+	<div class="swps-page-header">
+		<span class="swps-page-header-orb"></span>
+		<span class="swps-page-header-orb"></span>
+		<h1><?php esc_html_e( 'SEO Audit', 'stratawp-seo' ); ?></h1>
+		<p><?php esc_html_e( "Analyze your site's SEO health and fix issues", 'stratawp-seo' ); ?></p>
+	</div>
 
 	<div class="swps-audit-header">
 		<div class="swps-audit-score-circle swps-audit-score--<?php echo esc_attr( $score_class ); ?>">

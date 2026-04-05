@@ -1,11 +1,16 @@
 <div class="wrap swps-wrap">
-    <h1>
-        <span class="dashicons dashicons-format-status" style="font-size: 28px; margin-right: 8px;"></span>
-        <?php esc_html_e( 'Voice Profiles', 'stratawp-seo' ); ?>
-        <a href="<?php echo esc_url( admin_url( 'admin.php?page=swps-voice-profiles&action=new' ) ); ?>" class="page-title-action">
-            <?php esc_html_e( 'Add New', 'stratawp-seo' ); ?>
-        </a>
-    </h1>
+    <div class="swps-page-header">
+        <span class="swps-page-header-orb"></span>
+        <span class="swps-page-header-orb"></span>
+        <h1>
+            <span class="dashicons dashicons-format-status"></span>
+            <?php esc_html_e( 'Voice Profiles', 'stratawp-seo' ); ?>
+            <a href="<?php echo esc_url( admin_url( 'admin.php?page=swps-voice-profiles&action=new' ) ); ?>" class="page-title-action">
+                <?php esc_html_e( 'Add New', 'stratawp-seo' ); ?>
+            </a>
+        </h1>
+        <p><?php esc_html_e( 'Define consistent brand voices for your AI content', 'stratawp-seo' ); ?></p>
+    </div>
 
     <?php
     $active_id = (int) get_option( 'swps_voice_profile', 0 );
