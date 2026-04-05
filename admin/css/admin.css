@@ -1,6 +1,49 @@
-/* StrataWP SEO Admin Styles */
+/* StrataWP SEO Admin Styles — Slate & Coral Design System */
 
-.swps-wrap {
+:root {
+    /* Primary */
+    --swps-primary: #1E293B;
+    --swps-primary-light: #334155;
+    --swps-primary-lighter: #475569;
+    /* Accent */
+    --swps-accent: #F97316;
+    --swps-accent-light: #FFF7ED;
+    --swps-accent-hover: #EA580C;
+    /* Secondary */
+    --swps-secondary: #6366F1;
+    --swps-secondary-light: #EEF2FF;
+    /* Status */
+    --swps-success: #10B981;
+    --swps-success-light: #ECFDF5;
+    --swps-warning: #FBBF24;
+    --swps-warning-light: #FFFBEB;
+    --swps-error: #EF4444;
+    --swps-error-light: #FEF2F2;
+    /* Text */
+    --swps-text: #1E293B;
+    --swps-text-muted: #64748B;
+    --swps-text-light: #94A3B8;
+    /* Surface */
+    --swps-surface: #FFFFFF;
+    --swps-bg: #F8FAFC;
+    --swps-border: #E2E8F0;
+    --swps-border-light: #F1F5F9;
+    /* Radius */
+    --swps-radius-sm: 6px;
+    --swps-radius: 10px;
+    --swps-radius-lg: 16px;
+    /* Shadows */
+    --swps-shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --swps-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --swps-shadow-lg: 0 10px 15px rgba(0,0,0,0.08), 0 4px 6px rgba(0,0,0,0.04);
+    /* Transitions */
+    --swps-transition: 200ms ease;
+}
+
+.swps-wrap,
+.swps-analytics-wrap,
+.swps-keywords-wrap,
+.swps-calendar-wrap {
     max-width: 1200px;
 }
 
