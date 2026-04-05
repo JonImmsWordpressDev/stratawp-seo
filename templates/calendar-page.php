@@ -14,10 +14,6 @@ if ( ! defined( 'ABSPATH' ) ) {
         <p><?php esc_html_e( 'Plan your content schedule — click any date to add a topic', 'stratawp-seo' ); ?></p>
     </div>
 
-    <div class="swps-header-bar">
-        <p><?php esc_html_e( 'Plan your content schedule. Click any date to add a topic, drag to reschedule, click a topic to view details.', 'stratawp-seo' ); ?></p>
-    </div>
-
     <div id="swps-calendar"></div>
 
     <div class="swps-calendar-legend">
