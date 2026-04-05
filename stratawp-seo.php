@@ -317,10 +317,19 @@ final class StrataWP_SEO {
 
         // Analytics dashboard JS.
         if ( str_contains( $hook, 'swps-analytics' ) || in_array( $hook, [ 'post.php', 'post-new.php' ], true ) ) {
+            if ( str_contains( $hook, 'swps-analytics' ) ) {
+                wp_enqueue_script(
+                    'chartjs',
+                    'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js',
+                    [],
+                    '4.4.7',
+                    true
+                );
+            }
             wp_enqueue_script(
                 'swps-analytics',
                 SWPS_PLUGIN_URL . 'admin/js/analytics.js',
-                [ 'jquery', 'swps-admin' ],
+                str_contains( $hook, 'swps-analytics' ) ? [ 'jquery', 'swps-admin', 'chartjs' ] : [ 'jquery', 'swps-admin' ],
                 SWPS_VERSION,
                 true
             );

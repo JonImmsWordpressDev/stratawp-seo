@@ -105,47 +105,83 @@
         });
     }
 
-    // --- SVG Chart ---
+    // --- Chart.js Chart ---
+
+    var chartInstance = null;
 
     function renderChart(dailyViews, gscDaily) {
-        var container = document.getElementById('swps-analytics-chart');
-        if (!container) return;
-
-        var width = container.offsetWidth || 800;
-        var height = 250;
-        var padding = { top: 20, right: 20, bottom: 30, left: 50 };
-        var chartW = width - padding.left - padding.right;
-        var chartH = height - padding.top - padding.bottom;
+        var canvas = document.getElementById('swps-analytics-chart');
+        if (!canvas || typeof Chart === 'undefined') return;
 
         if (!dailyViews.length) {
-            container.innerHTML = '<p style="text-align:center;color:#646970;padding:40px 0;">No data for this period.</p>';
+            canvas.parentNode.insertAdjacentHTML('beforeend', '<p style="text-align:center;color:#64748B;padding:40px 0;">No data for this period.</p>');
             return;
         }
 
-        var maxViews = Math.max.apply(null, dailyViews.map(function (d) { return parseInt(d.views) || 0; }));
-        if (maxViews === 0) maxViews = 1;
+        var labels = dailyViews.map(function (d) { return d.date; });
+        var views = dailyViews.map(function (d) { return parseInt(d.views) || 0; });
+        var clicks = gscDaily.map(function (d) { return parseInt(d.clicks) || 0; });
 
-        var points = dailyViews.map(function (d, i) {
-            var x = padding.left + (i / Math.max(dailyViews.length - 1, 1)) * chartW;
-            var y = padding.top + chartH - ((parseInt(d.views) || 0) / maxViews) * chartH;
-            return x + ',' + y;
-        });
-
-        var svg = '<svg width="' + width + '" height="' + height + '" xmlns="http://www.w3.org/2000/svg">';
-
-        // Y-axis labels.
-        for (var i = 0; i <= 4; i++) {
-            var yVal = Math.round((maxViews / 4) * i);
-            var yPos = padding.top + chartH - (i / 4) * chartH;
-            svg += '<text x="' + (padding.left - 8) + '" y="' + (yPos + 4) + '" text-anchor="end" fill="#646970" font-size="11">' + yVal + '</text>';
-            svg += '<line x1="' + padding.left + '" y1="' + yPos + '" x2="' + (width - padding.right) + '" y2="' + yPos + '" stroke="#e0e0e0" />';
+        if (chartInstance) {
+            chartInstance.destroy();
         }
 
-        // Views line.
-        svg += '<polyline points="' + points.join(' ') + '" fill="none" stroke="#2271b1" stroke-width="2" />';
+        var ctx = canvas.getContext('2d');
+        var gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, 'rgba(249, 115, 22, 0.15)');
+        gradient.addColorStop(1, 'rgba(249, 115, 22, 0)');
 
-        svg += '</svg>';
-        container.innerHTML = svg;
+        var datasets = [{
+            label: 'Page Views',
+            data: views,
+            borderColor: '#F97316',
+            backgroundColor: gradient,
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            pointHoverBackgroundColor: '#F97316'
+        }];
+
+        if (clicks.length) {
+            datasets.push({
+                label: 'Search Clicks',
+                data: clicks,
+                borderColor: '#6366F1',
+                backgroundColor: 'transparent',
+                borderDash: [6, 3],
+                tension: 0.4,
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                pointHoverBackgroundColor: '#6366F1'
+            });
+        }
+
+        chartInstance = new Chart(canvas, {
+            type: 'line',
+            data: { labels: labels, datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    legend: { display: datasets.length > 1, position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'line', font: { size: 12 } } },
+                    tooltip: {
+                        backgroundColor: '#1E293B',
+                        titleFont: { size: 13 },
+                        bodyFont: { size: 12 },
+                        cornerRadius: 8,
+                        padding: 12
+                    }
+                },
+                scales: {
+                    x: { grid: { color: '#F1F5F9', drawBorder: false }, ticks: { color: '#94A3B8', font: { size: 11 } } },
+                    y: { grid: { color: '#F1F5F9', drawBorder: false }, ticks: { color: '#94A3B8', font: { size: 11 } }, beginAtZero: true }
+                }
+            }
+        });
     }
 
     // --- Post Metabox ---

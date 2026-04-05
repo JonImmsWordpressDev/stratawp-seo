@@ -90,8 +90,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
     <!-- Chart -->
     <div class="swps-chart-container">
-        <h2><?php esc_html_e( 'Traffic Over Time', 'stratawp-seo' ); ?></h2>
-        <div id="swps-analytics-chart" class="swps-chart"></div>
+        <h2><?php esc_html_e( 'Traffic Overview', 'stratawp-seo' ); ?></h2>
+        <p class="swps-chart-subtitle"><?php esc_html_e( 'Page views and search clicks over time', 'stratawp-seo' ); ?></p>
+        <canvas id="swps-analytics-chart" class="swps-chart"></canvas>
     </div>
 
     <!-- Top Pages -->
