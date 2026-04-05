@@ -954,7 +954,8 @@
 
 .swps-chart {
     width: 100%;
-    min-height: 280px;
+    height: 300px;
+    max-height: 400px;
 }
 
 .swps-analytics-section {
