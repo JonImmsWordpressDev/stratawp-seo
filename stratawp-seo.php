@@ -320,7 +320,7 @@ final class StrataWP_SEO {
             if ( str_contains( $hook, 'swps-analytics' ) ) {
                 wp_enqueue_script(
                     'chartjs',
-                    'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js',
+                    'https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js',
                     [],
                     '4.4.7',
                     true

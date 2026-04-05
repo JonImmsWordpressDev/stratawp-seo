@@ -113,18 +113,22 @@
         var canvas = document.getElementById('swps-analytics-chart');
         if (!canvas || typeof Chart === 'undefined') return;
 
+        if (chartInstance) {
+            chartInstance.destroy();
+            chartInstance = null;
+        }
+
+        var existing = canvas.parentNode.querySelector('.swps-no-data-msg');
+        if (existing) existing.remove();
+
         if (!dailyViews.length) {
-            canvas.parentNode.insertAdjacentHTML('beforeend', '<p style="text-align:center;color:#64748B;padding:40px 0;">No data for this period.</p>');
+            canvas.parentNode.insertAdjacentHTML('beforeend', '<p class="swps-no-data-msg" style="text-align:center;color:#64748B;padding:40px 0;">No data for this period.</p>');
             return;
         }
 
         var labels = dailyViews.map(function (d) { return d.date; });
         var views = dailyViews.map(function (d) { return parseInt(d.views) || 0; });
         var clicks = gscDaily.map(function (d) { return parseInt(d.clicks) || 0; });
-
-        if (chartInstance) {
-            chartInstance.destroy();
-        }
 
         var ctx = canvas.getContext('2d');
         var gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -177,8 +181,8 @@
                     }
                 },
                 scales: {
-                    x: { grid: { color: '#F1F5F9', drawBorder: false }, ticks: { color: '#94A3B8', font: { size: 11 } } },
-                    y: { grid: { color: '#F1F5F9', drawBorder: false }, ticks: { color: '#94A3B8', font: { size: 11 } }, beginAtZero: true }
+                    x: { border: { display: false }, grid: { color: '#F1F5F9' }, ticks: { color: '#94A3B8', font: { size: 11 } } },
+                    y: { border: { display: false }, grid: { color: '#F1F5F9' }, ticks: { color: '#94A3B8', font: { size: 11 } }, beginAtZero: true }
                 }
             }
         });
