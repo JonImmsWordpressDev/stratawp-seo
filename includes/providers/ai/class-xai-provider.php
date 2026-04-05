@@ -27,9 +27,9 @@ class SWPS_XAI_Provider extends SWPS_AI_Provider {
 
     public function get_available_models(): array {
         return [
-            'grok-3'      => 'Grok 3 (Most capable)',
-            'grok-3-fast' => 'Grok 3 Fast (Balanced)',
-            'grok-2'      => 'Grok 2 (Efficient)',
+            'grok-3'       => 'Grok 3 (Most capable)',
+            'grok-3-mini'  => 'Grok 3 Mini (Fast & efficient)',
+            'grok-3-fast'  => 'Grok 3 Fast (Balanced)',
         ];
     }
 

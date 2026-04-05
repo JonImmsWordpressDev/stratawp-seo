@@ -115,6 +115,77 @@
     });
 
     /**
+     * Bulk generate meta for all posts.
+     */
+    $(document).on('click', '#swps-bulk-generate-meta-btn', function (e) {
+        e.preventDefault();
+
+        var $btn = $(this);
+        var $bar = $btn.closest('.swps-bulk-refresh-bar');
+        var $progress = $bar.find('.swps-progress');
+        var $fill = $bar.find('.swps-progress-fill');
+        var $status = $bar.find('.swps-bulk-meta-status');
+        var generated = 0;
+        var skipped = 0;
+        var errors = 0;
+
+        $btn.prop('disabled', true);
+        $bar.find('#swps-bulk-refresh-btn').prop('disabled', true);
+        $progress.show();
+        $fill.css('width', '0%');
+
+        function processOne(offset) {
+            $.post(config.ajaxUrl, {
+                action: 'swps_bulk_generate_meta',
+                nonce: config.nonce,
+                offset: offset
+            })
+            .done(function (response) {
+                if (!response.success) {
+                    $status.text('Error: ' + (response.data.message || 'Unknown error'));
+                    $btn.prop('disabled', false);
+                    $bar.find('#swps-bulk-refresh-btn').prop('disabled', false);
+                    return;
+                }
+
+                var data = response.data;
+                var pct = data.total > 0 ? Math.round((data.processed / data.total) * 100) : 100;
+                $fill.css('width', pct + '%');
+
+                if (data.skipped) {
+                    skipped++;
+                } else if (data.error) {
+                    errors++;
+                } else if (data.post_title) {
+                    generated++;
+                }
+
+                var statusText = data.processed + ' / ' + data.total;
+                if (data.post_title) {
+                    statusText += ' — ' + (data.skipped ? 'Skipped' : data.error ? 'Error' : 'Generated') + ': ' + data.post_title;
+                }
+                $status.text(statusText);
+
+                if (data.done) {
+                    $status.text('Done! Generated: ' + generated + ', Skipped: ' + skipped + ', Errors: ' + errors + '. Reloading…');
+                    setTimeout(function () {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    processOne(data.processed);
+                }
+            })
+            .fail(function () {
+                $status.text('Request failed. Try again.');
+                $btn.prop('disabled', false);
+                $bar.find('#swps-bulk-refresh-btn').prop('disabled', false);
+            });
+        }
+
+        processOne(0);
+    });
+
+    /**
      * Inject bulk refresh bar above the posts table.
      */
     $(function () {
@@ -123,7 +194,10 @@
             var bar = '<div class="swps-bulk-refresh-bar">' +
                 '<button type="button" id="swps-bulk-refresh-btn" class="button">' +
                 'Refresh All SEO Scores</button>' +
+                ' <button type="button" id="swps-bulk-generate-meta-btn" class="button button-primary">' +
+                'AI Generate All Meta</button>' +
                 '<span class="swps-bulk-status"></span>' +
+                '<span class="swps-bulk-meta-status"></span>' +
                 '<div class="swps-progress"><div class="swps-progress-fill"></div></div>' +
                 '</div>';
             $table.before(bar);
