@@ -407,7 +407,7 @@
 }
 
 .swps-info-table td:first-child {
-    color: #646970;
+    color: var(--swps-text-muted);
     width: 100px;
 }
 
@@ -423,21 +423,23 @@
     display: block;
     font-size: 28px;
     font-weight: 700;
-    color: #1d2327;
+    color: var(--swps-text);
     line-height: 1.2;
 }
 
 .swps-stat-label {
     display: block;
-    font-size: 12px;
-    color: #646970;
+    font-size: 11px;
+    color: var(--swps-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    font-weight: 500;
+    margin-top: 4px;
 }
 
 /* Result card */
 .swps-card-result {
-    border-left: 4px solid #00a32a;
+    border-left: 4px solid var(--swps-success);
     margin-top: 20px;
 }
 
@@ -449,7 +451,7 @@
 .swps-result-table td {
     padding: 8px 12px;
     vertical-align: top;
-    border-bottom: 1px solid #f0f0f1;
+    border-bottom: 1px solid var(--swps-border-light);
 }
 
 .swps-result-table td:first-child {
@@ -465,10 +467,10 @@
 
 /* Code block */
 .swps-code-block {
-    background: #1d2327;
+    background: var(--swps-primary);
     color: #e0e0e0;
     padding: 16px;
-    border-radius: 4px;
+    border-radius: var(--swps-radius-sm);
     overflow-x: auto;
     font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
     font-size: 13px;
@@ -595,9 +597,9 @@
 }
 
 .swps-preview-meta {
-    background: #f0f6fc;
-    border: 1px solid #c3c4c7;
-    border-radius: 4px;
+    background: var(--swps-secondary-light);
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius-sm);
     padding: 12px 16px;
     margin-bottom: 20px;
 }
@@ -624,6 +626,7 @@
 
 .swps-log-section h2 {
     font-size: 16px;
+    color: var(--swps-text);
 }
 
 /* Content Score Badge */
@@ -641,13 +644,13 @@
 .swps-score-details {
     margin-top: 8px;
     font-size: 12px;
-    color: #646970;
+    color: var(--swps-text-muted);
 }
 .swps-score-details li {
     margin-bottom: 2px;
 }
 .swps-score-blocked-notice {
-    color: #d63638;
+    color: var(--swps-error);
     font-weight: 600;
     margin-top: 4px;
 }
@@ -966,7 +969,7 @@
 
 .swps-metabox-stats td {
     padding: 4px 0;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--swps-border-light);
     font-size: 13px;
 }
 
