@@ -90,6 +90,11 @@ class SWPS_Meta_Editor {
         $social_desc       = get_post_meta( $post->ID, '_swps_social_description', true );
         $social_image      = get_post_meta( $post->ID, '_swps_social_image', true );
 
+        // Sitemap controls.
+        $sitemap_exclude    = get_post_meta( $post->ID, '_swps_sitemap_exclude', true );
+        $sitemap_priority   = get_post_meta( $post->ID, '_swps_sitemap_priority', true );
+        $sitemap_changefreq = get_post_meta( $post->ID, '_swps_sitemap_changefreq', true );
+
         if ( $this->conflict ) {
             echo '<div class="notice notice-warning inline"><p>';
             esc_html_e( 'Meta output is disabled because another SEO plugin is active. Fields are saved but not output on the frontend.', 'stratawp-seo' );
@@ -139,6 +144,15 @@ class SWPS_Meta_Editor {
                 }
             }
         }
+
+        // Sitemap meta.
+        update_post_meta( $post_id, '_swps_sitemap_exclude', ! empty( $_POST['swps_sitemap_exclude'] ) ? 1 : 0 );
+
+        $priority = isset( $_POST['swps_sitemap_priority'] ) ? sanitize_text_field( $_POST['swps_sitemap_priority'] ) : '';
+        update_post_meta( $post_id, '_swps_sitemap_priority', $priority );
+
+        $changefreq = isset( $_POST['swps_sitemap_changefreq'] ) ? sanitize_text_field( $_POST['swps_sitemap_changefreq'] ) : '';
+        update_post_meta( $post_id, '_swps_sitemap_changefreq', $changefreq );
     }
 
     /**
@@ -243,18 +257,24 @@ class SWPS_Meta_Editor {
         $content = wp_strip_all_tags( $post->post_content );
         $content = mb_substr( $content, 0, 2000 ); // Limit to keep prompt short.
 
+        $kw_instruction = ! empty( $focus_keyword )
+            ? "Focus keyword (provided by user): {$focus_keyword}"
+            : 'Focus keyword: (none specified — you MUST suggest one based on the content)';
+
         $prompt = sprintf(
-            "Generate an SEO-optimized meta title (50-60 chars) and meta description (140-160 chars) for this blog post.\n\n"
+            "Generate an SEO-optimized meta title (50-60 chars), meta description (140-160 chars), and focus keyword for this blog post.\n\n"
             . "Post title: %s\n"
-            . "Focus keyword: %s\n"
+            . "%s\n"
             . "Content excerpt: %s\n\n"
             . "Requirements:\n"
-            . "- Include the focus keyword naturally in both title and description\n"
-            . "- Meta title: compelling, under 60 characters\n"
-            . "- Meta description: actionable, includes a call to read, under 160 characters\n\n"
-            . "Return JSON only: {\"meta_title\":\"...\",\"meta_description\":\"...\"}",
+            . "- If no focus keyword was provided, analyze the content and suggest the single best 2-4 word keyword phrase (e.g. 'WordPress SEO', 'Claude Skills' — NEVER a long sentence)\n"
+            . "- If a focus keyword was provided, use it as-is\n"
+            . "- Include the focus keyword naturally in both the meta title and meta description\n"
+            . "- Meta title: compelling, 50-60 characters, includes the focus keyword\n"
+            . "- Meta description: actionable, includes a call to read, 147-160 characters, includes the focus keyword\n\n"
+            . "Return JSON only: {\"meta_title\":\"...\",\"meta_description\":\"...\",\"focus_keyword\":\"...\"}",
             $post->post_title,
-            $focus_keyword ?: '(none specified)',
+            $kw_instruction,
             $content
         );
 
@@ -269,6 +289,13 @@ class SWPS_Meta_Editor {
         if ( preg_match( '/\{.*\}/s', $response, $json_match ) ) {
             $result = json_decode( $json_match[0], true );
             if ( is_array( $result ) ) {
+                // Save focus keyword to post meta immediately.
+                if ( ! empty( $result['focus_keyword'] ) ) {
+                    $kw = sanitize_text_field( $result['focus_keyword'] );
+                    update_post_meta( $post_id, '_swps_focus_keyword', $kw );
+                    update_post_meta( $post_id, '_yoast_wpseo_focuskw', $kw );
+                    update_post_meta( $post_id, 'rank_math_focus_keyword', $kw );
+                }
                 wp_send_json_success( $result );
             }
         }
@@ -327,18 +354,24 @@ class SWPS_Meta_Editor {
 
         $focus_keyword = get_post_meta( $post->ID, '_swps_focus_keyword', true );
 
+        $kw_instruction = ! empty( $focus_keyword )
+            ? "Focus keyword (provided by user): {$focus_keyword}"
+            : 'Focus keyword: (none specified — you MUST suggest one based on the content)';
+
         $prompt = sprintf(
-            "Generate an SEO-optimized meta title (50-60 chars) and meta description (140-160 chars) for this blog post.\n\n"
+            "Generate an SEO-optimized meta title (50-60 chars), meta description (140-160 chars), and focus keyword for this blog post.\n\n"
             . "Post title: %s\n"
-            . "Focus keyword: %s\n"
+            . "%s\n"
             . "Content excerpt: %s\n\n"
             . "Requirements:\n"
-            . "- Include the focus keyword naturally in both title and description\n"
-            . "- Meta title: compelling, under 60 characters\n"
-            . "- Meta description: actionable, includes a call to read, under 160 characters\n\n"
-            . "Return JSON only: {\"meta_title\":\"...\",\"meta_description\":\"...\"}",
+            . "- If no focus keyword was provided, analyze the content and suggest the single best 2-4 word keyword phrase (e.g. 'WordPress SEO', 'Claude Skills' — NEVER a long sentence)\n"
+            . "- If a focus keyword was provided, use it as-is\n"
+            . "- Include the focus keyword naturally in both the meta title and meta description\n"
+            . "- Meta title: compelling, 50-60 characters, includes the focus keyword\n"
+            . "- Meta description: actionable, includes a call to read, 147-160 characters, includes the focus keyword\n\n"
+            . "Return JSON only: {\"meta_title\":\"...\",\"meta_description\":\"...\",\"focus_keyword\":\"...\"}",
             $post->post_title,
-            $focus_keyword ?: '(none specified)',
+            $kw_instruction,
             $content
         );
 
@@ -358,6 +391,9 @@ class SWPS_Meta_Editor {
                 }
                 if ( ! empty( $result['meta_description'] ) ) {
                     update_post_meta( $post->ID, '_swps_meta_description', sanitize_textarea_field( $result['meta_description'] ) );
+                }
+                if ( ! empty( $result['focus_keyword'] ) ) {
+                    update_post_meta( $post->ID, '_swps_focus_keyword', sanitize_text_field( $result['focus_keyword'] ) );
                 }
             }
         }

@@ -5,3 +5,9 @@ vendor/
 *.zip
 .vscode/
 .idea/
+
+# Claude Code / Claude Flow tooling
+.claude/
+.claude-flow/
+.mcp.json
+CLAUDE.md
