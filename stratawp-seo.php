@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 3.6.1
+ * Version: 3.7.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'SWPS_VERSION', '3.6.1' );
+define( 'SWPS_VERSION', '3.7.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -364,10 +364,19 @@ final class StrataWP_SEO {
 
         // Analytics dashboard JS.
         if ( str_contains( $hook, 'swps-analytics' ) || in_array( $hook, [ 'post.php', 'post-new.php' ], true ) ) {
+            if ( str_contains( $hook, 'swps-analytics' ) ) {
+                wp_enqueue_script(
+                    'chartjs',
+                    'https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js',
+                    [],
+                    '4.4.7',
+                    true
+                );
+            }
             wp_enqueue_script(
                 'swps-analytics',
                 SWPS_PLUGIN_URL . 'admin/js/analytics.js',
-                [ 'jquery', 'swps-admin' ],
+                str_contains( $hook, 'swps-analytics' ) ? [ 'jquery', 'swps-admin', 'chartjs' ] : [ 'jquery', 'swps-admin' ],
                 SWPS_VERSION,
                 true
             );

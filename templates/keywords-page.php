@@ -10,7 +10,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 ?>
 <div class="wrap swps-keywords-wrap">
-    <h1><?php esc_html_e( 'Keyword Research & Tracking', 'stratawp-seo' ); ?></h1>
+    <div class="swps-page-header">
+        <span class="swps-page-header-orb"></span>
+        <span class="swps-page-header-orb"></span>
+        <h1><?php esc_html_e( 'Keyword Research & Tracking', 'stratawp-seo' ); ?></h1>
+        <p><?php esc_html_e( 'Discover opportunities and track your keyword rankings', 'stratawp-seo' ); ?></p>
+    </div>
 
     <!-- AI Suggestion Panel -->
     <div class="swps-keywords-section swps-suggest-panel">

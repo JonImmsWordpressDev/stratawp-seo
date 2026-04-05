@@ -18,10 +18,15 @@ $overall  = $results['overall_score'] ?? 0;
 $score_class = $overall >= 80 ? 'excellent' : ( $overall >= 50 ? 'good' : 'poor' );
 ?>
 <div class="wrap swps-wrap">
-	<h1><?php esc_html_e( 'SEO Audit', 'stratawp-seo' ); ?></h1>
+	<div class="swps-page-header">
+		<span class="swps-page-header-orb"></span>
+		<span class="swps-page-header-orb"></span>
+		<h1><?php esc_html_e( 'SEO Audit', 'stratawp-seo' ); ?></h1>
+		<p><?php esc_html_e( "Analyze your site's SEO health and fix issues", 'stratawp-seo' ); ?></p>
+	</div>
 
 	<div class="swps-audit-header">
-		<div class="swps-audit-score-circle swps-audit-score--<?php echo esc_attr( $score_class ); ?>">
+		<div class="swps-audit-score-circle swps-audit-score--<?php echo esc_attr( $score_class ); ?>" style="--score: <?php echo (int) $overall; ?>">
 			<span class="swps-audit-score-number"><?php echo (int) $overall; ?></span>
 			<span class="swps-audit-score-label"><?php esc_html_e( 'Site Health', 'stratawp-seo' ); ?></span>
 		</div>
@@ -76,7 +81,7 @@ $score_class = $overall >= 80 ? 'excellent' : ( $overall >= 50 ? 'good' : 'poor'
 				default   => '<span class="dashicons dashicons-dismiss" style="color:#d63638;"></span>',
 			};
 		?>
-		<div class="swps-audit-module-card swps-card" data-module-id="<?php echo esc_attr( $id ); ?>">
+		<div class="swps-audit-module-card swps-card" data-module-id="<?php echo esc_attr( $id ); ?>" data-status="<?php echo esc_attr( $mod_status ); ?>">
 			<div class="swps-audit-module-header">
 				<div class="swps-audit-module-info">
 					<?php echo $status_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>

@@ -6,10 +6,15 @@ $cost_stats  = stratawp_seo()->cost_tracker->get_monthly_stats();
 $templates   = SWPS_Templates::get_options();
 ?>
 <div class="wrap swps-wrap">
-    <h1>
-        <span class="dashicons dashicons-superhero-alt" style="font-size: 28px; margin-right: 8px;"></span>
-        <?php esc_html_e( 'Generate SEO Content', 'stratawp-seo' ); ?>
-    </h1>
+    <div class="swps-page-header">
+        <span class="swps-page-header-orb"></span>
+        <span class="swps-page-header-orb"></span>
+        <h1>
+            <span class="dashicons dashicons-superhero-alt"></span>
+            <?php esc_html_e( 'Generate SEO Content', 'stratawp-seo' ); ?>
+        </h1>
+        <p><?php esc_html_e( 'Create AI-powered SEO-optimized blog posts', 'stratawp-seo' ); ?></p>
+    </div>
 
     <?php if ( ! $has_api_key ) : ?>
         <div class="notice notice-error">

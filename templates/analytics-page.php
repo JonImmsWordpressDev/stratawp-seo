@@ -13,7 +13,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 ?>
 <div class="wrap swps-analytics-wrap">
-    <h1><?php esc_html_e( 'Analytics', 'stratawp-seo' ); ?></h1>
+    <div class="swps-page-header">
+        <span class="swps-page-header-orb"></span>
+        <span class="swps-page-header-orb"></span>
+        <h1><?php esc_html_e( 'Analytics', 'stratawp-seo' ); ?></h1>
+        <p><?php esc_html_e( "Track your site's performance and search visibility", 'stratawp-seo' ); ?></p>
+    </div>
 
     <?php if ( $gsc_connected && empty( $gsc_property ) && ! empty( $properties ) ) : ?>
         <div class="notice notice-info">
@@ -85,8 +90,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
     <!-- Chart -->
     <div class="swps-chart-container">
-        <h2><?php esc_html_e( 'Traffic Over Time', 'stratawp-seo' ); ?></h2>
-        <div id="swps-analytics-chart" class="swps-chart"></div>
+        <h2><?php esc_html_e( 'Traffic Overview', 'stratawp-seo' ); ?></h2>
+        <p class="swps-chart-subtitle"><?php esc_html_e( 'Page views and search clicks over time', 'stratawp-seo' ); ?></p>
+        <canvas id="swps-analytics-chart" class="swps-chart"></canvas>
     </div>
 
     <!-- Top Pages -->
