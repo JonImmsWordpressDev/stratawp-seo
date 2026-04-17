@@ -186,17 +186,6 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
-== Screenshots ==
-
-1. Settings page — configure AI provider, site details, and writing preferences
-2. Generate Content — create posts on demand with topic and template selection
-3. SEO Audit — 8-module technical audit with scores and one-click fixes
-4. Schema JSON-LD — automatic structured data output in page source
-5. Analytics Dashboard — page views, time on page, scroll depth, bounce rate, and GSC data
-6. Post Analytics — per-post metabox with views, engagement metrics, and top search queries
-7. Keyword Research — AI-powered suggestions and GSC rank tracking with striking distance opportunities
-8. SEO Meta Editor — per-post meta title, description, SERP preview, and SEO checklist
-
 == Changelog ==
 
 = 3.7.8 =
