@@ -4,8 +4,9 @@
 (function () {
     'use strict';
 
-    const nonce = typeof swps_admin !== 'undefined' ? swps_admin.nonce : '';
-    const ajaxUrl = typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php';
+    const adminData = typeof swpsAdmin !== 'undefined' ? swpsAdmin : (typeof swps_admin !== 'undefined' ? swps_admin : {});
+    const nonce = adminData.nonce || '';
+    const ajaxUrl = adminData.ajax_url || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php');
 
     function escHtml(str) {
         const div = document.createElement('div');
@@ -106,14 +107,24 @@
             })
                 .then(r => r.json())
                 .then(res => {
-                    if (pingResult) {
-                        pingResult.innerHTML = res.data || 'Ping complete';
-                        pingResult.style.display = 'block';
-                        // Clear after 3 seconds
-                        setTimeout(() => {
-                            pingResult.style.display = 'none';
-                        }, 3000);
-                    }
+                    if (!pingResult) return;
+                    const message =
+                        (res && res.data && typeof res.data === 'object' && res.data.message) ||
+                        (res && typeof res.data === 'string' && res.data) ||
+                        (res && res.success ? 'Ping complete' : 'Ping failed');
+                    const ok = res && res.success;
+                    pingResult.innerHTML = ' ' + escHtml(message);
+                    pingResult.style.color = ok ? '#0a7d2c' : '#b32d2e';
+                    pingResult.style.display = 'inline';
+                    setTimeout(() => {
+                        pingResult.style.display = 'none';
+                    }, 8000);
+                })
+                .catch(err => {
+                    if (!pingResult) return;
+                    pingResult.innerHTML = ' ' + escHtml('Network error: ' + err.message);
+                    pingResult.style.color = '#b32d2e';
+                    pingResult.style.display = 'inline';
                 });
         });
 

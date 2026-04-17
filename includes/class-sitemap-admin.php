@@ -229,10 +229,32 @@ class SWPS_Sitemap_Admin {
 			wp_send_json_error( [ 'message' => 'Sitemap manager not available.' ] );
 		}
 
-		$sitemap_manager->ping_search_engines();
+		$result = $sitemap_manager->ping_search_engines();
+
+		if ( ! empty( $result['error'] ) ) {
+			wp_send_json_error( [ 'message' => $result['error'] ] );
+		}
+
+		$status_code = (int) $result['status'];
+		$ok          = $status_code >= 200 && $status_code < 300;
+
+		if ( ! $ok ) {
+			wp_send_json_error( [
+				'message' => sprintf(
+					/* translators: %d: HTTP status code */
+					__( 'IndexNow returned HTTP %d. Verify the key file is accessible at /KEY.txt.', 'stratawp-seo' ),
+					$status_code
+				),
+			] );
+		}
 
 		wp_send_json_success( [
-			'message' => __( 'Pinging search engines...', 'stratawp-seo' ),
+			'message' => sprintf(
+				/* translators: 1: number of URLs, 2: HTTP status code */
+				__( 'Submitted %1$d URLs to IndexNow (HTTP %2$d). Bing, Yandex, and ChatGPT search will pick these up shortly.', 'stratawp-seo' ),
+				(int) $result['submitted'],
+				$status_code
+			),
 		] );
 	}
 
