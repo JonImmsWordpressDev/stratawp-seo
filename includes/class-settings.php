@@ -230,6 +230,29 @@ class SWPS_Settings {
             'rows'         => 4,
         ] );
 
+        // --- AI Crawlers Section ---
+        add_settings_section( 'swps_ai_crawlers_section', __( 'AI Crawlers', 'stratawp-seo' ), [ $this, 'render_ai_crawlers_section' ], 'stratawp-seo' );
+
+        $bot_options = [];
+        foreach ( SWPS_AI_Bots::KNOWN_BOTS as $key => $token ) {
+            $bot_options[ $key ] = $token;
+        }
+        $this->add_field( 'ai_bots_allowed', __( 'Allowed AI Bots', 'stratawp-seo' ), 'multi_checkbox', 'swps_ai_crawlers_section', [
+            'options'     => $bot_options,
+            'default'     => array_keys( $bot_options ),
+            'description' => __( 'Allowed bots get an explicit Allow rule in robots.txt; unchecked known bots get a Disallow. View the result at <code>/robots.txt</code>.', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'llms_txt_enabled', __( 'Generate llms.txt', 'stratawp-seo' ), 'checkbox', 'swps_ai_crawlers_section', [
+            'default'     => 1,
+            'label'       => __( 'Serve a dynamic llms.txt at /llms.txt', 'stratawp-seo' ),
+            'description' => sprintf(
+                /* translators: %s: link to /llms.txt */
+                __( 'Built from your site description and most recent posts (with one-line summaries). Overrides Yoast or other plugin output. <a href="%s" target="_blank">View live</a>.', 'stratawp-seo' ),
+                esc_url( home_url( '/llms.txt' ) )
+            ),
+        ] );
+
         // --- Writing Preferences Section ---
         add_settings_section( 'swps_writing_section', __( 'Writing Preferences', 'stratawp-seo' ), [ $this, 'render_writing_section' ], 'stratawp-seo' );
 
@@ -663,6 +686,12 @@ class SWPS_Settings {
             'checkbox' => function ( $value ) {
                 return $value ? 1 : 0;
             },
+            'multi_checkbox' => function ( $value ) {
+                if ( ! is_array( $value ) ) {
+                    return [];
+                }
+                return array_values( array_map( 'sanitize_key', $value ) );
+            },
             'number'   => 'absint',
             'textarea' => 'sanitize_textarea_field',
             'password' => function ( $value ) {
@@ -676,10 +705,11 @@ class SWPS_Settings {
      * Render a settings field.
      */
     public function render_field( array $args ): void {
-        $name  = $args['name'];
-        $type  = $args['type'];
-        $value = get_option( $name, '' );
-        $desc  = $args['description'] ?? '';
+        $name    = $args['name'];
+        $type    = $args['type'];
+        $default = $args['default'] ?? '';
+        $value   = get_option( $name, $default );
+        $desc    = $args['description'] ?? '';
 
         // Don't display encrypted values — show empty field with saved indicator.
         $has_encrypted_value = false;
@@ -743,6 +773,22 @@ class SWPS_Settings {
                 );
                 break;
 
+            case 'multi_checkbox':
+                $stored  = is_array( $value ) ? $value : ( $args['default'] ?? [] );
+                $options = $args['options'] ?? [];
+                echo '<fieldset style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:4px 16px;">';
+                foreach ( $options as $val => $label ) {
+                    printf(
+                        '<label><input type="checkbox" name="%s[]" value="%s" %s /> %s</label>',
+                        esc_attr( $name ),
+                        esc_attr( $val ),
+                        checked( in_array( $val, $stored, true ), true, false ),
+                        esc_html( $label )
+                    );
+                }
+                echo '</fieldset>';
+                break;
+
             case 'time':
                 printf(
                     '<input type="time" name="%s" value="%s" />',
@@ -792,6 +838,10 @@ class SWPS_Settings {
 
     public function render_site_section(): void {
         echo '<p>' . esc_html__( 'Tell the AI about your site so it can generate relevant, targeted content.', 'stratawp-seo' ) . '</p>';
+    }
+
+    public function render_ai_crawlers_section(): void {
+        echo '<p>' . esc_html__( 'Control which AI crawlers can access your site and serve a dynamic llms.txt index at /llms.txt.', 'stratawp-seo' ) . '</p>';
     }
 
     public function render_writing_section(): void {

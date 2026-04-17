@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 3.7.5
+ * Version: 3.7.6
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'SWPS_VERSION', '3.7.5' );
+define( 'SWPS_VERSION', '3.7.6' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -105,6 +105,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-link-keyword-engine.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-link-ai-engine.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-internal-links.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-internal-links-admin.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-ai-bots.php';
 
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
@@ -167,6 +168,7 @@ final class StrataWP_SEO {
     public SWPS_Sitemap_Admin $sitemap_admin;
     public SWPS_Internal_Links $internal_links;
     public SWPS_Internal_Links_Admin $internal_links_admin;
+    public SWPS_AI_Bots $ai_bots;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -215,6 +217,7 @@ final class StrataWP_SEO {
         $link_ai_engine      = new SWPS_Link_AI_Engine( $this->api, $this->cost_tracker );
         $this->internal_links = new SWPS_Internal_Links( $link_keyword_engine, $link_ai_engine );
         $this->internal_links_admin = new SWPS_Internal_Links_Admin( $this->internal_links );
+        $this->ai_bots             = new SWPS_AI_Bots();
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
