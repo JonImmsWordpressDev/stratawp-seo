@@ -12,7 +12,6 @@
 ## Table of Contents
 
 - [What This Plugin Does](#what-this-plugin-does)
-- [Screenshots](#screenshots)
 - [Features](#features)
 - [Architecture](#architecture)
 - [How Each Subsystem Works](#how-each-subsystem-works)
@@ -36,22 +35,6 @@ StrataWP SEO bundles three things into one plugin:
 3. **An AI discoverability layer** — robots.txt allowlist for 15 known AI crawlers (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, etc.), a dynamic `llms.txt` index built from your post excerpts, and IndexNow batch submission for instant Bing/ChatGPT indexing.
 
 It's designed to **replace** Yoast/RankMath/AIOSEO if you want to, or **coexist** with them (schema and meta output auto-disable when those plugins are detected).
-
----
-
-## Screenshots
-
-| Settings Page | Generate Content |
-|---|---|
-| ![Settings](screenshots/settings-page.png) | ![Generate](screenshots/generate-page.png) |
-
-| SEO Audit Dashboard | Schema JSON-LD Output |
-|---|---|
-| ![Audit](screenshots/audit-page.png) | ![Schema](screenshots/schema-output.png) |
-
-| Analytics Dashboard | Post Analytics Metabox |
-|---|---|
-| ![Analytics](screenshots/analytics-page.png) | ![Metabox](screenshots/analytics-metabox.png) |
 
 ---
 
