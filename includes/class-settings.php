@@ -84,6 +84,52 @@ class SWPS_Settings {
             'swps-redirects',
             [ SWPS_Redirect_Admin::class, 'render' ]
         );
+
+        add_submenu_page(
+            'stratawp-seo',
+            __( 'Debug — Last AI Failure', 'stratawp-seo' ),
+            __( 'Debug', 'stratawp-seo' ),
+            'manage_options',
+            'swps-debug',
+            [ $this, 'render_debug_page' ]
+        );
+    }
+
+    /**
+     * Render the debug page showing the last failed AI response.
+     */
+    public function render_debug_page(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You do not have permission to view this page.', 'stratawp-seo' ) );
+        }
+
+        if ( isset( $_POST['swps_clear_failure'] ) && check_admin_referer( 'swps_clear_failure' ) ) {
+            delete_transient( 'swps_last_ai_failure' );
+            echo '<div class="notice notice-success"><p>' . esc_html__( 'Cleared.', 'stratawp-seo' ) . '</p></div>';
+        }
+
+        $failure = get_transient( 'swps_last_ai_failure' );
+
+        echo '<div class="wrap"><h1>' . esc_html__( 'Last AI Failure', 'stratawp-seo' ) . '</h1>';
+
+        if ( empty( $failure ) ) {
+            echo '<p>' . esc_html__( 'No recent failures.', 'stratawp-seo' ) . '</p></div>';
+            return;
+        }
+
+        echo '<p><strong>' . esc_html__( 'Time:', 'stratawp-seo' ) . '</strong> ' . esc_html( $failure['time'] ?? '' ) . '</p>';
+        echo '<p><strong>' . esc_html__( 'Error:', 'stratawp-seo' ) . '</strong> ' . esc_html( $failure['error'] ?? '' ) . '</p>';
+        echo '<p><strong>' . esc_html__( 'Length:', 'stratawp-seo' ) . '</strong> ' . esc_html( (string) strlen( (string) ( $failure['raw'] ?? '' ) ) ) . ' chars</p>';
+
+        echo '<form method="post" style="margin: 12px 0;">';
+        wp_nonce_field( 'swps_clear_failure' );
+        submit_button( __( 'Clear', 'stratawp-seo' ), 'secondary', 'swps_clear_failure', false );
+        echo '</form>';
+
+        echo '<h2>' . esc_html__( 'Raw response', 'stratawp-seo' ) . '</h2>';
+        echo '<textarea readonly rows="30" style="width:100%;font-family:monospace;font-size:12px;">' . esc_textarea( (string) ( $failure['raw'] ?? '' ) ) . '</textarea>';
+
+        echo '</div>';
     }
 
     /**

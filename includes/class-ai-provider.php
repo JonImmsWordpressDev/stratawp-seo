@@ -123,10 +123,15 @@ abstract class SWPS_AI_Provider {
      * @return array|WP_Error Parsed JSON array or error.
      */
     protected function parse_json_response( string $response ): array|WP_Error {
+        $raw     = $response;
         $cleaned = trim( $response );
 
         // Strip BOM if present.
         $cleaned = ltrim( $cleaned, "\xEF\xBB\xBF" );
+
+        // Strip Unicode line/paragraph separators (U+2028, U+2029) that some
+        // PHP versions reject inside JSON strings.
+        $cleaned = str_replace( [ "\xe2\x80\xa8", "\xe2\x80\xa9" ], '', $cleaned );
 
         // Strip markdown code fences if present.
         $cleaned = preg_replace( '/^```(?:json)?\s*/s', '', $cleaned );
@@ -187,14 +192,48 @@ abstract class SWPS_AI_Provider {
             }
         }
 
-        // All attempts failed — return error with diagnostic info.
+        // Attempt 5: Combine quote repair AND control-char sanitization.
+        // The earlier sanitize regex bails out at the first unescaped quote, so
+        // combining repair (which fixes structure) with sanitize (which fixes
+        // control chars) catches responses with both issues.
+        $combined = preg_replace_callback(
+            '/"((?:[^"\\\\]|\\\\.)*)"/s',
+            function ( $m ) {
+                $val = str_replace(
+                    [ "\n", "\r", "\t", "\x08", "\x0C" ],
+                    [ '\\n', '\\r', '\\t', '\\b', '\\f' ],
+                    $m[1]
+                );
+                $val = preg_replace( '/[\x00-\x1F]/', '', $val );
+                return '"' . $val . '"';
+            },
+            $repaired
+        );
+        $decoded = json_decode( $combined, true, 512, JSON_INVALID_UTF8_SUBSTITUTE );
+        if ( json_last_error() === JSON_ERROR_NONE ) {
+            return $decoded;
+        }
+
+        // All attempts failed — persist the raw response for debugging and
+        // return error with diagnostic info.
+        set_transient(
+            'swps_last_ai_failure',
+            [
+                'time'    => current_time( 'mysql' ),
+                'error'   => json_last_error_msg(),
+                'raw'     => $raw,
+                'cleaned' => $cleaned,
+            ],
+            DAY_IN_SECONDS
+        );
+
         $len  = strlen( $cleaned );
         $tail = $len > 120 ? substr( $cleaned, -120 ) : $cleaned;
 
         return new WP_Error(
             'swps_json_parse_error',
             sprintf(
-                __( 'Failed to parse AI response as JSON: %s [len=%d, tail="%s"]', 'stratawp-seo' ),
+                __( 'Failed to parse AI response as JSON: %s [len=%d, tail="%s"]. Raw response saved — view at Settings → StrataWP SEO → Tools → Last AI Failure.', 'stratawp-seo' ),
                 json_last_error_msg(),
                 $len,
                 $tail
