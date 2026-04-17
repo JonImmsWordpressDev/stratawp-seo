@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         <a href="#settings" class="nav-tab" data-tab="settings"><?php esc_html_e( 'Settings', 'stratawp-seo' ); ?></a>
     </h2>
 
-    <div id="tab-dashboard" class="swps-tab-content">
+    <div id="tab-dashboard" class="swps-tab-content" data-tab="dashboard">
         <div class="postbox">
             <div class="inside">
                 <h3><?php esc_html_e( 'Sitemap Index', 'stratawp-seo' ); ?></h3>
@@ -67,7 +67,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         </table>
     </div>
 
-    <div id="tab-settings" class="swps-tab-content" style="display:none;">
+    <div id="tab-settings" class="swps-tab-content" data-tab="settings" style="display:none;">
         <form method="post" action="options.php">
             <?php settings_fields( 'swps_sitemap_settings' ); ?>
             <table class="form-table">

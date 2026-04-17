@@ -107,8 +107,6 @@ class SWPS_Generator {
             return $post_data;
         }
 
-        $this->log( sprintf( 'Generated post #%d: "%s"', $post_data['post_id'], $ai_result['title'] ) );
-
         // Fire after_generate action.
         SWPS_Hooks::do_after_generate( $post_data, $topic, $template );
 
@@ -394,6 +392,10 @@ PROMPT;
         if ( is_wp_error( $post_id ) ) {
             return $post_id;
         }
+
+        // Log the post creation immediately so we have a record even if a
+        // later step (featured image, hooks) fails or times out mid-cron.
+        $this->log( sprintf( 'Generated post #%d: "%s"', $post_id, $ai_result['title'] ) );
 
         // Set tags.
         if ( ! empty( $ai_result['suggested_tags'] ) ) {

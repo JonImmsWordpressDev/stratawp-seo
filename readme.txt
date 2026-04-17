@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 3.0.0
+Stable tag: 3.7.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -121,6 +121,12 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 
 * **Toggle-based removal** — WP generator tag, RSD link, shortlink, REST API link, oEmbed, and emoji scripts
 
+= AI Crawlers & llms.txt =
+
+* **AI bot allowlist** — checkbox grid for 15 known AI crawlers (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, etc.)
+* **robots.txt injection** — allowed bots get explicit Allow rules; unchecked known bots get Disallow
+* **Dynamic llms.txt** — served at /llms.txt, built from your site description and posts/pages/categories with one-line summaries
+
 = Developer Features =
 
 * **25+ filters and actions** — extend every part of the generation pipeline
@@ -193,6 +199,38 @@ No. GSC integration is optional. The on-site analytics works entirely without an
 
 == Changelog ==
 
+= 3.7.8 =
+* IndexNow batch submission replaces the dead Google/Bing sitemap ping endpoints (retired 2023). Ping now submits 50 most recent posts and reports real status.
+* Fixed Sitemaps admin: [object Object] ping result, blank Settings tab, permanent "Loading..." (wrong nonce reference).
+
+= 3.7.7 =
+* Sitemaps admin: fixed nonce reference (swps_admin -> swpsAdmin), added swps-admin JS dependency, fixed tab content data-tab attributes.
+
+= 3.7.6 =
+* New AI Crawlers settings section with multi-checkbox allowlist for 15 known AI bots.
+* New SWPS_AI_Bots class hooks robots_txt to inject Allow/Disallow rules.
+* Dynamic llms.txt generator served at /llms.txt with site description intro, posts/pages/categories, and one-line summaries.
+* New multi_checkbox settings field type and default arg support for checkboxes.
+
+= 3.7.5 =
+* New Debug admin page showing the last failed AI response (raw + cleaned) for diagnosis.
+* AI JSON parser: 5th repair attempt combining quote repair + control-char sanitization. Strips Unicode line/paragraph separators. Persists raw response on parse failure.
+
+= 3.7.4 =
+* Added Claude Opus 4.7 to the model dropdown (released April 2026).
+* Cost tracker pricing entry for Opus 4.7.
+
+= 3.7.3 =
+* Fixed JSON prefill incorrectly enabled for Claude 4.6+ models. Resolves "This model does not support assistant message prefill" error.
+
+= 3.7.0 - 3.7.2 =
+* Admin visual refresh (Slate & Coral palette across calendar, modals, SERP preview, all components).
+* Chart.js v4 fixes (CDN version pinning, canvas height constraint).
+* Updated AI model defaults.
+
+= 3.6.x =
+* Redirects, sitemaps, and internal linking system added.
+
 = 3.0.0 =
 * Added: Full Sitemap System — sitemap index with post type, taxonomy, and author sub-sitemaps. Per-URL priority/changefreq control. Image sitemap entries. IndexNow support for instant indexing.
 * Added: Search Appearance — configurable title/description templates for all content types with template variables. Title separator picker.
@@ -256,6 +294,18 @@ No. GSC integration is optional. The on-site analytics works entirely without an
 * Scheduled publishing
 
 == Upgrade Notice ==
+
+= 3.7.8 =
+Replaces the dead Google/Bing sitemap ping endpoints with IndexNow batch submission. Fixes Sitemaps admin display bugs.
+
+= 3.7.6 =
+Adds AI Crawlers settings section (robots.txt allowlist for 15 known AI bots) and dynamic llms.txt generator at /llms.txt.
+
+= 3.7.5 =
+Adds Debug admin page for AI JSON parse failures. Improves JSON parser robustness.
+
+= 3.7.3 =
+Fixes "assistant message prefill" error on Claude 4.6+ models. Strongly recommended.
 
 = 3.0.0 =
 Major release adding full sitemap system, search appearance templates, taxonomy/archive SEO, redirect manager, frontend breadcrumbs, RSS feed optimization, and wp_head cleanup. No breaking changes to existing features.

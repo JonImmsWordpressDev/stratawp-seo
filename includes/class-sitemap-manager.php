@@ -345,22 +345,67 @@ class SWPS_Sitemap_Manager {
     }
 
     /**
-     * Ping Google and Bing with the sitemap URL.
+     * Submit recent post URLs to IndexNow (Bing/Yandex/Seznam).
+     *
+     * Google retired the sitemap ping endpoint in 2023; Bing did the same.
+     * IndexNow is now the supported push protocol for Bing — and Bing's index
+     * powers ChatGPT search.
+     *
+     * @return array{submitted:int, status:int, error:string} Result summary.
      */
-    public function ping_search_engines(): void {
-        $sitemap_url = home_url( '/sitemap_index.xml' );
+    public function ping_search_engines(): array {
+        $key = get_option( 'swps_indexnow_key', '' );
+        if ( empty( $key ) ) {
+            return [
+                'submitted' => 0,
+                'status'    => 0,
+                'error'     => __( 'IndexNow key is not set. Generate one to enable pings.', 'stratawp-seo' ),
+            ];
+        }
 
-        wp_remote_get( 'https://www.google.com/ping?sitemap=' . urlencode( $sitemap_url ), [
-            'timeout'   => 5,
-            'blocking'  => false,
-            'sslverify' => false,
+        $posts = get_posts( [
+            'post_type'      => 'post',
+            'post_status'    => 'publish',
+            'posts_per_page' => 50,
+            'orderby'        => 'modified',
+            'order'          => 'DESC',
+            'fields'         => 'ids',
         ] );
 
-        wp_remote_get( 'https://www.bing.com/ping?sitemap=' . urlencode( $sitemap_url ), [
-            'timeout'   => 5,
-            'blocking'  => false,
-            'sslverify' => false,
+        if ( empty( $posts ) ) {
+            return [
+                'submitted' => 0,
+                'status'    => 0,
+                'error'     => __( 'No published posts to submit.', 'stratawp-seo' ),
+            ];
+        }
+
+        $urls = array_values( array_filter( array_map( 'get_permalink', $posts ) ) );
+
+        $response = wp_remote_post( 'https://api.indexnow.org/indexnow', [
+            'timeout' => 15,
+            'headers' => [ 'Content-Type' => 'application/json' ],
+            'body'    => wp_json_encode( [
+                'host'        => wp_parse_url( home_url(), PHP_URL_HOST ),
+                'key'         => $key,
+                'keyLocation' => home_url( "/{$key}.txt" ),
+                'urlList'     => $urls,
+            ] ),
         ] );
+
+        if ( is_wp_error( $response ) ) {
+            return [
+                'submitted' => 0,
+                'status'    => 0,
+                'error'     => $response->get_error_message(),
+            ];
+        }
+
+        return [
+            'submitted' => count( $urls ),
+            'status'    => (int) wp_remote_retrieve_response_code( $response ),
+            'error'     => '',
+        ];
     }
 
     /**

@@ -84,6 +84,52 @@ class SWPS_Settings {
             'swps-redirects',
             [ SWPS_Redirect_Admin::class, 'render' ]
         );
+
+        add_submenu_page(
+            'stratawp-seo',
+            __( 'Debug — Last AI Failure', 'stratawp-seo' ),
+            __( 'Debug', 'stratawp-seo' ),
+            'manage_options',
+            'swps-debug',
+            [ $this, 'render_debug_page' ]
+        );
+    }
+
+    /**
+     * Render the debug page showing the last failed AI response.
+     */
+    public function render_debug_page(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You do not have permission to view this page.', 'stratawp-seo' ) );
+        }
+
+        if ( isset( $_POST['swps_clear_failure'] ) && check_admin_referer( 'swps_clear_failure' ) ) {
+            delete_transient( 'swps_last_ai_failure' );
+            echo '<div class="notice notice-success"><p>' . esc_html__( 'Cleared.', 'stratawp-seo' ) . '</p></div>';
+        }
+
+        $failure = get_transient( 'swps_last_ai_failure' );
+
+        echo '<div class="wrap"><h1>' . esc_html__( 'Last AI Failure', 'stratawp-seo' ) . '</h1>';
+
+        if ( empty( $failure ) ) {
+            echo '<p>' . esc_html__( 'No recent failures.', 'stratawp-seo' ) . '</p></div>';
+            return;
+        }
+
+        echo '<p><strong>' . esc_html__( 'Time:', 'stratawp-seo' ) . '</strong> ' . esc_html( $failure['time'] ?? '' ) . '</p>';
+        echo '<p><strong>' . esc_html__( 'Error:', 'stratawp-seo' ) . '</strong> ' . esc_html( $failure['error'] ?? '' ) . '</p>';
+        echo '<p><strong>' . esc_html__( 'Length:', 'stratawp-seo' ) . '</strong> ' . esc_html( (string) strlen( (string) ( $failure['raw'] ?? '' ) ) ) . ' chars</p>';
+
+        echo '<form method="post" style="margin: 12px 0;">';
+        wp_nonce_field( 'swps_clear_failure' );
+        submit_button( __( 'Clear', 'stratawp-seo' ), 'secondary', 'swps_clear_failure', false );
+        echo '</form>';
+
+        echo '<h2>' . esc_html__( 'Raw response', 'stratawp-seo' ) . '</h2>';
+        echo '<textarea readonly rows="30" style="width:100%;font-family:monospace;font-size:12px;">' . esc_textarea( (string) ( $failure['raw'] ?? '' ) ) . '</textarea>';
+
+        echo '</div>';
     }
 
     /**
@@ -182,6 +228,29 @@ class SWPS_Settings {
             'placeholder'  => 'Describe your site, target audience, and what makes it unique...',
             'description'  => __( 'Give the AI context about your site and audience. The more detail, the better the content.', 'stratawp-seo' ),
             'rows'         => 4,
+        ] );
+
+        // --- AI Crawlers Section ---
+        add_settings_section( 'swps_ai_crawlers_section', __( 'AI Crawlers', 'stratawp-seo' ), [ $this, 'render_ai_crawlers_section' ], 'stratawp-seo' );
+
+        $bot_options = [];
+        foreach ( SWPS_AI_Bots::KNOWN_BOTS as $key => $token ) {
+            $bot_options[ $key ] = $token;
+        }
+        $this->add_field( 'ai_bots_allowed', __( 'Allowed AI Bots', 'stratawp-seo' ), 'multi_checkbox', 'swps_ai_crawlers_section', [
+            'options'     => $bot_options,
+            'default'     => array_keys( $bot_options ),
+            'description' => __( 'Allowed bots get an explicit Allow rule in robots.txt; unchecked known bots get a Disallow. View the result at <code>/robots.txt</code>.', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'llms_txt_enabled', __( 'Generate llms.txt', 'stratawp-seo' ), 'checkbox', 'swps_ai_crawlers_section', [
+            'default'     => 1,
+            'label'       => __( 'Serve a dynamic llms.txt at /llms.txt', 'stratawp-seo' ),
+            'description' => sprintf(
+                /* translators: %s: link to /llms.txt */
+                __( 'Built from your site description and most recent posts (with one-line summaries). Overrides Yoast or other plugin output. <a href="%s" target="_blank">View live</a>.', 'stratawp-seo' ),
+                esc_url( home_url( '/llms.txt' ) )
+            ),
         ] );
 
         // --- Writing Preferences Section ---
@@ -617,6 +686,12 @@ class SWPS_Settings {
             'checkbox' => function ( $value ) {
                 return $value ? 1 : 0;
             },
+            'multi_checkbox' => function ( $value ) {
+                if ( ! is_array( $value ) ) {
+                    return [];
+                }
+                return array_values( array_map( 'sanitize_key', $value ) );
+            },
             'number'   => 'absint',
             'textarea' => 'sanitize_textarea_field',
             'password' => function ( $value ) {
@@ -630,10 +705,11 @@ class SWPS_Settings {
      * Render a settings field.
      */
     public function render_field( array $args ): void {
-        $name  = $args['name'];
-        $type  = $args['type'];
-        $value = get_option( $name, '' );
-        $desc  = $args['description'] ?? '';
+        $name    = $args['name'];
+        $type    = $args['type'];
+        $default = $args['default'] ?? '';
+        $value   = get_option( $name, $default );
+        $desc    = $args['description'] ?? '';
 
         // Don't display encrypted values — show empty field with saved indicator.
         $has_encrypted_value = false;
@@ -697,6 +773,22 @@ class SWPS_Settings {
                 );
                 break;
 
+            case 'multi_checkbox':
+                $stored  = is_array( $value ) ? $value : ( $args['default'] ?? [] );
+                $options = $args['options'] ?? [];
+                echo '<fieldset style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:4px 16px;">';
+                foreach ( $options as $val => $label ) {
+                    printf(
+                        '<label><input type="checkbox" name="%s[]" value="%s" %s /> %s</label>',
+                        esc_attr( $name ),
+                        esc_attr( $val ),
+                        checked( in_array( $val, $stored, true ), true, false ),
+                        esc_html( $label )
+                    );
+                }
+                echo '</fieldset>';
+                break;
+
             case 'time':
                 printf(
                     '<input type="time" name="%s" value="%s" />',
@@ -746,6 +838,10 @@ class SWPS_Settings {
 
     public function render_site_section(): void {
         echo '<p>' . esc_html__( 'Tell the AI about your site so it can generate relevant, targeted content.', 'stratawp-seo' ) . '</p>';
+    }
+
+    public function render_ai_crawlers_section(): void {
+        echo '<p>' . esc_html__( 'Control which AI crawlers can access your site and serve a dynamic llms.txt index at /llms.txt.', 'stratawp-seo' ) . '</p>';
     }
 
     public function render_writing_section(): void {
