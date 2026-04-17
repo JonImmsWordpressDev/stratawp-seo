@@ -1288,3 +1288,26 @@
 #swps-404s-table .swps-404-checkbox {
     margin: 0;
 }
+
+/* Settings page tab layout */
+.swps-settings-tabs {
+    margin: 20px 0 0;
+    padding-left: 0;
+}
+.swps-settings-panel {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-top: none;
+    padding: 16px 24px 8px;
+    margin-bottom: 16px;
+}
+.swps-settings-panel h2 {
+    margin-top: 24px;
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
+}
+.swps-settings-panel h2:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}

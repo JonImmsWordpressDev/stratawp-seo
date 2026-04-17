@@ -918,6 +918,95 @@ class SWPS_Settings {
     }
 
     /**
+     * Tab groups for the settings page. Each tab lists the section IDs it contains.
+     */
+    public function get_settings_tabs(): array {
+        return [
+            'ai-content' => [
+                'label'    => __( 'AI & Content', 'stratawp-seo' ),
+                'sections' => [
+                    'swps_ai_section',
+                    'swps_site_section',
+                    'swps_writing_section',
+                    'swps_content_section',
+                    'swps_images_section',
+                ],
+            ],
+            'schedule' => [
+                'label'    => __( 'Schedule', 'stratawp-seo' ),
+                'sections' => [
+                    'swps_schedule_section',
+                ],
+            ],
+            'seo' => [
+                'label'    => __( 'SEO', 'stratawp-seo' ),
+                'sections' => [
+                    'swps_audit_section',
+                    'swps_schema_section',
+                    'swps_meta_section',
+                    'swps_cleanup_section',
+                    'swps_rss_section',
+                ],
+            ],
+            'discoverability' => [
+                'label'    => __( 'AI Crawlers', 'stratawp-seo' ),
+                'sections' => [
+                    'swps_ai_crawlers_section',
+                ],
+            ],
+            'analytics' => [
+                'label'    => __( 'Analytics', 'stratawp-seo' ),
+                'sections' => [
+                    'swps_analytics_section',
+                ],
+            ],
+            'advanced' => [
+                'label'    => __( 'Advanced', 'stratawp-seo' ),
+                'sections' => [
+                    'swps_advanced_section',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Render a subset of settings sections — same output as do_settings_sections()
+     * but scoped to a specific list of section IDs.
+     */
+    public function render_sections_for_tab( array $section_ids ): void {
+        global $wp_settings_sections, $wp_settings_fields;
+
+        $page = 'stratawp-seo';
+        if ( empty( $wp_settings_sections[ $page ] ) ) {
+            return;
+        }
+
+        foreach ( $section_ids as $section_id ) {
+            if ( ! isset( $wp_settings_sections[ $page ][ $section_id ] ) ) {
+                continue;
+            }
+
+            $section = $wp_settings_sections[ $page ][ $section_id ];
+
+            if ( ! empty( $section['title'] ) ) {
+                echo '<h2>' . esc_html( $section['title'] ) . '</h2>' . "\n";
+            }
+
+            if ( ! empty( $section['callback'] ) ) {
+                call_user_func( $section['callback'], $section );
+            }
+
+            if ( empty( $wp_settings_fields[ $page ][ $section_id ] ) ) {
+                continue;
+            }
+
+            echo '<table class="form-table" role="presentation">';
+            do_settings_fields( $page, $section_id );
+            echo '</table>';
+        }
+    }
+
+    /**
      * Render the main settings page.
      */
     public function render_settings_page(): void {
