@@ -214,6 +214,18 @@ abstract class SWPS_AI_Provider {
             return $decoded;
         }
 
+        // Attempt 6: Strip stray escape sequences (\n, \r, \t, etc.) that the
+        // model emitted *outside* of string literals. Walk the string tracking
+        // whether we're inside a JSON string; if we see a backslash outside a
+        // string, drop it and the following character.
+        $stripped = $this->strip_stray_escapes( $combined );
+        if ( $stripped !== $combined ) {
+            $decoded = json_decode( $stripped, true, 512, JSON_INVALID_UTF8_SUBSTITUTE );
+            if ( json_last_error() === JSON_ERROR_NONE ) {
+                return $decoded;
+            }
+        }
+
         // All attempts failed — persist the raw response for debugging and
         // return error with diagnostic info.
         set_transient(
@@ -301,6 +313,69 @@ abstract class SWPS_AI_Provider {
 
             $result .= $str_content . '"';
             $i++; // Skip the closing quote.
+        }
+
+        return $result;
+    }
+
+    /**
+     * Strip stray escape sequences that appear outside of string literals.
+     *
+     * The model occasionally emits literal backslash-letter pairs (e.g. "\n")
+     * between JSON tokens, which is invalid. Walk the string tracking whether
+     * we're inside a quoted string; outside strings, drop any backslash and
+     * the character that follows it.
+     *
+     * @param string $json The JSON string to clean.
+     * @return string The cleaned JSON string.
+     */
+    protected function strip_stray_escapes( string $json ): string {
+        $len      = strlen( $json );
+        $result   = '';
+        $i        = 0;
+        $in_string = false;
+
+        while ( $i < $len ) {
+            $ch = $json[ $i ];
+
+            if ( $in_string ) {
+                if ( $ch === '\\' && $i + 1 < $len ) {
+                    // Inside a string — preserve escape sequences verbatim.
+                    $result .= $ch . $json[ $i + 1 ];
+                    $i += 2;
+                    continue;
+                }
+                if ( $ch === '"' ) {
+                    $in_string = false;
+                }
+                $result .= $ch;
+                $i++;
+                continue;
+            }
+
+            // Outside a string.
+            if ( $ch === '"' ) {
+                $in_string = true;
+                $result   .= $ch;
+                $i++;
+                continue;
+            }
+
+            if ( $ch === '\\' && $i + 1 < $len ) {
+                // Stray escape between tokens — drop the backslash AND the
+                // following char only if it is a typical escape letter.
+                // Otherwise, drop just the backslash.
+                $next = $json[ $i + 1 ];
+                if ( strpos( "nrtbf/\\\"u", $next ) !== false ) {
+                    $i += 2;
+                } else {
+                    $i += 1;
+                }
+                continue;
+            }
+
+            $result .= $ch;
+            $i++;
         }
 
         return $result;
