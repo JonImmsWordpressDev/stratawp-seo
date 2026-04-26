@@ -229,7 +229,17 @@ PROMPT;
         $prompt .= <<<'PROMPT'
 
 
-RESPONSE FORMAT: Respond ONLY with a valid JSON object. No markdown fences, no explanation, just JSON.
+RESPONSE FORMAT: Respond ONLY with a single, strictly valid RFC 8259 JSON object. No markdown fences, no prose, no explanation.
+
+JSON SYNTAX REQUIREMENTS (NON-NEGOTIABLE — output MUST parse with strict JSON parsers):
+- Every string value must be properly quoted with " and any inner " escaped as \".
+- Escape sequences (\n, \r, \t, \", \\) are ONLY valid INSIDE string literals. NEVER emit a backslash-letter sequence between tokens, between array elements, between object members, or anywhere outside of a quoted string.
+- Use real whitespace (spaces, real newlines) between JSON tokens — never literal \n or \t characters as separators.
+- No trailing commas before } or ].
+- No comments (// or /* */).
+- No control characters (0x00–0x1F) inside strings — encode them as \n, \r, \t, etc.
+- Balanced brackets: every { has a matching } and every [ has a matching ].
+- Before finishing your response, mentally re-parse it as JSON and confirm it is valid.
 
 Required JSON structure:
 {
