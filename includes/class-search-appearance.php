@@ -41,6 +41,9 @@ class SWPS_Search_Appearance {
 
         // Meta description for non-singular pages — priority 2 (same as Meta Editor).
         add_action( 'wp_head', [ $this, 'output_meta_description' ], 2 );
+
+        // Robots directives from Search Appearance noindex controls.
+        add_action( 'wp_head', [ $this, 'output_robots_directives' ], 2 );
     }
 
     /**
@@ -91,6 +94,81 @@ class SWPS_Search_Appearance {
                 esc_attr( wp_strip_all_tags( $description ) )
             );
         }
+    }
+
+    /**
+     * Output robots meta tags for Search Appearance visibility settings.
+     */
+    public function output_robots_directives(): void {
+        $robots = $this->get_robots_directives();
+
+        if ( empty( $robots ) ) {
+            return;
+        }
+
+        printf(
+            '<meta name="robots" content="%s" />' . "\n",
+            esc_attr( implode( ', ', $robots ) )
+        );
+    }
+
+    /**
+     * Resolve robots directives for the current request.
+     *
+     * Per-post and per-term explicit robots settings win; this method only fills
+     * in the global noindex controls from Search Appearance to avoid duplicate
+     * meta tags from the Meta Editor or Taxonomy Meta modules.
+     */
+    private function get_robots_directives(): array {
+        if ( is_singular() ) {
+            $post_id = get_the_ID();
+            if ( ! $post_id ) {
+                return [];
+            }
+
+            $explicit = get_post_meta( $post_id, '_swps_robots', true );
+            if ( ! empty( $explicit ) ) {
+                return [];
+            }
+
+            $post_type = get_post_type( $post_id );
+            if ( $post_type && get_option( "swps_noindex_{$post_type}", 0 ) ) {
+                return [ 'noindex', 'follow' ];
+            }
+
+            return [];
+        }
+
+        if ( is_category() || is_tag() || is_tax() ) {
+            $term = get_queried_object();
+            if ( ! $term instanceof WP_Term ) {
+                return [];
+            }
+
+            $explicit = get_term_meta( $term->term_id, '_swps_robots', true );
+            if ( ! empty( $explicit ) ) {
+                return [];
+            }
+
+            if ( get_option( "swps_noindex_{$term->taxonomy}", 0 ) ) {
+                return [ 'noindex', 'follow' ];
+            }
+
+            return [];
+        }
+
+        if ( is_post_type_archive() ) {
+            $post_type = get_query_var( 'post_type' );
+            if ( is_array( $post_type ) ) {
+                $post_type = reset( $post_type );
+            }
+
+            if ( is_string( $post_type ) && get_option( "swps_noindex_{$post_type}", 0 ) ) {
+                return [ 'noindex', 'follow' ];
+            }
+        }
+
+        return [];
     }
 
     /**

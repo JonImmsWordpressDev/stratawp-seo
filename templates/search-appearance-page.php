@@ -66,6 +66,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                     <th scope="row"><?php esc_html_e( 'Show in Search Results', 'stratawp-seo' ); ?></th>
                     <td>
                         <label>
+                            <input type="hidden" name="swps_noindex_<?php echo esc_attr( $pt->name ); ?>" value="0">
                             <input type="checkbox" name="swps_noindex_<?php echo esc_attr( $pt->name ); ?>" value="1"
                                 <?php checked( get_option( "swps_noindex_{$pt->name}", 0 ) ); ?>>
                             <?php esc_html_e( 'Noindex this post type (hide from search engines)', 'stratawp-seo' ); ?>
@@ -98,6 +99,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                     <th scope="row"><?php esc_html_e( 'Show in Search Results', 'stratawp-seo' ); ?></th>
                     <td>
                         <label>
+                            <input type="hidden" name="swps_noindex_<?php echo esc_attr( $tax->name ); ?>" value="0">
                             <input type="checkbox" name="swps_noindex_<?php echo esc_attr( $tax->name ); ?>" value="1"
                                 <?php checked( get_option( "swps_noindex_{$tax->name}", 0 ) ); ?>>
                             <?php esc_html_e( 'Noindex this taxonomy', 'stratawp-seo' ); ?>

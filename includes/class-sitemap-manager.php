@@ -16,7 +16,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SWPS_Sitemap_Manager {
 
     private function get_urls_per_sitemap(): int {
-        return (int) get_option( 'swps_sitemap_urls_per_page', 1000 );
+        return max( 100, min( 50000, (int) get_option( 'swps_sitemap_urls_per_page', 1000 ) ) );
+    }
+    private function is_post_type_hidden_from_sitemap( string $post_type ): bool {
+        return 'attachment' === $post_type
+            || (bool) get_option( "swps_sitemap_exclude_{$post_type}", 0 )
+            || (bool) get_option( "swps_noindex_{$post_type}", 0 );
+    }
+
+    private function is_taxonomy_hidden_from_sitemap( string $taxonomy ): bool {
+        return 'post_format' === $taxonomy
+            || (bool) get_option( "swps_sitemap_exclude_{$taxonomy}", 0 )
+            || (bool) get_option( "swps_noindex_{$taxonomy}", 0 );
     }
 
     public function __construct() {
@@ -68,8 +79,8 @@ class SWPS_Sitemap_Manager {
             return;
         }
 
-        // Skip if Yoast or RankMath active.
-        if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) ) {
+        // Skip if another SEO plugin is actively handling sitemaps.
+        if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) ) {
             return;
         }
 
@@ -94,12 +105,12 @@ class SWPS_Sitemap_Manager {
         } else {
             // Check if it's a taxonomy.
             $taxonomies = get_taxonomies( [ 'public' => true ] );
-            if ( in_array( $type, $taxonomies, true ) && ! get_option( "swps_sitemap_exclude_{$type}", 0 ) ) {
+            if ( in_array( $type, $taxonomies, true ) && ! $this->is_taxonomy_hidden_from_sitemap( $type ) ) {
                 $this->render_taxonomy_sitemap( $type );
             } else {
                 // Post type sitemap.
                 $post_types = get_post_types( [ 'public' => true ] );
-                if ( in_array( $type, $post_types, true ) && ! get_option( "swps_sitemap_exclude_{$type}", 0 ) ) {
+                if ( in_array( $type, $post_types, true ) && ! $this->is_post_type_hidden_from_sitemap( $type ) ) {
                     $this->render_post_type_sitemap( $type, $page );
                 } else {
                     status_header( 404 );
@@ -121,7 +132,7 @@ class SWPS_Sitemap_Manager {
         // Post type sitemaps.
         $post_types = get_post_types( [ 'public' => true ] );
         foreach ( $post_types as $pt ) {
-            if ( 'attachment' === $pt || get_option( "swps_sitemap_exclude_{$pt}", 0 ) ) {
+            if ( $this->is_post_type_hidden_from_sitemap( $pt ) ) {
                 continue;
             }
 
@@ -141,7 +152,7 @@ class SWPS_Sitemap_Manager {
         // Taxonomy sitemaps.
         $taxonomies = get_taxonomies( [ 'public' => true ] );
         foreach ( $taxonomies as $tax ) {
-            if ( 'post_format' === $tax || get_option( "swps_sitemap_exclude_{$tax}", 0 ) ) {
+            if ( $this->is_taxonomy_hidden_from_sitemap( $tax ) ) {
                 continue;
             }
 
@@ -173,6 +184,10 @@ class SWPS_Sitemap_Manager {
      * Render a post type sub-sitemap.
      */
     private function render_post_type_sitemap( string $post_type, int $page ): void {
+        if ( $this->is_post_type_hidden_from_sitemap( $post_type ) ) {
+            return;
+        }
+
         $offset = ( $page - 1 ) * $this->get_urls_per_sitemap();
 
         $posts = get_posts( [
@@ -238,6 +253,10 @@ class SWPS_Sitemap_Manager {
      * Render a taxonomy sub-sitemap.
      */
     private function render_taxonomy_sitemap( string $taxonomy ): void {
+        if ( $this->is_taxonomy_hidden_from_sitemap( $taxonomy ) ) {
+            return;
+        }
+
         $terms = get_terms( [
             'taxonomy'   => $taxonomy,
             'hide_empty' => true,

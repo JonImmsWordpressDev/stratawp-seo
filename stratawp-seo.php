@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 3.8.0
+ * Version: 3.8.1
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'SWPS_VERSION', '3.8.0' );
+define( 'SWPS_VERSION', '3.8.1' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -580,10 +580,84 @@ final class StrataWP_SEO {
 
         $schema = get_post_meta( get_the_ID(), '_swps_faq_schema', true );
 
-        if ( ! empty( $schema ) ) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-built JSON-LD script tag.
-            echo $schema . "\n";
+        $schema = $this->normalize_faq_schema_meta( $schema );
+
+        if ( empty( $schema ) ) {
+            return;
         }
+
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-LD encoded from sanitized schema array.
+        echo '<script type="application/ld+json">'
+           . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
+           . '</script>' . "\n";
+    }
+
+    /**
+     * Normalize legacy FAQ schema meta into a safe schema array.
+     *
+     * Older versions stored a full script tag. Newer generated posts store the
+     * schema array directly so output can always be encoded in one trusted path.
+     */
+    private function normalize_faq_schema_meta( mixed $schema ): array {
+        if ( empty( $schema ) ) {
+            return [];
+        }
+
+        if ( is_string( $schema ) ) {
+            $json = trim( $schema );
+
+            if ( false !== stripos( $json, '<script' ) ) {
+                if ( ! preg_match( '/<script[^>]*type=["\']application\/ld\+json["\'][^>]*>(.*?)<\/script>/is', $json, $matches ) ) {
+                    return [];
+                }
+                $json = html_entity_decode( trim( $matches[1] ), ENT_QUOTES, 'UTF-8' );
+            }
+
+            $schema = json_decode( $json, true );
+        }
+
+        if ( ! is_array( $schema ) || 'FAQPage' !== ( $schema['@type'] ?? '' ) ) {
+            return [];
+        }
+
+        $entities = $schema['mainEntity'] ?? [];
+        if ( ! is_array( $entities ) ) {
+            return [];
+        }
+
+        $normalized = [
+            '@context'   => 'https://schema.org',
+            '@type'      => 'FAQPage',
+            'name'       => sanitize_text_field( wp_strip_all_tags( (string) ( $schema['name'] ?? get_the_title() ) ) ),
+            'mainEntity' => [],
+        ];
+
+        foreach ( $entities as $entity ) {
+            if ( ! is_array( $entity ) ) {
+                continue;
+            }
+
+            $answer = $entity['acceptedAnswer'] ?? [];
+            $text   = is_array( $answer ) ? ( $answer['text'] ?? '' ) : '';
+
+            $question = sanitize_text_field( wp_strip_all_tags( (string) ( $entity['name'] ?? '' ) ) );
+            $text     = sanitize_textarea_field( wp_strip_all_tags( (string) $text ) );
+
+            if ( '' === $question || '' === $text ) {
+                continue;
+            }
+
+            $normalized['mainEntity'][] = [
+                '@type'          => 'Question',
+                'name'           => $question,
+                'acceptedAnswer' => [
+                    '@type' => 'Answer',
+                    'text'  => $text,
+                ],
+            ];
+        }
+
+        return empty( $normalized['mainEntity'] ) ? [] : $normalized;
     }
 
     /**

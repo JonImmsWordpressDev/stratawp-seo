@@ -11,3 +11,8 @@ vendor/
 .claude-flow/
 .mcp.json
 CLAUDE.md
+
+# Codex / agent tooling
+.agents/
+.codex/
+AGENTS.md

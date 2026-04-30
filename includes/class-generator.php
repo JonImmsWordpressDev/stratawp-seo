@@ -449,8 +449,7 @@ PROMPT;
         if ( ! empty( $ai_result['faq_schema'] ) ) {
             $schema_data = $this->build_faq_schema_data( $ai_result['title'], $ai_result['faq_schema'] );
             $schema_data = SWPS_Hooks::filter_faq_schema( $schema_data, $ai_result['title'], $ai_result['faq_schema'] );
-            $schema_tag  = '<script type="application/ld+json">' . wp_json_encode( $schema_data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) . '</script>';
-            update_post_meta( $post_id, '_swps_faq_schema', $schema_tag );
+            update_post_meta( $post_id, '_swps_faq_schema', $schema_data );
         }
 
         // Track cost per post.
@@ -668,17 +667,28 @@ PROMPT;
         $schema = [
             '@context'   => 'https://schema.org',
             '@type'      => 'FAQPage',
-            'name'       => $title,
+            'name'       => sanitize_text_field( wp_strip_all_tags( $title ) ),
             'mainEntity' => [],
         ];
 
         foreach ( $faq_items as $item ) {
+            if ( ! is_array( $item ) ) {
+                continue;
+            }
+
+            $question = sanitize_text_field( wp_strip_all_tags( (string) ( $item['question'] ?? '' ) ) );
+            $answer   = sanitize_textarea_field( wp_strip_all_tags( (string) ( $item['answer'] ?? '' ) ) );
+
+            if ( '' === $question || '' === $answer ) {
+                continue;
+            }
+
             $schema['mainEntity'][] = [
                 '@type'          => 'Question',
-                'name'           => $item['question'],
+                'name'           => $question,
                 'acceptedAnswer' => [
                     '@type' => 'Answer',
-                    'text'  => $item['answer'],
+                    'text'  => $answer,
                 ],
             ];
         }
