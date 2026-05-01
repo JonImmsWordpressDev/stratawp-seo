@@ -130,6 +130,13 @@ class SWPS_Admin_Shell {
             SWPS_VERSION
         );
 
+        wp_enqueue_style(
+            'swps-templates',
+            SWPS_PLUGIN_URL . 'admin/css/templates.css',
+            [ 'swps-tokens', 'swps-components' ],
+            SWPS_VERSION
+        );
+
         wp_enqueue_script(
             'swps-shell',
             SWPS_PLUGIN_URL . 'admin/js/shell.js',

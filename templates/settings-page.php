@@ -1,6 +1,9 @@
 <?php
 /**
- * Settings page template with tabbed section groups.
+ * Settings page template (v4.0).
+ *
+ * Top tabs (broad categories) -> form sections rendered via WP Settings API.
+ * The shell (top bar + sidebar + page header partial) wraps this template.
  *
  * @package StrataWP_SEO
  */
@@ -14,24 +17,24 @@ $tabs     = $settings->get_settings_tabs();
 $tab_keys = array_keys( $tabs );
 $default  = $tab_keys[0] ?? 'ai-content';
 ?>
-<div class="wrap swps-wrap swps-settings-wrap">
-    <div class="swps-page-header">
-        <span class="swps-page-header-orb"></span>
-        <span class="swps-page-header-orb"></span>
-        <h1>
-            <span class="dashicons dashicons-superhero-alt"></span>
-            <?php esc_html_e( 'StrataWP SEO — Settings', 'stratawp-seo' ); ?>
-        </h1>
-        <p><?php esc_html_e( 'Configure your AI-powered SEO content generator', 'stratawp-seo' ); ?></p>
-    </div>
+<div class="wrap swps-settings-wrap">
+
+    <?php
+    $title    = __( 'Settings', 'stratawp-seo' );
+    $subtitle = __( 'Configure your AI provider, content defaults, schedule, schema, analytics, and more. Changes save when you hit Save.', 'stratawp-seo' );
+    $actions  = [];
+    require SWPS_PLUGIN_DIR . 'templates/partials/page-header.php';
+    ?>
 
     <div class="swps-header-bar">
-        <p><?php esc_html_e( 'Fill in your site details and preferences, then head to', 'stratawp-seo' ); ?>
-        <a href="<?php echo esc_url( admin_url( 'admin.php?page=swps-generate' ) ); ?>"><?php esc_html_e( 'Generate Content', 'stratawp-seo' ); ?></a>
-        <?php esc_html_e( 'to create your first post.', 'stratawp-seo' ); ?></p>
+        <p>
+            <?php esc_html_e( 'Fill in your site details and preferences, then head to', 'stratawp-seo' ); ?>
+            <a href="<?php echo esc_url( admin_url( 'admin.php?page=swps-generate' ) ); ?>"><?php esc_html_e( 'Generate Content', 'stratawp-seo' ); ?></a>
+            <?php esc_html_e( 'to create your first post.', 'stratawp-seo' ); ?>
+        </p>
     </div>
 
-    <h2 class="nav-tab-wrapper swps-settings-tabs" role="tablist">
+    <div class="nav-tab-wrapper swps-settings-tabs" role="tablist">
         <?php foreach ( $tabs as $key => $tab ) : ?>
             <a
                 href="#<?php echo esc_attr( $key ); ?>"
@@ -43,7 +46,7 @@ $default  = $tab_keys[0] ?? 'ai-content';
                 <?php echo esc_html( $tab['label'] ); ?>
             </a>
         <?php endforeach; ?>
-    </h2>
+    </div>
 
     <form method="post" action="options.php">
         <?php settings_fields( 'stratawp-seo' ); ?>
@@ -59,14 +62,13 @@ $default  = $tab_keys[0] ?? 'ai-content';
             </div>
         <?php endforeach; ?>
 
-        <?php submit_button( __( 'Save Settings', 'stratawp-seo' ) ); ?>
+        <?php submit_button( __( 'Save Settings', 'stratawp-seo' ), 'primary', 'submit', true, [ 'class' => 'swps-btn-grad' ] ); ?>
     </form>
 
-    <div class="swps-card" style="margin-top: 20px;">
+    <div class="swps-card">
         <h2><?php esc_html_e( 'Cache Management', 'stratawp-seo' ); ?></h2>
         <p><?php esc_html_e( 'The site analyzer caches results for 1 hour to improve performance. Clear the cache if you\'ve made significant content changes and want fresh analysis data.', 'stratawp-seo' ); ?></p>
         <button type="button" id="swps-clear-cache-btn" class="button button-secondary">
-            <span class="dashicons dashicons-trash" style="margin-top: 4px;"></span>
             <?php esc_html_e( 'Clear Cache', 'stratawp-seo' ); ?>
         </button>
     </div>
@@ -130,13 +132,11 @@ $default  = $tab_keys[0] ?? 'ai-content';
             });
         });
 
-        // Deep-link via hash.
         var hash = window.location.hash.replace(/^#/, '');
         if (hash && wrap.querySelector('.swps-settings-tabs .nav-tab[data-tab="' + hash + '"]')) {
             activate(hash);
         }
 
-        // If the user submits and lands on `?settings-updated=true`, preserve the tab they were on.
         var form = wrap.querySelector('form');
         if (form) {
             form.addEventListener('submit', function () {
@@ -147,7 +147,6 @@ $default  = $tab_keys[0] ?? 'ai-content';
                     input.name = '_swps_active_tab';
                     input.value = active.dataset.tab;
                     form.appendChild(input);
-                    // Append the tab as a hash so WP's redirect preserves it.
                     form.action = form.action.split('#')[0] + '#' + active.dataset.tab;
                 }
             });

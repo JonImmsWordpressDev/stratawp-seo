@@ -1,0 +1,381 @@
+/**
+ * StrataWP SEO — Page Templates (v4.0)
+ *
+ * Settings template (top tabs + form sections) and Data-dense template
+ * (summary tiles + filterable expandable rows).
+ */
+
+/* ==========================================================================
+   Settings template — pill tabs
+   ========================================================================== */
+
+body.swps-has-shell .swps-settings-tabs.nav-tab-wrapper {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0 0 24px;
+    padding: 4px;
+    background: var(--swps-bg-surface);
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius);
+    border-bottom: 1px solid var(--swps-border);
+}
+
+body.swps-has-shell .swps-settings-tabs .nav-tab {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--swps-text-muted);
+    border-radius: 7px;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    margin: 0;
+    box-shadow: none;
+    transition: all var(--swps-transition);
+    text-decoration: none;
+    line-height: 1.2;
+    height: auto;
+}
+body.swps-has-shell .swps-settings-tabs .nav-tab:hover,
+body.swps-has-shell .swps-settings-tabs .nav-tab:focus {
+    background: var(--swps-bg-hover);
+    color: var(--swps-text-primary);
+    box-shadow: none;
+    outline: none;
+}
+body.swps-has-shell .swps-settings-tabs .nav-tab-active,
+body.swps-has-shell .swps-settings-tabs .nav-tab-active:focus {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(167, 139, 250, 0.15));
+    color: var(--swps-text-primary);
+    border-color: rgba(167, 139, 250, 0.3);
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   Settings header bar (subtle introduction strip above tabs)
+   ========================================================================== */
+
+body.swps-has-shell .swps-header-bar {
+    background: var(--swps-bg-surface);
+    border: 1px solid var(--swps-border);
+    border-left: 4px solid var(--swps-accent-1);
+    color: var(--swps-text-body);
+    border-radius: var(--swps-radius-sm);
+}
+body.swps-has-shell .swps-header-bar p {
+    color: var(--swps-text-body);
+}
+body.swps-has-shell .swps-header-bar a {
+    color: var(--swps-accent-1);
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   Settings panels (one per tab)
+   ========================================================================== */
+
+body.swps-has-shell .swps-settings-panel {
+    background: var(--swps-bg-surface);
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius);
+    padding: 22px 24px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    margin-bottom: 16px;
+}
+[data-swps-theme="light"] body.swps-has-shell .swps-settings-panel {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: var(--swps-shadow-sm);
+}
+
+body.swps-has-shell .swps-settings-panel > h2 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--swps-text-primary);
+    margin: 0 0 4px;
+    padding: 0;
+    border: none;
+}
+body.swps-has-shell .swps-settings-panel > h2:not(:first-child) {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid var(--swps-border);
+}
+
+/* ==========================================================================
+   WP form-table → label-left / control-right
+   ========================================================================== */
+
+body.swps-has-shell .swps-settings-panel .form-table {
+    margin: 12px 0 0;
+    table-layout: fixed;
+    width: 100%;
+}
+body.swps-has-shell .swps-settings-panel .form-table th {
+    width: 38%;
+    padding: 14px 24px 14px 0;
+    vertical-align: top;
+    color: var(--swps-text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    border-top: 1px solid var(--swps-border);
+}
+body.swps-has-shell .swps-settings-panel .form-table tr:first-child th,
+body.swps-has-shell .swps-settings-panel .form-table tr:first-child td {
+    border-top: none;
+    padding-top: 0;
+}
+body.swps-has-shell .swps-settings-panel .form-table td {
+    width: 62%;
+    padding: 14px 0;
+    color: var(--swps-text-body);
+    vertical-align: top;
+    border-top: 1px solid var(--swps-border);
+}
+body.swps-has-shell .swps-settings-panel .form-table p.description {
+    color: var(--swps-text-faint);
+    font-size: 12px;
+    margin-top: 6px;
+    line-height: 1.5;
+    font-style: normal;
+}
+body.swps-has-shell .swps-settings-panel .form-table input[type="text"],
+body.swps-has-shell .swps-settings-panel .form-table input[type="number"],
+body.swps-has-shell .swps-settings-panel .form-table input[type="email"],
+body.swps-has-shell .swps-settings-panel .form-table input[type="url"],
+body.swps-has-shell .swps-settings-panel .form-table input[type="password"],
+body.swps-has-shell .swps-settings-panel .form-table input[type="search"],
+body.swps-has-shell .swps-settings-panel .form-table select,
+body.swps-has-shell .swps-settings-panel .form-table textarea {
+    width: 100%;
+    max-width: 480px;
+}
+body.swps-has-shell .swps-settings-panel .form-table input.regular-text {
+    width: 100%;
+    max-width: 480px;
+}
+body.swps-has-shell .swps-settings-panel .form-table input.small-text,
+body.swps-has-shell .swps-settings-panel .form-table input[type="number"].small-text {
+    width: 80px;
+}
+
+body.swps-has-shell .swps-settings-panel fieldset label {
+    color: var(--swps-text-body);
+    display: block;
+    margin: 4px 0;
+}
+body.swps-has-shell .swps-settings-panel fieldset label code {
+    background: var(--swps-bg-input);
+    color: var(--swps-accent-2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+/* WP submit button row */
+body.swps-has-shell .swps-settings-wrap p.submit {
+    padding: 16px 0 0;
+    margin: 0;
+}
+
+/* WP "Settings saved" admin notice — already inherits .notice rules, just spacing */
+body.swps-has-shell .swps-settings-wrap .updated.notice,
+body.swps-has-shell .swps-settings-wrap .notice-success {
+    margin-bottom: 16px;
+}
+
+/* ==========================================================================
+   Cache / Activity log section (below tabs)
+   ========================================================================== */
+
+body.swps-has-shell .swps-settings-wrap > .swps-card {
+    background: var(--swps-bg-surface);
+    border: 1px solid var(--swps-border);
+}
+
+body.swps-has-shell .swps-log-section {
+    background: var(--swps-bg-surface);
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius);
+    padding: 22px 24px;
+    margin-top: 16px;
+}
+body.swps-has-shell .swps-log-section h2 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 12px;
+    color: var(--swps-text-primary);
+}
+
+/* ==========================================================================
+   Tables (widefat) inside our shell
+   ========================================================================== */
+
+body.swps-has-shell .widefat {
+    background: transparent;
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius-sm);
+    box-shadow: none;
+}
+body.swps-has-shell .widefat thead th,
+body.swps-has-shell .widefat tfoot th {
+    background: var(--swps-bg-input);
+    color: var(--swps-text-primary);
+    font-weight: 600;
+    border-bottom: 1px solid var(--swps-border);
+    text-shadow: none;
+}
+body.swps-has-shell .widefat tbody td,
+body.swps-has-shell .widefat tbody th {
+    color: var(--swps-text-body);
+    background: transparent;
+    border-bottom: 1px solid var(--swps-border);
+}
+body.swps-has-shell .widefat.striped > tbody > :nth-child(odd) {
+    background: rgba(255, 255, 255, 0.02);
+}
+[data-swps-theme="light"] body.swps-has-shell .widefat.striped > tbody > :nth-child(odd) {
+    background: var(--swps-bg-hover);
+}
+
+/* ==========================================================================
+   Data-dense template (summary tiles + filter chips + expandable rows)
+   ========================================================================== */
+
+.swps-summary-tiles {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+@media screen and (max-width: 960px) {
+    .swps-summary-tiles { grid-template-columns: repeat(2, 1fr); }
+}
+
+.swps-summary-tile {
+    background: var(--swps-bg-surface);
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius);
+    padding: 16px;
+}
+.swps-summary-tile-h {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--swps-text-muted);
+    font-weight: 600;
+    margin: 0 0 10px;
+}
+.swps-summary-tile-num {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+}
+.swps-summary-tile-num.is-grad {
+    background: var(--swps-accent-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: var(--swps-accent-2);
+}
+.swps-summary-tile-num.is-crit { color: var(--swps-crit); }
+.swps-summary-tile-num.is-warn { color: var(--swps-warn); }
+.swps-summary-tile-num.is-ok   { color: var(--swps-success); }
+.swps-summary-tile-foot {
+    font-size: 11px;
+    color: var(--swps-text-muted);
+    margin-top: 6px;
+}
+
+/* Filter chips row */
+.swps-filter-chips {
+    display: inline-flex;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius-sm);
+    padding: 2px;
+    margin-left: auto;
+}
+.swps-filter-chip {
+    padding: 6px 12px;
+    font-size: 11px;
+    color: var(--swps-text-muted);
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all var(--swps-transition-fast);
+}
+.swps-filter-chip:hover {
+    color: var(--swps-text-primary);
+}
+.swps-filter-chip.is-on {
+    background: rgba(56, 189, 248, 0.10);
+    color: var(--swps-accent-1);
+}
+
+/* Section header with right-aligned chips */
+.swps-section-h {
+    display: flex;
+    align-items: center;
+    margin: 0 0 14px;
+    gap: 12px;
+}
+.swps-section-h h3 {
+    font-size: 15px;
+    color: var(--swps-text-primary);
+    margin: 0;
+    font-weight: 600;
+}
+
+/* Expandable issue/result rows */
+.swps-row-card {
+    background: var(--swps-bg-surface);
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius);
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+.swps-row-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+}
+.swps-row-head-name {
+    font-size: 13px;
+    color: var(--swps-text-primary);
+    font-weight: 600;
+}
+.swps-row-head-msg {
+    font-size: 11px;
+    color: var(--swps-text-muted);
+    margin-top: 2px;
+}
+.swps-row-head-meta {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.swps-row-head-score {
+    font-size: 14px;
+    color: var(--swps-text-primary);
+    font-weight: 600;
+}
+.swps-row-disclose {
+    color: var(--swps-text-faint);
+    font-size: 12px;
+}
+.swps-row-detail {
+    border-top: 1px solid var(--swps-border);
+    padding: 14px 18px 16px 60px;
+    display: none;
+}
+.swps-row-card.is-open .swps-row-detail {
+    display: block;
+}
