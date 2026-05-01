@@ -550,7 +550,15 @@ class SWPS_Sitemap_Manager {
                 /* translators: %d: HTTP status code */
                 $error = sprintf( __( 'HTTP %d', 'stratawp-seo' ), $status );
             } elseif ( $body !== $key ) {
-                $error = __( 'Returned content does not match the key.', 'stratawp-seo' );
+                $excerpt = substr( $body, 0, 80 );
+                if ( strlen( $body ) > 80 ) {
+                    $excerpt .= '…';
+                }
+                $error = sprintf(
+                    /* translators: %s: response body excerpt */
+                    __( 'Returned content does not match the key. Got: %s', 'stratawp-seo' ),
+                    '"' . $excerpt . '"'
+                );
             }
             $checks[] = [
                 'label'  => $target['label'],
@@ -639,17 +647,34 @@ class SWPS_Sitemap_Manager {
      */
     public function rest_indexnow_key(): void {
         $key = get_option( 'swps_indexnow_key', '' );
+
+        // Drop any output buffers the REST server (or other plugins) started
+        // so the body we emit isn't appended to a JSON-encoded payload.
+        while ( ob_get_level() > 0 ) {
+            @ob_end_clean();
+        }
+
+        // Replace the application/json header WP_REST_Server queued before
+        // dispatch. header_remove() clears it so our header() call wins on
+        // SAPIs that don't honour PHP's default replace flag.
+        if ( ! headers_sent() ) {
+            header_remove( 'Content-Type' );
+            header_remove( 'Cache-Control' );
+            header_remove( 'Expires' );
+            header_remove( 'Pragma' );
+        }
+
+        nocache_headers();
+        header( 'Content-Type: text/plain; charset=UTF-8' );
+        header( 'X-Robots-Tag: noindex' );
+
         if ( empty( $key ) ) {
             status_header( 404 );
-            header( 'Content-Type: text/plain; charset=UTF-8' );
             echo 'IndexNow key is not set.';
             exit;
         }
 
-        nocache_headers();
         status_header( 200 );
-        header( 'Content-Type: text/plain; charset=UTF-8' );
-        header( 'X-Robots-Tag: noindex' );
         echo $key;
         exit;
     }
