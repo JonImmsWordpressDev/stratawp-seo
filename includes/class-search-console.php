@@ -102,7 +102,7 @@ class SWPS_Search_Console {
         update_option( 'swps_gsc_connected', 1 );
 
         // Redirect to settings page.
-        wp_safe_redirect( admin_url( 'admin.php?page=stratawp-seo&gsc_connected=1' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=swps-settings&gsc_connected=1' ) );
         exit;
     }
 

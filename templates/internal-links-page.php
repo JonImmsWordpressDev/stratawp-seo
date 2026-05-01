@@ -1,6 +1,6 @@
 <?php
 /**
- * Internal Links overview admin page template.
+ * Internal Links overview admin page (v4.0).
  *
  * @var array $stats Stats from SWPS_Internal_Links_Admin::get_stats().
  * @package StrataWP_SEO
@@ -10,50 +10,59 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 ?>
-<div class="wrap">
-    <h1><?php esc_html_e( 'Internal Links', 'stratawp-seo' ); ?></h1>
+<div class="wrap swps-internal-links-wrap">
 
-    <div class="swps-link-actions-bar" style="margin: 15px 0;">
-        <button type="button" class="button button-primary" id="swps-rebuild-index">
-            <?php esc_html_e( 'Rebuild Index', 'stratawp-seo' ); ?>
-        </button>
-        <span id="swps-rebuild-status"></span>
-        <div id="swps-rebuild-progress" style="display:none; margin-top:8px;">
-            <progress id="swps-rebuild-bar" value="0" max="100" style="width:300px;"></progress>
-            <span id="swps-rebuild-text"></span>
-        </div>
+    <?php
+    $title    = __( 'Internal Links', 'stratawp-seo' );
+    $subtitle = __( 'AI + keyword-based internal linking. Rebuild the index, then accept link suggestions per post.', 'stratawp-seo' );
+    $actions  = [
+        [
+            'label' => __( 'Rebuild Index', 'stratawp-seo' ),
+            'class' => 'swps-btn-grad',
+            'attrs' => 'id="swps-rebuild-index"',
+        ],
+    ];
+    require SWPS_PLUGIN_DIR . 'templates/partials/page-header.php';
+    ?>
+
+    <div id="swps-rebuild-progress" style="display:none; margin-bottom:16px;">
+        <progress id="swps-rebuild-bar" value="0" max="100" style="width:300px;"></progress>
+        <span id="swps-rebuild-text" style="margin-left:10px;color:var(--swps-text-muted);font-size:12px"></span>
     </div>
+    <span id="swps-rebuild-status"></span>
 
-    <!-- Health Summary -->
-    <div class="swps-link-health" style="display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap;">
-        <div class="card" style="padding:15px; min-width:150px;">
-            <h3 style="margin:0 0 5px;"><?php echo esc_html( $stats['total_links'] ); ?></h3>
-            <p style="margin:0; color:#666;"><?php esc_html_e( 'Total Internal Links', 'stratawp-seo' ); ?></p>
+    <div class="swps-summary-tiles">
+        <div class="swps-summary-tile">
+            <div class="swps-summary-tile-h"><?php esc_html_e( 'Total Internal Links', 'stratawp-seo' ); ?></div>
+            <div class="swps-summary-tile-num is-grad"><?php echo esc_html( number_format( (int) $stats['total_links'] ) ); ?></div>
         </div>
-        <div class="card" style="padding:15px; min-width:150px;">
-            <h3 style="margin:0 0 5px;"><?php echo esc_html( $stats['avg_links'] ); ?></h3>
-            <p style="margin:0; color:#666;"><?php esc_html_e( 'Avg Links/Post', 'stratawp-seo' ); ?></p>
+        <div class="swps-summary-tile">
+            <div class="swps-summary-tile-h"><?php esc_html_e( 'Avg Links/Post', 'stratawp-seo' ); ?></div>
+            <div class="swps-summary-tile-num is-grad"><?php echo esc_html( $stats['avg_links'] ); ?></div>
         </div>
-        <div class="card" style="padding:15px; min-width:150px;">
-            <h3 style="margin:0 0 5px; color:<?php echo $stats['orphan_count'] > 0 ? '#d63638' : '#00a32a'; ?>;">
-                <?php echo esc_html( $stats['orphan_count'] ); ?>
-            </h3>
-            <p style="margin:0; color:#666;"><?php esc_html_e( 'Orphan Pages', 'stratawp-seo' ); ?></p>
+        <div class="swps-summary-tile">
+            <div class="swps-summary-tile-h"><?php esc_html_e( 'Orphan Pages', 'stratawp-seo' ); ?></div>
+            <div class="swps-summary-tile-num <?php echo $stats['orphan_count'] > 0 ? 'is-crit' : 'is-ok'; ?>">
+                <?php echo (int) $stats['orphan_count']; ?>
+            </div>
+            <div class="swps-summary-tile-foot"><?php esc_html_e( 'no inbound links', 'stratawp-seo' ); ?></div>
         </div>
-        <div class="card" style="padding:15px; min-width:150px;">
-            <h3 style="margin:0 0 5px;"><?php echo esc_html( $stats['pending_suggestions'] ); ?></h3>
-            <p style="margin:0; color:#666;"><?php esc_html_e( 'Pending Suggestions', 'stratawp-seo' ); ?></p>
+        <div class="swps-summary-tile">
+            <div class="swps-summary-tile-h"><?php esc_html_e( 'Pending Suggestions', 'stratawp-seo' ); ?></div>
+            <div class="swps-summary-tile-num is-grad"><?php echo (int) $stats['pending_suggestions']; ?></div>
         </div>
     </div>
 
     <?php if ( ! empty( $stats['most_linked'] ) ) : ?>
-    <h2><?php esc_html_e( 'Most Linked Posts', 'stratawp-seo' ); ?></h2>
-    <table class="widefat striped" style="max-width:600px; margin-bottom:20px;">
+    <div class="swps-section-h">
+        <h3><?php esc_html_e( 'Most Linked Posts', 'stratawp-seo' ); ?></h3>
+    </div>
+    <table class="widefat striped" style="max-width:600px; margin-bottom:24px;">
         <thead><tr><th><?php esc_html_e( 'Post', 'stratawp-seo' ); ?></th><th><?php esc_html_e( 'Inbound Links', 'stratawp-seo' ); ?></th></tr></thead>
         <tbody>
         <?php foreach ( $stats['most_linked'] as $row ) :
             $post = get_post( (int) $row['target_post_id'] );
-            if ( ! $post ) continue;
+            if ( ! $post ) { continue; }
         ?>
             <tr>
                 <td><a href="<?php echo esc_url( get_edit_post_link( $post->ID ) ); ?>"><?php echo esc_html( $post->post_title ); ?></a></td>
@@ -64,8 +73,9 @@ if ( ! defined( 'ABSPATH' ) ) {
     </table>
     <?php endif; ?>
 
-    <!-- Opportunities Table -->
-    <h2><?php esc_html_e( 'Link Opportunities', 'stratawp-seo' ); ?></h2>
+    <div class="swps-section-h">
+        <h3><?php esc_html_e( 'Link Opportunities', 'stratawp-seo' ); ?></h3>
+    </div>
     <?php if ( ! empty( $stats['opportunities'] ) ) : ?>
     <table class="widefat striped">
         <thead>
@@ -82,9 +92,9 @@ if ( ! defined( 'ABSPATH' ) ) {
         <?php foreach ( $stats['opportunities'] as $opp ) :
             $source = get_post( (int) $opp['source_post_id'] );
             $target = get_post( (int) $opp['target_post_id'] );
-            if ( ! $source || ! $target ) continue;
+            if ( ! $source || ! $target ) { continue; }
             $score = (float) $opp['relevance_score'];
-            $color = $score >= 0.7 ? '#00a32a' : ( $score >= 0.4 ? '#dba617' : '#d63638' );
+            $color = $score >= 0.7 ? 'var(--swps-success)' : ( $score >= 0.4 ? 'var(--swps-warn)' : 'var(--swps-crit)' );
         ?>
             <tr>
                 <td><input type="checkbox" class="swps-opp-check" value="<?php echo esc_attr( $opp['id'] ); ?>" /></td>
@@ -98,8 +108,8 @@ if ( ! defined( 'ABSPATH' ) ) {
         </tbody>
     </table>
 
-    <div style="margin:10px 0;">
-        <button type="button" class="button" id="swps-bulk-dismiss"><?php esc_html_e( 'Dismiss Selected', 'stratawp-seo' ); ?></button>
+    <div style="margin:16px 0;">
+        <button type="button" class="swps-btn swps-btn-secondary" id="swps-bulk-dismiss"><?php esc_html_e( 'Dismiss Selected', 'stratawp-seo' ); ?></button>
     </div>
 
     <?php if ( $stats['total_pages'] > 1 ) : ?>
@@ -117,13 +127,14 @@ if ( ! defined( 'ABSPATH' ) ) {
     <?php endif; ?>
 
     <?php else : ?>
-        <p><?php esc_html_e( 'No link opportunities found. Try rebuilding the index.', 'stratawp-seo' ); ?></p>
+        <p style="color:var(--swps-text-muted)"><?php esc_html_e( 'No link opportunities found. Try rebuilding the index.', 'stratawp-seo' ); ?></p>
     <?php endif; ?>
 
-    <!-- Orphan Pages -->
-    <h2><?php esc_html_e( 'Orphan Pages', 'stratawp-seo' ); ?></h2>
+    <div class="swps-section-h" style="margin-top:32px">
+        <h3><?php esc_html_e( 'Orphan Pages', 'stratawp-seo' ); ?></h3>
+    </div>
     <?php if ( ! empty( $stats['orphan_posts'] ) ) : ?>
-    <p><?php esc_html_e( 'These posts have no inbound internal links — consider linking to them from related content.', 'stratawp-seo' ); ?></p>
+    <p style="color:var(--swps-text-muted)"><?php esc_html_e( 'These posts have no inbound internal links — consider linking to them from related content.', 'stratawp-seo' ); ?></p>
     <table class="widefat striped" style="max-width:600px;">
         <thead><tr><th><?php esc_html_e( 'Post', 'stratawp-seo' ); ?></th><th><?php esc_html_e( 'Published', 'stratawp-seo' ); ?></th></tr></thead>
         <tbody>
@@ -136,6 +147,6 @@ if ( ! defined( 'ABSPATH' ) ) {
         </tbody>
     </table>
     <?php else : ?>
-        <p style="color:#00a32a;"><?php esc_html_e( 'No orphan pages found. All posts have at least one inbound link.', 'stratawp-seo' ); ?></p>
+        <p style="color:var(--swps-success)"><?php esc_html_e( 'No orphan pages found. All posts have at least one inbound link.', 'stratawp-seo' ); ?></p>
     <?php endif; ?>
 </div>

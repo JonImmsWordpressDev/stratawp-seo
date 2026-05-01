@@ -1,18 +1,22 @@
 <?php
+/**
+ * Calendar page (v4.0).
+ *
+ * @package StrataWP_SEO
+ */
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 ?>
-<div class="wrap swps-wrap swps-calendar-wrap">
-    <div class="swps-page-header">
-        <span class="swps-page-header-orb"></span>
-        <span class="swps-page-header-orb"></span>
-        <h1>
-            <span class="dashicons dashicons-calendar-alt"></span>
-            <?php esc_html_e( 'Content Calendar', 'stratawp-seo' ); ?>
-        </h1>
-        <p><?php esc_html_e( 'Plan your content schedule — click any date to add a topic', 'stratawp-seo' ); ?></p>
-    </div>
+<div class="wrap swps-calendar-wrap">
+
+    <?php
+    $title    = __( 'Content Calendar', 'stratawp-seo' );
+    $subtitle = __( 'Plan your content schedule — click any date to add a topic.', 'stratawp-seo' );
+    $actions  = [];
+    require SWPS_PLUGIN_DIR . 'templates/partials/page-header.php';
+    ?>
 
     <div id="swps-calendar"></div>
 
@@ -72,7 +76,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <textarea id="swps-topic-notes" rows="3" placeholder="<?php esc_attr_e( 'Any specific instructions for this topic...', 'stratawp-seo' ); ?>"></textarea>
             </div>
 
-            <button type="submit" class="button button-primary"><?php esc_html_e( 'Add to Queue', 'stratawp-seo' ); ?></button>
+            <button type="submit" class="swps-btn swps-btn-grad"><?php esc_html_e( 'Add to Queue', 'stratawp-seo' ); ?></button>
         </form>
     </div>
 </div>
@@ -104,7 +108,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         </table>
 
         <div class="swps-modal-actions">
-            <button type="button" id="swps-topic-delete" class="button button-link-delete" data-topic-id="">
+            <button type="button" id="swps-topic-delete" class="swps-btn swps-btn-secondary" data-topic-id="" style="color:var(--swps-crit);border-color:var(--swps-crit)">
                 <?php esc_html_e( 'Delete Topic', 'stratawp-seo' ); ?>
             </button>
         </div>

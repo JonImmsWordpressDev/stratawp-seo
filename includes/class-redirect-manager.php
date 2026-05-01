@@ -105,6 +105,11 @@ class SWPS_Redirect_Manager {
             exit;
         }
 
+        $request_path = wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH );
+        if ( is_string( $request_path ) && $this->paths_match( $request_path, $redirect->target_url ) ) {
+            return;
+        }
+
         wp_redirect( $redirect->target_url, (int) $redirect->type );
         exit;
     }
@@ -175,9 +180,18 @@ class SWPS_Redirect_Manager {
     /**
      * Add a redirect.
      */
-    public function add_redirect( string $source, string $target, int $type = 301, bool $is_regex = false ): int|false {
+    public function add_redirect( string $source, string $target, int $type = 301, bool $is_regex = false ): int|false|WP_Error {
         global $wpdb;
         $table = $wpdb->prefix . self::REDIRECTS_TABLE;
+
+        $validation = $this->validate_redirect( $source, $target, $type, $is_regex );
+        if ( is_wp_error( $validation ) ) {
+            return $validation;
+        }
+
+        $source = $validation['source'];
+        $target = $validation['target'];
+        $type   = $validation['type'];
 
         $result = $wpdb->insert( $table, [
             'source_url' => $source,
@@ -192,6 +206,109 @@ class SWPS_Redirect_Manager {
         delete_transient( self::CACHE_KEY );
 
         return $result ? $wpdb->insert_id : false;
+    }
+
+    /**
+     * Validate and normalize redirect data before storage.
+     */
+    private function validate_redirect( string $source, string $target, int $type, bool $is_regex ): array|WP_Error {
+        $allowed_types = [ 301, 302, 307, 410 ];
+        if ( ! in_array( $type, $allowed_types, true ) ) {
+            return new WP_Error( 'swps_invalid_redirect_type', __( 'Invalid redirect type.', 'stratawp-seo' ) );
+        }
+
+        $source = $this->normalize_source_url( $source, $is_regex );
+        $target = $this->normalize_target_url( $target, $type );
+
+        if ( '' === $source || '/' === $source ) {
+            return new WP_Error( 'swps_invalid_redirect_source', __( 'Source URL must be a non-root path.', 'stratawp-seo' ) );
+        }
+
+        if ( $is_regex ) {
+            $pattern = '#' . str_replace( '#', '\#', $source ) . '#';
+            if ( false === @preg_match( $pattern, '' ) ) {
+                return new WP_Error( 'swps_invalid_redirect_regex', __( 'Source regex is not valid.', 'stratawp-seo' ) );
+            }
+        }
+
+        if ( 410 !== $type && '' === $target ) {
+            return new WP_Error( 'swps_invalid_redirect_target', __( 'Target URL is required unless the redirect type is 410 Gone.', 'stratawp-seo' ) );
+        }
+
+        if ( 410 !== $type && ! $is_regex && $this->paths_match( $source, $target ) ) {
+            return new WP_Error( 'swps_redirect_loop', __( 'Source and target cannot resolve to the same path.', 'stratawp-seo' ) );
+        }
+
+        return [
+            'source' => $source,
+            'target' => $target,
+            'type'   => $type,
+        ];
+    }
+
+    /**
+     * Normalize a source URL to the path format used during request matching.
+     */
+    private function normalize_source_url( string $source, bool $is_regex ): string {
+        $source = trim( wp_unslash( $source ) );
+
+        if ( $is_regex ) {
+            return $source;
+        }
+
+        $path = wp_parse_url( $source, PHP_URL_PATH );
+        if ( ! is_string( $path ) || '' === $path ) {
+            $path = $source;
+        }
+
+        $path = '/' . ltrim( $path, '/' );
+        $path = rtrim( $path, '/' );
+
+        return '' === $path ? '/' : sanitize_text_field( $path );
+    }
+
+    /**
+     * Normalize a target URL while preserving intentional external redirects.
+     */
+    private function normalize_target_url( string $target, int $type ): string {
+        if ( 410 === $type ) {
+            return '';
+        }
+
+        $target = trim( wp_unslash( $target ) );
+        if ( '' === $target ) {
+            return '';
+        }
+
+        $scheme = wp_parse_url( $target, PHP_URL_SCHEME );
+        if ( $scheme && ! in_array( strtolower( $scheme ), [ 'http', 'https' ], true ) ) {
+            return '';
+        }
+
+        if ( ! $scheme ) {
+            $target = '/' . ltrim( $target, '/' );
+        }
+
+        return esc_url_raw( $target );
+    }
+
+    /**
+     * Compare source and target paths after trimming trailing slashes.
+     */
+    private function paths_match( string $source, string $target ): bool {
+        $target_host = wp_parse_url( $target, PHP_URL_HOST );
+        $home_host   = wp_parse_url( home_url(), PHP_URL_HOST );
+
+        if ( $target_host && $home_host && strtolower( $target_host ) !== strtolower( $home_host ) ) {
+            return false;
+        }
+
+        $target_path = wp_parse_url( $target, PHP_URL_PATH );
+        if ( ! is_string( $target_path ) || '' === $target_path ) {
+            return false;
+        }
+
+        return untrailingslashit( $source ) === untrailingslashit( $target_path );
     }
 
     /**
@@ -230,6 +347,14 @@ class SWPS_Redirect_Manager {
         }
 
         $id = $this->add_redirect( $source, $target, $type, $is_regex );
+        if ( is_wp_error( $id ) ) {
+            wp_send_json_error( $id->get_error_message() );
+        }
+
+        if ( false === $id ) {
+            wp_send_json_error( 'Could not save redirect.' );
+        }
+
         wp_send_json_success( [ 'id' => $id ] );
     }
 
@@ -428,10 +553,18 @@ class SWPS_Redirect_Manager {
             ...$ids
         ) );
 
+        $created = 0;
+        $errors  = [];
+
         foreach ( $rows as $row ) {
             $source = wp_parse_url( $row->url, PHP_URL_PATH );
             if ( $source ) {
-                $this->add_redirect( $source, $target, 301 );
+                $result = $this->add_redirect( $source, $target, 301 );
+                if ( is_wp_error( $result ) ) {
+                    $errors[] = $result->get_error_message();
+                } elseif ( $result ) {
+                    $created++;
+                }
             }
         }
 
@@ -442,7 +575,10 @@ class SWPS_Redirect_Manager {
             ...$ids
         ) );
 
-        wp_send_json_success();
+        wp_send_json_success( [
+            'created' => $created,
+            'errors'  => array_values( array_unique( $errors ) ),
+        ] );
     }
 
     /**

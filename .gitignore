@@ -11,3 +11,15 @@ vendor/
 .claude-flow/
 .mcp.json
 CLAUDE.md
+
+# Codex / agent tooling
+.agents/
+.codex/
+AGENTS.md
+.superpowers/
+.playwright-mcp/
+
+# Playwright debug screenshots dropped in project root
+/dashboard-*.png
+/debug-page-*.png
+/page-*.png

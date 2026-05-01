@@ -2,7 +2,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, and a per-post meta editor — on autopilot or on demand.
 
-[![Version](https://img.shields.io/badge/version-3.7.8-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.0.0-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -647,7 +647,7 @@ Available templates: `auto`, `listicle`, `how-to`, `comparison`, `case-study`, `
 
 ## REST API
 
-All endpoints under `/wp-json/strawp-seo/v1/`:
+All endpoints under `/wp-json/swps/v1/`:
 
 | Method | Endpoint | Purpose |
 |---|---|---|

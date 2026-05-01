@@ -29,25 +29,6 @@ if ( ! defined( 'ABSPATH' ) ) {
             </div>
         </div>
 
-        <div class="postbox">
-            <div class="inside">
-                <h3><?php esc_html_e( 'IndexNow Status', 'stratawp-seo' ); ?></h3>
-                <p id="swps-indexnow-status">
-                    <?php esc_html_e( 'Loading...', 'stratawp-seo' ); ?>
-                </p>
-            </div>
-        </div>
-
-        <div class="postbox">
-            <div class="inside">
-                <h3><?php esc_html_e( 'Search Engines', 'stratawp-seo' ); ?></h3>
-                <p>
-                    <button class="button button-primary" id="swps-ping-engines"><?php esc_html_e( 'Ping Search Engines', 'stratawp-seo' ); ?></button>
-                    <span id="swps-ping-result"></span>
-                </p>
-            </div>
-        </div>
-
         <h3><?php esc_html_e( 'Sitemaps', 'stratawp-seo' ); ?></h3>
         <table class="widefat striped" id="swps-sitemaps-table">
             <thead>

@@ -130,36 +130,42 @@
         var views = dailyViews.map(function (d) { return parseInt(d.views) || 0; });
         var clicks = gscDaily.map(function (d) { return parseInt(d.clicks) || 0; });
 
+        // v4.0.4 — gold/black palette, read theme from <html data-swps-theme>.
+        var theme = document.documentElement.getAttribute('data-swps-theme') || 'dark';
+        var pal = theme === 'light'
+            ? { line1: '#B45309', line2: '#D97706', grid: '#E5E7EB', tick: '#4B5563', tip: '#0F172A' }
+            : { line1: '#FBBF24', line2: '#D97706', grid: 'rgba(255,255,255,0.05)', tick: '#94A3B8', tip: '#1E293B' };
+
         var ctx = canvas.getContext('2d');
         var gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        gradient.addColorStop(0, 'rgba(249, 115, 22, 0.15)');
-        gradient.addColorStop(1, 'rgba(249, 115, 22, 0)');
+        gradient.addColorStop(0, theme === 'light' ? 'rgba(180, 83, 9, 0.10)' : 'rgba(251, 191, 36, 0.22)');
+        gradient.addColorStop(1, theme === 'light' ? 'rgba(180, 83, 9, 0)'   : 'rgba(251, 191, 36, 0)');
 
         var datasets = [{
             label: 'Page Views',
             data: views,
-            borderColor: '#F97316',
+            borderColor: pal.line1,
             backgroundColor: gradient,
             fill: true,
             tension: 0.4,
             borderWidth: 2,
             pointRadius: 0,
             pointHoverRadius: 4,
-            pointHoverBackgroundColor: '#F97316'
+            pointHoverBackgroundColor: pal.line1
         }];
 
         if (clicks.length) {
             datasets.push({
                 label: 'Search Clicks',
                 data: clicks,
-                borderColor: '#6366F1',
+                borderColor: pal.line2,
                 backgroundColor: 'transparent',
                 borderDash: [6, 3],
                 tension: 0.4,
                 borderWidth: 2,
                 pointRadius: 0,
                 pointHoverRadius: 4,
-                pointHoverBackgroundColor: '#6366F1'
+                pointHoverBackgroundColor: pal.line2
             });
         }
 
@@ -171,9 +177,11 @@
                 maintainAspectRatio: false,
                 interaction: { intersect: false, mode: 'index' },
                 plugins: {
-                    legend: { display: datasets.length > 1, position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'line', font: { size: 12 } } },
+                    legend: { display: datasets.length > 1, position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'line', font: { size: 12 }, color: pal.tick } },
                     tooltip: {
-                        backgroundColor: '#1E293B',
+                        backgroundColor: pal.tip,
+                        titleColor: '#F1F5F9',
+                        bodyColor: '#E2E8F0',
                         titleFont: { size: 13 },
                         bodyFont: { size: 12 },
                         cornerRadius: 8,
@@ -181,8 +189,8 @@
                     }
                 },
                 scales: {
-                    x: { border: { display: false }, grid: { color: '#F1F5F9' }, ticks: { color: '#94A3B8', font: { size: 11 } } },
-                    y: { border: { display: false }, grid: { color: '#F1F5F9' }, ticks: { color: '#94A3B8', font: { size: 11 } }, beginAtZero: true }
+                    x: { border: { display: false }, grid: { color: pal.grid }, ticks: { color: pal.tick, font: { size: 11 } } },
+                    y: { border: { display: false }, grid: { color: pal.grid }, ticks: { color: pal.tick, font: { size: 11 } }, beginAtZero: true }
                 }
             }
         });

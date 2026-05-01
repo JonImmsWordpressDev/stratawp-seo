@@ -62,13 +62,6 @@
                     });
                 }
 
-                // Handle IndexNow key display
-                if (res.data.indexnow_key) {
-                    const indexNowStatus = document.querySelector('#swps-indexnow-status');
-                    if (indexNowStatus) {
-                        indexNowStatus.innerHTML = `<code>${escHtml(res.data.indexnow_key)}</code>`;
-                    }
-                }
             });
     }
 
@@ -90,42 +83,6 @@
                     tabContent.style.display = 'block';
                 }
             });
-        });
-
-        // Ping search engines button
-        document.getElementById('swps-ping-engines')?.addEventListener('click', function () {
-            const pingResult = document.getElementById('swps-ping-result');
-            if (pingResult) {
-                pingResult.innerHTML = 'Pinging search engines...';
-                pingResult.style.display = 'block';
-            }
-
-            fetch(ajaxUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ action: 'swps_ping_search_engines', nonce: nonce }),
-            })
-                .then(r => r.json())
-                .then(res => {
-                    if (!pingResult) return;
-                    const message =
-                        (res && res.data && typeof res.data === 'object' && res.data.message) ||
-                        (res && typeof res.data === 'string' && res.data) ||
-                        (res && res.success ? 'Ping complete' : 'Ping failed');
-                    const ok = res && res.success;
-                    pingResult.innerHTML = ' ' + escHtml(message);
-                    pingResult.style.color = ok ? '#0a7d2c' : '#b32d2e';
-                    pingResult.style.display = 'inline';
-                    setTimeout(() => {
-                        pingResult.style.display = 'none';
-                    }, 8000);
-                })
-                .catch(err => {
-                    if (!pingResult) return;
-                    pingResult.innerHTML = ' ' + escHtml('Network error: ' + err.message);
-                    pingResult.style.color = '#b32d2e';
-                    pingResult.style.display = 'inline';
-                });
         });
 
         // Delegate clicks for toggle sitemap button

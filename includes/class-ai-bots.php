@@ -294,10 +294,8 @@ class SWPS_AI_Bots {
         if ( defined( 'AIOSEO_VERSION' ) ) {
             return home_url( '/sitemap.xml' );
         }
-        // WP core sitemap (5.5+).
-        if ( function_exists( 'wp_sitemaps_get_server' ) ) {
-            return home_url( '/wp-sitemap.xml' );
-        }
-        return null;
+
+        // StrataWP SEO disables the WP core sitemap and serves its own index.
+        return home_url( '/sitemap_index.xml' );
     }
 }

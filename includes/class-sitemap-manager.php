@@ -3,8 +3,7 @@
  * Full XML Sitemap Manager.
  *
  * Generates sitemap index with sub-sitemaps for post types, taxonomies,
- * and authors. Supports per-URL priority/changefreq, image entries,
- * and IndexNow pinging.
+ * and authors. Supports per-URL priority/changefreq and image entries.
  *
  * @package StrataWP_SEO
  */
@@ -16,7 +15,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SWPS_Sitemap_Manager {
 
     private function get_urls_per_sitemap(): int {
-        return (int) get_option( 'swps_sitemap_urls_per_page', 1000 );
+        return max( 100, min( 50000, (int) get_option( 'swps_sitemap_urls_per_page', 1000 ) ) );
+    }
+    private function is_post_type_hidden_from_sitemap( string $post_type ): bool {
+        return 'attachment' === $post_type
+            || (bool) get_option( "swps_sitemap_exclude_{$post_type}", 0 )
+            || (bool) get_option( "swps_noindex_{$post_type}", 0 );
+    }
+
+    private function is_taxonomy_hidden_from_sitemap( string $taxonomy ): bool {
+        return 'post_format' === $taxonomy
+            || (bool) get_option( "swps_sitemap_exclude_{$taxonomy}", 0 )
+            || (bool) get_option( "swps_noindex_{$taxonomy}", 0 );
     }
 
     public function __construct() {
@@ -26,14 +36,13 @@ class SWPS_Sitemap_Manager {
         // Rewrite rules.
         add_action( 'init', [ $this, 'register_rewrite_rules' ] );
 
+        // Auto-flush after a plugin upgrade so cached rewrite_rules pick up
+        // new sitemap URLs without the user manually visiting Settings →
+        // Permalinks. Runs once per version change.
+        add_action( 'wp_loaded', [ $this, 'maybe_flush_rewrites' ] );
+
         // Serve sitemaps.
         add_action( 'template_redirect', [ $this, 'serve_sitemap' ], 1 );
-
-        // Ping on publish/update/delete.
-        add_action( 'transition_post_status', [ $this, 'on_post_status_change' ], 10, 3 );
-
-        // IndexNow verification file.
-        add_action( 'template_redirect', [ $this, 'serve_indexnow_key' ], 1 );
     }
 
     /**
@@ -60,6 +69,18 @@ class SWPS_Sitemap_Manager {
     }
 
     /**
+     * Flush rewrite rules once per plugin version so users do not have to
+     * manually re-save permalinks after every upgrade.
+     */
+    public function maybe_flush_rewrites(): void {
+        if ( get_option( 'swps_rewrite_version' ) === SWPS_VERSION ) {
+            return;
+        }
+        update_option( 'swps_rewrite_version', SWPS_VERSION, false );
+        flush_rewrite_rules( false );
+    }
+
+    /**
      * Serve the appropriate sitemap based on the query var.
      */
     public function serve_sitemap(): void {
@@ -68,8 +89,8 @@ class SWPS_Sitemap_Manager {
             return;
         }
 
-        // Skip if Yoast or RankMath active.
-        if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) ) {
+        // Skip if another SEO plugin is actively handling sitemaps.
+        if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) ) {
             return;
         }
 
@@ -94,12 +115,12 @@ class SWPS_Sitemap_Manager {
         } else {
             // Check if it's a taxonomy.
             $taxonomies = get_taxonomies( [ 'public' => true ] );
-            if ( in_array( $type, $taxonomies, true ) && ! get_option( "swps_sitemap_exclude_{$type}", 0 ) ) {
+            if ( in_array( $type, $taxonomies, true ) && ! $this->is_taxonomy_hidden_from_sitemap( $type ) ) {
                 $this->render_taxonomy_sitemap( $type );
             } else {
                 // Post type sitemap.
                 $post_types = get_post_types( [ 'public' => true ] );
-                if ( in_array( $type, $post_types, true ) && ! get_option( "swps_sitemap_exclude_{$type}", 0 ) ) {
+                if ( in_array( $type, $post_types, true ) && ! $this->is_post_type_hidden_from_sitemap( $type ) ) {
                     $this->render_post_type_sitemap( $type, $page );
                 } else {
                     status_header( 404 );
@@ -121,7 +142,7 @@ class SWPS_Sitemap_Manager {
         // Post type sitemaps.
         $post_types = get_post_types( [ 'public' => true ] );
         foreach ( $post_types as $pt ) {
-            if ( 'attachment' === $pt || get_option( "swps_sitemap_exclude_{$pt}", 0 ) ) {
+            if ( $this->is_post_type_hidden_from_sitemap( $pt ) ) {
                 continue;
             }
 
@@ -141,7 +162,7 @@ class SWPS_Sitemap_Manager {
         // Taxonomy sitemaps.
         $taxonomies = get_taxonomies( [ 'public' => true ] );
         foreach ( $taxonomies as $tax ) {
-            if ( 'post_format' === $tax || get_option( "swps_sitemap_exclude_{$tax}", 0 ) ) {
+            if ( $this->is_taxonomy_hidden_from_sitemap( $tax ) ) {
                 continue;
             }
 
@@ -173,6 +194,10 @@ class SWPS_Sitemap_Manager {
      * Render a post type sub-sitemap.
      */
     private function render_post_type_sitemap( string $post_type, int $page ): void {
+        if ( $this->is_post_type_hidden_from_sitemap( $post_type ) ) {
+            return;
+        }
+
         $offset = ( $page - 1 ) * $this->get_urls_per_sitemap();
 
         $posts = get_posts( [
@@ -238,6 +263,10 @@ class SWPS_Sitemap_Manager {
      * Render a taxonomy sub-sitemap.
      */
     private function render_taxonomy_sitemap( string $taxonomy ): void {
+        if ( $this->is_taxonomy_hidden_from_sitemap( $taxonomy ) ) {
+            return;
+        }
+
         $terms = get_terms( [
             'taxonomy'   => $taxonomy,
             'hide_empty' => true,
@@ -329,125 +358,6 @@ class SWPS_Sitemap_Manager {
     }
 
     /**
-     * Ping search engines and IndexNow on post status change.
-     */
-    public function on_post_status_change( string $new_status, string $old_status, \WP_Post $post ): void {
-        if ( 'publish' !== $new_status && 'publish' !== $old_status ) {
-            return;
-        }
-
-        if ( wp_is_post_revision( $post ) || wp_is_post_autosave( $post ) ) {
-            return;
-        }
-
-        $this->ping_search_engines();
-        $this->ping_indexnow( get_permalink( $post ) );
-    }
-
-    /**
-     * Submit recent post URLs to IndexNow (Bing/Yandex/Seznam).
-     *
-     * Google retired the sitemap ping endpoint in 2023; Bing did the same.
-     * IndexNow is now the supported push protocol for Bing — and Bing's index
-     * powers ChatGPT search.
-     *
-     * @return array{submitted:int, status:int, error:string} Result summary.
-     */
-    public function ping_search_engines(): array {
-        $key = get_option( 'swps_indexnow_key', '' );
-        if ( empty( $key ) ) {
-            return [
-                'submitted' => 0,
-                'status'    => 0,
-                'error'     => __( 'IndexNow key is not set. Generate one to enable pings.', 'stratawp-seo' ),
-            ];
-        }
-
-        $posts = get_posts( [
-            'post_type'      => 'post',
-            'post_status'    => 'publish',
-            'posts_per_page' => 50,
-            'orderby'        => 'modified',
-            'order'          => 'DESC',
-            'fields'         => 'ids',
-        ] );
-
-        if ( empty( $posts ) ) {
-            return [
-                'submitted' => 0,
-                'status'    => 0,
-                'error'     => __( 'No published posts to submit.', 'stratawp-seo' ),
-            ];
-        }
-
-        $urls = array_values( array_filter( array_map( 'get_permalink', $posts ) ) );
-
-        $response = wp_remote_post( 'https://api.indexnow.org/indexnow', [
-            'timeout' => 15,
-            'headers' => [ 'Content-Type' => 'application/json' ],
-            'body'    => wp_json_encode( [
-                'host'        => wp_parse_url( home_url(), PHP_URL_HOST ),
-                'key'         => $key,
-                'keyLocation' => home_url( "/{$key}.txt" ),
-                'urlList'     => $urls,
-            ] ),
-        ] );
-
-        if ( is_wp_error( $response ) ) {
-            return [
-                'submitted' => 0,
-                'status'    => 0,
-                'error'     => $response->get_error_message(),
-            ];
-        }
-
-        return [
-            'submitted' => count( $urls ),
-            'status'    => (int) wp_remote_retrieve_response_code( $response ),
-            'error'     => '',
-        ];
-    }
-
-    /**
-     * Ping IndexNow with a specific URL.
-     */
-    private function ping_indexnow( string $url ): void {
-        $key = get_option( 'swps_indexnow_key', '' );
-        if ( empty( $key ) ) {
-            return;
-        }
-
-        wp_remote_post( 'https://api.indexnow.org/indexnow', [
-            'timeout'  => 5,
-            'blocking' => false,
-            'headers'  => [ 'Content-Type' => 'application/json' ],
-            'body'     => wp_json_encode( [
-                'host'        => wp_parse_url( home_url(), PHP_URL_HOST ),
-                'key'         => $key,
-                'keyLocation' => home_url( "/{$key}.txt" ),
-                'urlList'     => [ $url ],
-            ] ),
-        ] );
-    }
-
-    /**
-     * Serve the IndexNow verification file.
-     */
-    public function serve_indexnow_key(): void {
-        $key = get_option( 'swps_indexnow_key', '' );
-        if ( empty( $key ) ) {
-            return;
-        }
-
-        $request_uri = trim( $_SERVER['REQUEST_URI'] ?? '', '/' );
-        if ( $request_uri === $key . '.txt' ) {
-            header( 'Content-Type: text/plain; charset=UTF-8' );
-            echo $key;
-            exit;
-        }
-    }
-
-    /**
      * Get post count for a post type (excluding sitemap-excluded posts).
      */
     private function get_post_type_count( string $post_type ): int {
@@ -468,14 +378,5 @@ class SWPS_Sitemap_Manager {
             $post_type
         ) );
         return $date ? gmdate( 'Y-m-d\TH:i:s+00:00', strtotime( $date ) ) : gmdate( 'Y-m-d\TH:i:s+00:00' );
-    }
-
-    /**
-     * Generate IndexNow key on activation.
-     */
-    public static function generate_indexnow_key(): void {
-        if ( ! get_option( 'swps_indexnow_key' ) ) {
-            update_option( 'swps_indexnow_key', bin2hex( random_bytes( 16 ) ) );
-        }
     }
 }

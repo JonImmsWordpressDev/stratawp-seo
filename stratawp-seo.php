@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 3.8.0
+ * Version: 4.0.4
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'SWPS_VERSION', '3.8.0' );
+define( 'SWPS_VERSION', '4.0.4' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -118,6 +118,12 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-calendar.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-background-processor.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rest-api.php';
 
+// v4.0 admin shell.
+require_once SWPS_PLUGIN_DIR . 'includes/class-user-prefs.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-modules.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-admin-shell.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-dashboard.php';
+
 // WP-CLI commands (only when CLI is available).
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
     require_once SWPS_PLUGIN_DIR . 'includes/class-cli.php';
@@ -169,6 +175,12 @@ final class StrataWP_SEO {
     public SWPS_Internal_Links $internal_links;
     public SWPS_Internal_Links_Admin $internal_links_admin;
     public SWPS_AI_Bots $ai_bots;
+
+    // v4.0 admin shell.
+    public SWPS_User_Prefs $user_prefs;
+    public SWPS_Modules $modules;
+    public SWPS_Admin_Shell $admin_shell;
+    public SWPS_Dashboard $dashboard;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -234,6 +246,12 @@ final class StrataWP_SEO {
         $this->calendar             = new SWPS_Calendar( $this->topic_queue );
         $this->background_processor = new SWPS_Background_Processor();
         $this->rest_api             = new SWPS_REST_API();
+
+        // v4.0 admin shell — only relevant in admin, but instantiate always so REST routes register.
+        $this->user_prefs  = new SWPS_User_Prefs();
+        $this->modules     = new SWPS_Modules();
+        $this->admin_shell = new SWPS_Admin_Shell( $this->user_prefs );
+        $this->dashboard   = new SWPS_Dashboard();
 
         // Register CPT.
         add_action( 'init', [ SWPS_Topic_Queue::class, 'register_post_type' ] );
@@ -580,10 +598,84 @@ final class StrataWP_SEO {
 
         $schema = get_post_meta( get_the_ID(), '_swps_faq_schema', true );
 
-        if ( ! empty( $schema ) ) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-built JSON-LD script tag.
-            echo $schema . "\n";
+        $schema = $this->normalize_faq_schema_meta( $schema );
+
+        if ( empty( $schema ) ) {
+            return;
         }
+
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-LD encoded from sanitized schema array.
+        echo '<script type="application/ld+json">'
+           . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
+           . '</script>' . "\n";
+    }
+
+    /**
+     * Normalize legacy FAQ schema meta into a safe schema array.
+     *
+     * Older versions stored a full script tag. Newer generated posts store the
+     * schema array directly so output can always be encoded in one trusted path.
+     */
+    private function normalize_faq_schema_meta( mixed $schema ): array {
+        if ( empty( $schema ) ) {
+            return [];
+        }
+
+        if ( is_string( $schema ) ) {
+            $json = trim( $schema );
+
+            if ( false !== stripos( $json, '<script' ) ) {
+                if ( ! preg_match( '/<script[^>]*type=["\']application\/ld\+json["\'][^>]*>(.*?)<\/script>/is', $json, $matches ) ) {
+                    return [];
+                }
+                $json = html_entity_decode( trim( $matches[1] ), ENT_QUOTES, 'UTF-8' );
+            }
+
+            $schema = json_decode( $json, true );
+        }
+
+        if ( ! is_array( $schema ) || 'FAQPage' !== ( $schema['@type'] ?? '' ) ) {
+            return [];
+        }
+
+        $entities = $schema['mainEntity'] ?? [];
+        if ( ! is_array( $entities ) ) {
+            return [];
+        }
+
+        $normalized = [
+            '@context'   => 'https://schema.org',
+            '@type'      => 'FAQPage',
+            'name'       => sanitize_text_field( wp_strip_all_tags( (string) ( $schema['name'] ?? get_the_title() ) ) ),
+            'mainEntity' => [],
+        ];
+
+        foreach ( $entities as $entity ) {
+            if ( ! is_array( $entity ) ) {
+                continue;
+            }
+
+            $answer = $entity['acceptedAnswer'] ?? [];
+            $text   = is_array( $answer ) ? ( $answer['text'] ?? '' ) : '';
+
+            $question = sanitize_text_field( wp_strip_all_tags( (string) ( $entity['name'] ?? '' ) ) );
+            $text     = sanitize_textarea_field( wp_strip_all_tags( (string) $text ) );
+
+            if ( '' === $question || '' === $text ) {
+                continue;
+            }
+
+            $normalized['mainEntity'][] = [
+                '@type'          => 'Question',
+                'name'           => $question,
+                'acceptedAnswer' => [
+                    '@type' => 'Answer',
+                    'text'  => $text,
+                ],
+            ];
+        }
+
+        return empty( $normalized['mainEntity'] ) ? [] : $normalized;
     }
 
     /**
@@ -990,7 +1082,6 @@ function swps_activate(): void {
     SWPS_Topic_Queue::register_post_type();
     SWPS_Voice_Profile::register_post_type();
     SWPS_SEO_Audit::schedule_cron();
-    SWPS_Sitemap_Manager::generate_indexnow_key();
     flush_rewrite_rules();
 
     SWPS_Analytics_Tracker::create_tables();

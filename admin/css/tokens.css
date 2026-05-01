@@ -1,0 +1,144 @@
+/**
+ * StrataWP SEO — Design Tokens (v4.0.4 — Gold & Black)
+ *
+ * Palette ported from jonimms.com theme:
+ *   --accent-gold:        #d97706
+ *   --accent-gold-light:  #fbbf24
+ *   --accent-gold-hover:  #b45309
+ *   --hero-bg:            #0f172a (deep slate)
+ *   --hero-bg-light:      #1e293b (slate)
+ *   --hero-text:          #ffffff
+ *   --hero-text-muted:    #cbd5e1
+ *
+ * Dark theme by default. Light theme via [data-swps-theme="light"].
+ * Legacy --swps-* names kept as aliases (admin.css continues to work).
+ */
+
+:root,
+[data-swps-theme="dark"] {
+    /* === Surfaces === */
+    --swps-bg-app:        linear-gradient(180deg, #0F172A 0%, #1E293B 100%);
+    --swps-bg-app-solid:  #0F172A;
+    --swps-bg-chrome:     rgba(15, 23, 42, 0.92);
+    --swps-bg-side:       rgba(15, 23, 42, 0.55);
+    --swps-bg-surface:    rgba(30, 41, 59, 0.55);
+    --swps-bg-surface-strong: rgba(30, 41, 59, 0.85);
+    --swps-bg-input:      rgba(15, 23, 42, 0.7);
+    --swps-bg-hover:      rgba(251, 191, 36, 0.06);
+
+    /* === Borders === */
+    --swps-border:        rgba(255, 255, 255, 0.06);
+    --swps-border-strong: rgba(255, 255, 255, 0.12);
+    --swps-border-focus:  rgba(217, 119, 6, 0.55);
+
+    /* === Text === */
+    --swps-text-primary:  #FFFFFF;
+    --swps-text-body:     #CBD5E1;
+    --swps-text-muted:    #94A3B8;
+    --swps-text-faint:    #64748B;
+    --swps-text-on-grad:  #0F172A;
+
+    /* === Accent — gold === */
+    --swps-accent-1:      #D97706;  /* deep gold (primary) */
+    --swps-accent-2:      #FBBF24;  /* light gold */
+    --swps-accent-grad:   linear-gradient(135deg, #D97706, #FBBF24);
+    --swps-accent-grad-hover: linear-gradient(135deg, #B45309, #F59E0B);
+    --swps-accent-glow:   0 0 20px rgba(251, 191, 36, 0.30);
+    --swps-ai-grad:       linear-gradient(135deg, #FBBF24, #D97706);
+
+    /* === Status === */
+    --swps-success:       #34D399;
+    --swps-success-bg:    rgba(16, 185, 129, 0.15);
+    --swps-warn:          #FBBF24;
+    --swps-warn-bg:       rgba(251, 191, 36, 0.15);
+    --swps-crit:          #F87171;
+    --swps-crit-bg:       rgba(248, 113, 113, 0.15);
+    --swps-info:          #FBBF24;
+    --swps-info-bg:       rgba(251, 191, 36, 0.15);
+
+    /* === Radii === */
+    --swps-radius-sm:     6px;
+    --swps-radius:        10px;
+    --swps-radius-lg:     12px;
+    --swps-radius-pill:   999px;
+
+    /* === Shadows / Glow === */
+    --swps-shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.35);
+    --swps-shadow:        0 4px 12px rgba(0, 0, 0, 0.30);
+    --swps-shadow-lg:     0 12px 28px rgba(0, 0, 0, 0.40);
+    --swps-glow-focus:    0 0 0 3px rgba(217, 119, 6, 0.30);
+
+    /* === Motion === */
+    --swps-transition:    200ms ease;
+    --swps-transition-fast: 150ms ease;
+
+    /* === Type === */
+    --swps-font:          'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --swps-font-body:     'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    /* === Backwards-compatible aliases (legacy --swps-* used in admin.css) === */
+    --swps-primary:       var(--swps-bg-side);
+    --swps-primary-light: var(--swps-bg-surface);
+    --swps-primary-lighter: var(--swps-bg-surface-strong);
+    --swps-accent:        var(--swps-accent-1);
+    --swps-accent-light:  rgba(217, 119, 6, 0.10);
+    --swps-accent-hover:  var(--swps-accent-2);
+    --swps-secondary:     var(--swps-accent-2);
+    --swps-secondary-light: rgba(251, 191, 36, 0.10);
+    --swps-error:         var(--swps-crit);
+    --swps-error-light:   var(--swps-crit-bg);
+    --swps-warning:       var(--swps-warn);
+    --swps-warning-light: var(--swps-warn-bg);
+    --swps-text:          var(--swps-text-primary);
+    --swps-text-light:    var(--swps-text-muted);
+    --swps-surface:       var(--swps-bg-surface);
+    --swps-bg:            var(--swps-bg-app-solid);
+    --swps-border-light:  var(--swps-border);
+}
+
+[data-swps-theme="light"] {
+    /* === Surfaces === */
+    --swps-bg-app:        #FAFAFA;
+    --swps-bg-app-solid:  #FAFAFA;
+    --swps-bg-chrome:     #FFFFFF;
+    --swps-bg-side:       #FFFFFF;
+    --swps-bg-surface:    #FFFFFF;
+    --swps-bg-surface-strong: #FFFFFF;
+    --swps-bg-input:      #FFFFFF;
+    --swps-bg-hover:      #FEF3C7;
+
+    /* === Borders === */
+    --swps-border:        #E5E7EB;
+    --swps-border-strong: #D1D5DB;
+    --swps-border-focus:  rgba(217, 119, 6, 0.55);
+
+    /* === Text === */
+    --swps-text-primary:  #111111;
+    --swps-text-body:     #1F2937;
+    --swps-text-muted:    #4B5563;
+    --swps-text-faint:    #9CA3AF;
+    --swps-text-on-grad:  #111111;
+
+    /* === Accent — gold (slightly darker for AA on white) === */
+    --swps-accent-1:      #B45309;
+    --swps-accent-2:      #D97706;
+    --swps-accent-grad:   linear-gradient(135deg, #B45309, #D97706);
+    --swps-accent-grad-hover: linear-gradient(135deg, #92400E, #B45309);
+    --swps-accent-glow:   0 4px 12px rgba(180, 83, 9, 0.20);
+    --swps-ai-grad:       linear-gradient(135deg, #D97706, #B45309);
+
+    /* === Status === */
+    --swps-success:       #047857;
+    --swps-success-bg:    #D1FAE5;
+    --swps-warn:          #B45309;
+    --swps-warn-bg:       #FEF3C7;
+    --swps-crit:          #B91C1C;
+    --swps-crit-bg:       #FEE2E2;
+    --swps-info:          #B45309;
+    --swps-info-bg:       #FEF3C7;
+
+    /* === Shadows (lighter for white bg) === */
+    --swps-shadow-sm:     0 1px 2px rgba(15, 23, 42, 0.05);
+    --swps-shadow:        0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+    --swps-shadow-lg:     0 10px 25px rgba(15, 23, 42, 0.10);
+}
