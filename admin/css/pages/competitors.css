@@ -1,0 +1,235 @@
+/**
+ * StrataWP SEO — Competitors page styles (v4.1).
+ *
+ * Loaded on stratawp-seo_page_swps-competitors. Mirrors the data-dense
+ * .swps-row-card pattern used by Auto-Optimize.
+ */
+
+/* Add / edit form. */
+.swps-comp-form {
+    margin-bottom: 18px;
+    padding: 14px 18px;
+}
+.swps-comp-form-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+.swps-comp-form-field {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 220px;
+    min-width: 200px;
+}
+.swps-comp-form-field label {
+    font-size: 12px;
+    color: var(--swps-text-primary);
+    margin-bottom: 4px;
+}
+.swps-comp-form-field input {
+    background: var(--swps-bg-input);
+    color: var(--swps-text-primary);
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius-sm);
+    padding: 7px 10px;
+    font-size: 13px;
+}
+.swps-comp-form-field input:focus {
+    border-color: var(--swps-border-focus);
+    outline: none;
+    box-shadow: var(--swps-glow-focus);
+}
+.swps-comp-form-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.swps-comp-progress {
+    margin-top: 10px;
+    color: var(--swps-text-muted);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+}
+
+/* Row tweaks. */
+.swps-comp-row .swps-row-head-name a {
+    color: var(--swps-text-primary);
+    text-decoration: none;
+}
+.swps-comp-row .swps-row-head-name a:hover {
+    color: var(--swps-accent-2);
+}
+.swps-comp-source-pill {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 6px;
+    border: 1px solid var(--swps-border-strong);
+    border-radius: var(--swps-radius-sm);
+    background: var(--swps-bg-surface);
+    color: var(--swps-text-muted);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+}
+.swps-comp-err {
+    color: var(--swps-crit);
+}
+
+/* Stats column (new posts + velocity). */
+.swps-comp-stats {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: 6px;
+}
+.swps-comp-newposts {
+    background: var(--swps-bg-surface);
+    border: 1px solid var(--swps-border);
+    color: var(--swps-text-muted);
+    border-radius: var(--swps-radius-sm);
+    padding: 4px 9px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: default;
+}
+button.swps-comp-newposts {
+    cursor: pointer;
+}
+.swps-comp-newposts--has {
+    background: var(--swps-success-bg);
+    border-color: var(--swps-success);
+    color: var(--swps-success);
+}
+.swps-comp-velocity {
+    color: var(--swps-text-primary);
+    font-size: 13px;
+    font-weight: 600;
+}
+.swps-comp-velocity-unit {
+    color: var(--swps-text-muted);
+    font-size: 11px;
+    font-weight: 400;
+    margin-left: 2px;
+}
+
+/* Body section: schema chips + change pills. */
+.swps-comp-row-body {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--swps-border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.swps-comp-schema-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.swps-comp-schema-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--swps-text-muted);
+    margin-right: 4px;
+}
+.swps-comp-schema-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--swps-bg-surface);
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius-sm);
+    color: var(--swps-text-body);
+    font-size: 11px;
+    font-weight: 500;
+}
+.swps-comp-schema-chip.is-new {
+    border-color: var(--swps-sky);
+    background: var(--swps-sky-bg);
+    color: var(--swps-sky);
+}
+.swps-comp-schema-chip.is-new::before {
+    content: "+ ";
+    font-weight: 700;
+}
+.swps-comp-changes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.swps-comp-change-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: var(--swps-warn-bg);
+    border: 1px solid var(--swps-warn);
+    color: var(--swps-warn);
+    border-radius: var(--swps-radius-sm);
+    font-size: 11px;
+    font-weight: 600;
+}
+.swps-comp-change-pill .dashicons {
+    font-size: 13px;
+    width: 13px;
+    height: 13px;
+}
+
+/* New posts expander list. */
+.swps-comp-newposts-list {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: var(--swps-bg-surface);
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius-sm);
+}
+.swps-comp-newposts-h {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--swps-text-muted);
+    margin-bottom: 6px;
+}
+.swps-comp-newposts-list ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.swps-comp-newposts-list li {
+    padding: 4px 0;
+    font-size: 13px;
+    color: var(--swps-text-body);
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+.swps-comp-newposts-list li a {
+    color: var(--swps-text-primary);
+    text-decoration: none;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.swps-comp-newposts-list li a:hover {
+    color: var(--swps-accent-2);
+}
+.swps-comp-newposts-date {
+    color: var(--swps-text-faint);
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+/* Empty state. */
+.swps-comp-empty {
+    text-align: center;
+    padding: 28px 20px;
+    color: var(--swps-text-muted);
+}
+.swps-comp-empty p { margin: 0; }

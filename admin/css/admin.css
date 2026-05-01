@@ -15,7 +15,7 @@
     /* Status */
     --swps-success: #10B981;
     --swps-success-light: #ECFDF5;
-    --swps-warning: #FBBF24;
+    --swps-warning: #14B8A6;
     --swps-warning-light: #FFFBEB;
     --swps-error: #EF4444;
     --swps-error-light: #FEF2F2;
@@ -639,7 +639,7 @@
     line-height: 1.4;
 }
 .swps-score-badge--excellent { background: var(--swps-success-light); color: var(--swps-success); }
-.swps-score-badge--good { background: var(--swps-warning-light); color: #92400E; }
+.swps-score-badge--good { background: var(--swps-warning-light); color: #047857; }
 .swps-score-badge--poor { background: var(--swps-error-light); color: var(--swps-error); }
 .swps-score-details {
     margin-top: 8px;
@@ -687,7 +687,7 @@
 }
 .swps-audit-score--good {
     background: conic-gradient(var(--swps-warning) calc(var(--score, 0) * 1%), var(--swps-border-light) 0);
-    color: #92400E;
+    color: #047857;
 }
 .swps-audit-score--poor {
     background: conic-gradient(var(--swps-error) calc(var(--score, 0) * 1%), var(--swps-border-light) 0);

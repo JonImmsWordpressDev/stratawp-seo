@@ -59,7 +59,7 @@ body.swps-has-shell .button-primary:hover,
     background: var(--swps-accent-grad-hover);
     color: var(--swps-text-on-grad);
     border-color: transparent;
-    box-shadow: 0 0 24px rgba(251, 191, 36, 0.45);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.40);
     transform: translateY(-1px);
 }
 body.swps-has-shell .button-primary:focus,
@@ -215,9 +215,9 @@ body.swps-has-shell .button:disabled,
     color: #fff;
 }
 .swps-badge-pro {
-    background: rgba(251, 191, 36, 0.15);
+    background: rgba(20, 184, 166, 0.15);
     color: var(--swps-accent-2);
-    border: 1px solid rgba(251, 191, 36, 0.3);
+    border: 1px solid rgba(20, 184, 166, 0.3);
 }
 .swps-badge-beta {
     background: var(--swps-warn-bg);
@@ -255,9 +255,9 @@ body.swps-has-shell .button:disabled,
     color: var(--swps-success);
 }
 .swps-pill-ai {
-    background: linear-gradient(135deg, rgba(217, 119, 6, 0.20), rgba(251, 191, 36, 0.20));
-    color: var(--swps-accent-2);
-    border: 1px solid rgba(251, 191, 36, 0.30);
+    background: var(--swps-ai-bg);
+    color: var(--swps-ai);
+    border: 1px solid var(--swps-ai);
 }
 
 /* ==========================================================================
