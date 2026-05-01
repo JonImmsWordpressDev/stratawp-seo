@@ -51,11 +51,12 @@ class SWPS_Sitemap_Manager {
         // IndexNow verification file — hooked early so it works even if rewrite
         // rules haven't been flushed and before any template_redirect handlers
         // (canonical redirects, caching plugins) can intercept the request.
+        // No REST fallback: IndexNow requires the keyLocation filename to be
+        // literally `{key}.txt`, so a `/wp-json/.../indexnow-key.txt` URL is
+        // never a valid IndexNow target. The init handler below works whether
+        // or not pretty permalinks are enabled, so REST adds no value and only
+        // introduces a JSON-serialization failure mode.
         add_action( 'init', [ $this, 'serve_indexnow_key' ], 1 );
-
-        // REST API fallback for the key — always reachable, bypasses any
-        // server-level rules that might block top-level .txt requests.
-        add_action( 'rest_api_init', [ $this, 'register_rest_routes' ] );
     }
 
     /**
@@ -487,14 +488,16 @@ class SWPS_Sitemap_Manager {
     }
 
     /**
-     * Build the keyLocation URL. Prefers a pretty-permalink rewrite when
-     * available; falls back to the REST endpoint, which is always reachable.
+     * Build the keyLocation URL.
+     *
+     * IndexNow requires the keyLocation filename to literally equal
+     * `{key}.txt`, so REST-style URLs are never valid. We always use the
+     * top-level path; `serve_indexnow_key()` intercepts on `init` priority 1
+     * and handles the request before any rewrite/REST routing runs, which
+     * means this works whether or not pretty permalinks are enabled.
      */
     private function get_key_location( string $key ): string {
-        if ( get_option( 'permalink_structure' ) ) {
-            return home_url( "/{$key}.txt" );
-        }
-        return rest_url( 'stratawp-seo/v1/indexnow-key.txt' );
+        return home_url( "/{$key}.txt" );
     }
 
     /**
@@ -520,15 +523,22 @@ class SWPS_Sitemap_Manager {
         }
 
         $targets = [
-            [ 'label' => __( 'Pretty URL', 'stratawp-seo' ), 'url' => home_url( "/{$key}.txt" ) ],
-            [ 'label' => __( 'REST fallback', 'stratawp-seo' ), 'url' => rest_url( 'stratawp-seo/v1/indexnow-key.txt' ) ],
+            [ 'label' => __( 'Key URL', 'stratawp-seo' ), 'url' => home_url( "/{$key}.txt" ) ],
         ];
 
         $checks = [];
         $any_ok = false;
 
         foreach ( $targets as $target ) {
-            $resp = wp_remote_get( $target['url'], [ 'timeout' => 10, 'sslverify' => false ] );
+            // Bust any host-level cache so we test the live response, not a
+            // stale copy left over from a previous plugin version.
+            $bust    = ( false === strpos( $target['url'], '?' ) ? '?' : '&' ) . 'swps_cb=' . time();
+            $fetch   = $target['url'] . $bust;
+            $resp    = wp_remote_get( $fetch, [
+                'timeout'   => 10,
+                'sslverify' => false,
+                'headers'   => [ 'Cache-Control' => 'no-cache' ],
+            ] );
             if ( is_wp_error( $resp ) ) {
                 $checks[] = [
                     'label'  => $target['label'],
@@ -622,59 +632,6 @@ class SWPS_Sitemap_Manager {
         nocache_headers();
         header( 'Content-Type: text/plain; charset=UTF-8' );
         header( 'X-Robots-Tag: noindex' );
-        echo $key;
-        exit;
-    }
-
-    /**
-     * Register REST routes for IndexNow.
-     */
-    public function register_rest_routes(): void {
-        register_rest_route( 'stratawp-seo/v1', '/indexnow-key(?:\.txt)?', [
-            'methods'             => 'GET',
-            'permission_callback' => '__return_true',
-            'callback'            => [ $this, 'rest_indexnow_key' ],
-        ] );
-    }
-
-    /**
-     * Emit the IndexNow key as raw text for the REST fallback.
-     *
-     * IndexNow validates the keyLocation by byte-matching the response body
-     * against the key. Returning a `WP_REST_Response` would JSON-encode the
-     * string (wrapping it in quotes), so we send raw output and exit before
-     * the REST controller can serialize anything.
-     */
-    public function rest_indexnow_key(): void {
-        $key = get_option( 'swps_indexnow_key', '' );
-
-        // Drop any output buffers the REST server (or other plugins) started
-        // so the body we emit isn't appended to a JSON-encoded payload.
-        while ( ob_get_level() > 0 ) {
-            @ob_end_clean();
-        }
-
-        // Replace the application/json header WP_REST_Server queued before
-        // dispatch. header_remove() clears it so our header() call wins on
-        // SAPIs that don't honour PHP's default replace flag.
-        if ( ! headers_sent() ) {
-            header_remove( 'Content-Type' );
-            header_remove( 'Cache-Control' );
-            header_remove( 'Expires' );
-            header_remove( 'Pragma' );
-        }
-
-        nocache_headers();
-        header( 'Content-Type: text/plain; charset=UTF-8' );
-        header( 'X-Robots-Tag: noindex' );
-
-        if ( empty( $key ) ) {
-            status_header( 404 );
-            echo 'IndexNow key is not set.';
-            exit;
-        }
-
-        status_header( 200 );
         echo $key;
         exit;
     }
