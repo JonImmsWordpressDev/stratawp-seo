@@ -20,6 +20,7 @@ class SWPS_Sitemap_Admin {
 		add_action( 'wp_ajax_swps_get_sitemaps', [ $this, 'ajax_get_sitemaps' ] );
 		add_action( 'wp_ajax_swps_toggle_sitemap', [ $this, 'ajax_toggle_sitemap' ] );
 		add_action( 'wp_ajax_swps_ping_search_engines', [ $this, 'ajax_ping_search_engines' ] );
+		add_action( 'wp_ajax_swps_verify_indexnow_key', [ $this, 'ajax_verify_indexnow_key' ] );
 	}
 
 	/**
@@ -239,11 +240,16 @@ class SWPS_Sitemap_Admin {
 		$ok          = $status_code >= 200 && $status_code < 300;
 
 		if ( ! $ok ) {
+			$body_excerpt = '';
+			if ( ! empty( $result['body'] ) ) {
+				$body_excerpt = ' — ' . trim( wp_strip_all_tags( substr( (string) $result['body'], 0, 240 ) ) );
+			}
 			wp_send_json_error( [
 				'message' => sprintf(
-					/* translators: %d: HTTP status code */
-					__( 'IndexNow returned HTTP %d. Verify the key file is accessible at /KEY.txt.', 'stratawp-seo' ),
-					$status_code
+					/* translators: 1: HTTP status code, 2: response body excerpt */
+					__( 'IndexNow returned HTTP %1$d.%2$s Use the "Verify Key URL" button to diagnose key-file accessibility.', 'stratawp-seo' ),
+					$status_code,
+					$body_excerpt
 				),
 			] );
 		}
@@ -256,6 +262,26 @@ class SWPS_Sitemap_Admin {
 				$status_code
 			),
 		] );
+	}
+
+	/**
+	 * AJAX: Verify the IndexNow key file is reachable.
+	 */
+	public function ajax_verify_indexnow_key(): void {
+		check_ajax_referer( 'swps_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => 'Insufficient permissions.' ] );
+		}
+
+		$sitemap_manager = StrataWP_SEO::instance()->sitemap_manager;
+		if ( ! $sitemap_manager ) {
+			wp_send_json_error( [ 'message' => 'Sitemap manager not available.' ] );
+		}
+
+		$result = $sitemap_manager->verify_key_url();
+
+		wp_send_json_success( $result );
 	}
 
 	/**

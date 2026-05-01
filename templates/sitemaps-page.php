@@ -43,8 +43,10 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <h3><?php esc_html_e( 'Search Engines', 'stratawp-seo' ); ?></h3>
                 <p>
                     <button class="button button-primary" id="swps-ping-engines"><?php esc_html_e( 'Ping Search Engines', 'stratawp-seo' ); ?></button>
+                    <button class="button" id="swps-verify-key"><?php esc_html_e( 'Verify Key URL', 'stratawp-seo' ); ?></button>
                     <span id="swps-ping-result"></span>
                 </p>
+                <div id="swps-verify-result" style="display:none;margin-top:8px;"></div>
             </div>
         </div>
 

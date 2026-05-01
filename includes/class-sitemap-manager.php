@@ -37,14 +37,25 @@ class SWPS_Sitemap_Manager {
         // Rewrite rules.
         add_action( 'init', [ $this, 'register_rewrite_rules' ] );
 
+        // Auto-flush after a plugin upgrade so cached rewrite_rules pick up
+        // new sitemap URLs without the user manually visiting Settings →
+        // Permalinks. Runs once per version change.
+        add_action( 'wp_loaded', [ $this, 'maybe_flush_rewrites' ] );
+
         // Serve sitemaps.
         add_action( 'template_redirect', [ $this, 'serve_sitemap' ], 1 );
 
         // Ping on publish/update/delete.
         add_action( 'transition_post_status', [ $this, 'on_post_status_change' ], 10, 3 );
 
-        // IndexNow verification file.
-        add_action( 'template_redirect', [ $this, 'serve_indexnow_key' ], 1 );
+        // IndexNow verification file — hooked early so it works even if rewrite
+        // rules haven't been flushed and before any template_redirect handlers
+        // (canonical redirects, caching plugins) can intercept the request.
+        add_action( 'init', [ $this, 'serve_indexnow_key' ], 1 );
+
+        // REST API fallback for the key — always reachable, bypasses any
+        // server-level rules that might block top-level .txt requests.
+        add_action( 'rest_api_init', [ $this, 'register_rest_routes' ] );
     }
 
     /**
@@ -68,6 +79,18 @@ class SWPS_Sitemap_Manager {
             $vars[] = 'swps_sitemap_page';
             return $vars;
         } );
+    }
+
+    /**
+     * Flush rewrite rules once per plugin version so users do not have to
+     * manually re-save permalinks after every upgrade.
+     */
+    public function maybe_flush_rewrites(): void {
+        if ( get_option( 'swps_rewrite_version' ) === SWPS_VERSION ) {
+            return;
+        }
+        update_option( 'swps_rewrite_version', SWPS_VERSION, false );
+        flush_rewrite_rules( false );
     }
 
     /**
@@ -364,13 +387,13 @@ class SWPS_Sitemap_Manager {
     }
 
     /**
-     * Submit recent post URLs to IndexNow (Bing/Yandex/Seznam).
+     * Submit recent URLs to IndexNow (Bing/Yandex/Seznam).
      *
      * Google retired the sitemap ping endpoint in 2023; Bing did the same.
      * IndexNow is now the supported push protocol for Bing — and Bing's index
      * powers ChatGPT search.
      *
-     * @return array{submitted:int, status:int, error:string} Result summary.
+     * @return array{submitted:int, status:int, error:string, body:string} Result summary.
      */
     public function ping_search_engines(): array {
         $key = get_option( 'swps_indexnow_key', '' );
@@ -379,35 +402,28 @@ class SWPS_Sitemap_Manager {
                 'submitted' => 0,
                 'status'    => 0,
                 'error'     => __( 'IndexNow key is not set. Generate one to enable pings.', 'stratawp-seo' ),
+                'body'      => '',
             ];
         }
 
-        $posts = get_posts( [
-            'post_type'      => 'post',
-            'post_status'    => 'publish',
-            'posts_per_page' => 50,
-            'orderby'        => 'modified',
-            'order'          => 'DESC',
-            'fields'         => 'ids',
-        ] );
+        $urls = $this->collect_recent_urls();
 
-        if ( empty( $posts ) ) {
+        if ( empty( $urls ) ) {
             return [
                 'submitted' => 0,
                 'status'    => 0,
-                'error'     => __( 'No published posts to submit.', 'stratawp-seo' ),
+                'error'     => __( 'No published content to submit.', 'stratawp-seo' ),
+                'body'      => '',
             ];
         }
 
-        $urls = array_values( array_filter( array_map( 'get_permalink', $posts ) ) );
-
         $response = wp_remote_post( 'https://api.indexnow.org/indexnow', [
             'timeout' => 15,
-            'headers' => [ 'Content-Type' => 'application/json' ],
+            'headers' => [ 'Content-Type' => 'application/json; charset=utf-8' ],
             'body'    => wp_json_encode( [
                 'host'        => wp_parse_url( home_url(), PHP_URL_HOST ),
                 'key'         => $key,
-                'keyLocation' => home_url( "/{$key}.txt" ),
+                'keyLocation' => $this->get_key_location( $key ),
                 'urlList'     => $urls,
             ] ),
         ] );
@@ -417,14 +433,135 @@ class SWPS_Sitemap_Manager {
                 'submitted' => 0,
                 'status'    => 0,
                 'error'     => $response->get_error_message(),
+                'body'      => '',
             ];
         }
 
+        $status = (int) wp_remote_retrieve_response_code( $response );
+        $body   = (string) wp_remote_retrieve_body( $response );
+
         return [
             'submitted' => count( $urls ),
-            'status'    => (int) wp_remote_retrieve_response_code( $response ),
+            'status'    => $status,
             'error'     => '',
+            'body'      => $body,
         ];
+    }
+
+    /**
+     * Collect a deduped list of recently modified URLs across public post
+     * types (capped at IndexNow's 10,000-URL per-request limit).
+     *
+     * @return string[]
+     */
+    private function collect_recent_urls(): array {
+        $post_types = get_post_types( [ 'public' => true ] );
+        $post_types = array_filter( $post_types, function ( $pt ) {
+            return ! $this->is_post_type_hidden_from_sitemap( $pt );
+        } );
+
+        if ( empty( $post_types ) ) {
+            return [];
+        }
+
+        $posts = get_posts( [
+            'post_type'      => array_values( $post_types ),
+            'post_status'    => 'publish',
+            'posts_per_page' => 200,
+            'orderby'        => 'modified',
+            'order'          => 'DESC',
+            'fields'         => 'ids',
+        ] );
+
+        $urls = array_values( array_filter( array_map( 'get_permalink', $posts ) ) );
+        $urls = array_values( array_unique( $urls ) );
+
+        /**
+         * Filter the URL list submitted to IndexNow.
+         *
+         * @param string[] $urls Permalinks queued for submission.
+         */
+        $urls = (array) apply_filters( 'swps_indexnow_url_list', $urls );
+
+        return array_slice( $urls, 0, 10000 );
+    }
+
+    /**
+     * Build the keyLocation URL. Prefers a pretty-permalink rewrite when
+     * available; falls back to the REST endpoint, which is always reachable.
+     */
+    private function get_key_location( string $key ): string {
+        if ( get_option( 'permalink_structure' ) ) {
+            return home_url( "/{$key}.txt" );
+        }
+        return rest_url( 'stratawp-seo/v1/indexnow-key.txt' );
+    }
+
+    /**
+     * Verify both key locations are reachable. Used by the admin diagnostic.
+     *
+     * @return array{ok:bool, checks:array<int,array{label:string,url:string,status:int,ok:bool,error:string}>}
+     */
+    public function verify_key_url(): array {
+        $key = get_option( 'swps_indexnow_key', '' );
+        if ( empty( $key ) ) {
+            return [
+                'ok'     => false,
+                'checks' => [
+                    [
+                        'label'  => __( 'Key', 'stratawp-seo' ),
+                        'url'    => '',
+                        'status' => 0,
+                        'ok'     => false,
+                        'error'  => __( 'IndexNow key is not set.', 'stratawp-seo' ),
+                    ],
+                ],
+            ];
+        }
+
+        $targets = [
+            [ 'label' => __( 'Pretty URL', 'stratawp-seo' ), 'url' => home_url( "/{$key}.txt" ) ],
+            [ 'label' => __( 'REST fallback', 'stratawp-seo' ), 'url' => rest_url( 'stratawp-seo/v1/indexnow-key.txt' ) ],
+        ];
+
+        $checks = [];
+        $any_ok = false;
+
+        foreach ( $targets as $target ) {
+            $resp = wp_remote_get( $target['url'], [ 'timeout' => 10, 'sslverify' => false ] );
+            if ( is_wp_error( $resp ) ) {
+                $checks[] = [
+                    'label'  => $target['label'],
+                    'url'    => $target['url'],
+                    'status' => 0,
+                    'ok'     => false,
+                    'error'  => $resp->get_error_message(),
+                ];
+                continue;
+            }
+            $status = (int) wp_remote_retrieve_response_code( $resp );
+            $body   = trim( (string) wp_remote_retrieve_body( $resp ) );
+            $ok     = ( 200 === $status && $body === $key );
+            if ( $ok ) {
+                $any_ok = true;
+            }
+            $error = '';
+            if ( 200 !== $status ) {
+                /* translators: %d: HTTP status code */
+                $error = sprintf( __( 'HTTP %d', 'stratawp-seo' ), $status );
+            } elseif ( $body !== $key ) {
+                $error = __( 'Returned content does not match the key.', 'stratawp-seo' );
+            }
+            $checks[] = [
+                'label'  => $target['label'],
+                'url'    => $target['url'],
+                'status' => $status,
+                'ok'     => $ok,
+                'error'  => $error,
+            ];
+        }
+
+        return [ 'ok' => $any_ok, 'checks' => $checks ];
     }
 
     /**
@@ -432,18 +569,18 @@ class SWPS_Sitemap_Manager {
      */
     private function ping_indexnow( string $url ): void {
         $key = get_option( 'swps_indexnow_key', '' );
-        if ( empty( $key ) ) {
+        if ( empty( $key ) || empty( $url ) ) {
             return;
         }
 
         wp_remote_post( 'https://api.indexnow.org/indexnow', [
             'timeout'  => 5,
             'blocking' => false,
-            'headers'  => [ 'Content-Type' => 'application/json' ],
+            'headers'  => [ 'Content-Type' => 'application/json; charset=utf-8' ],
             'body'     => wp_json_encode( [
                 'host'        => wp_parse_url( home_url(), PHP_URL_HOST ),
                 'key'         => $key,
-                'keyLocation' => home_url( "/{$key}.txt" ),
+                'keyLocation' => $this->get_key_location( $key ),
                 'urlList'     => [ $url ],
             ] ),
         ] );
@@ -451,6 +588,10 @@ class SWPS_Sitemap_Manager {
 
     /**
      * Serve the IndexNow verification file.
+     *
+     * Hooked to `init` so it runs before `template_redirect` (canonical
+     * redirects, caching plugins) and even when no rewrite rule matches.
+     * Path comparison strips the query string and is case-insensitive.
      */
     public function serve_indexnow_key(): void {
         $key = get_option( 'swps_indexnow_key', '' );
@@ -458,12 +599,59 @@ class SWPS_Sitemap_Manager {
             return;
         }
 
-        $request_uri = trim( $_SERVER['REQUEST_URI'] ?? '', '/' );
-        if ( $request_uri === $key . '.txt' ) {
+        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+        if ( '' === $request_uri ) {
+            return;
+        }
+
+        $path = (string) wp_parse_url( $request_uri, PHP_URL_PATH );
+        $path = strtolower( trim( $path, '/' ) );
+
+        if ( $path !== strtolower( $key ) . '.txt' ) {
+            return;
+        }
+
+        nocache_headers();
+        header( 'Content-Type: text/plain; charset=UTF-8' );
+        header( 'X-Robots-Tag: noindex' );
+        echo $key;
+        exit;
+    }
+
+    /**
+     * Register REST routes for IndexNow.
+     */
+    public function register_rest_routes(): void {
+        register_rest_route( 'stratawp-seo/v1', '/indexnow-key(?:\.txt)?', [
+            'methods'             => 'GET',
+            'permission_callback' => '__return_true',
+            'callback'            => [ $this, 'rest_indexnow_key' ],
+        ] );
+    }
+
+    /**
+     * Emit the IndexNow key as raw text for the REST fallback.
+     *
+     * IndexNow validates the keyLocation by byte-matching the response body
+     * against the key. Returning a `WP_REST_Response` would JSON-encode the
+     * string (wrapping it in quotes), so we send raw output and exit before
+     * the REST controller can serialize anything.
+     */
+    public function rest_indexnow_key(): void {
+        $key = get_option( 'swps_indexnow_key', '' );
+        if ( empty( $key ) ) {
+            status_header( 404 );
             header( 'Content-Type: text/plain; charset=UTF-8' );
-            echo $key;
+            echo 'IndexNow key is not set.';
             exit;
         }
+
+        nocache_headers();
+        status_header( 200 );
+        header( 'Content-Type: text/plain; charset=UTF-8' );
+        header( 'X-Robots-Tag: noindex' );
+        echo $key;
+        exit;
     }
 
     /**
