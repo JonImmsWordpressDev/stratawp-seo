@@ -32,6 +32,13 @@ body.swps-has-shell #wpcontent {
     flex-direction: column;
     min-height: calc(100vh - 32px);
     min-width: 0;
+    /* Hard containment: nothing inside our shell can push the page
+       wider than its allotted column. Prevents the dreaded "scrolls
+       sideways under WP admin menu" bug. `overflow-x: clip` is
+       supported in all modern browsers and, unlike `hidden`, doesn't
+       create a new scroll container that breaks `position: sticky`. */
+    overflow-x: clip;
+    box-sizing: border-box;
 }
 body.folded.swps-has-shell #wpcontent {
     margin-left: 36px; /* WP collapsed sidebar */
@@ -52,13 +59,20 @@ body.swps-has-shell #wpbody {
     flex: 1;
 }
 
-/* Reset WP defaults inside the grid body cell */
+/* Reset WP defaults inside the grid body cell.
+ *
+ * WP gives #wpbody-content { width: 100%; box-sizing: content-box },
+ * so any horizontal padding we add would BLOW OUT the parent. Force
+ * border-box so our padding is inside the width. */
 body.swps-has-shell #wpbody-content {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
     padding: 24px 28px;
     color: var(--swps-text-body);
     font-family: var(--swps-font);
     min-width: 0;
-    /* Below 600px, tighten gutters to keep things from feeling cramped */
+    overflow-x: clip;
 }
 @media screen and (max-width: 600px) {
     body.swps-has-shell #wpbody-content { padding: 16px; }
@@ -66,9 +80,10 @@ body.swps-has-shell #wpbody-content {
 body.swps-has-shell .wrap {
     margin: 0;
     padding: 0;
-    max-width: none;
+    max-width: 100%;
     color: var(--swps-text-body);
     min-width: 0;
+    box-sizing: border-box;
 }
 
 /* Generic safety: anything that's normally laid out side-by-side inside
@@ -140,6 +155,9 @@ body.swps-has-shell #screen-meta-links {
     z-index: 100;
     flex-wrap: nowrap;
     min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    flex-shrink: 0;
 }
 /* Each top bar child must be able to shrink. */
 .swps-shell-top > * { min-width: 0; }
@@ -289,6 +307,9 @@ body.swps-has-shell #screen-meta-links {
     top: 87px; /* WP admin bar (32px) + top bar (~55px) */
     z-index: 99;
     min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .swps-shell-nav::-webkit-scrollbar { height: 6px; }
