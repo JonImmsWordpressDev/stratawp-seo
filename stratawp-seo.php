@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.0.4
+ * Version: 4.1.7
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'SWPS_VERSION', '4.0.4' );
+define( 'SWPS_VERSION', '4.1.7' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -89,6 +89,12 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-analytics-dashboard.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-keyword-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-keywords-page.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-meta-editor.php';
+
+// Auto-Optimize (v4.1).
+require_once SWPS_PLUGIN_DIR . 'includes/class-auto-optimize.php';
+
+// Competitors (v4.1).
+require_once SWPS_PLUGIN_DIR . 'includes/class-competitors.php';
 
 // v3.0 classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-head-cleanup.php';
@@ -175,6 +181,8 @@ final class StrataWP_SEO {
     public SWPS_Internal_Links $internal_links;
     public SWPS_Internal_Links_Admin $internal_links_admin;
     public SWPS_AI_Bots $ai_bots;
+    public SWPS_Auto_Optimize $auto_optimize;
+    public SWPS_Competitors $competitors;
 
     // v4.0 admin shell.
     public SWPS_User_Prefs $user_prefs;
@@ -230,6 +238,8 @@ final class StrataWP_SEO {
         $this->internal_links = new SWPS_Internal_Links( $link_keyword_engine, $link_ai_engine );
         $this->internal_links_admin = new SWPS_Internal_Links_Admin( $this->internal_links );
         $this->ai_bots             = new SWPS_AI_Bots();
+        $this->auto_optimize       = new SWPS_Auto_Optimize( $this->content_scorer );
+        $this->competitors         = new SWPS_Competitors();
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
@@ -1114,6 +1124,7 @@ function swps_deactivate(): void {
     SWPS_Analytics_Tracker::unschedule_cron();
     SWPS_Search_Console::unschedule_cron();
     SWPS_Keyword_Tracker::unschedule_cron();
+    SWPS_Competitors::unschedule_cron();
     flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'swps_deactivate' );

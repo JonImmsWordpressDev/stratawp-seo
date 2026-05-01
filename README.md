@@ -2,7 +2,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, and a per-post meta editor — on autopilot or on demand.
 
-[![Version](https://img.shields.io/badge/version-4.0.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.1.7-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -17,6 +17,7 @@
 - [How Each Subsystem Works](#how-each-subsystem-works)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [How-To Guide: Page by Page](#how-to-guide-page-by-page)
 - [Configuration Guide](#configuration-guide)
 - [WP-CLI Commands](#wp-cli-commands)
 - [REST API](#rest-api)
@@ -156,6 +157,31 @@ It's designed to **replace** Yoast/RankMath/AIOSEO if you want to, or **coexist*
 - **REST API** — programmatic access to generation, voice profiles, audit, analytics
 - **Encrypted secret storage** — sensitive options (GSC client secret, remote endpoint secret) encrypted at rest
 - **Debug page** — last failed AI response saved to a transient and viewable from the admin
+
+### AI Auto-Optimize (v4.1) ★
+
+- **Re-score all published posts** — chunked (10 posts per request) with live progress so big sites don't hit PHP timeouts
+- **AI proposals** — concrete `find/replace` edits, plus optional new meta title/description and focus keyword, plus a projected score
+- **Diff review modal** — see old vs. new for each edit, check/uncheck individual changes before applying
+- **One-click apply** — only accepted edits are applied; the post is automatically re-scored after
+- **Threshold control** — surface only posts below your score floor (default 75)
+- **Per-row dismiss** — hide posts you don't want optimized
+
+### Competitor Watch (v4.1) ★
+
+- **Track up to 10 competitor sites** — paste URL, get auto-discovered RSS / Atom feed, plus homepage + sitemap.xml fallback
+- **Daily WP-cron auto-scan** — fetches each site's content at most once per day with polite delays between requests
+- **Per-row "Scan now"** — manual refresh whenever you want
+- **Diff detection per scan** — new posts since last snapshot, new JSON-LD schema types, title/H1 changes
+- **Content velocity** — posts-per-week trend across the snapshot history (last 12 snapshots, ~12 days at daily cadence)
+- **Dashboard widget** — 3 most-recently-changed competitors with a one-line summary on the dashboard
+
+### Admin Shell (v4.0)
+
+- **Branded shell** — top bar (logo, breadcrumb, search, theme toggle, help) sits above every plugin page
+- **Dark mode by default** with light mode via the toggle (per-user preference, persisted)
+- **Emerald & Teal palette** — brand identity (v4.1.4 — moved off the original gold/black; semantic colors are distinct from brand to keep status pills readable)
+- **Data-dense template** — used by Audit, Redirects, Internal Links, Auto-Optimize, Competitors. Consistent row-card pattern with status dot + name + meta + actions
 
 ---
 
@@ -464,6 +490,199 @@ SWPS_Image_Provider (abstract)
 4. **(Optional) Allow AI crawlers** — **AI Crawlers** section is enabled by default; visit `/llms.txt` to see your generated index
 5. **Generate your first post** — **StrataWP SEO → Generate Content**, enter a topic, click **Generate**
 6. **Review & publish** — edit the generated draft in WordPress, then publish
+
+---
+
+## How-To Guide: Page by Page
+
+Every admin page in the plugin, what it does, and exactly how to use it. Pages are listed in the order they appear in the StrataWP admin sidebar.
+
+### Dashboard (`StrataWP SEO`)
+
+The landing page. Shows site health score, recent generations, AI cost (30d), post views, top GSC queries, top issues, the **Auto-Optimize queue preview**, and the **Competitor watch widget**. Each tile links to its source page — click "Manage →" on Competitor watch to jump straight to managing tracked sites.
+
+**How to use it:** load it daily as a temperature check. The welcome line summarizes site health, fixable issues, and 30-day AI spend in one sentence. The KPI tiles use the brand emerald gradient for the four primary numbers. The modules grid at the bottom lets you toggle features on/off — turn off Sitemaps if you're using Yoast/RankMath's sitemap, for example.
+
+### Generate Content (`Create → Generate`)
+
+The main AI content generator.
+
+1. Pick a **template** (Auto, Listicle, How-To, Comparison, Case Study, News Analysis, Tutorial)
+2. Enter a **topic** (or leave blank to auto-pick from queue)
+3. Optionally select a **voice profile** to lock the tone
+4. Set **target word count** (or use the global default)
+5. Click **Generate** — it'll analyze your site, draft, score, attach images, and save as a draft
+
+**Tip:** if generation takes >2 min, the post is being processed in the background. Check the Calendar to see status.
+
+### Calendar (`Create → Calendar`)
+
+Visual month-view of every scheduled and generated post. Color-coded by status (draft, scheduled, published). Click any cell to see the post detail or jump to the editor.
+
+**How to use it:** drag-and-drop is not supported (yet) — to reschedule, edit the post and change its date.
+
+### Topic Queue (`Create → Topic Queue`)
+
+A custom post type that holds **upcoming topics** for auto-publish. Each entry has a topic, target template, scheduled date, and notes. The cron job picks the next due topic, generates the post, and marks the queue entry as used.
+
+**How to use it:**
+1. Add 10-20 topic ideas with target dates
+2. **Settings → Auto-Publishing Schedule**: pick "Daily" / "Weekly" / etc.
+3. Walk away — the cron generates posts automatically on schedule
+
+### Auto-Optimize (`Create → Auto-Optimize`) ★ v4.1
+
+Finds underperforming published posts, generates AI proposals to fix them, and applies the edits with one click. Manual review queue — every edit is reviewed before it touches your content.
+
+**How to use it:**
+1. Click **Re-scan all posts** — scores all published posts/pages in batches of 10 (live progress bar). Posts below the threshold (default 75) appear in the queue.
+2. For each row, click **Generate proposal** — AI returns 2-6 concrete `find/replace` edits, plus optional new meta title/description and focus keyword, plus a projected score
+3. Click **Review** on a proposal — see the diff (red = old, green = new), check/uncheck individual edits, click **Apply selected edits**
+4. Re-score happens automatically after apply — you'll see the new score
+
+**Threshold tuning:** raise the threshold (e.g. 85) to surface more posts, lower it (e.g. 50) to focus only on the worst.
+
+**Dismissing:** the trash icon hides a post from the queue permanently (snapshot history is kept; un-dismiss via WP-CLI).
+
+### Voice Profiles (`Create → Voice Profiles`)
+
+Reusable writing personas. Each profile sets tone, formality (1-10), preferred sentence length, vocabulary level, point of view, avoid/preferred phrases, and a sample text the AI emulates.
+
+**How to use it:**
+1. **Add new** → name it (e.g., "Friendly authority", "Conversational developer")
+2. Paste a **sample paragraph** that matches the tone you want
+3. Mark it **Default** if it should apply to every Generate without picking explicitly
+4. In Generate Content, the dropdown lets you override per-post
+
+### SEO Audit (`Optimize → Audit`)
+
+8-module technical SEO check. Each module reports pass/warn/critical with auto-fix where possible.
+
+**How to use it:**
+1. Click **Run audit now** — takes 2-10 seconds
+2. Each module card shows status; click **Auto-fix** on any module that has it (canonical, OG, Twitter, sitemap)
+3. **CSV export** for client reporting
+
+Schedule daily/weekly/monthly runs from **Settings → SEO Audit**. The dashboard widget shows the latest health score.
+
+### Schema (`Optimize → Schema`)
+
+Configures structured data output (JSON-LD).
+
+**How to use it:**
+1. Pick **Article schema type** — Article, BlogPosting (default), or NewsArticle
+2. **Organization or Person** — pick which entity represents your site
+3. Add **logo URL** and **social profiles** (Twitter, Facebook, LinkedIn, etc.) — these become `sameAs` in the Organization schema
+4. Toggle **WebSite SearchAction** to enable Google sitelinks searchbox
+
+**Conflict detection:** auto-disables if Yoast/RankMath/AIOSEO is active. Enable the override toggle if you want StrataWP's schema regardless.
+
+### Sitemaps (`Optimize → Sitemaps`)
+
+Configures `/sitemap_index.xml` and sub-sitemaps.
+
+**How to use it:**
+1. **Settings tab:** toggle individual post types/taxonomies in/out of the sitemap, set per-type priority and changefreq
+2. **Submit tab:** the **Ping Search Engines** button submits 50 most-recently-modified posts to IndexNow (Bing/Yandex/Seznam — Bing's feed powers ChatGPT search). Use after a major content push.
+3. **View raw:** click "View sitemap" to see the live XML
+
+### Redirects (`Optimize → Redirects`)
+
+Manages 301/302/307/410 redirects and 404 monitoring.
+
+**How to use it:**
+1. **Add a redirect:** From URL → To URL → pick status code → Save
+2. **Regex tab** for pattern-based redirects (`^/old/(.*)$ → /new/$1`)
+3. **404 Log tab:** every unhandled 404 shows up here; click **Create redirect** to fix it in one click
+4. **Auto-redirect on slug change:** enabled by default — when you change a post's slug, a redirect from the old slug is created automatically
+
+### Internal Links (`Optimize → Internal Links`)
+
+Suggests internal links from existing posts to other relevant posts on your site. Two engines:
+
+- **Keyword engine:** finds anchor opportunities by keyword match
+- **AI engine:** uses your AI provider for semantic suggestions
+
+**How to use it:**
+1. Pick a target post
+2. Click **Find suggestions** — engine returns candidate anchors with confidence scores
+3. Accept or skip each one — accepted links are inserted into the post body
+
+### Search Appearance (`Optimize → Search Appearance`)
+
+Controls how titles and descriptions appear in search results.
+
+**How to use it:**
+1. Set **separator** (`|`, `–`, `·`, etc.)
+2. Edit per-content-type templates with variables: `%title%`, `%sitename%`, `%sep%`, `%category%`, `%author%`, `%date%`, etc.
+3. Per-post overrides are still available in the post editor's **SEO Meta Editor** metabox
+
+### Analytics (`Insights → Analytics`)
+
+Cookie-free on-site analytics + GSC dashboard.
+
+**How to use it:**
+1. **Date range filter** at the top: 7 / 30 / 90 days
+2. **Top stats:** Pageviews, Unique visitors, Avg time, Bounce rate
+3. **Charts:** Pageviews over time, top posts, top referrers
+4. **GSC tab:** clicks, impressions, CTR, position (requires OAuth setup in Settings → Analytics)
+
+### Keywords (`Insights → Keywords`)
+
+Keyword research + rank tracking.
+
+**How to use it:**
+1. **Generate keywords:** enter a seed topic, AI suggests 10-50 related keywords
+2. **Track keywords:** add to the watchlist — GSC syncs daily and shows position trends
+3. **Striking distance:** the "8-20" tab surfaces ranking opportunities — keywords you're already on page 2 for that could be pushed to page 1 with light optimization
+
+### Search Console (`Insights → Search Console`)
+
+Connects Google Search Console for search data.
+
+**How to use it:**
+1. **Settings → Analytics:** paste GSC OAuth client ID + secret
+2. Click **Authorize** → sign into Google → confirm scope → return
+3. Pick the verified property
+4. Data syncs daily; available in Dashboard, Analytics, and Keywords pages
+
+### Competitors (`Insights → Competitors`) ★ v4.1
+
+Tracks competitor sites for content velocity, schema diff, title/H1 changes.
+
+**How to use it:**
+1. Click **Add competitor** → paste the URL → optional label → Save
+2. Click **Scan now** on the row — fetches their RSS (auto-discovered or common-path), homepage, and falls back to sitemap.xml if no feed
+3. Daily WP-cron auto-rescans every tracked site
+4. **+N new** pill on a row indicates new posts since last scan (click to expand the list)
+5. **Schema:** chips show their JSON-LD types; new types are highlighted with a `+ NEW` indicator
+6. **Title/H1 changed** pills appear when their homepage `<title>` or `<h1>` flipped between scans
+7. Source pill (RSS / SITEMAP) shows which data source the scan succeeded with
+
+**Limit:** 10 competitors. **Storage:** last 12 snapshots per competitor (~12 days of daily history). **Out of scope:** keyword-gap analysis (needs paid backlink API).
+
+### Settings (`System → Settings`)
+
+The control panel — split into tabs:
+
+- **AI Provider:** API key, model, image provider keys
+- **Site Details:** niche, description, language
+- **AI Crawlers:** allowlist for 15 known bots, llms.txt toggle
+- **Writing Preferences:** tone, formality, word count
+- **Content Settings:** templates, FAQ on/off, Key Takeaways on/off, TOC on/off, internal link min/max, default post status
+- **Auto-Publishing:** schedule, time of day, post-type
+- **SEO Audit:** schedule
+- **Schema:** entity type, social profiles, conflict override
+- **SEO Meta Editor:** enable per-post fields
+- **Keyword Tracking:** GSC OAuth, retention
+- **Analytics:** retention period, GDPR options
+- **Advanced:** cost tracking, rate limit cooldown, debug logging, encrypted secrets
+
+### Debug (`System → Debug`)
+
+Shows the **last failed AI response** (raw + cleaned) for diagnosing JSON parse failures. If a generation errored, this is the first place to look.
+
+**How to use it:** click "Refresh" to fetch the most recent failure. Both raw and post-repair JSON are shown side-by-side.
 
 ---
 
@@ -859,6 +1078,34 @@ Click **Sitemaps → Ping Search Engines** and the plugin submits your 50 most r
 ---
 
 ## Changelog
+
+### 4.1.7
+- **Critical fix:** moved `swps_render_optimize_row()` and `swps_render_competitor_row()` declarations to the top of their templates. PHP doesn't hoist conditionally-declared functions, so calling them from the queue/list loop before the `if ( ! function_exists() )` block ran was a fatal once any post had a cached score. Fixes "There has been a critical error" on Auto-Optimize and Competitors pages.
+
+### 4.1.6
+- **Auto-Optimize re-scan now chunked** — scans 10 posts per request with live progress (`Re-scoring 30/137 (22%)`). New `swps_optimize_scan_chunk` AJAX endpoint + `score_chunk()` server method. 90s `set_time_limit` per chunk; per-post try/catch so a single corrupt post doesn't kill the batch. Fixes "Request failed" on busy sites.
+
+### 4.1.5
+- Auto-Optimize: added `set_time_limit(180)`, `wp_raise_memory_limit('admin')`, `ignore_user_abort(true)`, and a server-side try/catch to surface real errors instead of generic 500s. JS upgraded from `$.post` to `$.ajax` with a 4-min client timeout and clearer fail messages (HTTP status, "timed out").
+
+### 4.1.4
+- **Brand palette overhaul** — switched from gold/black to **Emerald → Teal** (`#10B981 → #14B8A6` dark, `#059669 → #0D9488` light). Brand gold was clashing with status warn/info colors that also used gold tints; the new emerald-teal brand sits cleanly alongside the new semantic palette.
+- **Status palette refreshed** — green for good (`#22C55E` / `#16A34A`), red for bad (`#EF4444` / `#DC2626`), orange for warn (`#F97316` / `#C2410C`), blue for info (`#3B82F6` / `#2563EB`), violet for AI (`#8B5CF6` / `#7C3AED`), sky for "new" highlights (`#0EA5E9` / `#0284C7`).
+- Killed the colored halo on primary CTAs — `--swps-accent-glow` is now a clean depth shadow instead of a yellow neon glow.
+- Cleaned up every hardcoded brand-gold rgba in `tokens.css`, `components.css`, `shell.css`, `templates.css`, `pages/dashboard.css`, `admin.css`.
+
+### 4.1.0–4.1.3
+- **NEW: AI Auto-Optimize page** — finds underperforming posts, generates AI edit proposals, applies edits with diff review. Manual review queue: every change is reviewed before it touches content. AJAX-driven, lives at `Create → Auto-Optimize`.
+- **NEW: Competitor Watch page** — tracks up to 10 competitor URLs. Daily WP-cron auto-scan via RSS / Atom (auto-discovered) with sitemap.xml fallback; always also fetches homepage for `<title>`, first `<h1>`, and JSON-LD schema types. Diff between last two snapshots surfaces new posts, new schema types, title/H1 changes. Lives at `Insights → Competitors`.
+- **Dashboard widget** — Row 4 "Competitor watch" shows the 3 most-recently-changed competitors with one-line summaries, plus a Backlinks placeholder tile.
+- **Plugin self-registration** — `SWPS_Auto_Optimize` and `SWPS_Competitors` now register their own admin submenus and AJAX handlers (cleaner than the old dashboard-registered scaffolds).
+
+### 4.0.0–4.0.4
+- **Admin shell redesign** — branded top bar (logo, breadcrumb, search, theme toggle, help) on every plugin page, replaces the old in-shell sidebar nav (now uses WP's native admin sidebar). Per-user dark/light theme toggle persisted to user meta.
+- **Tokens-based design system** — `admin/css/tokens.css` for `:root` and `[data-swps-theme="light"]` variables; `admin/css/components.css` for buttons, tiles, toggles, badges, chips, status pills; `admin/css/templates.css` for the data-dense template; `admin/css/pages/*.css` for per-page layout.
+- **Dashboard rebuild** — KPI tiles, recent generations, AI cost (30d), top issues, top GSC queries, modules grid with on/off toggles per feature, and slot-in widgets for Auto-Optimize and Competitors.
+- **IndexNow batch submit** — replaces the dead Google/Bing sitemap ping endpoints (retired 2023). Submits 50 most recently modified posts to `api.indexnow.org` (Bing's IndexNow feed powers ChatGPT search).
+- **Yoast replacement** — fully implements the meta-editor + sitemap + breadcrumbs + redirects layer from v3 with conflict detection.
 
 ### 3.7.8
 - IndexNow batch submission replaces the dead Google/Bing sitemap ping endpoints (retired in 2023). Ping now submits 50 most recent posts and reports real status.

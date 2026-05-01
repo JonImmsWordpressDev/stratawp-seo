@@ -1,14 +1,18 @@
 /**
- * StrataWP SEO — Design Tokens (v4.0.4 — Gold & Black)
+ * StrataWP SEO — Design Tokens (v4.1.4 — Emerald & Teal + semantic palette)
  *
- * Palette ported from jonimms.com theme:
- *   --accent-gold:        #d97706
- *   --accent-gold-light:  #fbbf24
- *   --accent-gold-hover:  #b45309
- *   --hero-bg:            #0f172a (deep slate)
- *   --hero-bg-light:      #1e293b (slate)
- *   --hero-text:          #ffffff
- *   --hero-text-muted:    #cbd5e1
+ * Brand:
+ *   --accent-emerald:    #10B981 → #14B8A6 (gradient — growth/SEO vibe)
+ *   --hero-bg:           #0f172a / #1e293b (deep slate)
+ *
+ * Status colors are deliberately distinct from the brand gold so that
+ * warnings, AI accents, and "info" callouts don't look like primary CTAs:
+ *   success — emerald  #10B981 (real green, not mint)
+ *   crit    — red      #EF4444 (real red, not coral)
+ *   warn    — orange   #F97316 (was gold; now distinct from brand)
+ *   info    — blue     #3B82F6 (was gold; now a true info color)
+ *   ai      — violet   #8B5CF6 (AI badges only — luxury pair with gold)
+ *   sky     — cyan     #0EA5E9 ("new" pills, NEW tags, chart strokes)
  *
  * Dark theme by default. Light theme via [data-swps-theme="light"].
  * Legacy --swps-* names kept as aliases (admin.css continues to work).
@@ -24,12 +28,12 @@
     --swps-bg-surface:    rgba(30, 41, 59, 0.55);
     --swps-bg-surface-strong: rgba(30, 41, 59, 0.85);
     --swps-bg-input:      rgba(15, 23, 42, 0.7);
-    --swps-bg-hover:      rgba(251, 191, 36, 0.06);
+    --swps-bg-hover:      rgba(20, 184, 166, 0.08);
 
     /* === Borders === */
     --swps-border:        rgba(255, 255, 255, 0.06);
     --swps-border-strong: rgba(255, 255, 255, 0.12);
-    --swps-border-focus:  rgba(217, 119, 6, 0.55);
+    --swps-border-focus:  rgba(16, 185, 129, 0.55);
 
     /* === Text === */
     --swps-text-primary:  #FFFFFF;
@@ -38,23 +42,32 @@
     --swps-text-faint:    #64748B;
     --swps-text-on-grad:  #0F172A;
 
-    /* === Accent — gold === */
-    --swps-accent-1:      #D97706;  /* deep gold (primary) */
-    --swps-accent-2:      #FBBF24;  /* light gold */
-    --swps-accent-grad:   linear-gradient(135deg, #D97706, #FBBF24);
-    --swps-accent-grad-hover: linear-gradient(135deg, #B45309, #F59E0B);
-    --swps-accent-glow:   0 0 20px rgba(251, 191, 36, 0.30);
-    --swps-ai-grad:       linear-gradient(135deg, #FBBF24, #D97706);
+    /* === Accent — emerald → teal (brand) === */
+    --swps-accent-1:      #10B981;  /* emerald (primary) */
+    --swps-accent-2:      #14B8A6;  /* teal */
+    --swps-accent-grad:   linear-gradient(135deg, #10B981, #14B8A6);
+    --swps-accent-grad-hover: linear-gradient(135deg, #059669, #0D9488);
+    /* No coloured halo — soft elevation shadow instead. Keeps primary CTAs clean. */
+    --swps-accent-glow:   0 4px 14px rgba(0, 0, 0, 0.35);
 
-    /* === Status === */
-    --swps-success:       #34D399;
-    --swps-success-bg:    rgba(16, 185, 129, 0.15);
-    --swps-warn:          #FBBF24;
-    --swps-warn-bg:       rgba(251, 191, 36, 0.15);
-    --swps-crit:          #F87171;
-    --swps-crit-bg:       rgba(248, 113, 113, 0.15);
-    --swps-info:          #FBBF24;
-    --swps-info-bg:       rgba(251, 191, 36, 0.15);
+    /* AI gradient: violet → sky. Distinct from the emerald brand. */
+    --swps-ai-grad:       linear-gradient(135deg, #8B5CF6, #0EA5E9);
+
+    /* === Status (semantic, distinct from brand) === */
+    --swps-success:       #22C55E;  /* warmer green — distinct from emerald brand */
+    --swps-success-bg:    rgba(34, 197, 94, 0.15);
+    --swps-crit:          #EF4444;
+    --swps-crit-bg:       rgba(239, 68, 68, 0.15);
+    --swps-warn:          #F97316;  /* orange — moved off gold */
+    --swps-warn-bg:       rgba(249, 115, 22, 0.15);
+    --swps-info:          #3B82F6;  /* blue — moved off gold */
+    --swps-info-bg:       rgba(59, 130, 246, 0.15);
+
+    /* === Optional accents (use sparingly, non-status) === */
+    --swps-ai:            #8B5CF6;  /* violet — AI features */
+    --swps-ai-bg:         rgba(139, 92, 246, 0.15);
+    --swps-sky:           #0EA5E9;  /* sky — "new" highlights, charts */
+    --swps-sky-bg:        rgba(14, 165, 233, 0.15);
 
     /* === Radii === */
     --swps-radius-sm:     6px;
@@ -66,7 +79,7 @@
     --swps-shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.35);
     --swps-shadow:        0 4px 12px rgba(0, 0, 0, 0.30);
     --swps-shadow-lg:     0 12px 28px rgba(0, 0, 0, 0.40);
-    --swps-glow-focus:    0 0 0 3px rgba(217, 119, 6, 0.30);
+    --swps-glow-focus:    0 0 0 3px rgba(16, 185, 129, 0.30);
 
     /* === Motion === */
     --swps-transition:    200ms ease;
@@ -81,10 +94,10 @@
     --swps-primary-light: var(--swps-bg-surface);
     --swps-primary-lighter: var(--swps-bg-surface-strong);
     --swps-accent:        var(--swps-accent-1);
-    --swps-accent-light:  rgba(217, 119, 6, 0.10);
+    --swps-accent-light:  rgba(16, 185, 129, 0.10);
     --swps-accent-hover:  var(--swps-accent-2);
     --swps-secondary:     var(--swps-accent-2);
-    --swps-secondary-light: rgba(251, 191, 36, 0.10);
+    --swps-secondary-light: rgba(20, 184, 166, 0.10);
     --swps-error:         var(--swps-crit);
     --swps-error-light:   var(--swps-crit-bg);
     --swps-warning:       var(--swps-warn);
@@ -105,12 +118,12 @@
     --swps-bg-surface:    #FFFFFF;
     --swps-bg-surface-strong: #FFFFFF;
     --swps-bg-input:      #FFFFFF;
-    --swps-bg-hover:      #FEF3C7;
+    --swps-bg-hover:      #D1FAE5;
 
     /* === Borders === */
     --swps-border:        #E5E7EB;
     --swps-border-strong: #D1D5DB;
-    --swps-border-focus:  rgba(217, 119, 6, 0.55);
+    --swps-border-focus:  rgba(5, 150, 105, 0.55);
 
     /* === Text === */
     --swps-text-primary:  #111111;
@@ -119,23 +132,32 @@
     --swps-text-faint:    #9CA3AF;
     --swps-text-on-grad:  #111111;
 
-    /* === Accent — gold (slightly darker for AA on white) === */
-    --swps-accent-1:      #B45309;
-    --swps-accent-2:      #D97706;
-    --swps-accent-grad:   linear-gradient(135deg, #B45309, #D97706);
-    --swps-accent-grad-hover: linear-gradient(135deg, #92400E, #B45309);
-    --swps-accent-glow:   0 4px 12px rgba(180, 83, 9, 0.20);
-    --swps-ai-grad:       linear-gradient(135deg, #D97706, #B45309);
+    /* === Accent — emerald → teal (slightly darker for AA on white) === */
+    --swps-accent-1:      #059669;  /* emerald-600 */
+    --swps-accent-2:      #0D9488;  /* teal-600 */
+    --swps-accent-grad:   linear-gradient(135deg, #059669, #0D9488);
+    --swps-accent-grad-hover: linear-gradient(135deg, #047857, #0F766E);
+    /* No coloured halo — soft elevation for white bg */
+    --swps-accent-glow:   0 1px 3px rgba(15, 23, 42, 0.12), 0 1px 2px rgba(15, 23, 42, 0.06);
 
-    /* === Status === */
-    --swps-success:       #047857;
-    --swps-success-bg:    #D1FAE5;
-    --swps-warn:          #B45309;
-    --swps-warn-bg:       #FEF3C7;
-    --swps-crit:          #B91C1C;
+    /* AI gradient: violet → sky (darker for white-bg contrast) */
+    --swps-ai-grad:       linear-gradient(135deg, #7C3AED, #0284C7);
+
+    /* === Status (darker shades for AA on white) === */
+    --swps-success:       #16A34A;  /* warmer green — distinct from emerald brand */
+    --swps-success-bg:    #DCFCE7;
+    --swps-crit:          #DC2626;
     --swps-crit-bg:       #FEE2E2;
-    --swps-info:          #B45309;
-    --swps-info-bg:       #FEF3C7;
+    --swps-warn:          #C2410C;  /* orange-700 */
+    --swps-warn-bg:       #FFEDD5;  /* orange-100 */
+    --swps-info:          #2563EB;  /* blue-600 */
+    --swps-info-bg:       #DBEAFE;  /* blue-100 */
+
+    /* === Optional accents === */
+    --swps-ai:            #7C3AED;  /* violet-600 */
+    --swps-ai-bg:         #EDE9FE;  /* violet-100 */
+    --swps-sky:           #0284C7;  /* sky-600 */
+    --swps-sky-bg:        #E0F2FE;  /* sky-100 */
 
     /* === Shadows (lighter for white bg) === */
     --swps-shadow-sm:     0 1px 2px rgba(15, 23, 42, 0.05);

@@ -272,6 +272,45 @@ $welcome_msg = sprintf(
 
     </div>
 
+    <!-- Row 4 — Competitor watch -->
+    <div class="swps-dash-row swps-dash-row-2">
+        <div class="swps-tile">
+            <div class="swps-tile-h" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+                <span><?php esc_html_e( 'Competitor watch', 'stratawp-seo' ); ?></span>
+                <a href="<?php echo esc_url( admin_url( 'admin.php?page=swps-competitors' ) ); ?>"
+                   style="color:var(--swps-accent-1);font-size:11px;font-weight:600;text-decoration:none">
+                    <?php esc_html_e( 'Manage →', 'stratawp-seo' ); ?>
+                </a>
+            </div>
+            <?php if ( empty( $competitors ) ) : ?>
+                <p style="color:var(--swps-text-muted);font-size:12px;margin:4px 0 0">
+                    <?php esc_html_e( 'No competitors tracked yet. Add up to 10 sites to monitor for content velocity, schema diff, and homepage changes.', 'stratawp-seo' ); ?>
+                </p>
+            <?php else : ?>
+                <div class="swps-dash-list">
+                    <?php foreach ( $competitors as $c ) : ?>
+                        <div class="swps-dash-list-row">
+                            <div class="swps-dash-list-main">
+                                <div class="swps-dash-list-title"><?php echo esc_html( $c['label'] ); ?></div>
+                                <div class="swps-dash-list-sub"><?php echo esc_html( $c['summary'] ); ?></div>
+                            </div>
+                            <?php if ( ! empty( $c['has_changes'] ) ) : ?>
+                                <span class="swps-pill swps-pill-warn"><?php esc_html_e( 'Δ', 'stratawp-seo' ); ?></span>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="swps-tile">
+            <div class="swps-tile-h"><?php esc_html_e( 'Backlinks', 'stratawp-seo' ); ?></div>
+            <p style="color:var(--swps-text-muted);font-size:12px;margin:4px 0 0">
+                <?php esc_html_e( 'Connect Ahrefs / Moz / SE Ranking to track backlinks. Coming after a paid data partner is wired up.', 'stratawp-seo' ); ?>
+            </p>
+        </div>
+    </div>
+
     <!-- Modules grid -->
     <div class="swps-dash-section-h">
         <h3><?php esc_html_e( 'Modules', 'stratawp-seo' ); ?></h3>

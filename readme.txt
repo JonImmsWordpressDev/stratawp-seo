@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.0.4
+Stable tag: 4.1.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -127,6 +127,30 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 * **robots.txt injection** — allowed bots get explicit Allow rules; unchecked known bots get Disallow
 * **Dynamic llms.txt** — served at /llms.txt, built from your site description and posts/pages/categories with one-line summaries
 
+= AI Auto-Optimize (v4.1) =
+
+* **Re-score all published posts** — chunked scanning (10 posts per batch) with live progress; works on busy sites without hitting PHP timeouts
+* **AI edit proposals** — concrete find/replace edits, optional new meta title/description and focus keyword, with a projected score
+* **Diff review modal** — see old vs. new for each edit, check/uncheck individual changes before applying
+* **One-click apply** — only the edits you accepted are applied; the post is re-scored automatically after
+* **Threshold control** — surface only posts below your score floor (default 75)
+
+= Competitor Watch (v4.1) =
+
+* **Track up to 10 competitor sites** — paste URL, get auto-discovered RSS/Atom feed plus homepage and sitemap.xml fallback
+* **Daily WP-cron auto-scan** — fetches each site at most once per day with polite delays
+* **Diff detection** — new posts since last snapshot, new JSON-LD schema types, homepage title/H1 changes
+* **Content velocity** — posts-per-week trend across snapshot history
+* **Per-row "Scan now"** — manual refresh whenever you want
+* **Dashboard widget** — 3 most-recently-changed competitors with one-line summary
+
+= Admin Shell (v4.0) =
+
+* **Branded top bar** — logo, breadcrumb, search, theme toggle, help — sits above every plugin page
+* **Dark mode by default** — light mode via the toggle (per-user preference, persisted)
+* **Emerald & Teal palette** — distinct brand identity with semantic status colors (green = good, red = bad, orange = warn, blue = info, violet = AI features, sky = "new" highlights)
+* **Data-dense template** — Audit, Redirects, Internal Links, Auto-Optimize, and Competitors all use the same row-card pattern
+
 = Developer Features =
 
 * **25+ filters and actions** — extend every part of the generation pipeline
@@ -187,6 +211,35 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.1.7 =
+* Critical fix: render functions for the Auto-Optimize queue and Competitors list moved to the top of their templates. PHP doesn't hoist conditionally-declared functions, so the prior placement caused a fatal error ("There has been a critical error") once any post had a cached score.
+
+= 4.1.6 =
+* Auto-Optimize re-scan is now chunked: 10 posts per request with live progress (e.g. "Re-scoring 30/137"). Fixes "Request failed" on busy sites.
+* New `swps_optimize_scan_chunk` AJAX endpoint; per-post try/catch so a corrupt post doesn't kill the batch.
+
+= 4.1.5 =
+* Auto-Optimize: server now sets a 180s time limit, raises the admin memory cap, ignores user abort, and surfaces real error messages instead of generic 500s. Client uses $.ajax with a 4-min timeout and reports HTTP status / "timed out" in the alert.
+
+= 4.1.4 =
+* Brand palette overhaul: Emerald → Teal replaces the gold/black brand. Status colors refreshed for clarity (green = good, red = bad, orange = warn, blue = info, violet = AI, sky = "new").
+* Removed the colored halo on primary CTAs — replaced with a clean depth shadow.
+* Cleaned up every hardcoded brand-gold rgba across the CSS files.
+
+= 4.1.0–4.1.3 =
+* New: AI Auto-Optimize page — finds underperforming posts, generates AI edit proposals, applies edits with diff review.
+* New: Competitor Watch page — tracks up to 10 competitor URLs with daily WP-cron scans (RSS / Atom auto-discovery, sitemap.xml fallback, homepage scrape for title/H1/schema).
+* Dashboard widget for Competitor Watch (3 most-recently-changed sites with one-line summary).
+* Auto-Optimize and Competitors classes self-register their admin submenus, AJAX handlers, and cron events.
+
+= 4.0.0–4.0.4 =
+* Admin shell redesign: branded top bar (logo, breadcrumb, search, theme toggle, help) on every plugin page.
+* Per-user dark/light theme toggle persisted to user meta.
+* Tokens-based design system: tokens.css (root + light variants), components.css, templates.css, per-page CSS files.
+* Dashboard rebuild: KPI tiles, recent generations, AI cost (30d), top issues, top GSC queries, modules grid.
+* IndexNow batch submit replaces dead Google/Bing sitemap ping endpoints.
+* Yoast replacement layer fully implemented (meta editor, sitemap, breadcrumbs, redirects with conflict detection).
 
 = 3.7.8 =
 * IndexNow batch submission replaces the dead Google/Bing sitemap ping endpoints (retired 2023). Ping now submits 50 most recent posts and reports real status.
@@ -283,6 +336,15 @@ No. GSC integration is optional. The on-site analytics works entirely without an
 * Scheduled publishing
 
 == Upgrade Notice ==
+
+= 4.1.7 =
+Critical fix for Auto-Optimize and Competitors pages — fatal error when displaying queue rows. Strongly recommended.
+
+= 4.1.4 =
+Brand palette refresh (Emerald & Teal). All semantic status colors are now distinct from the brand. Hard-reload the admin to clear cached CSS.
+
+= 4.1.0 =
+Major release: AI Auto-Optimize and Competitor Watch ship. New admin shell with dark/light theme toggle. Yoast replacement layer is fully featured.
 
 = 3.7.8 =
 Replaces the dead Google/Bing sitemap ping endpoints with IndexNow batch submission. Fixes Sitemaps admin display bugs.

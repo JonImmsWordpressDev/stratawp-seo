@@ -68,24 +68,8 @@ class SWPS_Dashboard {
             [ $this, 'render' ]
         );
 
-        // Phase 7-8 scaffolds: Auto-Optimize, Competitors.
-        add_submenu_page(
-            'stratawp-seo',
-            __( 'Auto-Optimize', 'stratawp-seo' ),
-            __( 'Auto-Optimize', 'stratawp-seo' ),
-            'manage_options',
-            'swps-auto-optimize',
-            [ $this, 'render_auto_optimize' ]
-        );
-
-        add_submenu_page(
-            'stratawp-seo',
-            __( 'Competitors', 'stratawp-seo' ),
-            __( 'Competitors', 'stratawp-seo' ),
-            'manage_options',
-            'swps-competitors',
-            [ $this, 'render_competitors' ]
-        );
+        // Auto-Optimize and Competitors register their own submenus
+        // (SWPS_Auto_Optimize, SWPS_Competitors).
     }
 
     /**
@@ -94,20 +78,6 @@ class SWPS_Dashboard {
     public function render(): void {
         $data = $this->get_summary_data();
         require SWPS_PLUGIN_DIR . 'templates/dashboard-page.php';
-    }
-
-    /**
-     * Render Auto-Optimize scaffold.
-     */
-    public function render_auto_optimize(): void {
-        require SWPS_PLUGIN_DIR . 'templates/auto-optimize-page.php';
-    }
-
-    /**
-     * Render Competitors scaffold.
-     */
-    public function render_competitors(): void {
-        require SWPS_PLUGIN_DIR . 'templates/competitors-page.php';
     }
 
     /**
@@ -130,7 +100,7 @@ class SWPS_Dashboard {
             'top_issues'         => $this->safe_get_top_issues(),
             'top_queries'        => $this->safe_get_top_gsc_queries(),
             'auto_optimize_queue' => [], // Phase 7 fills in.
-            'competitors'        => [],  // Phase 8 fills in.
+            'competitors'        => $this->safe_get_competitor_summary(),
             'modules'            => $this->get_modules_for_grid(),
         ];
     }
@@ -276,6 +246,18 @@ class SWPS_Dashboard {
             }
             $rows = $gsc->get_top_queries( 7, 3 );
             return is_array( $rows ) ? $rows : [];
+        } catch ( \Throwable $e ) {
+            return [];
+        }
+    }
+
+    private function safe_get_competitor_summary(): array {
+        try {
+            $competitors = stratawp_seo()->competitors;
+            if ( ! method_exists( $competitors, 'get_dashboard_summary' ) ) {
+                return [];
+            }
+            return $competitors->get_dashboard_summary( 3 );
         } catch ( \Throwable $e ) {
             return [];
         }

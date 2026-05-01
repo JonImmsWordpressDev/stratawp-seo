@@ -1,0 +1,229 @@
+/**
+ * StrataWP SEO — Auto-Optimize page styles (v4.1).
+ *
+ * Loaded on stratawp-seo_page_swps-auto-optimize. Builds on top of
+ * tokens.css, components.css, and templates.css (data-dense template).
+ */
+
+/* Controls bar — sits between the summary tiles and the queue list. */
+.swps-optimize-controls {
+    margin-bottom: 18px;
+    padding: 14px 18px;
+}
+.swps-optimize-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+.swps-optimize-control-field {
+    display: flex;
+    flex-direction: column;
+}
+.swps-optimize-control-field label {
+    font-size: 13px;
+    color: var(--swps-text-primary);
+}
+.swps-optimize-control-help {
+    font-size: 11px;
+    color: var(--swps-text-muted);
+    margin: 2px 0 0;
+}
+.swps-optimize-controls input[type="number"] {
+    width: 80px;
+    background: var(--swps-bg-input);
+    color: var(--swps-text-primary);
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius-sm);
+    padding: 6px 8px;
+    font-size: 13px;
+}
+.swps-optimize-controls input[type="number"]:focus {
+    border-color: var(--swps-border-focus);
+    outline: none;
+    box-shadow: var(--swps-glow-focus);
+}
+.swps-optimize-progress {
+    margin-left: auto;
+    color: var(--swps-text-muted);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+}
+
+/* Row score arrow + projected number. */
+.swps-row-card.swps-optimize-row .swps-row-head-score {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.swps-optimize-arrow {
+    color: var(--swps-text-faint);
+    font-size: 14px;
+}
+.swps-optimize-projected {
+    background: var(--swps-accent-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: var(--swps-accent-2);
+    font-weight: 700;
+}
+
+.swps-optimize-row .swps-row-head-name a {
+    color: var(--swps-text-primary);
+    text-decoration: none;
+}
+.swps-optimize-row .swps-row-head-name a:hover {
+    color: var(--swps-accent-2);
+}
+
+.swps-optimize-empty {
+    text-align: center;
+    padding: 28px 20px;
+    color: var(--swps-text-muted);
+}
+.swps-optimize-empty p { margin: 0; }
+
+/* Modal */
+.swps-optimize-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100050;
+}
+.swps-optimize-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+.swps-optimize-modal-panel {
+    position: relative;
+    max-width: 760px;
+    margin: 50px auto;
+    background: var(--swps-bg-app-solid);
+    color: var(--swps-text-body);
+    border: 1px solid var(--swps-border-strong);
+    border-radius: var(--swps-radius-lg);
+    box-shadow: var(--swps-shadow-lg);
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 100px);
+}
+.swps-optimize-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--swps-border);
+}
+.swps-optimize-modal-head h2 {
+    margin: 0;
+    font-size: 15px;
+    color: var(--swps-text-primary);
+    font-weight: 600;
+}
+.swps-optimize-modal-close {
+    background: none;
+    border: 0;
+    font-size: 22px;
+    cursor: pointer;
+    color: var(--swps-text-muted);
+    line-height: 1;
+}
+.swps-optimize-modal-close:hover { color: var(--swps-text-primary); }
+.swps-optimize-modal-body {
+    padding: 16px 18px;
+    overflow-y: auto;
+}
+.swps-optimize-modal-body h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--swps-text-muted);
+    font-weight: 600;
+    margin: 16px 0 10px;
+}
+.swps-optimize-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 18px;
+    border-top: 1px solid var(--swps-border);
+}
+
+/* Review summary */
+.swps-optimize-review-summary { margin-bottom: 14px; }
+.swps-optimize-review-scores {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--swps-text-primary);
+}
+.swps-optimize-review-scores .swps-optimize-projected {
+    font-size: 22px;
+}
+.swps-optimize-review-cost {
+    color: var(--swps-text-muted);
+    font-size: 12px;
+    font-weight: 400;
+    margin-left: 8px;
+}
+.swps-optimize-review-rationale {
+    color: var(--swps-text-body);
+    font-size: 13px;
+    margin: 0;
+}
+
+/* Edit list */
+.swps-optimize-edits {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0 0 18px;
+}
+.swps-optimize-edit {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius-sm);
+    background: var(--swps-bg-surface);
+    cursor: pointer;
+}
+.swps-optimize-edit input[type="checkbox"] {
+    margin-top: 4px;
+    flex-shrink: 0;
+    accent-color: var(--swps-accent-1);
+}
+.swps-optimize-edit-body { flex: 1; min-width: 0; }
+.swps-optimize-edit-head {
+    font-size: 12px;
+    color: var(--swps-text-primary);
+}
+.swps-optimize-edit-reason {
+    color: var(--swps-text-muted);
+    font-weight: 400;
+    margin-left: 6px;
+}
+.swps-optimize-edit-diff { margin-top: 6px; border-radius: var(--swps-radius-sm); overflow: hidden; }
+.swps-optimize-edit-diff pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    color: var(--swps-text-body);
+}
+.swps-optimize-edit-diff--from pre {
+    background: var(--swps-crit-bg);
+    border-left: 3px solid var(--swps-crit);
+}
+.swps-optimize-edit-diff--to pre {
+    background: var(--swps-success-bg);
+    border-left: 3px solid var(--swps-success);
+}
