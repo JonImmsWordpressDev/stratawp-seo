@@ -282,25 +282,26 @@ class SWPS_Dashboard {
     }
 
     /**
-     * Static modules list for the dashboard grid until Phase 6
-     * replaces this with the real Modules registry.
+     * Build the modules grid array for the dashboard template.
+     *
+     * Reads from SWPS_Modules registry — each entry includes the
+     * persisted on/off state.
      */
     private function get_modules_for_grid(): array {
-        return [
-            [ 'slug' => 'ai-generation',  'icon' => '✦', 'title' => 'AI Content Generation', 'desc' => 'Site-aware AI posts with internal links, FAQs, schema.', 'badge' => '', 'enabled' => true,  'settings_url' => admin_url( 'admin.php?page=swps-settings' ) ],
-            [ 'slug' => 'auto-optimize',  'icon' => '↻', 'title' => 'AI Auto-Optimize',     'desc' => 'Auto-refresh old posts: kw in H2, first paragraph, schema, alt text.', 'badge' => 'ai',  'enabled' => true,  'settings_url' => admin_url( 'admin.php?page=swps-auto-optimize' ) ],
-            [ 'slug' => 'competitors',    'icon' => '◎', 'title' => 'Competitors',          'desc' => 'Track sites, schema, keyword gaps, content velocity.', 'badge' => 'new', 'enabled' => true,  'settings_url' => admin_url( 'admin.php?page=swps-competitors' ) ],
-            [ 'slug' => 'seo-audit',      'icon' => '⚡', 'title' => 'SEO Audit',           'desc' => '8-module health check with one-click auto-fix.', 'badge' => '',    'enabled' => true,  'settings_url' => admin_url( 'admin.php?page=swps-seo-audit' ) ],
-            [ 'slug' => 'schema',         'icon' => '{}', 'title' => 'Schema',              'desc' => 'Article, FAQ, BreadcrumbList, Organization JSON-LD.', 'badge' => '', 'enabled' => true,  'settings_url' => admin_url( 'admin.php?page=swps-settings#schema' ) ],
-            [ 'slug' => 'redirects',      'icon' => '⤳', 'title' => 'Redirects',           'desc' => '301/302/307/410, regex, 404 monitor with one-click fix.', 'badge' => '', 'enabled' => true,  'settings_url' => admin_url( 'admin.php?page=swps-redirects' ) ],
-            [ 'slug' => 'sitemaps',       'icon' => '⌘', 'title' => 'Sitemaps',            'desc' => 'XML index, image sitemap, IndexNow batch submit.', 'badge' => '', 'enabled' => true,  'settings_url' => admin_url( 'admin.php?page=swps-sitemaps' ) ],
-            [ 'slug' => 'internal-links', 'icon' => '⟿', 'title' => 'Internal Links',     'desc' => 'Keyword + AI-suggested internal linking.', 'badge' => '', 'enabled' => true,  'settings_url' => admin_url( 'admin.php?page=swps-internal-links' ) ],
-            [ 'slug' => 'meta-editor',    'icon' => '◆', 'title' => 'Meta Editor',         'desc' => 'Per-post title, description, OG, Twitter, robots, canonical.', 'badge' => '', 'enabled' => true,  'settings_url' => admin_url( 'admin.php?page=swps-settings#meta' ) ],
-            [ 'slug' => 'analytics',      'icon' => '◔', 'title' => 'Analytics',           'desc' => 'Cookie-free pageviews, time on page, scroll depth.', 'badge' => '', 'enabled' => true,  'settings_url' => admin_url( 'admin.php?page=swps-analytics' ) ],
-            [ 'slug' => 'ai-bots',        'icon' => '⌨', 'title' => 'AI Crawlers + llms.txt', 'desc' => 'GPTBot, ClaudeBot, PerplexityBot allowlist + dynamic /llms.txt.', 'badge' => '', 'enabled' => true,  'settings_url' => admin_url( 'admin.php?page=swps-settings#ai-bots' ) ],
-            [ 'slug' => 'local-seo',      'icon' => '◉', 'title' => 'Local SEO',           'desc' => 'Google Business profile, NAP, LocalBusiness schema.', 'badge' => 'soon', 'enabled' => false, 'settings_url' => '' ],
-            [ 'slug' => 'woocommerce',    'icon' => '⌥', 'title' => 'WooCommerce SEO',     'desc' => 'Product schema, category SEO, OG for variations.', 'badge' => 'soon', 'enabled' => false, 'settings_url' => '' ],
-            [ 'slug' => 'image-seo',      'icon' => '◈', 'title' => 'Image SEO',           'desc' => 'Auto-alt, auto-rename, compression, WebP.', 'badge' => 'soon', 'enabled' => false, 'settings_url' => '' ],
-        ];
+        $modules = stratawp_seo()->modules->get_all();
+        $out     = [];
+        foreach ( $modules as $slug => $mod ) {
+            $out[] = [
+                'slug'         => $slug,
+                'icon'         => $mod['icon'],
+                'title'        => $mod['name'],
+                'desc'         => $mod['desc'],
+                'badge'        => $mod['badge'],
+                'enabled'      => (bool) $mod['enabled'],
+                'locked'       => ! empty( $mod['locked'] ),
+                'settings_url' => $mod['settings_url'],
+            ];
+        }
+        return $out;
     }
 }

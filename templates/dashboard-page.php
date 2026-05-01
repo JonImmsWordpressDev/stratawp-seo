@@ -323,9 +323,10 @@ $welcome_msg = sprintf(
                     <button type="button"
                         class="swps-toggle swps-toggle-sm <?php echo ! empty( $mod['enabled'] ) ? 'is-on' : ''; ?>"
                         data-swps-module-toggle="<?php echo esc_attr( $mod['slug'] ); ?>"
+                        data-swps-locked="<?php echo ! empty( $mod['locked'] ) ? '1' : '0'; ?>"
                         aria-checked="<?php echo ! empty( $mod['enabled'] ) ? 'true' : 'false'; ?>"
                         aria-label="<?php echo esc_attr( sprintf( __( 'Toggle %s', 'stratawp-seo' ), $mod['title'] ) ); ?>"
-                        <?php disabled( $is_coming ); ?>
+                        <?php disabled( ! empty( $mod['locked'] ) ); ?>
                     ></button>
                 </div>
             </div>

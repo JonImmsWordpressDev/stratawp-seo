@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.0.0-alpha.4
+ * Version: 4.0.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'SWPS_VERSION', '4.0.0-alpha.4' );
+define( 'SWPS_VERSION', '4.0.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -120,6 +120,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-rest-api.php';
 
 // v4.0 admin shell.
 require_once SWPS_PLUGIN_DIR . 'includes/class-user-prefs.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-modules.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-admin-shell.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-dashboard.php';
 
@@ -177,6 +178,7 @@ final class StrataWP_SEO {
 
     // v4.0 admin shell.
     public SWPS_User_Prefs $user_prefs;
+    public SWPS_Modules $modules;
     public SWPS_Admin_Shell $admin_shell;
     public SWPS_Dashboard $dashboard;
 
@@ -247,6 +249,7 @@ final class StrataWP_SEO {
 
         // v4.0 admin shell — only relevant in admin, but instantiate always so REST routes register.
         $this->user_prefs  = new SWPS_User_Prefs();
+        $this->modules     = new SWPS_Modules();
         $this->admin_shell = new SWPS_Admin_Shell( $this->user_prefs );
         $this->dashboard   = new SWPS_Dashboard();
 

@@ -195,6 +195,17 @@ class SWPS_REST_API {
                 ],
             ],
         ] );
+
+        // Modules registry — toggle a module on/off.
+        register_rest_route( self::NAMESPACE, '/modules/(?P<slug>[a-z0-9-]+)/toggle', [
+            'methods'             => 'POST',
+            'callback'            => [ $this, 'toggle_module' ],
+            'permission_callback' => [ $this, 'check_permissions' ],
+            'args'                => [
+                'slug'    => [ 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_key' ],
+                'enabled' => [ 'type' => 'boolean', 'required' => true ],
+            ],
+        ] );
     }
 
     /**
@@ -219,6 +230,29 @@ class SWPS_REST_API {
             'success' => $ok,
             'theme'   => $prefs->get_theme(),
         ], $ok ? 200 : 400 );
+    }
+
+    /**
+     * POST /modules/{slug}/toggle — enable or disable a module.
+     */
+    public function toggle_module( WP_REST_Request $request ): WP_REST_Response {
+        $slug    = $request->get_param( 'slug' );
+        $enabled = (bool) $request->get_param( 'enabled' );
+        $modules = stratawp_seo()->modules;
+
+        $ok = $modules->set_enabled( $slug, $enabled );
+        if ( ! $ok ) {
+            return new WP_REST_Response( [
+                'success' => false,
+                'message' => 'Unknown or locked module.',
+            ], 400 );
+        }
+
+        return new WP_REST_Response( [
+            'success' => true,
+            'slug'    => $slug,
+            'enabled' => $modules->is_enabled( $slug ),
+        ] );
     }
 
     /**

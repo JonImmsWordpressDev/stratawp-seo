@@ -65,23 +65,59 @@
     }
 
     /* ------------------------------------------------------------------
-     * Module toggles (Phase 6 wires real REST; for v4.0-alpha the toggle
-     * just flips visually — the registered modules in Phase 6 take over.)
+     * Module toggles — persists via REST POST /swps/v1/modules/{slug}/toggle
      * ------------------------------------------------------------------ */
     function bindModuleToggles() {
         var toggles = document.querySelectorAll('[data-swps-module-toggle]');
         toggles.forEach(function (t) {
             t.addEventListener('click', function (e) {
                 e.preventDefault();
-                if (t.disabled) return;
-                var on = t.classList.toggle('is-on');
+                if (t.disabled || t.dataset.swpsLocked === '1') return;
+
+                var slug = t.getAttribute('data-swps-module-toggle');
+                var on   = !t.classList.contains('is-on');
+
+                // Optimistic toggle.
+                t.classList.toggle('is-on', on);
                 t.setAttribute('aria-checked', on ? 'true' : 'false');
-                showFlash(
-                    (t.getAttribute('aria-label') || 'Module') +
-                    (on ? ' enabled' : ' disabled') +
-                    ' (saved on next page load — Phase 6)',
-                    'ok'
-                );
+                t.disabled = true;
+
+                if (!cfg.restUrl) {
+                    t.disabled = false;
+                    return;
+                }
+
+                fetch(cfg.restUrl + 'swps/v1/modules/' + encodeURIComponent(slug) + '/toggle', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-WP-Nonce': cfg.restNonce
+                    },
+                    body: JSON.stringify({ enabled: on })
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        t.disabled = false;
+                        if (!data || !data.success) {
+                            // Rollback.
+                            t.classList.toggle('is-on', !on);
+                            t.setAttribute('aria-checked', !on ? 'true' : 'false');
+                            showFlash('Could not save — locked or unknown module.', 'err');
+                            return;
+                        }
+                        showFlash(
+                            (t.getAttribute('aria-label') || 'Module') +
+                            (data.enabled ? ' enabled' : ' disabled'),
+                            'ok'
+                        );
+                    })
+                    .catch(function () {
+                        t.disabled = false;
+                        t.classList.toggle('is-on', !on);
+                        t.setAttribute('aria-checked', !on ? 'true' : 'false');
+                        showFlash('Network error saving module state.', 'err');
+                    });
             });
         });
     }
