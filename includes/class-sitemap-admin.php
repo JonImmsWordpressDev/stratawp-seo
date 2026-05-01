@@ -2,8 +2,7 @@
 /**
  * Sitemap Admin page and AJAX handlers.
  *
- * Provides the dashboard for managing XML sitemaps with exclusion toggles,
- * search engine pinging, and IndexNow configuration.
+ * Provides the dashboard for managing XML sitemaps with exclusion toggles.
  *
  * @package StrataWP_SEO
  */
@@ -19,8 +18,6 @@ class SWPS_Sitemap_Admin {
 		add_action( 'admin_init', [ $this, 'register_settings' ] );
 		add_action( 'wp_ajax_swps_get_sitemaps', [ $this, 'ajax_get_sitemaps' ] );
 		add_action( 'wp_ajax_swps_toggle_sitemap', [ $this, 'ajax_toggle_sitemap' ] );
-		add_action( 'wp_ajax_swps_ping_search_engines', [ $this, 'ajax_ping_search_engines' ] );
-		add_action( 'wp_ajax_swps_verify_indexnow_key', [ $this, 'ajax_verify_indexnow_key' ] );
 	}
 
 	/**
@@ -178,13 +175,11 @@ class SWPS_Sitemap_Admin {
 			'excluded'  => $author_excluded,
 		];
 
-		$index_url   = home_url( '/sitemap_index.xml' );
-		$indexnow_key = get_option( 'swps_indexnow_key', '' );
+		$index_url = home_url( '/sitemap_index.xml' );
 
 		wp_send_json_success( [
-			'sitemaps'     => $sitemaps,
-			'index_url'    => $index_url,
-			'indexnow_key' => $indexnow_key,
+			'sitemaps'  => $sitemaps,
+			'index_url' => $index_url,
 		] );
 	}
 
@@ -213,75 +208,6 @@ class SWPS_Sitemap_Admin {
 			'key'      => $key,
 			'excluded' => (bool) $new_value,
 		] );
-	}
-
-	/**
-	 * AJAX: Ping search engines and IndexNow.
-	 */
-	public function ajax_ping_search_engines(): void {
-		check_ajax_referer( 'swps_nonce', 'nonce' );
-
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( [ 'message' => 'Insufficient permissions.' ] );
-		}
-
-		$sitemap_manager = StrataWP_SEO::instance()->sitemap_manager;
-		if ( ! $sitemap_manager ) {
-			wp_send_json_error( [ 'message' => 'Sitemap manager not available.' ] );
-		}
-
-		$result = $sitemap_manager->ping_search_engines();
-
-		if ( ! empty( $result['error'] ) ) {
-			wp_send_json_error( [ 'message' => $result['error'] ] );
-		}
-
-		$status_code = (int) $result['status'];
-		$ok          = $status_code >= 200 && $status_code < 300;
-
-		if ( ! $ok ) {
-			$body_excerpt = '';
-			if ( ! empty( $result['body'] ) ) {
-				$body_excerpt = ' — ' . trim( wp_strip_all_tags( substr( (string) $result['body'], 0, 240 ) ) );
-			}
-			wp_send_json_error( [
-				'message' => sprintf(
-					/* translators: 1: HTTP status code, 2: response body excerpt */
-					__( 'IndexNow returned HTTP %1$d.%2$s Use the "Verify Key URL" button to diagnose key-file accessibility.', 'stratawp-seo' ),
-					$status_code,
-					$body_excerpt
-				),
-			] );
-		}
-
-		wp_send_json_success( [
-			'message' => sprintf(
-				/* translators: 1: number of URLs, 2: HTTP status code */
-				__( 'Submitted %1$d URLs to IndexNow (HTTP %2$d). Bing, Yandex, and ChatGPT search will pick these up shortly.', 'stratawp-seo' ),
-				(int) $result['submitted'],
-				$status_code
-			),
-		] );
-	}
-
-	/**
-	 * AJAX: Verify the IndexNow key file is reachable.
-	 */
-	public function ajax_verify_indexnow_key(): void {
-		check_ajax_referer( 'swps_nonce', 'nonce' );
-
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( [ 'message' => 'Insufficient permissions.' ] );
-		}
-
-		$sitemap_manager = StrataWP_SEO::instance()->sitemap_manager;
-		if ( ! $sitemap_manager ) {
-			wp_send_json_error( [ 'message' => 'Sitemap manager not available.' ] );
-		}
-
-		$result = $sitemap_manager->verify_key_url();
-
-		wp_send_json_success( $result );
 	}
 
 	/**
