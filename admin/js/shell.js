@@ -60,8 +60,10 @@
     }
 
     /* ------------------------------------------------------------------
-     * Sidebar active state
-     * Mark the current nav item active by matching ?page= against href
+     * Top-nav active state
+     * Mark the current nav item active by matching ?page= against href.
+     * (v4.0.2: works on either .swps-shell-nav-item or legacy
+     *  .swps-shell-side-item — kept dual selectors for back-compat.)
      * ------------------------------------------------------------------ */
     function activateCurrentNavItem() {
         var params = new URLSearchParams(window.location.search);
@@ -69,27 +71,36 @@
         if (!currentPage) {
             return;
         }
-        var items = document.querySelectorAll('.swps-shell-side-item');
+        var items = document.querySelectorAll('.swps-shell-nav-item, .swps-shell-side-item');
+        var active = null;
         items.forEach(function (item) {
             var href = item.getAttribute('href') || '';
             if (href.indexOf('page=' + currentPage) !== -1) {
                 item.classList.add('is-active');
+                if (!active) active = item;
             } else {
                 item.classList.remove('is-active');
             }
         });
+        // Scroll active item into view in horizontal nav.
+        if (active && active.scrollIntoView) {
+            try { active.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'center' }); }
+            catch (e) { /* ignore */ }
+        }
     }
 
     /* ------------------------------------------------------------------
-     * Search box: simple page-jump v1
-     * Filter sidebar items live; Enter on first match navigates.
+     * Search box: simple page-jump
+     * Filter nav items live; Enter on first match navigates.
      * ------------------------------------------------------------------ */
     function bindSearch() {
         var input = document.querySelector('[data-swps-search]');
         if (!input) {
             return;
         }
-        var items = Array.prototype.slice.call(document.querySelectorAll('.swps-shell-side-item'));
+        var items = Array.prototype.slice.call(
+            document.querySelectorAll('.swps-shell-nav-item, .swps-shell-side-item')
+        );
 
         input.addEventListener('input', function () {
             var q = input.value.trim().toLowerCase();

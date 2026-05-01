@@ -28,34 +28,29 @@ body.swps-has-shell #wpcontent {
     padding-left: 0;
     margin-left: 160px; /* WP unfolded sidebar width */
     background: var(--swps-bg-app);
-    display: grid;
-    grid-template-columns: 220px minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-        "top  top"
-        "side body";
+    display: flex;
+    flex-direction: column;
     min-height: calc(100vh - 32px);
-    /* Allow grid to shrink — prevents children's min-content widths from
-       blowing out the layout on narrow viewports. */
     min-width: 0;
 }
 body.folded.swps-has-shell #wpcontent {
     margin-left: 36px; /* WP collapsed sidebar */
 }
-/* WP itself collapses its admin sidebar at 782px (mobile breakpoint).
-   Mirror that for our shell. */
 @media screen and (max-width: 782px) {
     body.swps-has-shell #wpcontent {
         margin-left: 0;
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-areas: "top" "body";
     }
-    body.swps-has-shell .swps-shell-side { display: none; }
 }
 
-body.swps-has-shell .swps-shell-top  { grid-area: top;  min-width: 0; }
-body.swps-has-shell .swps-shell-side { grid-area: side; min-width: 0; }
-body.swps-has-shell #wpbody          { grid-area: body; padding-top: 0; min-width: 0; }
+/* Sidebar removed in v4.0.2 — keep selector around as a hard-disable
+   in case any custom-CSS users referenced it. */
+body.swps-has-shell .swps-shell-side { display: none; }
+
+body.swps-has-shell #wpbody {
+    padding-top: 0;
+    min-width: 0;
+    flex: 1;
+}
 
 /* Reset WP defaults inside the grid body cell */
 body.swps-has-shell #wpbody-content {
@@ -276,7 +271,97 @@ body.swps-has-shell #screen-meta-links {
 }
 
 /* ==========================================================================
-   Sidebar
+   Horizontal nav (replaces the old left sidebar in v4.0.2)
+   ========================================================================== */
+
+.swps-shell-nav {
+    background: var(--swps-bg-side);
+    border-bottom: 1px solid var(--swps-border);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+    position: sticky;
+    top: 87px; /* WP admin bar (32px) + top bar (~55px) */
+    z-index: 99;
+    min-width: 0;
+}
+
+.swps-shell-nav::-webkit-scrollbar { height: 6px; }
+.swps-shell-nav::-webkit-scrollbar-thumb { background: var(--swps-border-strong); border-radius: 3px; }
+
+.swps-shell-nav-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding-right: 6px;
+    border-right: 1px solid var(--swps-border);
+    flex-shrink: 0;
+}
+.swps-shell-nav-group:last-child {
+    border-right: none;
+    padding-right: 0;
+}
+
+.swps-shell-nav-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--swps-text-faint);
+    font-weight: 600;
+    padding: 0 8px;
+    white-space: nowrap;
+}
+
+.swps-shell-nav-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 12px;
+    color: var(--swps-text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    white-space: nowrap;
+    transition: color var(--swps-transition-fast), border-color var(--swps-transition-fast);
+}
+.swps-shell-nav-item:hover {
+    color: var(--swps-text-primary);
+    box-shadow: none;
+    outline: none;
+}
+.swps-shell-nav-item:focus {
+    color: var(--swps-text-primary);
+    outline: none;
+    box-shadow: var(--swps-glow-focus);
+    border-radius: 4px;
+}
+.swps-shell-nav-item.is-active {
+    color: var(--swps-accent-1);
+    border-bottom-color: var(--swps-accent-1);
+}
+.swps-shell-nav-item-badge {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--swps-crit-bg);
+    color: var(--swps-crit);
+    font-weight: 600;
+}
+.swps-shell-nav-item-badge.is-new {
+    background: var(--swps-accent-grad);
+    color: var(--swps-text-on-grad);
+    font-weight: 700;
+}
+
+/* ==========================================================================
+   (Legacy sidebar styles — kept for any pages still referencing them)
    ========================================================================== */
 
 .swps-shell-side {

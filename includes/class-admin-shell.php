@@ -153,11 +153,11 @@ class SWPS_Admin_Shell {
     }
 
     /**
-     * Render top bar + sidebar as siblings inside #wpcontent.
+     * Render top bar + horizontal nav as siblings inside #wpcontent.
      *
-     * They're laid out alongside WP's #wpbody via CSS Grid (see shell.css).
-     * No wrapping div is opened — avoids DOM nesting issues with WP's
-     * admin-footer.php structure.
+     * v4.0.2: switched from a left vertical sidebar to a horizontal
+     * top-nav row. The previous sidebar duplicated WP's own StrataWP
+     * submenu and ate ~220px of horizontal space.
      */
     public function render_chrome(): void {
         if ( ! self::is_own_page() ) {
@@ -165,7 +165,7 @@ class SWPS_Admin_Shell {
         }
         $page = $_GET['page'] ?? 'stratawp-seo';
         $this->render_top_bar( $page );
-        $this->render_sidebar( $page );
+        $this->render_top_nav( $page );
     }
 
     /**
@@ -217,36 +217,39 @@ class SWPS_Admin_Shell {
     }
 
     /**
-     * Sidebar with grouped nav items.
+     * Horizontal top nav with grouped pill items.
      *
-     * Until Phase 6 (Modules registry), this is a static list.
+     * v4.0.2: replaces the old left sidebar. Items are arranged inline
+     * with section dividers; nav scrolls horizontally if total width
+     * exceeds the viewport.
      */
-    private function render_sidebar( string $current_page ): void {
+    private function render_top_nav( string $current_page ): void {
         $items = $this->get_nav_items();
         ?>
-        <nav class="swps-shell-side" aria-label="<?php esc_attr_e( 'StrataWP SEO navigation', 'stratawp-seo' ); ?>">
+        <nav class="swps-shell-nav" aria-label="<?php esc_attr_e( 'StrataWP SEO navigation', 'stratawp-seo' ); ?>">
             <?php foreach ( $items as $group_label => $group_items ) :
                 $is_dashboard_group = ( '' === $group_label );
             ?>
-                <?php if ( ! $is_dashboard_group ) : ?>
-                    <div class="swps-shell-side-group"><?php echo esc_html( $group_label ); ?></div>
-                <?php endif; ?>
+                <div class="swps-shell-nav-group">
+                    <?php if ( ! $is_dashboard_group ) : ?>
+                        <span class="swps-shell-nav-label"><?php echo esc_html( $group_label ); ?></span>
+                    <?php endif; ?>
 
-                <?php foreach ( $group_items as $item ) :
-                    $url    = admin_url( 'admin.php?page=' . $item['slug'] );
-                    $active = ( $item['slug'] === $current_page ) ? ' is-active' : '';
-                ?>
-                    <a class="swps-shell-side-item<?php echo esc_attr( $active ); ?>"
-                       href="<?php echo esc_url( $url ); ?>">
-                        <span class="swps-shell-side-item-dot" aria-hidden="true"></span>
-                        <span><?php echo esc_html( $item['label'] ); ?></span>
-                        <?php if ( ! empty( $item['badge'] ) ) : ?>
-                            <span class="swps-shell-side-item-badge<?php echo $item['badge']['type'] === 'new' ? ' is-new' : ''; ?>">
-                                <?php echo esc_html( $item['badge']['label'] ); ?>
-                            </span>
-                        <?php endif; ?>
-                    </a>
-                <?php endforeach; ?>
+                    <?php foreach ( $group_items as $item ) :
+                        $url    = admin_url( 'admin.php?page=' . $item['slug'] );
+                        $active = ( $item['slug'] === $current_page ) ? ' is-active' : '';
+                    ?>
+                        <a class="swps-shell-nav-item<?php echo esc_attr( $active ); ?>"
+                           href="<?php echo esc_url( $url ); ?>">
+                            <?php echo esc_html( $item['label'] ); ?>
+                            <?php if ( ! empty( $item['badge'] ) ) : ?>
+                                <span class="swps-shell-nav-item-badge<?php echo $item['badge']['type'] === 'new' ? ' is-new' : ''; ?>">
+                                    <?php echo esc_html( $item['badge']['label'] ); ?>
+                                </span>
+                            <?php endif; ?>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
             <?php endforeach; ?>
         </nav>
         <?php
