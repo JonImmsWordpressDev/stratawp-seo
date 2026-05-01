@@ -1,0 +1,378 @@
+/**
+ * StrataWP SEO — Reusable Components (v4.0)
+ *
+ * Buttons, tiles, toggles, badges, chips, status pills.
+ * Used across the shell and every page template.
+ */
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+
+body.swps-has-shell .button,
+.swps-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: auto;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.2;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all var(--swps-transition);
+    font-family: inherit;
+}
+
+/* Secondary (default) */
+body.swps-has-shell .button:not(.button-primary):not(.swps-btn-grad),
+.swps-btn-secondary {
+    background: var(--swps-bg-hover);
+    color: var(--swps-text-body);
+    border-color: var(--swps-border-strong);
+}
+body.swps-has-shell .button:not(.button-primary):not(.swps-btn-grad):hover,
+.swps-btn-secondary:hover {
+    background: var(--swps-bg-surface);
+    color: var(--swps-text-primary);
+    border-color: var(--swps-accent-1);
+}
+
+/* Primary (WP default class) — gradient style */
+body.swps-has-shell .button-primary,
+.swps-btn-primary,
+.swps-btn-grad {
+    background: var(--swps-accent-grad);
+    color: var(--swps-text-on-grad);
+    border-color: transparent;
+    font-weight: 600;
+    box-shadow: var(--swps-accent-glow);
+    text-shadow: none;
+}
+body.swps-has-shell .button-primary:hover,
+.swps-btn-primary:hover,
+.swps-btn-grad:hover {
+    background: var(--swps-accent-grad-hover);
+    color: var(--swps-text-on-grad);
+    border-color: transparent;
+    box-shadow: 0 0 24px rgba(167, 139, 250, 0.5);
+    transform: translateY(-1px);
+}
+body.swps-has-shell .button-primary:focus,
+.swps-btn-primary:focus,
+.swps-btn-grad:focus {
+    outline: none;
+    box-shadow: var(--swps-glow-focus), var(--swps-accent-glow);
+}
+
+body.swps-has-shell .button-hero {
+    padding: 10px 18px;
+    font-size: 14px;
+}
+
+/* Disabled */
+body.swps-has-shell .button:disabled,
+.swps-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ==========================================================================
+   Tiles (dashboard widgets, summary stats)
+   ========================================================================== */
+
+.swps-tile {
+    background: var(--swps-bg-surface);
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius);
+    padding: 18px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+[data-swps-theme="light"] .swps-tile {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: var(--swps-shadow);
+}
+
+.swps-tile-h {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--swps-text-muted);
+    margin: 0 0 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.swps-tile-stat {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    background: var(--swps-accent-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+[data-swps-theme="light"] .swps-tile-stat {
+    /* AA fallback for browsers without -webkit-text-fill-color */
+    color: var(--swps-accent-2);
+}
+
+.swps-tile-trend {
+    font-size: 11px;
+    color: var(--swps-success);
+    margin-top: 6px;
+}
+.swps-tile-trend.is-down {
+    color: var(--swps-crit);
+}
+
+/* ==========================================================================
+   Toggles
+   ========================================================================== */
+
+.swps-toggle {
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--swps-border-strong);
+    position: relative;
+    cursor: pointer;
+    transition: background var(--swps-transition);
+    border: none;
+    padding: 0;
+    flex-shrink: 0;
+}
+.swps-toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform var(--swps-transition);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.swps-toggle.is-on,
+.swps-toggle[aria-checked="true"] {
+    background: var(--swps-accent-1);
+}
+.swps-toggle.is-on::after,
+.swps-toggle[aria-checked="true"]::after {
+    transform: translateX(16px);
+}
+.swps-toggle:focus {
+    outline: none;
+    box-shadow: var(--swps-glow-focus);
+}
+
+/* Compact toggle (used in module cards) */
+.swps-toggle-sm {
+    width: 28px;
+    height: 16px;
+}
+.swps-toggle-sm::after {
+    width: 12px;
+    height: 12px;
+}
+.swps-toggle-sm.is-on::after {
+    transform: translateX(12px);
+}
+
+/* ==========================================================================
+   Badges
+   ========================================================================== */
+
+.swps-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+}
+.swps-badge-new {
+    background: var(--swps-accent-grad);
+    color: var(--swps-text-on-grad);
+}
+.swps-badge-ai {
+    background: var(--swps-ai-grad);
+    color: #fff;
+}
+.swps-badge-pro {
+    background: rgba(167, 139, 250, 0.15);
+    color: var(--swps-accent-2);
+    border: 1px solid rgba(167, 139, 250, 0.3);
+}
+.swps-badge-beta {
+    background: var(--swps-warn-bg);
+    color: var(--swps-warn);
+}
+
+/* ==========================================================================
+   Status pills (used in audit, lists, queues)
+   ========================================================================== */
+
+.swps-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.swps-pill-crit {
+    background: var(--swps-crit-bg);
+    color: var(--swps-crit);
+}
+.swps-pill-warn {
+    background: var(--swps-warn-bg);
+    color: var(--swps-warn);
+}
+.swps-pill-info {
+    background: var(--swps-info-bg);
+    color: var(--swps-info);
+}
+.swps-pill-ok {
+    background: var(--swps-success-bg);
+    color: var(--swps-success);
+}
+.swps-pill-ai {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.20), rgba(167, 139, 250, 0.20));
+    color: var(--swps-accent-2);
+    border: 1px solid rgba(167, 139, 250, 0.30);
+}
+
+/* ==========================================================================
+   Status circle (audit module results)
+   ========================================================================== */
+
+.swps-status-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.swps-status-dot-ok {
+    background: var(--swps-success-bg);
+    color: var(--swps-success);
+}
+.swps-status-dot-warn {
+    background: var(--swps-warn-bg);
+    color: var(--swps-warn);
+}
+.swps-status-dot-crit {
+    background: var(--swps-crit-bg);
+    color: var(--swps-crit);
+}
+
+/* ==========================================================================
+   Form inputs (consistent dark styling)
+   ========================================================================== */
+
+body.swps-has-shell input[type="text"],
+body.swps-has-shell input[type="number"],
+body.swps-has-shell input[type="email"],
+body.swps-has-shell input[type="url"],
+body.swps-has-shell input[type="password"],
+body.swps-has-shell input[type="search"],
+body.swps-has-shell select,
+body.swps-has-shell textarea {
+    background: var(--swps-bg-input);
+    border: 1px solid var(--swps-border-strong);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: var(--swps-text-primary);
+    font-size: 13px;
+    font-family: inherit;
+    box-shadow: none;
+    transition: border-color var(--swps-transition), box-shadow var(--swps-transition);
+}
+body.swps-has-shell input[type="text"]:focus,
+body.swps-has-shell input[type="number"]:focus,
+body.swps-has-shell input[type="email"]:focus,
+body.swps-has-shell input[type="url"]:focus,
+body.swps-has-shell input[type="password"]:focus,
+body.swps-has-shell input[type="search"]:focus,
+body.swps-has-shell select:focus,
+body.swps-has-shell textarea:focus {
+    border-color: var(--swps-border-focus);
+    box-shadow: var(--swps-glow-focus);
+    outline: none;
+}
+body.swps-has-shell input::placeholder,
+body.swps-has-shell textarea::placeholder {
+    color: var(--swps-text-faint);
+}
+
+/* WP form-table tweaks inside our shell */
+body.swps-has-shell .form-table th {
+    color: var(--swps-text-primary);
+    font-weight: 600;
+}
+body.swps-has-shell .form-table td {
+    color: var(--swps-text-body);
+}
+body.swps-has-shell p.description {
+    color: var(--swps-text-muted);
+    font-size: 12px;
+}
+
+/* ==========================================================================
+   Notices & messages inside the shell
+   ========================================================================== */
+
+body.swps-has-shell .notice {
+    background: var(--swps-bg-surface);
+    border: 1px solid var(--swps-border);
+    border-left-width: 4px;
+    color: var(--swps-text-body);
+}
+body.swps-has-shell .notice p {
+    color: var(--swps-text-body);
+}
+body.swps-has-shell .notice-success { border-left-color: var(--swps-success); }
+body.swps-has-shell .notice-warning { border-left-color: var(--swps-warn); }
+body.swps-has-shell .notice-error   { border-left-color: var(--swps-crit); }
+body.swps-has-shell .notice-info    { border-left-color: var(--swps-accent-1); }
+
+/* ==========================================================================
+   Card (legacy .swps-card retained, restyled)
+   ========================================================================== */
+
+body.swps-has-shell .swps-card {
+    background: var(--swps-bg-surface);
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius);
+    box-shadow: none;
+    color: var(--swps-text-body);
+}
+body.swps-has-shell .swps-card h2,
+body.swps-has-shell .swps-card h3 {
+    color: var(--swps-text-primary);
+}
+body.swps-has-shell .swps-card-desc {
+    color: var(--swps-text-muted);
+}

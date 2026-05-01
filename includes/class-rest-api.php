@@ -180,6 +180,45 @@ class SWPS_REST_API {
                 'module_id' => [ 'type' => 'string', 'required' => true, 'sanitize_callback' => 'sanitize_text_field' ],
             ],
         ] );
+
+        // User preferences (v4.0 — theme toggle).
+        register_rest_route( self::NAMESPACE, '/user-prefs/theme', [
+            'methods'             => 'POST',
+            'callback'            => [ $this, 'update_theme' ],
+            'permission_callback' => [ $this, 'check_logged_in' ],
+            'args'                => [
+                'theme' => [
+                    'type'              => 'string',
+                    'required'          => true,
+                    'sanitize_callback' => 'sanitize_text_field',
+                    'enum'              => [ 'dark', 'light' ],
+                ],
+            ],
+        ] );
+    }
+
+    /**
+     * Looser permission check for per-user preferences — any logged-in user.
+     */
+    public function check_logged_in(): bool|WP_Error {
+        if ( ! is_user_logged_in() ) {
+            return new WP_Error( 'rest_forbidden', __( 'You must be logged in.', 'stratawp-seo' ), [ 'status' => 401 ] );
+        }
+        return true;
+    }
+
+    /**
+     * POST /user-prefs/theme — set the current user's admin theme.
+     */
+    public function update_theme( WP_REST_Request $request ): WP_REST_Response {
+        $theme = $request->get_param( 'theme' );
+        $prefs = stratawp_seo()->user_prefs;
+        $ok    = $prefs->set_theme( $theme );
+
+        return new WP_REST_Response( [
+            'success' => $ok,
+            'theme'   => $prefs->get_theme(),
+        ], $ok ? 200 : 400 );
     }
 
     /**
