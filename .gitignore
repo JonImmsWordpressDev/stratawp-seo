@@ -17,3 +17,9 @@ CLAUDE.md
 .codex/
 AGENTS.md
 .superpowers/
+.playwright-mcp/
+
+# Playwright debug screenshots dropped in project root
+/dashboard-*.png
+/debug-page-*.png
+/page-*.png

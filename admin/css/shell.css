@@ -29,40 +29,70 @@ body.swps-has-shell #wpcontent {
     margin-left: 160px; /* WP unfolded sidebar width */
     background: var(--swps-bg-app);
     display: grid;
-    grid-template-columns: 220px 1fr;
+    grid-template-columns: 220px minmax(0, 1fr);
     grid-template-rows: auto 1fr;
     grid-template-areas:
         "top  top"
         "side body";
     min-height: calc(100vh - 32px);
+    /* Allow grid to shrink — prevents children's min-content widths from
+       blowing out the layout on narrow viewports. */
+    min-width: 0;
 }
 body.folded.swps-has-shell #wpcontent {
     margin-left: 36px; /* WP collapsed sidebar */
 }
-@media screen and (max-width: 960px) {
+/* WP itself collapses its admin sidebar at 782px (mobile breakpoint).
+   Mirror that for our shell. */
+@media screen and (max-width: 782px) {
     body.swps-has-shell #wpcontent {
         margin-left: 0;
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
         grid-template-areas: "top" "body";
     }
     body.swps-has-shell .swps-shell-side { display: none; }
 }
 
-body.swps-has-shell .swps-shell-top  { grid-area: top; }
-body.swps-has-shell .swps-shell-side { grid-area: side; }
-body.swps-has-shell #wpbody          { grid-area: body; padding-top: 0; }
+body.swps-has-shell .swps-shell-top  { grid-area: top;  min-width: 0; }
+body.swps-has-shell .swps-shell-side { grid-area: side; min-width: 0; }
+body.swps-has-shell #wpbody          { grid-area: body; padding-top: 0; min-width: 0; }
 
 /* Reset WP defaults inside the grid body cell */
 body.swps-has-shell #wpbody-content {
     padding: 24px 28px;
     color: var(--swps-text-body);
     font-family: var(--swps-font);
+    min-width: 0;
+    /* Below 600px, tighten gutters to keep things from feeling cramped */
+}
+@media screen and (max-width: 600px) {
+    body.swps-has-shell #wpbody-content { padding: 16px; }
 }
 body.swps-has-shell .wrap {
     margin: 0;
     padding: 0;
     max-width: none;
     color: var(--swps-text-body);
+    min-width: 0;
+}
+
+/* Generic safety: anything that's normally laid out side-by-side inside
+   a grid/flex parent should be able to shrink. */
+body.swps-has-shell .swps-tile,
+body.swps-has-shell .swps-summary-tile,
+body.swps-has-shell .swps-dash-tile,
+body.swps-has-shell .swps-row-card,
+body.swps-has-shell .swps-settings-panel {
+    min-width: 0;
+}
+
+/* Wide tables get horizontal scroll inside their parent — prevents the
+   whole page overflowing horizontally on small screens. */
+body.swps-has-shell .swps-shell-main .widefat,
+body.swps-has-shell .widefat {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
 }
 
 /* Hide WP's default H1 and add-new buttons; our page-header partial replaces them. */
@@ -109,11 +139,15 @@ body.swps-has-shell #screen-meta-links {
     display: flex;
     align-items: center;
     padding: 12px 20px;
-    gap: 16px;
+    gap: 12px;
     position: sticky;
     top: 32px; /* below WP admin bar */
     z-index: 100;
+    flex-wrap: nowrap;
+    min-width: 0;
 }
+/* Each top bar child must be able to shrink. */
+.swps-shell-top > * { min-width: 0; }
 
 [data-swps-theme="light"] .swps-shell-top {
     backdrop-filter: none;
@@ -182,10 +216,25 @@ body.swps-has-shell #screen-meta-links {
     font-size: 12px;
     color: var(--swps-text-muted);
     width: 240px;
+    max-width: 100%;
     font-family: inherit;
     transition: border-color var(--swps-transition);
     box-shadow: none;
     line-height: 1.4;
+    min-width: 0;
+    flex-shrink: 1;
+}
+/* Below 1080px, shrink the search; below 700px, hide it (theme + help icons stay). */
+@media screen and (max-width: 1080px) {
+    .swps-shell-search { width: 160px; }
+}
+@media screen and (max-width: 700px) {
+    .swps-shell-search { display: none; }
+    body.swps-has-shell .swps-shell-breadcrumb { display: none; }
+}
+@media screen and (max-width: 480px) {
+    .swps-shell-top { padding: 10px 14px; gap: 8px; }
+    body.swps-has-shell .swps-shell-logo span:not(.swps-shell-logo-mark) { display: none; }
 }
 .swps-shell-search:focus {
     outline: none;

@@ -16,14 +16,14 @@
     margin-bottom: 16px;
 }
 .swps-dash-row-1 {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .swps-dash-row-2 {
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
 }
 @media screen and (max-width: 1080px) {
     .swps-dash-row-1 {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .swps-dash-row-2 {
         grid-template-columns: 1fr;
@@ -200,7 +200,7 @@
 
 .swps-dash-actions {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
 }
 
@@ -295,14 +295,14 @@
 
 .swps-dash-modules {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
 }
 @media screen and (max-width: 1280px) {
-    .swps-dash-modules { grid-template-columns: repeat(3, 1fr); }
+    .swps-dash-modules { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media screen and (max-width: 960px) {
-    .swps-dash-modules { grid-template-columns: repeat(2, 1fr); }
+    .swps-dash-modules { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media screen and (max-width: 600px) {
     .swps-dash-modules { grid-template-columns: 1fr; }

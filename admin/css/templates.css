@@ -245,12 +245,12 @@ body.swps-has-shell .widefat.striped > tbody > :nth-child(odd) {
 
 .swps-summary-tiles {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
     margin-bottom: 24px;
 }
 @media screen and (max-width: 960px) {
-    .swps-summary-tiles { grid-template-columns: repeat(2, 1fr); }
+    .swps-summary-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .swps-summary-tile {

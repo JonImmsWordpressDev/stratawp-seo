@@ -106,24 +106,36 @@ class SWPS_Settings {
 
         $failure = get_transient( 'swps_last_ai_failure' );
 
-        echo '<div class="wrap"><h1>' . esc_html__( 'Last AI Failure', 'stratawp-seo' ) . '</h1>';
+        echo '<div class="wrap swps-debug-wrap">';
+
+        $title    = __( 'Debug', 'stratawp-seo' );
+        $subtitle = __( 'Last failed AI response captured by the JSON parser. Use this to diagnose generation errors.', 'stratawp-seo' );
+        $actions  = [];
+        require SWPS_PLUGIN_DIR . 'templates/partials/page-header.php';
 
         if ( empty( $failure ) ) {
-            echo '<p>' . esc_html__( 'No recent failures.', 'stratawp-seo' ) . '</p></div>';
+            echo '<div class="swps-tile" style="text-align:center;padding:48px 24px">';
+            echo '<div style="font-size:48px;line-height:1;margin-bottom:16px;color:var(--swps-success)">✓</div>';
+            echo '<p style="color:var(--swps-text-muted);margin:0">' . esc_html__( 'No recent failures.', 'stratawp-seo' ) . '</p>';
+            echo '</div></div>';
             return;
         }
 
-        echo '<p><strong>' . esc_html__( 'Time:', 'stratawp-seo' ) . '</strong> ' . esc_html( $failure['time'] ?? '' ) . '</p>';
-        echo '<p><strong>' . esc_html__( 'Error:', 'stratawp-seo' ) . '</strong> ' . esc_html( $failure['error'] ?? '' ) . '</p>';
-        echo '<p><strong>' . esc_html__( 'Length:', 'stratawp-seo' ) . '</strong> ' . esc_html( (string) strlen( (string) ( $failure['raw'] ?? '' ) ) ) . ' chars</p>';
+        echo '<div class="swps-tile">';
+        echo '<table style="width:100%;border-collapse:collapse">';
+        echo '<tr><td style="padding:6px 0;color:var(--swps-text-muted);font-size:12px;width:80px">' . esc_html__( 'Time', 'stratawp-seo' ) . '</td><td style="padding:6px 0;color:var(--swps-text-primary)">' . esc_html( $failure['time'] ?? '' ) . '</td></tr>';
+        echo '<tr><td style="padding:6px 0;color:var(--swps-text-muted);font-size:12px">' . esc_html__( 'Error', 'stratawp-seo' ) . '</td><td style="padding:6px 0;color:var(--swps-crit)">' . esc_html( $failure['error'] ?? '' ) . '</td></tr>';
+        echo '<tr><td style="padding:6px 0;color:var(--swps-text-muted);font-size:12px">' . esc_html__( 'Length', 'stratawp-seo' ) . '</td><td style="padding:6px 0;color:var(--swps-text-primary)">' . esc_html( number_format( strlen( (string) ( $failure['raw'] ?? '' ) ) ) ) . ' ' . esc_html__( 'chars', 'stratawp-seo' ) . '</td></tr>';
+        echo '</table>';
 
-        echo '<form method="post" style="margin: 12px 0;">';
+        echo '<form method="post" style="margin: 16px 0 0;">';
         wp_nonce_field( 'swps_clear_failure' );
-        submit_button( __( 'Clear', 'stratawp-seo' ), 'secondary', 'swps_clear_failure', false );
+        echo '<button type="submit" name="swps_clear_failure" class="swps-btn swps-btn-secondary">' . esc_html__( 'Clear', 'stratawp-seo' ) . '</button>';
         echo '</form>';
+        echo '</div>';
 
-        echo '<h2>' . esc_html__( 'Raw response', 'stratawp-seo' ) . '</h2>';
-        echo '<textarea readonly rows="30" style="width:100%;font-family:monospace;font-size:12px;">' . esc_textarea( (string) ( $failure['raw'] ?? '' ) ) . '</textarea>';
+        echo '<div class="swps-section-h" style="margin-top:24px"><h3>' . esc_html__( 'Raw response', 'stratawp-seo' ) . '</h3></div>';
+        echo '<textarea readonly rows="24" style="width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:var(--swps-bg-input);color:var(--swps-text-body);border:1px solid var(--swps-border-strong);border-radius:var(--swps-radius-sm);padding:14px;line-height:1.5">' . esc_textarea( (string) ( $failure['raw'] ?? '' ) ) . '</textarea>';
 
         echo '</div>';
     }
