@@ -1,11 +1,16 @@
-<div class="wrap swps-wrap">
-    <h1>
-        <span class="dashicons dashicons-format-status" style="font-size: 28px; margin-right: 8px;"></span>
-        <?php esc_html_e( 'Voice Profiles', 'stratawp-seo' ); ?>
-        <a href="<?php echo esc_url( admin_url( 'admin.php?page=swps-voice-profiles&action=new' ) ); ?>" class="page-title-action">
-            <?php esc_html_e( 'Add New', 'stratawp-seo' ); ?>
-        </a>
-    </h1>
+<div class="wrap swps-voice-profiles-wrap">
+    <?php
+    $title    = __( 'Voice Profiles', 'stratawp-seo' );
+    $subtitle = __( 'Reusable brand-voice presets injected into the AI system prompt: tone, formality, sentence length, vocabulary level, person, avoid/preferred phrases, sample text.', 'stratawp-seo' );
+    $actions  = [
+        [
+            'label' => __( 'Add New', 'stratawp-seo' ),
+            'url'   => admin_url( 'admin.php?page=swps-voice-profiles&action=new' ),
+            'class' => 'swps-btn-grad',
+        ],
+    ];
+    require SWPS_PLUGIN_DIR . 'templates/partials/page-header.php';
+    ?>
 
     <?php
     $active_id = (int) get_option( 'swps_voice_profile', 0 );

@@ -107,8 +107,6 @@ class SWPS_Generator {
             return $post_data;
         }
 
-        $this->log( sprintf( 'Generated post #%d: "%s"', $post_data['post_id'], $ai_result['title'] ) );
-
         // Fire after_generate action.
         SWPS_Hooks::do_after_generate( $post_data, $topic, $template );
 
@@ -231,16 +229,26 @@ PROMPT;
         $prompt .= <<<'PROMPT'
 
 
-RESPONSE FORMAT: Respond ONLY with a valid JSON object. No markdown fences, no explanation, just JSON.
+RESPONSE FORMAT: Respond ONLY with a single, strictly valid RFC 8259 JSON object. No markdown fences, no prose, no explanation.
+
+JSON SYNTAX REQUIREMENTS (NON-NEGOTIABLE — output MUST parse with strict JSON parsers):
+- Every string value must be properly quoted with " and any inner " escaped as \".
+- Escape sequences (\n, \r, \t, \", \\) are ONLY valid INSIDE string literals. NEVER emit a backslash-letter sequence between tokens, between array elements, between object members, or anywhere outside of a quoted string.
+- Use real whitespace (spaces, real newlines) between JSON tokens — never literal \n or \t characters as separators.
+- No trailing commas before } or ].
+- No comments (// or /* */).
+- No control characters (0x00–0x1F) inside strings — encode them as \n, \r, \t, etc.
+- Balanced brackets: every { has a matching } and every [ has a matching ].
+- Before finishing your response, mentally re-parse it as JSON and confirm it is valid.
 
 Required JSON structure:
 {
   "title": "The blog post title (also the SEO title tag)",
   "slug": "url-friendly-slug",
-  "meta_description": "Compelling meta description, 150-160 characters",
+  "meta_description": "Compelling meta description, 147-160 characters",
   "content_html": "Full blog post HTML content with headings, paragraphs, lists, and internal links",
   "excerpt": "2-3 sentence post excerpt",
-  "focus_keyword": "primary target keyword",
+  "focus_keyword": "2-4 word keyword phrase (e.g. 'Claude Skills', 'WordPress SEO', 'React Hooks')",
   "secondary_keywords": ["keyword2", "keyword3"],
   "suggested_tags": ["tag1", "tag2", "tag3"],
   "suggested_category": "Best fitting category name",
@@ -261,6 +269,10 @@ CRITICAL RULES:
 - Include FAQ section at the end if requested
 - If key takeaways are requested, include a key_takeaways array with concise, actionable bullet points (each under 20 words) summarizing the post's most valuable insights
 - Write comprehensive, valuable content — not thin filler
+- The focus_keyword MUST be exactly 2-4 words — short and broad (e.g. "Claude Skills", "WordPress SEO"). NEVER use a long phrase or sentence as the focus keyword.
+- The focus_keyword MUST appear in: meta_description, the first <p> of content_html, and at least one <h2> heading
+- The slug must contain the focus_keyword words
+- Every <img> tag in content_html MUST have an alt attribute that contains the focus_keyword
 PROMPT;
 
         return $prompt;
@@ -297,7 +309,14 @@ PROMPT;
         }
 
         if ( ! empty( $keywords ) ) {
-            $prompt .= "TARGET KEYWORDS to incorporate naturally: {$keywords}\n\n";
+            $prompt .= "TARGET KEYWORDS: {$keywords}\n";
+            $prompt .= "KEYWORD PLACEMENT RULES (mandatory for SEO):\n";
+            $prompt .= "- Include the primary keyword in the meta_title\n";
+            $prompt .= "- Include the primary keyword in the meta_description\n";
+            $prompt .= "- Include the primary keyword in the FIRST paragraph of the content\n";
+            $prompt .= "- Include the primary keyword in at least ONE H2 heading\n";
+            $prompt .= "- Include the primary keyword in the slug\n";
+            $prompt .= "- Use keywords naturally throughout the rest of the content — do not stuff\n\n";
         }
 
         $prompt .= "REQUIREMENTS:\n";
@@ -319,7 +338,7 @@ PROMPT;
 
         $prompt .= "- Use proper heading hierarchy (H2 for main sections, H3 for subsections)\n";
         $prompt .= "- Suggest the best existing category for this post, or suggest a new one\n";
-        $prompt .= "- Write a compelling meta description (150-160 characters)\n\n";
+        $prompt .= "- Write a compelling meta description (147-160 characters) that includes the primary target keyword\n\n";
         $prompt .= "Generate the blog post now. Respond with JSON only.";
 
         return $prompt;
@@ -357,6 +376,8 @@ PROMPT;
             $content = $this->inject_takeaways( $content, $ai_result['key_takeaways'] );
         }
 
+
+
         $post_data = [
             'post_title'    => sanitize_text_field( $ai_result['title'] ),
             'post_content'  => wp_kses_post( $content ),
@@ -381,6 +402,10 @@ PROMPT;
         if ( is_wp_error( $post_id ) ) {
             return $post_id;
         }
+
+        // Log the post creation immediately so we have a record even if a
+        // later step (featured image, hooks) fails or times out mid-cron.
+        $this->log( sprintf( 'Generated post #%d: "%s"', $post_id, $ai_result['title'] ) );
 
         // Set tags.
         if ( ! empty( $ai_result['suggested_tags'] ) ) {
@@ -424,8 +449,7 @@ PROMPT;
         if ( ! empty( $ai_result['faq_schema'] ) ) {
             $schema_data = $this->build_faq_schema_data( $ai_result['title'], $ai_result['faq_schema'] );
             $schema_data = SWPS_Hooks::filter_faq_schema( $schema_data, $ai_result['title'], $ai_result['faq_schema'] );
-            $schema_tag  = '<script type="application/ld+json">' . wp_json_encode( $schema_data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) . '</script>';
-            update_post_meta( $post_id, '_swps_faq_schema', $schema_tag );
+            update_post_meta( $post_id, '_swps_faq_schema', $schema_data );
         }
 
         // Track cost per post.
@@ -447,6 +471,25 @@ PROMPT;
 
             if ( is_wp_error( $image_result ) ) {
                 $this->log( 'Featured image failed: ' . $image_result->get_error_message() );
+            } else {
+                $attachment_id = $image_result;
+
+                // Update alt text to include the focus keyword for SEO.
+                if ( ! empty( $focus_keyword ) ) {
+                    $existing_alt = get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
+                    if ( empty( $existing_alt ) || false === mb_stripos( $existing_alt, $focus_keyword ) ) {
+                        $seo_alt = ! empty( $existing_alt )
+                            ? $existing_alt . ' - ' . $focus_keyword
+                            : ucfirst( $focus_keyword );
+                        update_post_meta( $attachment_id, '_wp_attachment_image_alt', sanitize_text_field( $seo_alt ) );
+                    }
+                }
+
+                // Set OG image from featured image so the social_image check passes.
+                $image_url = wp_get_attachment_url( $attachment_id );
+                if ( $image_url ) {
+                    update_post_meta( $post_id, '_swps_social_image', esc_url_raw( $image_url ) );
+                }
             }
         }
 
@@ -514,6 +557,106 @@ PROMPT;
     }
 
     /**
+     * Convert classic HTML content into Gutenberg block markup.
+     *
+     * Wraps each top-level HTML element with the appropriate
+     * Gutenberg block comment delimiters so WordPress treats
+     * the content as native blocks instead of a classic block.
+     *
+     * @param string $html Raw HTML content.
+     * @return string Block-formatted content.
+     */
+    private function convert_to_blocks( string $html ): string {
+        // Normalize line breaks and trim.
+        $html = trim( $html );
+        if ( empty( $html ) ) {
+            return '';
+        }
+
+        $output = '';
+
+        // Split HTML into top-level elements using a regex that captures tags and text between them.
+        // Match any top-level HTML tag with its content.
+        $pattern = '/(<(h[1-6]|p|ul|ol|blockquote|pre|table|figure|div|nav|hr|img)[^>]*>.*?<\/\2>|<(hr|img)[^>]*\/?>)/is';
+
+        $last_pos = 0;
+        if ( preg_match_all( $pattern, $html, $matches, PREG_OFFSET_CAPTURE ) ) {
+            foreach ( $matches[0] as $match ) {
+                $tag_html = $match[0];
+                $tag_pos  = $match[1];
+
+                // Skip any text between tags (whitespace).
+                $last_pos = $tag_pos + strlen( $tag_html );
+
+                // Detect the tag type.
+                if ( preg_match( '/^<(h[1-6]|p|ul|ol|blockquote|pre|table|figure|div|nav|hr|img)/i', $tag_html, $tag_match ) ) {
+                    $tag = strtolower( $tag_match[1] );
+                    $output .= $this->wrap_block( $tag, $tag_html );
+                } else {
+                    $output .= $tag_html . "\n\n";
+                }
+            }
+        }
+
+        return $output;
+    }
+
+    /**
+     * Wrap a single HTML element with Gutenberg block comment delimiters.
+     *
+     * @param string $tag  The HTML tag name (e.g., 'p', 'h2', 'ul').
+     * @param string $html The full HTML element.
+     * @return string Block-wrapped HTML.
+     */
+    private function wrap_block( string $tag, string $html ): string {
+        switch ( $tag ) {
+            case 'h1':
+            case 'h2':
+            case 'h3':
+            case 'h4':
+            case 'h5':
+            case 'h6':
+                $level = (int) substr( $tag, 1 );
+                $attrs = $level !== 2 ? ' {"level":' . $level . '}' : '';
+                return "<!-- wp:heading{$attrs} -->\n{$html}\n<!-- /wp:heading -->\n\n";
+
+            case 'p':
+                return "<!-- wp:paragraph -->\n{$html}\n<!-- /wp:paragraph -->\n\n";
+
+            case 'ul':
+                return "<!-- wp:list -->\n{$html}\n<!-- /wp:list -->\n\n";
+
+            case 'ol':
+                return "<!-- wp:list {\"ordered\":true} -->\n{$html}\n<!-- /wp:list -->\n\n";
+
+            case 'blockquote':
+                return "<!-- wp:quote -->\n{$html}\n<!-- /wp:quote -->\n\n";
+
+            case 'pre':
+                return "<!-- wp:code -->\n{$html}\n<!-- /wp:code -->\n\n";
+
+            case 'table':
+                return "<!-- wp:table -->\n<figure class=\"wp-block-table\">{$html}</figure>\n<!-- /wp:table -->\n\n";
+
+            case 'figure':
+                return "<!-- wp:image -->\n{$html}\n<!-- /wp:image -->\n\n";
+
+            case 'hr':
+                return "<!-- wp:separator -->\n<hr class=\"wp-block-separator has-alpha-channel-opacity\"/>\n<!-- /wp:separator -->\n\n";
+
+            case 'img':
+                return "<!-- wp:image -->\n<figure class=\"wp-block-image\">{$html}</figure>\n<!-- /wp:image -->\n\n";
+
+            case 'nav':
+            case 'div':
+                return "<!-- wp:html -->\n{$html}\n<!-- /wp:html -->\n\n";
+
+            default:
+                return $html . "\n\n";
+        }
+    }
+
+    /**
      * Build FAQ schema data array.
      *
      * @param string $title     Post title.
@@ -524,17 +667,28 @@ PROMPT;
         $schema = [
             '@context'   => 'https://schema.org',
             '@type'      => 'FAQPage',
-            'name'       => $title,
+            'name'       => sanitize_text_field( wp_strip_all_tags( $title ) ),
             'mainEntity' => [],
         ];
 
         foreach ( $faq_items as $item ) {
+            if ( ! is_array( $item ) ) {
+                continue;
+            }
+
+            $question = sanitize_text_field( wp_strip_all_tags( (string) ( $item['question'] ?? '' ) ) );
+            $answer   = sanitize_textarea_field( wp_strip_all_tags( (string) ( $item['answer'] ?? '' ) ) );
+
+            if ( '' === $question || '' === $answer ) {
+                continue;
+            }
+
             $schema['mainEntity'][] = [
                 '@type'          => 'Question',
-                'name'           => $item['question'],
+                'name'           => $question,
                 'acceptedAnswer' => [
                     '@type' => 'Answer',
-                    'text'  => $item['answer'],
+                    'text'  => $answer,
                 ],
             ];
         }

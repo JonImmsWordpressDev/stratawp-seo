@@ -1,0 +1,529 @@
+/**
+ * StrataWP SEO — Admin Shell (v4.0)
+ *
+ * Top bar + sidebar that wrap every StrataWP admin page using CSS Grid.
+ *
+ * Layout: shell elements are siblings of #wpbody inside #wpcontent.
+ * #wpcontent becomes a 2-column grid on our pages:
+ *
+ *   ┌─────────────────────────────────────┐
+ *   │ swps-shell-top (full width)         │
+ *   ├──────────┬──────────────────────────┤
+ *   │ swps-    │ #wpbody                  │
+ *   │ shell-   │   #wpbody-content        │
+ *   │ side     │     .wrap (page content) │
+ *   │          │                          │
+ *   └──────────┴──────────────────────────┘
+ */
+
+/* ==========================================================================
+   Grid layout on #wpcontent
+   ========================================================================== */
+
+body.swps-has-shell {
+    background: var(--swps-bg-app);
+}
+
+body.swps-has-shell #wpcontent {
+    padding-left: 0;
+    margin-left: 160px; /* WP unfolded sidebar width */
+    background: var(--swps-bg-app);
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 32px);
+    min-width: 0;
+    /* Hard containment: nothing inside our shell can push the page
+       wider than its allotted column. Prevents the dreaded "scrolls
+       sideways under WP admin menu" bug. `overflow-x: clip` is
+       supported in all modern browsers and, unlike `hidden`, doesn't
+       create a new scroll container that breaks `position: sticky`. */
+    overflow-x: clip;
+    box-sizing: border-box;
+}
+body.folded.swps-has-shell #wpcontent {
+    margin-left: 36px; /* WP collapsed sidebar */
+}
+@media screen and (max-width: 782px) {
+    body.swps-has-shell #wpcontent {
+        margin-left: 0;
+    }
+}
+
+/* Sidebar removed in v4.0.2 — keep selector around as a hard-disable
+   in case any custom-CSS users referenced it. */
+body.swps-has-shell .swps-shell-side { display: none; }
+
+body.swps-has-shell #wpbody {
+    padding-top: 0;
+    min-width: 0;
+    flex: 1;
+}
+
+/* Reset WP defaults inside the grid body cell.
+ *
+ * WP gives #wpbody-content { width: 100%; box-sizing: content-box },
+ * so any horizontal padding we add would BLOW OUT the parent. Force
+ * border-box so our padding is inside the width. */
+body.swps-has-shell #wpbody-content {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    padding: 24px 28px;
+    color: var(--swps-text-body);
+    font-family: var(--swps-font);
+    min-width: 0;
+    overflow-x: clip;
+}
+@media screen and (max-width: 600px) {
+    body.swps-has-shell #wpbody-content { padding: 16px; }
+}
+body.swps-has-shell .wrap {
+    margin: 0;
+    padding: 0;
+    max-width: 100%;
+    color: var(--swps-text-body);
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+/* Generic safety: anything that's normally laid out side-by-side inside
+   a grid/flex parent should be able to shrink. */
+body.swps-has-shell .swps-tile,
+body.swps-has-shell .swps-summary-tile,
+body.swps-has-shell .swps-dash-tile,
+body.swps-has-shell .swps-row-card,
+body.swps-has-shell .swps-settings-panel {
+    min-width: 0;
+}
+
+/* Wide tables get horizontal scroll inside their parent — prevents the
+   whole page overflowing horizontally on small screens. */
+body.swps-has-shell .swps-shell-main .widefat,
+body.swps-has-shell .widefat {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+/* Hide WP's default H1 and add-new buttons; our page-header partial replaces them. */
+body.swps-has-shell .wrap > h1:first-child:not(.swps-keep-h1),
+body.swps-has-shell .wrap > .wp-header-end:first-child + h1:first-of-type:not(.swps-keep-h1) {
+    /* Pages converted to use partials/page-header.php should not output a wrap > h1 anymore.
+       Legacy templates keep their h1 — give it our typography instead of hiding. */
+    color: var(--swps-text-primary);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 16px;
+    padding: 0;
+}
+
+body.swps-has-shell h2,
+body.swps-has-shell h3,
+body.swps-has-shell h4 {
+    color: var(--swps-text-primary);
+}
+
+body.swps-has-shell .notice,
+body.swps-has-shell .updated,
+body.swps-has-shell .error {
+    margin: 16px 0;
+    border-radius: var(--swps-radius-sm);
+}
+
+/* WP screen options / help tab — hide on our pages (we'll provide our own help drawer) */
+body.swps-has-shell #screen-meta,
+body.swps-has-shell #screen-meta-links {
+    display: none;
+}
+
+/* ==========================================================================
+   Top bar
+   ========================================================================== */
+
+.swps-shell-top {
+    background: var(--swps-bg-chrome);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--swps-border);
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    gap: 12px;
+    position: sticky;
+    top: 32px; /* below WP admin bar */
+    z-index: 100;
+    flex-wrap: nowrap;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+/* Each top bar child must be able to shrink. */
+.swps-shell-top > * { min-width: 0; }
+
+[data-swps-theme="light"] .swps-shell-top {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+@media screen and (max-width: 782px) {
+    .swps-shell-top {
+        top: 46px; /* mobile WP admin bar is taller */
+    }
+}
+
+.swps-shell-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--swps-text-primary);
+    text-decoration: none;
+}
+.swps-shell-logo:hover,
+.swps-shell-logo:focus {
+    color: var(--swps-text-primary);
+    box-shadow: none;
+    outline: none;
+}
+
+.swps-shell-logo-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    background: var(--swps-accent-grad);
+    box-shadow: var(--swps-accent-glow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: var(--swps-text-on-grad);
+    font-weight: 800;
+}
+
+.swps-shell-breadcrumb {
+    color: var(--swps-text-muted);
+    font-size: 12px;
+}
+.swps-shell-breadcrumb strong {
+    color: var(--swps-text-primary);
+    font-weight: 500;
+}
+.swps-shell-breadcrumb-sep {
+    margin: 0 4px;
+    opacity: 0.5;
+}
+
+.swps-shell-spacer {
+    flex: 1;
+}
+
+.swps-shell-search {
+    background: var(--swps-bg-hover);
+    border: 1px solid var(--swps-border-strong);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--swps-text-muted);
+    width: 240px;
+    max-width: 100%;
+    font-family: inherit;
+    transition: border-color var(--swps-transition);
+    box-shadow: none;
+    line-height: 1.4;
+    min-width: 0;
+    flex-shrink: 1;
+}
+/* Below 1080px, shrink the search; below 700px, hide it (theme + help icons stay). */
+@media screen and (max-width: 1080px) {
+    .swps-shell-search { width: 160px; }
+}
+@media screen and (max-width: 700px) {
+    .swps-shell-search { display: none; }
+    body.swps-has-shell .swps-shell-breadcrumb { display: none; }
+}
+@media screen and (max-width: 480px) {
+    .swps-shell-top { padding: 10px 14px; gap: 8px; }
+    body.swps-has-shell .swps-shell-logo span:not(.swps-shell-logo-mark) { display: none; }
+}
+.swps-shell-search:focus {
+    outline: none;
+    border-color: var(--swps-border-focus);
+    box-shadow: var(--swps-glow-focus);
+    color: var(--swps-text-primary);
+}
+.swps-shell-search::placeholder {
+    color: var(--swps-text-muted);
+}
+
+.swps-shell-iconbtn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--swps-bg-hover);
+    border: 1px solid var(--swps-border-strong);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: var(--swps-text-muted);
+    cursor: pointer;
+    transition: all var(--swps-transition);
+    text-decoration: none;
+}
+.swps-shell-iconbtn:hover,
+.swps-shell-iconbtn:focus {
+    color: var(--swps-text-primary);
+    border-color: var(--swps-accent-1);
+    outline: none;
+    box-shadow: none;
+}
+.swps-shell-iconbtn .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 1;
+}
+
+/* ==========================================================================
+   Horizontal nav (replaces the old left sidebar in v4.0.2)
+   ========================================================================== */
+
+.swps-shell-nav {
+    background: var(--swps-bg-side);
+    border-bottom: 1px solid var(--swps-border);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+    position: sticky;
+    top: 87px; /* WP admin bar (32px) + top bar (~55px) */
+    z-index: 99;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.swps-shell-nav::-webkit-scrollbar { height: 6px; }
+.swps-shell-nav::-webkit-scrollbar-thumb { background: var(--swps-border-strong); border-radius: 3px; }
+
+.swps-shell-nav-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding-right: 6px;
+    border-right: 1px solid var(--swps-border);
+    flex-shrink: 0;
+}
+.swps-shell-nav-group:last-child {
+    border-right: none;
+    padding-right: 0;
+}
+
+.swps-shell-nav-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--swps-text-faint);
+    font-weight: 600;
+    padding: 0 8px;
+    white-space: nowrap;
+}
+
+.swps-shell-nav-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 12px;
+    color: var(--swps-text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    white-space: nowrap;
+    transition: color var(--swps-transition-fast), border-color var(--swps-transition-fast);
+}
+.swps-shell-nav-item:hover {
+    color: var(--swps-text-primary);
+    box-shadow: none;
+    outline: none;
+}
+.swps-shell-nav-item:focus {
+    color: var(--swps-text-primary);
+    outline: none;
+    box-shadow: var(--swps-glow-focus);
+    border-radius: 4px;
+}
+.swps-shell-nav-item.is-active {
+    color: var(--swps-accent-1);
+    border-bottom-color: var(--swps-accent-1);
+}
+.swps-shell-nav-item-badge {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--swps-crit-bg);
+    color: var(--swps-crit);
+    font-weight: 600;
+}
+.swps-shell-nav-item-badge.is-new {
+    background: var(--swps-accent-grad);
+    color: var(--swps-text-on-grad);
+    font-weight: 700;
+}
+
+/* ==========================================================================
+   (Legacy sidebar styles — kept for any pages still referencing them)
+   ========================================================================== */
+
+.swps-shell-side {
+    background: var(--swps-bg-side);
+    border-right: 1px solid var(--swps-border);
+    padding: 20px 12px;
+    align-self: stretch;
+}
+
+.swps-shell-side-group {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--swps-text-faint);
+    padding: 12px 12px 6px;
+    font-weight: 600;
+}
+.swps-shell-side-group:first-child {
+    padding-top: 0;
+}
+
+.swps-shell-side-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--swps-text-muted);
+    font-size: 13px;
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: all var(--swps-transition-fast);
+}
+.swps-shell-side-item:hover {
+    color: var(--swps-text-primary);
+    background: var(--swps-bg-hover);
+    box-shadow: none;
+}
+.swps-shell-side-item:focus {
+    outline: none;
+    box-shadow: var(--swps-glow-focus);
+}
+.swps-shell-side-item.is-active {
+    background: rgba(217, 119, 6, 0.10);
+    color: var(--swps-accent-1);
+    border-left-color: var(--swps-accent-1);
+    padding-left: 10px;
+    font-weight: 500;
+}
+.swps-shell-side-item-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--swps-text-faint);
+    flex-shrink: 0;
+}
+.swps-shell-side-item.is-active .swps-shell-side-item-dot {
+    background: var(--swps-accent-1);
+    box-shadow: 0 0 6px var(--swps-accent-1);
+}
+.swps-shell-side-item-badge {
+    margin-left: auto;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--swps-crit-bg);
+    color: var(--swps-crit);
+    font-weight: 600;
+}
+.swps-shell-side-item-badge.is-new {
+    background: var(--swps-accent-grad);
+    color: var(--swps-text-on-grad);
+    font-weight: 700;
+}
+
+/* ==========================================================================
+   Page header (used inside .wrap on each StrataWP page)
+   ========================================================================== */
+
+.swps-page-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin: 0 0 24px;
+}
+.swps-page-head-text {
+    flex: 1;
+    min-width: 0;
+}
+.swps-page-head h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--swps-text-primary);
+    margin: 0 0 4px;
+    padding: 0;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+}
+.swps-page-head-sub {
+    font-size: 13px;
+    color: var(--swps-text-muted);
+    margin: 0;
+    line-height: 1.5;
+}
+.swps-page-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Override existing .swps-page-header (legacy templates) so they look OK
+   inside the new shell until each page is converted to .swps-page-head
+   ========================================================================== */
+
+body.swps-has-shell .swps-page-header {
+    background: var(--swps-bg-surface);
+    border: 1px solid var(--swps-border);
+    color: var(--swps-text-primary);
+    border-radius: var(--swps-radius);
+    margin: 0 0 24px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+body.swps-has-shell .swps-page-header h1 {
+    color: var(--swps-text-primary);
+}
+body.swps-has-shell .swps-page-header h1 .dashicons {
+    color: var(--swps-accent-1);
+}
+body.swps-has-shell .swps-page-header p {
+    color: var(--swps-text-muted);
+}
+body.swps-has-shell .swps-page-header::after {
+    background: var(--swps-accent-grad);
+}
+body.swps-has-shell .swps-page-header .swps-page-header-orb:first-of-type {
+    background: rgba(217, 119, 6, 0.10);
+}
+body.swps-has-shell .swps-page-header .swps-page-header-orb:last-of-type {
+    background: rgba(251, 191, 36, 0.08);
+}

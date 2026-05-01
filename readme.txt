@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 2.3.0
+Stable tag: 4.0.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -85,6 +85,48 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 * **Views column** — sortable "Views (30d)" column in the posts list table
 * **Configurable retention** — keep data for 30, 90, 180, or 365 days
 
+= Full Sitemap System =
+
+* **Sitemap index** — post type, taxonomy, and author sub-sitemaps
+* **Per-URL control** — configurable priority and changefreq per URL
+* **Image sitemap entries** — image metadata included in sitemap output
+* **IndexNow support** — instant indexing notification on publish/update
+
+= Search Appearance =
+
+* **Title/description templates** — configurable templates for all content types with template variables
+* **Title separator picker** — choose your preferred title separator character
+
+= Taxonomy & Archive SEO =
+
+* **Archive meta** — meta title, description, canonical URL, robots directives, and OG tags on category/tag/taxonomy edit screens
+* **Frontend output** — all archive meta rendered on archive pages
+
+= Redirect Manager =
+
+* **301/302/307/410 redirects** — exact and regex matching
+* **404 monitoring** — error log with one-click redirect creation
+* **Auto-redirect** — automatic redirect on slug change
+
+= Frontend Breadcrumbs =
+
+* **HTML breadcrumbs** — output with inline schema markup
+* **Flexible integration** — template function, shortcode, and configurable separator/home label
+
+= RSS Feed Optimization =
+
+* **Before/after content** — configurable content injected around RSS feed items with template variables
+
+= wp_head Cleanup =
+
+* **Toggle-based removal** — WP generator tag, RSD link, shortlink, REST API link, oEmbed, and emoji scripts
+
+= AI Crawlers & llms.txt =
+
+* **AI bot allowlist** — checkbox grid for 15 known AI crawlers (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, etc.)
+* **robots.txt injection** — allowed bots get explicit Allow rules; unchecked known bots get Disallow
+* **Dynamic llms.txt** — served at /llms.txt, built from your site description and posts/pages/categories with one-line summaries
+
 = Developer Features =
 
 * **25+ filters and actions** — extend every part of the generation pipeline
@@ -144,18 +186,48 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
-== Screenshots ==
-
-1. Settings page — configure AI provider, site details, and writing preferences
-2. Generate Content — create posts on demand with topic and template selection
-3. SEO Audit — 8-module technical audit with scores and one-click fixes
-4. Schema JSON-LD — automatic structured data output in page source
-5. Analytics Dashboard — page views, time on page, scroll depth, bounce rate, and GSC data
-6. Post Analytics — per-post metabox with views, engagement metrics, and top search queries
-7. Keyword Research — AI-powered suggestions and GSC rank tracking with striking distance opportunities
-8. SEO Meta Editor — per-post meta title, description, SERP preview, and SEO checklist
-
 == Changelog ==
+
+= 3.7.8 =
+* IndexNow batch submission replaces the dead Google/Bing sitemap ping endpoints (retired 2023). Ping now submits 50 most recent posts and reports real status.
+* Fixed Sitemaps admin: [object Object] ping result, blank Settings tab, permanent "Loading..." (wrong nonce reference).
+
+= 3.7.7 =
+* Sitemaps admin: fixed nonce reference (swps_admin -> swpsAdmin), added swps-admin JS dependency, fixed tab content data-tab attributes.
+
+= 3.7.6 =
+* New AI Crawlers settings section with multi-checkbox allowlist for 15 known AI bots.
+* New SWPS_AI_Bots class hooks robots_txt to inject Allow/Disallow rules.
+* Dynamic llms.txt generator served at /llms.txt with site description intro, posts/pages/categories, and one-line summaries.
+* New multi_checkbox settings field type and default arg support for checkboxes.
+
+= 3.7.5 =
+* New Debug admin page showing the last failed AI response (raw + cleaned) for diagnosis.
+* AI JSON parser: 5th repair attempt combining quote repair + control-char sanitization. Strips Unicode line/paragraph separators. Persists raw response on parse failure.
+
+= 3.7.4 =
+* Added Claude Opus 4.7 to the model dropdown (released April 2026).
+* Cost tracker pricing entry for Opus 4.7.
+
+= 3.7.3 =
+* Fixed JSON prefill incorrectly enabled for Claude 4.6+ models. Resolves "This model does not support assistant message prefill" error.
+
+= 3.7.0 - 3.7.2 =
+* Admin visual refresh (Slate & Coral palette across calendar, modals, SERP preview, all components).
+* Chart.js v4 fixes (CDN version pinning, canvas height constraint).
+* Updated AI model defaults.
+
+= 3.6.x =
+* Redirects, sitemaps, and internal linking system added.
+
+= 3.0.0 =
+* Added: Full Sitemap System — sitemap index with post type, taxonomy, and author sub-sitemaps. Per-URL priority/changefreq control. Image sitemap entries. IndexNow support for instant indexing.
+* Added: Search Appearance — configurable title/description templates for all content types with template variables. Title separator picker.
+* Added: Taxonomy & Archive SEO — meta title, description, canonical URL, robots directives, and OG tags on category/tag/taxonomy edit screens with frontend output on archive pages.
+* Added: Redirect Manager — 301/302/307/410 redirects with exact and regex matching. 404 error monitoring with one-click redirect creation. Auto-redirect on slug change.
+* Added: Frontend Breadcrumbs — HTML breadcrumb output with inline schema markup. Template function, shortcode, and configurable separator/home label.
+* Added: RSS Feed Optimization — configurable before/after content in RSS feed items with template variables.
+* Added: wp_head Cleanup — toggle-based removal of WP generator tag, RSD link, shortlink, REST API link, oEmbed, and emoji scripts.
 
 = 2.3.0 =
 * Added: Keyword Research & Tracking — AI-powered keyword suggestions and GSC rank tracking
@@ -211,6 +283,21 @@ No. GSC integration is optional. The on-site analytics works entirely without an
 * Scheduled publishing
 
 == Upgrade Notice ==
+
+= 3.7.8 =
+Replaces the dead Google/Bing sitemap ping endpoints with IndexNow batch submission. Fixes Sitemaps admin display bugs.
+
+= 3.7.6 =
+Adds AI Crawlers settings section (robots.txt allowlist for 15 known AI bots) and dynamic llms.txt generator at /llms.txt.
+
+= 3.7.5 =
+Adds Debug admin page for AI JSON parse failures. Improves JSON parser robustness.
+
+= 3.7.3 =
+Fixes "assistant message prefill" error on Claude 4.6+ models. Strongly recommended.
+
+= 3.0.0 =
+Major release adding full sitemap system, search appearance templates, taxonomy/archive SEO, redirect manager, frontend breadcrumbs, RSS feed optimization, and wp_head cleanup. No breaking changes to existing features.
 
 = 2.3.0 =
 Adds Keyword Research & Tracking with AI-powered suggestions and GSC rank tracking, plus a full SEO Meta Editor with SERP preview, social previews, and conflict detection. No breaking changes.

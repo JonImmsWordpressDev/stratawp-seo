@@ -19,24 +19,20 @@ class SWPS_Settings {
 
     /**
      * Register admin menu pages.
+     *
+     * v4.0: SWPS_Dashboard now owns the top-level menu (registered at
+     * admin_menu priority 5). Settings registers itself as a submenu with
+     * the new slug 'swps-settings' so /admin.php?page=stratawp-seo lands
+     * on the Dashboard, not Settings. Old bookmarks to ?page=stratawp-seo
+     * continue to resolve — they show Dashboard.
      */
     public function register_menu(): void {
-        add_menu_page(
-            __( 'StrataWP SEO', 'stratawp-seo' ),
-            __( 'StrataWP SEO', 'stratawp-seo' ),
-            'manage_options',
-            'stratawp-seo',
-            [ $this, 'render_settings_page' ],
-            'dashicons-superhero-alt',
-            30
-        );
-
         add_submenu_page(
             'stratawp-seo',
             __( 'Settings', 'stratawp-seo' ),
             __( 'Settings', 'stratawp-seo' ),
             'manage_options',
-            'stratawp-seo',
+            'swps-settings',
             [ $this, 'render_settings_page' ]
         );
 
@@ -66,6 +62,82 @@ class SWPS_Settings {
             'swps-seo-audit',
             [ $this, 'render_audit_page' ]
         );
+
+        add_submenu_page(
+            'stratawp-seo',
+            __( 'Search Appearance', 'stratawp-seo' ),
+            __( 'Search Appearance', 'stratawp-seo' ),
+            'manage_options',
+            'swps-search-appearance',
+            [ $this, 'render_search_appearance_page' ]
+        );
+
+        add_submenu_page(
+            'stratawp-seo',
+            __( 'Redirects', 'stratawp-seo' ),
+            __( 'Redirects', 'stratawp-seo' ),
+            'manage_options',
+            'swps-redirects',
+            [ SWPS_Redirect_Admin::class, 'render' ]
+        );
+
+        add_submenu_page(
+            'stratawp-seo',
+            __( 'Debug — Last AI Failure', 'stratawp-seo' ),
+            __( 'Debug', 'stratawp-seo' ),
+            'manage_options',
+            'swps-debug',
+            [ $this, 'render_debug_page' ]
+        );
+    }
+
+    /**
+     * Render the debug page showing the last failed AI response.
+     */
+    public function render_debug_page(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You do not have permission to view this page.', 'stratawp-seo' ) );
+        }
+
+        if ( isset( $_POST['swps_clear_failure'] ) && check_admin_referer( 'swps_clear_failure' ) ) {
+            delete_transient( 'swps_last_ai_failure' );
+            echo '<div class="notice notice-success"><p>' . esc_html__( 'Cleared.', 'stratawp-seo' ) . '</p></div>';
+        }
+
+        $failure = get_transient( 'swps_last_ai_failure' );
+
+        echo '<div class="wrap swps-debug-wrap">';
+
+        $title    = __( 'Debug', 'stratawp-seo' );
+        $subtitle = __( 'Last failed AI response captured by the JSON parser. Use this to diagnose generation errors.', 'stratawp-seo' );
+        $actions  = [];
+        require SWPS_PLUGIN_DIR . 'templates/partials/page-header.php';
+
+        if ( empty( $failure ) ) {
+            echo '<div class="swps-tile" style="text-align:center;padding:48px 24px">';
+            echo '<div style="font-size:48px;line-height:1;margin-bottom:16px;color:var(--swps-success)">✓</div>';
+            echo '<p style="color:var(--swps-text-muted);margin:0">' . esc_html__( 'No recent failures.', 'stratawp-seo' ) . '</p>';
+            echo '</div></div>';
+            return;
+        }
+
+        echo '<div class="swps-tile">';
+        echo '<table style="width:100%;border-collapse:collapse">';
+        echo '<tr><td style="padding:6px 0;color:var(--swps-text-muted);font-size:12px;width:80px">' . esc_html__( 'Time', 'stratawp-seo' ) . '</td><td style="padding:6px 0;color:var(--swps-text-primary)">' . esc_html( $failure['time'] ?? '' ) . '</td></tr>';
+        echo '<tr><td style="padding:6px 0;color:var(--swps-text-muted);font-size:12px">' . esc_html__( 'Error', 'stratawp-seo' ) . '</td><td style="padding:6px 0;color:var(--swps-crit)">' . esc_html( $failure['error'] ?? '' ) . '</td></tr>';
+        echo '<tr><td style="padding:6px 0;color:var(--swps-text-muted);font-size:12px">' . esc_html__( 'Length', 'stratawp-seo' ) . '</td><td style="padding:6px 0;color:var(--swps-text-primary)">' . esc_html( number_format( strlen( (string) ( $failure['raw'] ?? '' ) ) ) ) . ' ' . esc_html__( 'chars', 'stratawp-seo' ) . '</td></tr>';
+        echo '</table>';
+
+        echo '<form method="post" style="margin: 16px 0 0;">';
+        wp_nonce_field( 'swps_clear_failure' );
+        echo '<button type="submit" name="swps_clear_failure" class="swps-btn swps-btn-secondary">' . esc_html__( 'Clear', 'stratawp-seo' ) . '</button>';
+        echo '</form>';
+        echo '</div>';
+
+        echo '<div class="swps-section-h" style="margin-top:24px"><h3>' . esc_html__( 'Raw response', 'stratawp-seo' ) . '</h3></div>';
+        echo '<textarea readonly rows="24" style="width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:var(--swps-bg-input);color:var(--swps-text-body);border:1px solid var(--swps-border-strong);border-radius:var(--swps-radius-sm);padding:14px;line-height:1.5">' . esc_textarea( (string) ( $failure['raw'] ?? '' ) ) . '</textarea>';
+
+        echo '</div>';
     }
 
     /**
@@ -164,6 +236,29 @@ class SWPS_Settings {
             'placeholder'  => 'Describe your site, target audience, and what makes it unique...',
             'description'  => __( 'Give the AI context about your site and audience. The more detail, the better the content.', 'stratawp-seo' ),
             'rows'         => 4,
+        ] );
+
+        // --- AI Crawlers Section ---
+        add_settings_section( 'swps_ai_crawlers_section', __( 'AI Crawlers', 'stratawp-seo' ), [ $this, 'render_ai_crawlers_section' ], 'stratawp-seo' );
+
+        $bot_options = [];
+        foreach ( SWPS_AI_Bots::KNOWN_BOTS as $key => $token ) {
+            $bot_options[ $key ] = $token;
+        }
+        $this->add_field( 'ai_bots_allowed', __( 'Allowed AI Bots', 'stratawp-seo' ), 'multi_checkbox', 'swps_ai_crawlers_section', [
+            'options'     => $bot_options,
+            'default'     => array_keys( $bot_options ),
+            'description' => __( 'Allowed bots get an explicit Allow rule in robots.txt; unchecked known bots get a Disallow. View the result at <code>/robots.txt</code>.', 'stratawp-seo' ),
+        ] );
+
+        $this->add_field( 'llms_txt_enabled', __( 'Generate llms.txt', 'stratawp-seo' ), 'checkbox', 'swps_ai_crawlers_section', [
+            'default'     => 1,
+            'label'       => __( 'Serve a dynamic llms.txt at /llms.txt', 'stratawp-seo' ),
+            'description' => sprintf(
+                /* translators: %s: link to /llms.txt */
+                __( 'Built from your site description and most recent posts (with one-line summaries). Overrides Yoast or other plugin output. <a href="%s" target="_blank">View live</a>.', 'stratawp-seo' ),
+                esc_url( home_url( '/llms.txt' ) )
+            ),
         ] );
 
         // --- Writing Preferences Section ---
@@ -451,6 +546,93 @@ class SWPS_Settings {
         $this->add_field( 'jon_ai_secret', __( 'Remote Content Secret', 'stratawp-seo' ), 'password', 'swps_advanced_section', [
             'description' => __( 'Authentication secret for the remote content endpoint. Stored encrypted.', 'stratawp-seo' ),
         ] );
+
+        // --- Head Cleanup Section ---
+        add_settings_section( 'swps_cleanup_section', __( 'Head Cleanup', 'stratawp-seo' ), [ $this, 'render_cleanup_section' ], 'stratawp-seo' );
+
+        $cleanup_fields = [
+            'cleanup_generator' => __( 'Remove WP Generator Tag', 'stratawp-seo' ),
+            'cleanup_rsd'       => __( 'Remove RSD/EditURI Link', 'stratawp-seo' ),
+            'cleanup_wlw'       => __( 'Remove Windows Live Writer Link', 'stratawp-seo' ),
+            'cleanup_shortlink' => __( 'Remove Shortlink', 'stratawp-seo' ),
+            'cleanup_rest_api'  => __( 'Remove REST API Link', 'stratawp-seo' ),
+            'cleanup_oembed'    => __( 'Remove oEmbed Discovery', 'stratawp-seo' ),
+            'cleanup_emoji'     => __( 'Remove Emoji Scripts & Styles', 'stratawp-seo' ),
+        ];
+
+        foreach ( $cleanup_fields as $key => $label ) {
+            $this->add_field( $key, $label, 'checkbox', 'swps_cleanup_section' );
+        }
+
+        // --- RSS Optimization Section ---
+        add_settings_section( 'swps_rss_section', __( 'RSS Feed', 'stratawp-seo' ), [ $this, 'render_rss_section' ], 'stratawp-seo' );
+
+        $this->add_field( 'rss_before', __( 'Content Before Post in RSS', 'stratawp-seo' ), 'textarea', 'swps_rss_section' );
+        $this->add_field( 'rss_after', __( 'Content After Post in RSS', 'stratawp-seo' ), 'textarea', 'swps_rss_section' );
+
+        // --- Search Appearance Settings (separate options group) ---
+        register_setting( 'swps_search_appearance', 'swps_title_separator', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+
+        foreach ( get_post_types( [ 'public' => true ] ) as $pt ) {
+            if ( 'attachment' === $pt ) continue;
+            register_setting( 'swps_search_appearance', "swps_title_template_{$pt}", [ 'sanitize_callback' => 'sanitize_text_field' ] );
+            register_setting( 'swps_search_appearance', "swps_desc_template_{$pt}", [ 'sanitize_callback' => 'sanitize_textarea_field' ] );
+            register_setting( 'swps_search_appearance', "swps_noindex_{$pt}", [ 'sanitize_callback' => 'absint' ] );
+        }
+
+        foreach ( get_taxonomies( [ 'public' => true ] ) as $tax ) {
+            if ( 'post_format' === $tax ) continue;
+            register_setting( 'swps_search_appearance', "swps_title_template_{$tax}", [ 'sanitize_callback' => 'sanitize_text_field' ] );
+            register_setting( 'swps_search_appearance', "swps_noindex_{$tax}", [ 'sanitize_callback' => 'absint' ] );
+        }
+
+        register_setting( 'swps_search_appearance', 'swps_title_template_search', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'swps_search_appearance', 'swps_title_template_404', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'swps_search_appearance', 'swps_title_template_author', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'swps_search_appearance', 'swps_title_template_date', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+
+        // Breadcrumb settings.
+        register_setting( 'swps_search_appearance', 'swps_breadcrumbs_enabled', [ 'sanitize_callback' => 'absint' ] );
+        register_setting( 'swps_search_appearance', 'swps_breadcrumbs_separator', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'swps_search_appearance', 'swps_breadcrumbs_home_label', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+
+        // SEO Column settings.
+        register_setting( 'swps_search_appearance', 'swps_seo_column_post_types', [
+            'sanitize_callback' => function ( $value ) {
+                return is_array( $value ) ? array_map( 'sanitize_text_field', $value ) : [ 'post', 'page' ];
+            },
+            'default' => [ 'post', 'page' ],
+        ] );
+        register_setting( 'swps_search_appearance', 'swps_seo_score_content_min', [
+            'sanitize_callback' => 'absint',
+            'default' => 300,
+        ] );
+
+        // Internal Links settings.
+        register_setting( 'swps_settings', 'swps_internal_links_enabled', [
+            'type'    => 'boolean',
+            'default' => true,
+        ] );
+        register_setting( 'swps_settings', 'swps_internal_links_post_types', [
+            'type'    => 'array',
+            'default' => [ 'post', 'page' ],
+        ] );
+        register_setting( 'swps_settings', 'swps_link_relevance_threshold', [
+            'type'    => 'number',
+            'default' => 0.3,
+        ] );
+        register_setting( 'swps_settings', 'swps_link_max_suggestions', [
+            'type'    => 'integer',
+            'default' => 10,
+        ] );
+        register_setting( 'swps_settings', 'swps_internal_links_in_generation', [
+            'type'    => 'boolean',
+            'default' => true,
+        ] );
+        register_setting( 'swps_settings', 'swps_link_ai_batch_size', [
+            'type'    => 'integer',
+            'default' => 10,
+        ] );
     }
 
     /**
@@ -512,6 +694,12 @@ class SWPS_Settings {
             'checkbox' => function ( $value ) {
                 return $value ? 1 : 0;
             },
+            'multi_checkbox' => function ( $value ) {
+                if ( ! is_array( $value ) ) {
+                    return [];
+                }
+                return array_values( array_map( 'sanitize_key', $value ) );
+            },
             'number'   => 'absint',
             'textarea' => 'sanitize_textarea_field',
             'password' => function ( $value ) {
@@ -525,10 +713,11 @@ class SWPS_Settings {
      * Render a settings field.
      */
     public function render_field( array $args ): void {
-        $name  = $args['name'];
-        $type  = $args['type'];
-        $value = get_option( $name, '' );
-        $desc  = $args['description'] ?? '';
+        $name    = $args['name'];
+        $type    = $args['type'];
+        $default = $args['default'] ?? '';
+        $value   = get_option( $name, $default );
+        $desc    = $args['description'] ?? '';
 
         // Don't display encrypted values — show empty field with saved indicator.
         $has_encrypted_value = false;
@@ -592,6 +781,22 @@ class SWPS_Settings {
                 );
                 break;
 
+            case 'multi_checkbox':
+                $stored  = is_array( $value ) ? $value : ( $args['default'] ?? [] );
+                $options = $args['options'] ?? [];
+                echo '<fieldset style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:4px 16px;">';
+                foreach ( $options as $val => $label ) {
+                    printf(
+                        '<label><input type="checkbox" name="%s[]" value="%s" %s /> %s</label>',
+                        esc_attr( $name ),
+                        esc_attr( $val ),
+                        checked( in_array( $val, $stored, true ), true, false ),
+                        esc_html( $label )
+                    );
+                }
+                echo '</fieldset>';
+                break;
+
             case 'time':
                 printf(
                     '<input type="time" name="%s" value="%s" />',
@@ -641,6 +846,10 @@ class SWPS_Settings {
 
     public function render_site_section(): void {
         echo '<p>' . esc_html__( 'Tell the AI about your site so it can generate relevant, targeted content.', 'stratawp-seo' ) . '</p>';
+    }
+
+    public function render_ai_crawlers_section(): void {
+        echo '<p>' . esc_html__( 'Control which AI crawlers can access your site and serve a dynamic llms.txt index at /llms.txt.', 'stratawp-seo' ) . '</p>';
     }
 
     public function render_writing_section(): void {
@@ -697,6 +906,111 @@ class SWPS_Settings {
                     ? esc_html__( 'Stored encrypted.', 'stratawp-seo' )
                     : esc_html__( 'Not encrypted — save settings to encrypt.', 'stratawp-seo' )
             );
+        }
+    }
+
+    public function render_cleanup_section(): void {
+        echo '<p>' . esc_html__( 'Remove unnecessary items from your site\'s <head> section to reduce page size.', 'stratawp-seo' ) . '</p>';
+    }
+
+    public function render_rss_section(): void {
+        echo '<p>' . esc_html__( 'Add content before or after posts in your RSS feed. Available variables: %%post_link%%, %%blog_link%%, %%blog_name%%', 'stratawp-seo' ) . '</p>';
+    }
+
+    public function render_sitemap_section(): void {
+        $index_url = home_url( '/sitemap_index.xml' );
+        echo '<p>' . sprintf(
+            esc_html__( 'Your sitemap index: %s', 'stratawp-seo' ),
+            '<a href="' . esc_url( $index_url ) . '" target="_blank">' . esc_url( $index_url ) . '</a>'
+        ) . '</p>';
+    }
+
+    /**
+     * Tab groups for the settings page. Each tab lists the section IDs it contains.
+     */
+    public function get_settings_tabs(): array {
+        return [
+            'ai-content' => [
+                'label'    => __( 'AI & Content', 'stratawp-seo' ),
+                'sections' => [
+                    'swps_ai_section',
+                    'swps_site_section',
+                    'swps_writing_section',
+                    'swps_content_section',
+                    'swps_images_section',
+                ],
+            ],
+            'schedule' => [
+                'label'    => __( 'Schedule', 'stratawp-seo' ),
+                'sections' => [
+                    'swps_schedule_section',
+                ],
+            ],
+            'seo' => [
+                'label'    => __( 'SEO', 'stratawp-seo' ),
+                'sections' => [
+                    'swps_audit_section',
+                    'swps_schema_section',
+                    'swps_meta_section',
+                    'swps_cleanup_section',
+                    'swps_rss_section',
+                ],
+            ],
+            'discoverability' => [
+                'label'    => __( 'AI Crawlers', 'stratawp-seo' ),
+                'sections' => [
+                    'swps_ai_crawlers_section',
+                ],
+            ],
+            'analytics' => [
+                'label'    => __( 'Analytics', 'stratawp-seo' ),
+                'sections' => [
+                    'swps_analytics_section',
+                ],
+            ],
+            'advanced' => [
+                'label'    => __( 'Advanced', 'stratawp-seo' ),
+                'sections' => [
+                    'swps_advanced_section',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Render a subset of settings sections — same output as do_settings_sections()
+     * but scoped to a specific list of section IDs.
+     */
+    public function render_sections_for_tab( array $section_ids ): void {
+        global $wp_settings_sections, $wp_settings_fields;
+
+        $page = 'stratawp-seo';
+        if ( empty( $wp_settings_sections[ $page ] ) ) {
+            return;
+        }
+
+        foreach ( $section_ids as $section_id ) {
+            if ( ! isset( $wp_settings_sections[ $page ][ $section_id ] ) ) {
+                continue;
+            }
+
+            $section = $wp_settings_sections[ $page ][ $section_id ];
+
+            if ( ! empty( $section['title'] ) ) {
+                echo '<h2>' . esc_html( $section['title'] ) . '</h2>' . "\n";
+            }
+
+            if ( ! empty( $section['callback'] ) ) {
+                call_user_func( $section['callback'], $section );
+            }
+
+            if ( empty( $wp_settings_fields[ $page ][ $section_id ] ) ) {
+                continue;
+            }
+
+            echo '<table class="form-table" role="presentation">';
+            do_settings_fields( $page, $section_id );
+            echo '</table>';
         }
     }
 
@@ -784,5 +1098,9 @@ class SWPS_Settings {
         }
 
         include SWPS_PLUGIN_DIR . 'templates/audit-page.php';
+    }
+
+    public function render_search_appearance_page(): void {
+        include SWPS_PLUGIN_DIR . 'templates/search-appearance-page.php';
     }
 }

@@ -105,47 +105,95 @@
         });
     }
 
-    // --- SVG Chart ---
+    // --- Chart.js Chart ---
+
+    var chartInstance = null;
 
     function renderChart(dailyViews, gscDaily) {
-        var container = document.getElementById('swps-analytics-chart');
-        if (!container) return;
+        var canvas = document.getElementById('swps-analytics-chart');
+        if (!canvas || typeof Chart === 'undefined') return;
 
-        var width = container.offsetWidth || 800;
-        var height = 250;
-        var padding = { top: 20, right: 20, bottom: 30, left: 50 };
-        var chartW = width - padding.left - padding.right;
-        var chartH = height - padding.top - padding.bottom;
+        if (chartInstance) {
+            chartInstance.destroy();
+            chartInstance = null;
+        }
+
+        var existing = canvas.parentNode.querySelector('.swps-no-data-msg');
+        if (existing) existing.remove();
 
         if (!dailyViews.length) {
-            container.innerHTML = '<p style="text-align:center;color:#646970;padding:40px 0;">No data for this period.</p>';
+            canvas.parentNode.insertAdjacentHTML('beforeend', '<p class="swps-no-data-msg" style="text-align:center;color:#64748B;padding:40px 0;">No data for this period.</p>');
             return;
         }
 
-        var maxViews = Math.max.apply(null, dailyViews.map(function (d) { return parseInt(d.views) || 0; }));
-        if (maxViews === 0) maxViews = 1;
+        var labels = dailyViews.map(function (d) { return d.date; });
+        var views = dailyViews.map(function (d) { return parseInt(d.views) || 0; });
+        var clicks = gscDaily.map(function (d) { return parseInt(d.clicks) || 0; });
 
-        var points = dailyViews.map(function (d, i) {
-            var x = padding.left + (i / Math.max(dailyViews.length - 1, 1)) * chartW;
-            var y = padding.top + chartH - ((parseInt(d.views) || 0) / maxViews) * chartH;
-            return x + ',' + y;
-        });
+        // v4.0.4 — gold/black palette, read theme from <html data-swps-theme>.
+        var theme = document.documentElement.getAttribute('data-swps-theme') || 'dark';
+        var pal = theme === 'light'
+            ? { line1: '#B45309', line2: '#D97706', grid: '#E5E7EB', tick: '#4B5563', tip: '#0F172A' }
+            : { line1: '#FBBF24', line2: '#D97706', grid: 'rgba(255,255,255,0.05)', tick: '#94A3B8', tip: '#1E293B' };
 
-        var svg = '<svg width="' + width + '" height="' + height + '" xmlns="http://www.w3.org/2000/svg">';
+        var ctx = canvas.getContext('2d');
+        var gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, theme === 'light' ? 'rgba(180, 83, 9, 0.10)' : 'rgba(251, 191, 36, 0.22)');
+        gradient.addColorStop(1, theme === 'light' ? 'rgba(180, 83, 9, 0)'   : 'rgba(251, 191, 36, 0)');
 
-        // Y-axis labels.
-        for (var i = 0; i <= 4; i++) {
-            var yVal = Math.round((maxViews / 4) * i);
-            var yPos = padding.top + chartH - (i / 4) * chartH;
-            svg += '<text x="' + (padding.left - 8) + '" y="' + (yPos + 4) + '" text-anchor="end" fill="#646970" font-size="11">' + yVal + '</text>';
-            svg += '<line x1="' + padding.left + '" y1="' + yPos + '" x2="' + (width - padding.right) + '" y2="' + yPos + '" stroke="#e0e0e0" />';
+        var datasets = [{
+            label: 'Page Views',
+            data: views,
+            borderColor: pal.line1,
+            backgroundColor: gradient,
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            pointHoverBackgroundColor: pal.line1
+        }];
+
+        if (clicks.length) {
+            datasets.push({
+                label: 'Search Clicks',
+                data: clicks,
+                borderColor: pal.line2,
+                backgroundColor: 'transparent',
+                borderDash: [6, 3],
+                tension: 0.4,
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                pointHoverBackgroundColor: pal.line2
+            });
         }
 
-        // Views line.
-        svg += '<polyline points="' + points.join(' ') + '" fill="none" stroke="#2271b1" stroke-width="2" />';
-
-        svg += '</svg>';
-        container.innerHTML = svg;
+        chartInstance = new Chart(canvas, {
+            type: 'line',
+            data: { labels: labels, datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    legend: { display: datasets.length > 1, position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'line', font: { size: 12 }, color: pal.tick } },
+                    tooltip: {
+                        backgroundColor: pal.tip,
+                        titleColor: '#F1F5F9',
+                        bodyColor: '#E2E8F0',
+                        titleFont: { size: 13 },
+                        bodyFont: { size: 12 },
+                        cornerRadius: 8,
+                        padding: 12
+                    }
+                },
+                scales: {
+                    x: { border: { display: false }, grid: { color: pal.grid }, ticks: { color: pal.tick, font: { size: 11 } } },
+                    y: { border: { display: false }, grid: { color: pal.grid }, ticks: { color: pal.tick, font: { size: 11 } }, beginAtZero: true }
+                }
+            }
+        });
     }
 
     // --- Post Metabox ---

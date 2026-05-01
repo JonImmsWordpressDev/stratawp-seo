@@ -53,7 +53,9 @@ class SWPS_Schema {
             $this->article_schema();
         }
 
-        if ( ! is_front_page() ) {
+        // Output JSON-LD breadcrumbs only when the HTML breadcrumbs feature is disabled.
+        // When enabled, SWPS_Breadcrumbs outputs inline microdata schema instead.
+        if ( ! is_front_page() && ! get_option( 'swps_breadcrumbs_enabled', 1 ) ) {
             $this->breadcrumb_schema();
         }
     }

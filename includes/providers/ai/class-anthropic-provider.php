@@ -27,8 +27,10 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
 
     public function get_available_models(): array {
         return [
-            'claude-opus-4-6'            => 'Claude Opus 4.6 (Most powerful, higher cost)',
-            'claude-sonnet-4-5-20250929' => 'Claude Sonnet 4.5 (Great balance of quality & cost)',
+            'claude-opus-4-7'            => 'Claude Opus 4.7 (Most powerful, higher cost)',
+            'claude-opus-4-6'            => 'Claude Opus 4.6 (Previous generation)',
+            'claude-sonnet-4-6'          => 'Claude Sonnet 4.6 (Great balance of quality & cost)',
+            'claude-sonnet-4-5-20250929' => 'Claude Sonnet 4.5 (Previous generation)',
             'claude-haiku-4-5-20251001'  => 'Claude Haiku 4.5 (Fastest, lowest cost)',
         ];
     }
@@ -48,7 +50,11 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
         ];
 
         // Prefill with opening brace to guide Claude toward valid JSON output.
-        if ( $this->requesting_json ) {
+        // Note: Claude 4.6+ models (opus-4-6, sonnet-4-6, and newer 4-7+) do not support assistant prefill.
+        $model = $this->get_validated_model();
+        $supports_prefill = ! preg_match( '/-(4-6|4-7|4-8|4-9|5-)/', $model );
+
+        if ( $this->requesting_json && $supports_prefill ) {
             $messages[] = [
                 'role'    => 'assistant',
                 'content' => '{',
@@ -109,7 +115,7 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
         $text = $body['content'][0]['text'];
 
         // When using JSON prefill, prepend the opening brace we sent as assistant content.
-        if ( $this->requesting_json ) {
+        if ( $this->requesting_json && $supports_prefill ) {
             $text = '{' . $text;
         }
 

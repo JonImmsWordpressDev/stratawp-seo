@@ -5,17 +5,19 @@ $schedule    = SWPS_Cron::get_schedule_info();
 $cost_stats  = stratawp_seo()->cost_tracker->get_monthly_stats();
 $templates   = SWPS_Templates::get_options();
 ?>
-<div class="wrap swps-wrap">
-    <h1>
-        <span class="dashicons dashicons-superhero-alt" style="font-size: 28px; margin-right: 8px;"></span>
-        <?php esc_html_e( 'Generate SEO Content', 'stratawp-seo' ); ?>
-    </h1>
+<div class="wrap swps-generate-wrap">
+    <?php
+    $title    = __( 'Generate Content', 'stratawp-seo' );
+    $subtitle = __( 'Create AI-powered, SEO-optimized blog posts. Enter a topic or let the AI pick one based on your site\'s gaps.', 'stratawp-seo' );
+    $actions  = [];
+    require SWPS_PLUGIN_DIR . 'templates/partials/page-header.php';
+    ?>
 
     <?php if ( ! $has_api_key ) : ?>
         <div class="notice notice-error">
             <p><?php printf(
                 __( 'You need to <a href="%s">add your AI provider API key</a> before generating content.', 'stratawp-seo' ),
-                esc_url( admin_url( 'admin.php?page=stratawp-seo' ) )
+                esc_url( admin_url( 'admin.php?page=swps-settings' ) )
             ); ?></p>
         </div>
     <?php endif; ?>
@@ -146,7 +148,7 @@ $templates   = SWPS_Templates::get_options();
                     <strong><?php esc_html_e( 'Inactive', 'stratawp-seo' ); ?></strong>
                     <p><?php printf(
                         __( 'Enable automated posting in <a href="%s">Settings</a>.', 'stratawp-seo' ),
-                        esc_url( admin_url( 'admin.php?page=stratawp-seo' ) )
+                        esc_url( admin_url( 'admin.php?page=swps-settings' ) )
                     ); ?></p>
                 </div>
             <?php endif; ?>

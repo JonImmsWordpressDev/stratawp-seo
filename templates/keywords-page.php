@@ -1,8 +1,9 @@
 <?php
 /**
- * Keywords page template.
+ * Keywords page (v4.0).
  *
  * @var bool $gsc_connected Whether GSC is connected.
+ * @package StrataWP_SEO
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -10,15 +11,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 ?>
 <div class="wrap swps-keywords-wrap">
-    <h1><?php esc_html_e( 'Keyword Research & Tracking', 'stratawp-seo' ); ?></h1>
 
-    <!-- AI Suggestion Panel -->
-    <div class="swps-keywords-section swps-suggest-panel">
-        <h2><?php esc_html_e( 'Discover Keywords', 'stratawp-seo' ); ?></h2>
-        <div class="swps-suggest-form">
-            <input type="text" id="swps-seed-topic" class="regular-text"
+    <?php
+    $title    = __( 'Keyword Research & Tracking', 'stratawp-seo' );
+    $subtitle = __( 'Discover opportunities and track your keyword rankings. Striking-distance keywords (positions 8-20) are your fastest wins.', 'stratawp-seo' );
+    $actions  = [];
+    require SWPS_PLUGIN_DIR . 'templates/partials/page-header.php';
+    ?>
+
+    <div class="swps-settings-panel">
+        <h2 style="margin-top:0"><?php esc_html_e( 'Discover Keywords', 'stratawp-seo' ); ?></h2>
+        <div class="swps-suggest-form" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+            <input type="text" id="swps-seed-topic" class="regular-text" style="flex:1;min-width:240px"
                    placeholder="<?php esc_attr_e( 'Enter a seed topic (e.g., home renovation tips)', 'stratawp-seo' ); ?>" />
-            <button class="button button-primary" id="swps-suggest-btn">
+            <button class="swps-btn swps-btn-grad" id="swps-suggest-btn">
                 <?php esc_html_e( 'Get AI Suggestions', 'stratawp-seo' ); ?>
             </button>
             <span class="spinner" id="swps-suggest-spinner"></span>
@@ -37,9 +43,8 @@ if ( ! defined( 'ABSPATH' ) ) {
         </table>
     </div>
 
-    <!-- Tracked Keywords -->
-    <div class="swps-keywords-section">
-        <h2><?php esc_html_e( 'Tracked Keywords', 'stratawp-seo' ); ?></h2>
+    <div class="swps-settings-panel">
+        <h2 style="margin-top:0"><?php esc_html_e( 'Tracked Keywords', 'stratawp-seo' ); ?></h2>
         <table class="widefat striped" id="swps-tracked-table">
             <thead>
                 <tr>
@@ -53,16 +58,15 @@ if ( ! defined( 'ABSPATH' ) ) {
                 </tr>
             </thead>
             <tbody>
-                <tr><td colspan="7" class="swps-loading"><?php esc_html_e( 'Loading...', 'stratawp-seo' ); ?></td></tr>
+                <tr><td colspan="7" class="swps-loading" style="color:var(--swps-text-muted)"><?php esc_html_e( 'Loading...', 'stratawp-seo' ); ?></td></tr>
             </tbody>
         </table>
     </div>
 
     <?php if ( $gsc_connected ) : ?>
-    <!-- Opportunities -->
-    <div class="swps-keywords-section">
-        <h2><?php esc_html_e( 'Opportunities (Striking Distance)', 'stratawp-seo' ); ?></h2>
-        <p class="description"><?php esc_html_e( 'Keywords ranking position 8-20 with high impressions — optimize these for quick wins.', 'stratawp-seo' ); ?></p>
+    <div class="swps-settings-panel">
+        <h2 style="margin-top:0"><?php esc_html_e( 'Opportunities (Striking Distance)', 'stratawp-seo' ); ?></h2>
+        <p style="color:var(--swps-text-muted);font-size:12px;margin:0 0 12px"><?php esc_html_e( 'Keywords ranking position 8-20 with high impressions — optimize these for quick wins.', 'stratawp-seo' ); ?></p>
         <table class="widefat striped" id="swps-opportunities-table">
             <thead>
                 <tr>
@@ -74,13 +78,12 @@ if ( ! defined( 'ABSPATH' ) ) {
                 </tr>
             </thead>
             <tbody>
-                <tr><td colspan="5" class="swps-loading"><?php esc_html_e( 'Loading...', 'stratawp-seo' ); ?></td></tr>
+                <tr><td colspan="5" class="swps-loading" style="color:var(--swps-text-muted)"><?php esc_html_e( 'Loading...', 'stratawp-seo' ); ?></td></tr>
             </tbody>
         </table>
     </div>
     <?php endif; ?>
 
-    <!-- Keyword History Modal -->
     <div id="swps-keyword-history-modal" class="swps-modal" style="display:none;">
         <div class="swps-modal-content">
             <span class="swps-modal-close">&times;</span>

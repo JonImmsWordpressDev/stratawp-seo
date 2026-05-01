@@ -123,10 +123,15 @@ abstract class SWPS_AI_Provider {
      * @return array|WP_Error Parsed JSON array or error.
      */
     protected function parse_json_response( string $response ): array|WP_Error {
+        $raw     = $response;
         $cleaned = trim( $response );
 
         // Strip BOM if present.
         $cleaned = ltrim( $cleaned, "\xEF\xBB\xBF" );
+
+        // Strip Unicode line/paragraph separators (U+2028, U+2029) that some
+        // PHP versions reject inside JSON strings.
+        $cleaned = str_replace( [ "\xe2\x80\xa8", "\xe2\x80\xa9" ], '', $cleaned );
 
         // Strip markdown code fences if present.
         $cleaned = preg_replace( '/^```(?:json)?\s*/s', '', $cleaned );
@@ -187,14 +192,60 @@ abstract class SWPS_AI_Provider {
             }
         }
 
-        // All attempts failed — return error with diagnostic info.
+        // Attempt 5: Combine quote repair AND control-char sanitization.
+        // The earlier sanitize regex bails out at the first unescaped quote, so
+        // combining repair (which fixes structure) with sanitize (which fixes
+        // control chars) catches responses with both issues.
+        $combined = preg_replace_callback(
+            '/"((?:[^"\\\\]|\\\\.)*)"/s',
+            function ( $m ) {
+                $val = str_replace(
+                    [ "\n", "\r", "\t", "\x08", "\x0C" ],
+                    [ '\\n', '\\r', '\\t', '\\b', '\\f' ],
+                    $m[1]
+                );
+                $val = preg_replace( '/[\x00-\x1F]/', '', $val );
+                return '"' . $val . '"';
+            },
+            $repaired
+        );
+        $decoded = json_decode( $combined, true, 512, JSON_INVALID_UTF8_SUBSTITUTE );
+        if ( json_last_error() === JSON_ERROR_NONE ) {
+            return $decoded;
+        }
+
+        // Attempt 6: Strip stray escape sequences (\n, \r, \t, etc.) that the
+        // model emitted *outside* of string literals. Walk the string tracking
+        // whether we're inside a JSON string; if we see a backslash outside a
+        // string, drop it and the following character.
+        $stripped = $this->strip_stray_escapes( $combined );
+        if ( $stripped !== $combined ) {
+            $decoded = json_decode( $stripped, true, 512, JSON_INVALID_UTF8_SUBSTITUTE );
+            if ( json_last_error() === JSON_ERROR_NONE ) {
+                return $decoded;
+            }
+        }
+
+        // All attempts failed — persist the raw response for debugging and
+        // return error with diagnostic info.
+        set_transient(
+            'swps_last_ai_failure',
+            [
+                'time'    => current_time( 'mysql' ),
+                'error'   => json_last_error_msg(),
+                'raw'     => $raw,
+                'cleaned' => $cleaned,
+            ],
+            DAY_IN_SECONDS
+        );
+
         $len  = strlen( $cleaned );
         $tail = $len > 120 ? substr( $cleaned, -120 ) : $cleaned;
 
         return new WP_Error(
             'swps_json_parse_error',
             sprintf(
-                __( 'Failed to parse AI response as JSON: %s [len=%d, tail="%s"]', 'stratawp-seo' ),
+                __( 'Failed to parse AI response as JSON: %s [len=%d, tail="%s"]. Raw response saved — view at Settings → StrataWP SEO → Tools → Last AI Failure.', 'stratawp-seo' ),
                 json_last_error_msg(),
                 $len,
                 $tail
@@ -262,6 +313,69 @@ abstract class SWPS_AI_Provider {
 
             $result .= $str_content . '"';
             $i++; // Skip the closing quote.
+        }
+
+        return $result;
+    }
+
+    /**
+     * Strip stray escape sequences that appear outside of string literals.
+     *
+     * The model occasionally emits literal backslash-letter pairs (e.g. "\n")
+     * between JSON tokens, which is invalid. Walk the string tracking whether
+     * we're inside a quoted string; outside strings, drop any backslash and
+     * the character that follows it.
+     *
+     * @param string $json The JSON string to clean.
+     * @return string The cleaned JSON string.
+     */
+    protected function strip_stray_escapes( string $json ): string {
+        $len      = strlen( $json );
+        $result   = '';
+        $i        = 0;
+        $in_string = false;
+
+        while ( $i < $len ) {
+            $ch = $json[ $i ];
+
+            if ( $in_string ) {
+                if ( $ch === '\\' && $i + 1 < $len ) {
+                    // Inside a string — preserve escape sequences verbatim.
+                    $result .= $ch . $json[ $i + 1 ];
+                    $i += 2;
+                    continue;
+                }
+                if ( $ch === '"' ) {
+                    $in_string = false;
+                }
+                $result .= $ch;
+                $i++;
+                continue;
+            }
+
+            // Outside a string.
+            if ( $ch === '"' ) {
+                $in_string = true;
+                $result   .= $ch;
+                $i++;
+                continue;
+            }
+
+            if ( $ch === '\\' && $i + 1 < $len ) {
+                // Stray escape between tokens — drop the backslash AND the
+                // following char only if it is a typical escape letter.
+                // Otherwise, drop just the backslash.
+                $next = $json[ $i + 1 ];
+                if ( strpos( "nrtbf/\\\"u", $next ) !== false ) {
+                    $i += 2;
+                } else {
+                    $i += 1;
+                }
+                continue;
+            }
+
+            $result .= $ch;
+            $i++;
         }
 
         return $result;

@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 2.3.0
+ * Version: 4.0.4
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'SWPS_VERSION', '2.3.0' );
+define( 'SWPS_VERSION', '4.0.4' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -90,6 +90,23 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-keyword-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-keywords-page.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-meta-editor.php';
 
+// v3.0 classes.
+require_once SWPS_PLUGIN_DIR . 'includes/class-head-cleanup.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-rss-optimizer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-taxonomy-meta.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-sitemap-manager.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-search-appearance.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-breadcrumbs.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-redirect-manager.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-redirect-admin.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-sitemap-admin.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-post-list-seo.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-link-keyword-engine.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-link-ai-engine.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-internal-links.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-internal-links-admin.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-ai-bots.php';
+
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-analyzer.php';
@@ -100,6 +117,12 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-cron.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-calendar.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-background-processor.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rest-api.php';
+
+// v4.0 admin shell.
+require_once SWPS_PLUGIN_DIR . 'includes/class-user-prefs.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-modules.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-admin-shell.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-dashboard.php';
 
 // WP-CLI commands (only when CLI is available).
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
@@ -140,6 +163,24 @@ final class StrataWP_SEO {
     public SWPS_Keyword_Tracker $keyword_tracker;
     public SWPS_Keywords_Page $keywords_page;
     public SWPS_Meta_Editor $meta_editor;
+    public SWPS_Head_Cleanup $head_cleanup;
+    public SWPS_RSS_Optimizer $rss_optimizer;
+    public SWPS_Taxonomy_Meta $taxonomy_meta;
+    public SWPS_Sitemap_Manager $sitemap_manager;
+    public SWPS_Search_Appearance $search_appearance;
+    public SWPS_Breadcrumbs $breadcrumbs;
+    public SWPS_Redirect_Manager $redirect_manager;
+    public SWPS_Post_List_SEO $post_list_seo;
+    public SWPS_Sitemap_Admin $sitemap_admin;
+    public SWPS_Internal_Links $internal_links;
+    public SWPS_Internal_Links_Admin $internal_links_admin;
+    public SWPS_AI_Bots $ai_bots;
+
+    // v4.0 admin shell.
+    public SWPS_User_Prefs $user_prefs;
+    public SWPS_Modules $modules;
+    public SWPS_Admin_Shell $admin_shell;
+    public SWPS_Dashboard $dashboard;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -172,6 +213,23 @@ final class StrataWP_SEO {
         $this->keyword_tracker = new SWPS_Keyword_Tracker( $this->search_console );
         $this->keywords_page   = new SWPS_Keywords_Page( $this->keyword_tracker );
         $this->meta_editor     = new SWPS_Meta_Editor();
+        $this->head_cleanup    = new SWPS_Head_Cleanup();
+        $this->rss_optimizer   = new SWPS_RSS_Optimizer();
+        $this->taxonomy_meta      = new SWPS_Taxonomy_Meta();
+        $this->sitemap_manager    = new SWPS_Sitemap_Manager();
+        $this->search_appearance  = new SWPS_Search_Appearance();
+        $this->breadcrumbs        = new SWPS_Breadcrumbs();
+        $this->redirect_manager   = new SWPS_Redirect_Manager();
+        $this->sitemap_admin      = new SWPS_Sitemap_Admin();
+
+        if ( is_admin() ) {
+            $this->post_list_seo = new SWPS_Post_List_SEO( $this->content_scorer );
+        }
+        $link_keyword_engine = new SWPS_Link_Keyword_Engine();
+        $link_ai_engine      = new SWPS_Link_AI_Engine( $this->api, $this->cost_tracker );
+        $this->internal_links = new SWPS_Internal_Links( $link_keyword_engine, $link_ai_engine );
+        $this->internal_links_admin = new SWPS_Internal_Links_Admin( $this->internal_links );
+        $this->ai_bots             = new SWPS_AI_Bots();
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
@@ -189,8 +247,17 @@ final class StrataWP_SEO {
         $this->background_processor = new SWPS_Background_Processor();
         $this->rest_api             = new SWPS_REST_API();
 
+        // v4.0 admin shell — only relevant in admin, but instantiate always so REST routes register.
+        $this->user_prefs  = new SWPS_User_Prefs();
+        $this->modules     = new SWPS_Modules();
+        $this->admin_shell = new SWPS_Admin_Shell( $this->user_prefs );
+        $this->dashboard   = new SWPS_Dashboard();
+
         // Register CPT.
         add_action( 'init', [ SWPS_Topic_Queue::class, 'register_post_type' ] );
+
+        // Redirect 404 log pruning cron.
+        add_action( 'swps_prune_404_logs', [ SWPS_Redirect_Manager::class, 'prune_404_logs' ] );
 
         // Admin assets.
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
@@ -229,9 +296,10 @@ final class StrataWP_SEO {
         if ( get_option( 'swps_meta_editor_enabled', 1 ) && ! defined( 'WPSEO_VERSION' ) && ! defined( 'RANK_MATH_VERSION' ) && ! defined( 'AIOSEO_VERSION' ) ) {
             remove_action( 'wp_head', [ SWPS_OpenGraph_Module::class, 'output_meta_tags' ], 5 );
         }
-        add_action( 'init', [ SWPS_Sitemap_Module::class, 'register_rewrite_rules' ] );
-        add_action( 'template_redirect', [ SWPS_Sitemap_Module::class, 'serve_sitemap' ] );
-        add_action( 'publish_post', [ SWPS_Sitemap_Module::class, 'ping_search_engines' ] );
+        // Sitemap generation/serving/pinging now handled by SWPS_Sitemap_Manager.
+        // add_action( 'init', [ SWPS_Sitemap_Module::class, 'register_rewrite_rules' ] );
+        // add_action( 'template_redirect', [ SWPS_Sitemap_Module::class, 'serve_sitemap' ] );
+        // add_action( 'publish_post', [ SWPS_Sitemap_Module::class, 'ping_search_engines' ] );
         add_filter( 'robots_txt', [ SWPS_Robots_Module::class, 'filter_robots_txt' ], 10, 2 );
 
         // SEO Audit AJAX handlers.
@@ -317,10 +385,19 @@ final class StrataWP_SEO {
 
         // Analytics dashboard JS.
         if ( str_contains( $hook, 'swps-analytics' ) || in_array( $hook, [ 'post.php', 'post-new.php' ], true ) ) {
+            if ( str_contains( $hook, 'swps-analytics' ) ) {
+                wp_enqueue_script(
+                    'chartjs',
+                    'https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js',
+                    [],
+                    '4.4.7',
+                    true
+                );
+            }
             wp_enqueue_script(
                 'swps-analytics',
                 SWPS_PLUGIN_URL . 'admin/js/analytics.js',
-                [ 'jquery', 'swps-admin' ],
+                str_contains( $hook, 'swps-analytics' ) ? [ 'jquery', 'swps-admin', 'chartjs' ] : [ 'jquery', 'swps-admin' ],
                 SWPS_VERSION,
                 true
             );
@@ -346,6 +423,20 @@ final class StrataWP_SEO {
                 SWPS_VERSION,
                 true
             );
+        }
+
+        // Search Appearance page JS.
+        if ( 'stratawp-seo_page_swps-search-appearance' === $hook ) {
+            wp_enqueue_script( 'swps-search-appearance', SWPS_PLUGIN_URL . 'admin/js/search-appearance.js', [], SWPS_VERSION, true );
+        }
+
+        // Redirects page JS.
+        if ( 'stratawp-seo_page_swps-redirects' === $hook ) {
+            wp_enqueue_script( 'swps-redirects', SWPS_PLUGIN_URL . 'admin/js/redirects.js', [], SWPS_VERSION, true );
+        }
+
+        if ( 'stratawp-seo_page_swps-sitemaps' === $hook ) {
+            wp_enqueue_script( 'swps-sitemaps', SWPS_PLUGIN_URL . 'admin/js/sitemaps.js', [ 'swps-admin' ], SWPS_VERSION, true );
         }
     }
 
@@ -507,10 +598,84 @@ final class StrataWP_SEO {
 
         $schema = get_post_meta( get_the_ID(), '_swps_faq_schema', true );
 
-        if ( ! empty( $schema ) ) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-built JSON-LD script tag.
-            echo $schema . "\n";
+        $schema = $this->normalize_faq_schema_meta( $schema );
+
+        if ( empty( $schema ) ) {
+            return;
         }
+
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-LD encoded from sanitized schema array.
+        echo '<script type="application/ld+json">'
+           . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
+           . '</script>' . "\n";
+    }
+
+    /**
+     * Normalize legacy FAQ schema meta into a safe schema array.
+     *
+     * Older versions stored a full script tag. Newer generated posts store the
+     * schema array directly so output can always be encoded in one trusted path.
+     */
+    private function normalize_faq_schema_meta( mixed $schema ): array {
+        if ( empty( $schema ) ) {
+            return [];
+        }
+
+        if ( is_string( $schema ) ) {
+            $json = trim( $schema );
+
+            if ( false !== stripos( $json, '<script' ) ) {
+                if ( ! preg_match( '/<script[^>]*type=["\']application\/ld\+json["\'][^>]*>(.*?)<\/script>/is', $json, $matches ) ) {
+                    return [];
+                }
+                $json = html_entity_decode( trim( $matches[1] ), ENT_QUOTES, 'UTF-8' );
+            }
+
+            $schema = json_decode( $json, true );
+        }
+
+        if ( ! is_array( $schema ) || 'FAQPage' !== ( $schema['@type'] ?? '' ) ) {
+            return [];
+        }
+
+        $entities = $schema['mainEntity'] ?? [];
+        if ( ! is_array( $entities ) ) {
+            return [];
+        }
+
+        $normalized = [
+            '@context'   => 'https://schema.org',
+            '@type'      => 'FAQPage',
+            'name'       => sanitize_text_field( wp_strip_all_tags( (string) ( $schema['name'] ?? get_the_title() ) ) ),
+            'mainEntity' => [],
+        ];
+
+        foreach ( $entities as $entity ) {
+            if ( ! is_array( $entity ) ) {
+                continue;
+            }
+
+            $answer = $entity['acceptedAnswer'] ?? [];
+            $text   = is_array( $answer ) ? ( $answer['text'] ?? '' ) : '';
+
+            $question = sanitize_text_field( wp_strip_all_tags( (string) ( $entity['name'] ?? '' ) ) );
+            $text     = sanitize_textarea_field( wp_strip_all_tags( (string) $text ) );
+
+            if ( '' === $question || '' === $text ) {
+                continue;
+            }
+
+            $normalized['mainEntity'][] = [
+                '@type'          => 'Question',
+                'name'           => $question,
+                'acceptedAnswer' => [
+                    '@type' => 'Answer',
+                    'text'  => $text,
+                ],
+            ];
+        }
+
+        return empty( $normalized['mainEntity'] ) ? [] : $normalized;
     }
 
     /**
@@ -834,7 +999,7 @@ function swps_activate(): void {
         'pexels_api_key'     => '',
         'pixabay_api_key'    => '',
         // Gemini image provider reuses google_api_key — no separate key needed.
-        'model'              => 'claude-sonnet-4-5-20250929',
+        'model'              => 'claude-sonnet-4-6',
         'featured_images'    => 1,
         'site_niche'         => '',
         'site_description'   => '',
@@ -894,6 +1059,17 @@ function swps_activate(): void {
         'meta_editor_post_types'       => 'post,page',
         'meta_auto_generate'           => 0,
         'keyword_tracking_frequency'   => 'weekly',
+        // RSS Feed defaults.
+        'rss_before' => '',
+        'rss_after'  => 'The post %%post_link%% appeared first on %%blog_link%%.',
+        // Search Appearance defaults.
+        'title_separator' => '-',
+        // Breadcrumb defaults.
+        'breadcrumbs_enabled'    => 1,
+        'breadcrumbs_separator'  => '&raquo;',
+        'breadcrumbs_home_label' => 'Home',
+        // Redirect defaults.
+        'auto_redirect_slug_change' => 1,
     ];
 
     foreach ( $defaults as $key => $value ) {
@@ -913,6 +1089,15 @@ function swps_activate(): void {
     SWPS_Search_Console::schedule_cron();
     SWPS_Keyword_Tracker::create_tables();
     SWPS_Keyword_Tracker::schedule_cron();
+
+    SWPS_Redirect_Manager::create_tables();
+    SWPS_Link_Keyword_Engine::create_tables();
+    SWPS_Internal_Links::create_tables();
+    SWPS_Internal_Links::schedule_cron();
+
+    if ( ! wp_next_scheduled( 'swps_prune_404_logs' ) ) {
+        wp_schedule_event( time(), 'daily', 'swps_prune_404_logs' );
+    }
 
     if ( get_option( 'swps_cron_enabled' ) ) {
         SWPS_Cron::schedule();
