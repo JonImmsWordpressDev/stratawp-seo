@@ -5,16 +5,13 @@ $schedule    = SWPS_Cron::get_schedule_info();
 $cost_stats  = stratawp_seo()->cost_tracker->get_monthly_stats();
 $templates   = SWPS_Templates::get_options();
 ?>
-<div class="wrap swps-wrap">
-    <div class="swps-page-header">
-        <span class="swps-page-header-orb"></span>
-        <span class="swps-page-header-orb"></span>
-        <h1>
-            <span class="dashicons dashicons-superhero-alt"></span>
-            <?php esc_html_e( 'Generate SEO Content', 'stratawp-seo' ); ?>
-        </h1>
-        <p><?php esc_html_e( 'Create AI-powered SEO-optimized blog posts', 'stratawp-seo' ); ?></p>
-    </div>
+<div class="wrap swps-generate-wrap">
+    <?php
+    $title    = __( 'Generate Content', 'stratawp-seo' );
+    $subtitle = __( 'Create AI-powered, SEO-optimized blog posts. Enter a topic or let the AI pick one based on your site\'s gaps.', 'stratawp-seo' );
+    $actions  = [];
+    require SWPS_PLUGIN_DIR . 'templates/partials/page-header.php';
+    ?>
 
     <?php if ( ! $has_api_key ) : ?>
         <div class="notice notice-error">
