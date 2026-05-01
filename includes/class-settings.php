@@ -19,24 +19,20 @@ class SWPS_Settings {
 
     /**
      * Register admin menu pages.
+     *
+     * v4.0: SWPS_Dashboard now owns the top-level menu (registered at
+     * admin_menu priority 5). Settings registers itself as a submenu with
+     * the new slug 'swps-settings' so /admin.php?page=stratawp-seo lands
+     * on the Dashboard, not Settings. Old bookmarks to ?page=stratawp-seo
+     * continue to resolve — they show Dashboard.
      */
     public function register_menu(): void {
-        add_menu_page(
-            __( 'StrataWP SEO', 'stratawp-seo' ),
-            __( 'StrataWP SEO', 'stratawp-seo' ),
-            'manage_options',
-            'stratawp-seo',
-            [ $this, 'render_settings_page' ],
-            'dashicons-superhero-alt',
-            30
-        );
-
         add_submenu_page(
             'stratawp-seo',
             __( 'Settings', 'stratawp-seo' ),
             __( 'Settings', 'stratawp-seo' ),
             'manage_options',
-            'stratawp-seo',
+            'swps-settings',
             [ $this, 'render_settings_page' ]
         );
 

@@ -20,7 +20,7 @@ $templates   = SWPS_Templates::get_options();
         <div class="notice notice-error">
             <p><?php printf(
                 __( 'You need to <a href="%s">add your AI provider API key</a> before generating content.', 'stratawp-seo' ),
-                esc_url( admin_url( 'admin.php?page=stratawp-seo' ) )
+                esc_url( admin_url( 'admin.php?page=swps-settings' ) )
             ); ?></p>
         </div>
     <?php endif; ?>
@@ -151,7 +151,7 @@ $templates   = SWPS_Templates::get_options();
                     <strong><?php esc_html_e( 'Inactive', 'stratawp-seo' ); ?></strong>
                     <p><?php printf(
                         __( 'Enable automated posting in <a href="%s">Settings</a>.', 'stratawp-seo' ),
-                        esc_url( admin_url( 'admin.php?page=stratawp-seo' ) )
+                        esc_url( admin_url( 'admin.php?page=swps-settings' ) )
                     ); ?></p>
                 </div>
             <?php endif; ?>
