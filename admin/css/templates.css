@@ -45,9 +45,9 @@ body.swps-has-shell .swps-settings-tabs .nav-tab:focus {
 }
 body.swps-has-shell .swps-settings-tabs .nav-tab-active,
 body.swps-has-shell .swps-settings-tabs .nav-tab-active:focus {
-    background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(167, 139, 250, 0.15));
+    background: linear-gradient(135deg, rgba(217, 119, 6, 0.15), rgba(251, 191, 36, 0.15));
     color: var(--swps-text-primary);
-    border-color: rgba(167, 139, 250, 0.3);
+    border-color: rgba(251, 191, 36, 0.3);
     font-weight: 600;
 }
 
@@ -312,7 +312,7 @@ body.swps-has-shell .widefat.striped > tbody > :nth-child(odd) {
     color: var(--swps-text-primary);
 }
 .swps-filter-chip.is-on {
-    background: rgba(56, 189, 248, 0.10);
+    background: rgba(217, 119, 6, 0.10);
     color: var(--swps-accent-1);
 }
 

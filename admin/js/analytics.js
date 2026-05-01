@@ -130,16 +130,16 @@
         var views = dailyViews.map(function (d) { return parseInt(d.views) || 0; });
         var clicks = gscDaily.map(function (d) { return parseInt(d.clicks) || 0; });
 
-        // v4.0 — read theme from <html data-swps-theme>; pick palette accordingly.
+        // v4.0.4 — gold/black palette, read theme from <html data-swps-theme>.
         var theme = document.documentElement.getAttribute('data-swps-theme') || 'dark';
         var pal = theme === 'light'
-            ? { line1: '#0284C7', line2: '#7C3AED', grid: '#E2E8F0', tick: '#475569', tip: '#0F172A' }
-            : { line1: '#38BDF8', line2: '#A78BFA', grid: 'rgba(255,255,255,0.05)', tick: '#94A3B8', tip: '#1E293B' };
+            ? { line1: '#B45309', line2: '#D97706', grid: '#E5E7EB', tick: '#4B5563', tip: '#0F172A' }
+            : { line1: '#FBBF24', line2: '#D97706', grid: 'rgba(255,255,255,0.05)', tick: '#94A3B8', tip: '#1E293B' };
 
         var ctx = canvas.getContext('2d');
         var gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        gradient.addColorStop(0, theme === 'light' ? 'rgba(2, 132, 199, 0.10)' : 'rgba(56, 189, 248, 0.20)');
-        gradient.addColorStop(1, theme === 'light' ? 'rgba(2, 132, 199, 0)'   : 'rgba(56, 189, 248, 0)');
+        gradient.addColorStop(0, theme === 'light' ? 'rgba(180, 83, 9, 0.10)' : 'rgba(251, 191, 36, 0.22)');
+        gradient.addColorStop(1, theme === 'light' ? 'rgba(180, 83, 9, 0)'   : 'rgba(251, 191, 36, 0)');
 
         var datasets = [{
             label: 'Page Views',

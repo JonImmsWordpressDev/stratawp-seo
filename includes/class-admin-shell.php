@@ -109,10 +109,18 @@ class SWPS_Admin_Shell {
             return;
         }
 
+        // v4.0.4: Poppins (heading) + Open Sans (body) — match jonimms.com.
+        wp_enqueue_style(
+            'swps-fonts',
+            'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap',
+            [],
+            SWPS_VERSION
+        );
+
         wp_enqueue_style(
             'swps-tokens',
             SWPS_PLUGIN_URL . 'admin/css/tokens.css',
-            [],
+            [ 'swps-fonts' ],
             SWPS_VERSION
         );
 
@@ -153,11 +161,11 @@ class SWPS_Admin_Shell {
     }
 
     /**
-     * Render top bar + horizontal nav as siblings inside #wpcontent.
+     * Render top bar inside #wpcontent.
      *
-     * v4.0.2: switched from a left vertical sidebar to a horizontal
-     * top-nav row. The previous sidebar duplicated WP's own StrataWP
-     * submenu and ate ~220px of horizontal space.
+     * v4.0.4: dropped the in-shell nav entirely. WP's native admin
+     * sidebar + StrataWP submenu is the only navigation — no
+     * duplication, no horizontal scroll issues.
      */
     public function render_chrome(): void {
         if ( ! self::is_own_page() ) {
@@ -165,7 +173,6 @@ class SWPS_Admin_Shell {
         }
         $page = $_GET['page'] ?? 'stratawp-seo';
         $this->render_top_bar( $page );
-        $this->render_top_nav( $page );
     }
 
     /**

@@ -427,7 +427,7 @@ body.swps-has-shell #screen-meta-links {
     box-shadow: var(--swps-glow-focus);
 }
 .swps-shell-side-item.is-active {
-    background: rgba(56, 189, 248, 0.08);
+    background: rgba(217, 119, 6, 0.10);
     color: var(--swps-accent-1);
     border-left-color: var(--swps-accent-1);
     padding-left: 10px;
@@ -522,8 +522,8 @@ body.swps-has-shell .swps-page-header::after {
     background: var(--swps-accent-grad);
 }
 body.swps-has-shell .swps-page-header .swps-page-header-orb:first-of-type {
-    background: rgba(56, 189, 248, 0.10);
+    background: rgba(217, 119, 6, 0.10);
 }
 body.swps-has-shell .swps-page-header .swps-page-header-orb:last-of-type {
-    background: rgba(167, 139, 250, 0.08);
+    background: rgba(251, 191, 36, 0.08);
 }
