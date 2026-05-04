@@ -1,5 +1,24 @@
 # StrataWP SEO
 
+<p align="center">
+  <a href="https://github.com/JonImmsWordpressDev/stratawp-seo/releases/latest/download/stratawp-seo.zip">
+    <img alt="Download the plugin (latest release)" src="https://img.shields.io/badge/⬇%20Download%20the%20plugin-Install%20on%20WordPress-10b981?style=for-the-badge&labelColor=059669" />
+  </a>
+</p>
+
+<p align="center">
+  <sub>One-click download of the latest production-ready zip. Always points to the most recent release —
+  rebuilt automatically on every push.</sub>
+</p>
+
+<p align="center">
+  <a href="https://github.com/JonImmsWordpressDev/stratawp-seo/releases">All releases</a> ·
+  <a href="#installation">Install instructions</a> ·
+  <a href="#how-to-guide-page-by-page">How-to guide</a>
+</p>
+
+---
+
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, a per-post meta editor, **Local SEO** (LocalBusiness schema with NAP and opening hours), **Image SEO** (auto-alt + filename sanitization + lazy-load), **Crawlers & Files** (in-admin editor for /llms.txt and /robots.txt), and **Backlinks** (manual/CSV-import tracker with daily health monitoring) — on autopilot or on demand.
 
 [![Version](https://img.shields.io/badge/version-4.2.2-blue.svg)]()
