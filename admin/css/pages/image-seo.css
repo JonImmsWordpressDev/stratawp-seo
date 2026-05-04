@@ -1,0 +1,30 @@
+/* Image SEO settings page. */
+
+.swps-image-seo-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+@media (max-width: 900px) {
+    .swps-image-seo-stats { grid-template-columns: 1fr; }
+}
+
+.swps-image-seo-form .swps-card,
+.swps-card {
+    background: var(--swps-surface, #fff);
+    border: 1px solid var(--swps-border, #e2e4e9);
+    border-radius: 10px;
+    padding: 18px 20px;
+}
+
+.swps-image-seo-form .swps-card h2,
+.swps-card > h2:first-child {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    color: var(--swps-text-muted, #6b7280);
+    margin-bottom: 12px;
+}

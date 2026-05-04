@@ -21,6 +21,9 @@ $issues          = $data['top_issues'] ?? [];
 $top_queries     = $data['top_queries'] ?? [];
 $auto_q          = $data['auto_optimize_queue'] ?? [];
 $competitors     = $data['competitors'] ?? [];
+$backlinks_data  = $data['backlinks'] ?? [ 'stats' => [], 'recent' => [] ];
+$bl_stats        = (array) ( $backlinks_data['stats']  ?? [] );
+$bl_recent       = (array) ( $backlinks_data['recent'] ?? [] );
 $modules         = $data['modules'] ?? [];
 
 $score           = (int) ( $health['score'] ?? 0 );
@@ -111,12 +114,29 @@ $welcome_msg = sprintf(
 
         <div class="swps-tile">
             <div class="swps-tile-h"><?php esc_html_e( 'Backlinks', 'stratawp-seo' ); ?></div>
-            <div class="swps-tile-stat" style="font-size:18px;-webkit-text-fill-color:var(--swps-text-muted);background:none;color:var(--swps-text-muted)">
-                <?php esc_html_e( '— Connect a source', 'stratawp-seo' ); ?>
-            </div>
-            <div class="swps-tile-trend" style="color:var(--swps-text-faint)">
-                <?php esc_html_e( 'Ahrefs / Moz / SE Ranking — coming soon', 'stratawp-seo' ); ?>
-            </div>
+            <?php if ( (int) ( $bl_stats['total'] ?? 0 ) > 0 ) : ?>
+                <div class="swps-tile-stat"><?php echo number_format( (int) $bl_stats['total'] ); ?></div>
+                <div class="swps-tile-trend" style="color:var(--swps-text-muted)">
+                    <?php
+                    printf(
+                        /* translators: 1: live count, 2: lost count, 3: unique domains */
+                        esc_html__( '%1$d live · %2$d lost · %3$d domains', 'stratawp-seo' ),
+                        (int) ( $bl_stats['live'] ?? 0 ),
+                        (int) ( $bl_stats['lost'] ?? 0 ),
+                        (int) ( $bl_stats['unique_domains'] ?? 0 )
+                    );
+                    ?>
+                </div>
+            <?php else : ?>
+                <div class="swps-tile-stat" style="font-size:18px;-webkit-text-fill-color:var(--swps-text-muted);background:none;color:var(--swps-text-muted)">
+                    <?php esc_html_e( '— Add some', 'stratawp-seo' ); ?>
+                </div>
+                <div class="swps-tile-trend" style="color:var(--swps-text-faint)">
+                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=swps-backlinks' ) ); ?>" style="color:inherit;text-decoration:underline">
+                        <?php esc_html_e( 'Track inbound links →', 'stratawp-seo' ); ?>
+                    </a>
+                </div>
+            <?php endif; ?>
         </div>
 
         <div class="swps-tile">
@@ -304,10 +324,38 @@ $welcome_msg = sprintf(
         </div>
 
         <div class="swps-tile">
-            <div class="swps-tile-h"><?php esc_html_e( 'Backlinks', 'stratawp-seo' ); ?></div>
-            <p style="color:var(--swps-text-muted);font-size:12px;margin:4px 0 0">
-                <?php esc_html_e( 'Connect Ahrefs / Moz / SE Ranking to track backlinks. Coming after a paid data partner is wired up.', 'stratawp-seo' ); ?>
-            </p>
+            <div class="swps-tile-h" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+                <span><?php esc_html_e( 'Backlinks', 'stratawp-seo' ); ?></span>
+                <a href="<?php echo esc_url( admin_url( 'admin.php?page=swps-backlinks' ) ); ?>"
+                   style="color:var(--swps-accent-1);font-size:11px;font-weight:600;text-decoration:none">
+                    <?php esc_html_e( 'Manage →', 'stratawp-seo' ); ?>
+                </a>
+            </div>
+            <?php if ( empty( $bl_recent ) ) : ?>
+                <p style="color:var(--swps-text-muted);font-size:12px;margin:4px 0 0">
+                    <?php esc_html_e( 'No backlinks tracked yet. Add manually or paste a CSV from Google Search Console (Top linking sites).', 'stratawp-seo' ); ?>
+                </p>
+            <?php else : ?>
+                <div class="swps-dash-list">
+                    <?php foreach ( $bl_recent as $bl ) :
+                        $status_color = 'live' === $bl['status'] ? '#10b981' : ( 'lost' === $bl['status'] ? '#f59e0b' : ( 'broken' === $bl['status'] ? '#ef4444' : '#6b7280' ) );
+                    ?>
+                        <div class="swps-dash-list-row">
+                            <div class="swps-dash-list-main">
+                                <div class="swps-dash-list-title"><?php echo esc_html( $bl['label'] ); ?></div>
+                                <div class="swps-dash-list-sub">
+                                    <span style="color:<?php echo esc_attr( $status_color ); ?>;font-weight:600;text-transform:uppercase;font-size:10px;letter-spacing:.05em">
+                                        <?php echo esc_html( $bl['status'] ); ?>
+                                    </span>
+                                    <?php if ( ! empty( $bl['when'] ) ) : ?>
+                                        · <?php echo esc_html( human_time_diff( strtotime( $bl['when'] ) ) . ' ago' ); ?>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
