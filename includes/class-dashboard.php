@@ -101,6 +101,7 @@ class SWPS_Dashboard {
             'top_queries'        => $this->safe_get_top_gsc_queries(),
             'auto_optimize_queue' => [], // Phase 7 fills in.
             'competitors'        => $this->safe_get_competitor_summary(),
+            'backlinks'          => $this->safe_get_backlinks_summary(),
             'modules'            => $this->get_modules_for_grid(),
         ];
     }
@@ -260,6 +261,21 @@ class SWPS_Dashboard {
             return $competitors->get_dashboard_summary( 3 );
         } catch ( \Throwable $e ) {
             return [];
+        }
+    }
+
+    private function safe_get_backlinks_summary(): array {
+        try {
+            $bl = stratawp_seo()->backlinks;
+            return [
+                'stats'  => $bl->get_stats(),
+                'recent' => $bl->get_dashboard_recent( 3 ),
+            ];
+        } catch ( \Throwable $e ) {
+            return [
+                'stats'  => [ 'total' => 0, 'live' => 0, 'lost' => 0, 'broken' => 0, 'new_30d' => 0, 'lost_30d' => 0, 'unique_domains' => 0 ],
+                'recent' => [],
+            ];
         }
     }
 

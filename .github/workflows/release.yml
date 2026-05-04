@@ -1,0 +1,88 @@
+name: Build & release plugin zip
+
+# Builds a production-ready WordPress plugin zip and publishes it as a GitHub
+# Release whenever the version in stratawp-seo.php changes.
+#
+# The README links to:
+#   releases/latest/download/stratawp-seo.zip
+# which always resolves to the asset attached to the most recent release.
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+    paths:
+      - 'stratawp-seo.php'
+      - 'includes/**'
+      - 'admin/**'
+      - 'templates/**'
+      - 'css/**'
+      - 'readme.txt'
+      - 'uninstall.php'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Read plugin version from stratawp-seo.php
+        id: ver
+        run: |
+          VERSION=$(grep -E "^[[:space:]]*\*[[:space:]]*Version:" stratawp-seo.php | head -1 | awk -F': ' '{print $2}' | tr -d ' \r')
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not read Version: header from stratawp-seo.php"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Plugin version: $VERSION"
+
+      - name: Check if release already exists for this version
+        id: exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "v${{ steps.ver.outputs.version }}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release v${{ steps.ver.outputs.version }} already exists — skipping."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build production zip
+        if: steps.exists.outputs.exists == 'false'
+        run: |
+          set -e
+          mkdir -p build
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='docs' \
+            --exclude='screenshots' \
+            --exclude='build' \
+            --exclude='node_modules' \
+            --exclude='*.zip' \
+            --exclude='AGENTS.md' \
+            --exclude='CLAUDE.md' \
+            --exclude='.DS_Store' \
+            --exclude='**/.DS_Store' \
+            ./ build/stratawp-seo/
+          (cd build && zip -rq stratawp-seo.zip stratawp-seo)
+          ls -lh build/stratawp-seo.zip
+
+      - name: Publish GitHub Release
+        if: steps.exists.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: v${{ steps.ver.outputs.version }}
+          files: build/stratawp-seo.zip
+          generate_release_notes: true
+          make_latest: true

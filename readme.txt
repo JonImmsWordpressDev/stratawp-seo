@@ -4,11 +4,11 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.1.7
+Stable tag: 4.2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, structured data, analytics, keyword tracking, meta editing, and technical SEO.
+AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, structured data, analytics, keyword tracking, meta editing, technical SEO, Local SEO (LocalBusiness schema with NAP and opening hours), Image SEO (auto-alt + filename sanitization + lazy-load), in-admin /llms.txt and /robots.txt editors, and a manual/CSV-import backlink tracker with daily health monitoring.
 
 == Description ==
 
@@ -127,6 +127,46 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 * **robots.txt injection** — allowed bots get explicit Allow rules; unchecked known bots get Disallow
 * **Dynamic llms.txt** — served at /llms.txt, built from your site description and posts/pages/categories with one-line summaries
 
+= Local SEO (v4.2) =
+
+* **30+ business types** — Restaurant, Plumber, Dentist, Hotel, RealEstateAgent, Attorney, BeautySalon, etc.
+* **NAP fields** — name, address, phone, email, price range
+* **Opening hours per day** with "Closed" tick for off-days
+* **Geo coordinates** — latitude/longitude for `GeoCoordinates` schema
+* **Area served** — newline-separated cities/regions for service-area businesses
+* **Google Place ID** — emits a `hasMap` link
+* **LocalBusiness JSON-LD** on the homepage with `OpeningHoursSpecification`, `PostalAddress`, `GeoCoordinates`
+* **Schema preview** card on the settings page
+* Defers automatically to Yoast / RankMath / AIOSEO when those are active
+
+= Image SEO (v4.2) =
+
+* **Auto-alt on upload** — Heuristic mode (free, derives from filename + parent post title) or AI mode (uses your configured provider; falls back on error)
+* **Filename sanitization** — strips device prefixes (IMG_, DSC_, Screenshot), lowercases, dash-separates
+* **Lazy-loading enforcement** — adds `loading="lazy" decoding="async"` to any post-content image still missing it
+* **Bulk fix tool** — processes the existing media library in 20-image AJAX batches with live progress
+* **Stats tiles** — total images, missing alt, % covered
+
+= Crawlers & Files (v4.2) =
+
+* **/llms.txt editor** — Auto (StrataWP-generated) or Custom (your markdown served verbatim)
+* **/robots.txt editor** — Auto, Append (auto + your rules), or Replace (your content only)
+* **Side-by-side editor + auto preview** — one-click "copy auto into editor"
+* **Physical-file warning** — detects a real `robots.txt` in the site root and warns it would override the dynamic version
+* **Hooks into the existing AI-bot allowlist** — Append mode preserves the StrataWP-managed AI bot rules
+
+= Backlinks (v4.2) =
+
+* **Manual + CSV import** — add backlinks one at a time, or paste/upload a CSV (auto-detects Google Search Console "Top linking sites" exports)
+* **Daily WP-cron health monitoring** — re-fetches every source page once a day; classifies as Live, Lost, or Broken
+* **Real anchor text + first/last seen** captured on every successful verify
+* **AJAX bulk verify** — runs in 25-row batches with progress
+* **Per-row re-verify and delete**
+* **CSV export**
+* **Stats tiles** — total tracked, live, lost, broken, +30d gained, 30d lost, unique referring domains
+* **Dashboard widget** — live count + 3 most-recently-verified backlinks with status pills
+* No paid backlink index required — tracks the list you give it
+
 = AI Auto-Optimize (v4.1) =
 
 * **Re-score all published posts** — chunked scanning (10 posts per batch) with live progress; works on busy sites without hitting PHP timeouts
@@ -211,6 +251,18 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.2.2 =
+* New: Backlinks page (Insights → Backlinks). Manual + CSV-import backlink tracker. Daily WP-cron classifies each link as Live, Lost, or Broken; captures real anchor text and first/last seen dates. AJAX bulk-verify in 25-row batches, per-row re-verify and delete, CSV import (auto-detects Google Search Console "Top linking sites" exports), CSV export. Backed by a custom DB table created via dbDelta with a runtime upgrade path so existing installs get the table without re-activation. Replaces the previous "coming soon" placeholder with a real, working feature.
+* Dashboard tiles light up with live backlink stats (total / live / lost / domains, plus 3 most-recently-verified).
+
+= 4.2.1 =
+* New: Crawlers & Files page (SEO → Crawlers & Files). Edit /llms.txt (Auto / Custom modes) and /robots.txt (Auto / Append / Replace modes) directly from the admin. Side-by-side editor + auto preview, one-click "copy auto into editor", warning when a physical robots.txt would override the dynamic version. Hooks into the existing pipeline so the AI-bot allowlist is preserved in Append mode.
+
+= 4.2.0 =
+* New: Local SEO page (SEO → Local SEO). LocalBusiness JSON-LD output for brick-and-mortar and service-area sites. 30+ business types (Restaurant, Plumber, Dentist, Hotel, etc.), full NAP fields, opening hours per day, geo coordinates, area served, Google Place ID. Live schema preview. Defers to Yoast / RankMath / AIOSEO when active.
+* New: Image SEO page (SEO → Image SEO). Auto-alt on upload (Heuristic free mode or AI mode using the configured provider), device-prefix-stripping filename sanitization, lazy-loading enforcement on the_content, bulk-fix tool for the existing media library with batched AJAX progress, library coverage stats.
+* Modules registry: Local SEO and Image SEO unlocked with NEW badges; Backlinks added as a "soon" entry; WooCommerce SEO retained as the only remaining "soon" module.
 
 = 4.1.7 =
 * Critical fix: render functions for the Auto-Optimize queue and Competitors list moved to the top of their templates. PHP doesn't hoist conditionally-declared functions, so the prior placement caused a fatal error ("There has been a critical error") once any post had a cached score.
@@ -336,6 +388,15 @@ No. GSC integration is optional. The on-site analytics works entirely without an
 * Scheduled publishing
 
 == Upgrade Notice ==
+
+= 4.2.2 =
+Adds the Backlinks tracker (Insights → Backlinks) — manual + CSV-import with daily health monitoring (Live / Lost / Broken). Imports the Google Search Console "Top linking sites" CSV directly. Runs DB migration on first load.
+
+= 4.2.1 =
+New Crawlers & Files page lets you edit /llms.txt and /robots.txt from the admin with auto/custom modes and side-by-side preview.
+
+= 4.2.0 =
+Two new modules: Local SEO (LocalBusiness JSON-LD with NAP, hours, geo, area served) and Image SEO (auto-alt, filename sanitization, lazy-load, bulk-fix tool). No breaking changes.
 
 = 4.1.7 =
 Critical fix for Auto-Optimize and Competitors pages — fatal error when displaying queue rows. Strongly recommended.

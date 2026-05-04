@@ -1,0 +1,26 @@
+/* Local SEO settings page — minimal overrides on top of components/templates. */
+
+.swps-local-seo-form .swps-card {
+    background: var(--swps-surface, #fff);
+    border: 1px solid var(--swps-border, #e2e4e9);
+    border-radius: 10px;
+    padding: 18px 20px;
+}
+
+.swps-local-seo-form .swps-card h2 {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    color: var(--swps-text-muted, #6b7280);
+    margin-bottom: 12px;
+}
+
+.swps-local-seo-form .form-table th {
+    width: 200px;
+}
+
+.swps-local-seo-form input[type="time"] {
+    padding: 4px 6px;
+    font-family: inherit;
+}

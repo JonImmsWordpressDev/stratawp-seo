@@ -51,10 +51,14 @@ class SWPS_Modules {
         $this->register( 'auto-optimize',  [ 'name' => __( 'AI Auto-Optimize', 'stratawp-seo' ),       'desc' => __( 'Auto-refresh old posts: kw in H2, first paragraph, schema, alt text.', 'stratawp-seo' ), 'icon' => '↻', 'group' => 'content',  'default_on' => false, 'badge' => 'ai',  'settings_url' => admin_url( 'admin.php?page=swps-auto-optimize' ) ] );
         $this->register( 'competitors',    [ 'name' => __( 'Competitors', 'stratawp-seo' ),            'desc' => __( 'Track sites, schema, keyword gaps, content velocity.', 'stratawp-seo' ),         'icon' => '◎', 'group' => 'insights', 'default_on' => false, 'badge' => 'new', 'settings_url' => admin_url( 'admin.php?page=swps-competitors' ) ] );
 
+        // v4.2 — newly shipped modules.
+        $this->register( 'local-seo',      [ 'name' => __( 'Local SEO', 'stratawp-seo' ),              'desc' => __( 'NAP, opening hours, LocalBusiness JSON-LD for local + service-area sites.', 'stratawp-seo' ), 'icon' => '◉', 'group' => 'seo', 'default_on' => false, 'badge' => 'new', 'settings_url' => admin_url( 'admin.php?page=swps-local-seo' ) ] );
+        $this->register( 'image-seo',      [ 'name' => __( 'Image SEO', 'stratawp-seo' ),              'desc' => __( 'AI auto-alt, filename sanitization, lazy-loading, image sitemap.', 'stratawp-seo' ),     'icon' => '◈', 'group' => 'seo', 'default_on' => false, 'badge' => 'new', 'settings_url' => admin_url( 'admin.php?page=swps-image-seo' ) ] );
+
+        $this->register( 'backlinks',      [ 'name' => __( 'Backlinks', 'stratawp-seo' ),              'desc' => __( 'Manual + CSV-import backlink tracker with daily health monitoring.', 'stratawp-seo' ), 'icon' => '⇄', 'group' => 'insights', 'default_on' => false, 'badge' => 'new', 'settings_url' => admin_url( 'admin.php?page=swps-backlinks' ) ] );
+
         // Coming soon — disabled, not user-toggleable.
-        $this->register( 'local-seo',      [ 'name' => __( 'Local SEO', 'stratawp-seo' ),              'desc' => __( 'Google Business profile, NAP, LocalBusiness schema.', 'stratawp-seo' ),         'icon' => '◉', 'group' => 'seo',      'default_on' => false, 'badge' => 'soon', 'settings_url' => '', 'locked' => true ] );
         $this->register( 'woocommerce',    [ 'name' => __( 'WooCommerce SEO', 'stratawp-seo' ),        'desc' => __( 'Product schema, category SEO, OG for variations.', 'stratawp-seo' ),            'icon' => '⌥', 'group' => 'seo',      'default_on' => false, 'badge' => 'soon', 'settings_url' => '', 'locked' => true ] );
-        $this->register( 'image-seo',      [ 'name' => __( 'Image SEO', 'stratawp-seo' ),              'desc' => __( 'Auto-alt, auto-rename, compression, WebP.', 'stratawp-seo' ),                  'icon' => '◈', 'group' => 'seo',      'default_on' => false, 'badge' => 'soon', 'settings_url' => '', 'locked' => true ] );
 
         /**
          * Fires after default modules are registered. Use this to add custom modules.

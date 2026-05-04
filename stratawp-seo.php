@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.1.7
+ * Version: 4.2.2
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'SWPS_VERSION', '4.1.7' );
+define( 'SWPS_VERSION', '4.2.2' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -95,6 +95,18 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-auto-optimize.php';
 
 // Competitors (v4.1).
 require_once SWPS_PLUGIN_DIR . 'includes/class-competitors.php';
+
+// Local SEO (v4.2).
+require_once SWPS_PLUGIN_DIR . 'includes/class-local-seo.php';
+
+// Image SEO (v4.2).
+require_once SWPS_PLUGIN_DIR . 'includes/class-image-seo.php';
+
+// Crawlers & Files (v4.2) — edit /llms.txt and /robots.txt.
+require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-files.php';
+
+// Backlinks (v4.2.2) — manual/CSV-import backlink tracker with health monitor.
+require_once SWPS_PLUGIN_DIR . 'includes/class-backlinks.php';
 
 // v3.0 classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-head-cleanup.php';
@@ -183,6 +195,10 @@ final class StrataWP_SEO {
     public SWPS_AI_Bots $ai_bots;
     public SWPS_Auto_Optimize $auto_optimize;
     public SWPS_Competitors $competitors;
+    public SWPS_Local_SEO $local_seo;
+    public SWPS_Image_SEO $image_seo;
+    public SWPS_Crawl_Files $crawl_files;
+    public SWPS_Backlinks $backlinks;
 
     // v4.0 admin shell.
     public SWPS_User_Prefs $user_prefs;
@@ -240,6 +256,10 @@ final class StrataWP_SEO {
         $this->ai_bots             = new SWPS_AI_Bots();
         $this->auto_optimize       = new SWPS_Auto_Optimize( $this->content_scorer );
         $this->competitors         = new SWPS_Competitors();
+        $this->local_seo           = new SWPS_Local_SEO();
+        $this->image_seo           = new SWPS_Image_SEO();
+        $this->crawl_files         = new SWPS_Crawl_Files();
+        $this->backlinks           = new SWPS_Backlinks();
         $this->settings  = new SWPS_Settings();
         $this->analyzer  = new SWPS_Analyzer( $this->cache_manager );
         $this->generator = new SWPS_Generator(
@@ -1105,6 +1125,9 @@ function swps_activate(): void {
     SWPS_Internal_Links::create_tables();
     SWPS_Internal_Links::schedule_cron();
 
+    SWPS_Backlinks::create_tables();
+    SWPS_Backlinks::schedule_cron();
+
     if ( ! wp_next_scheduled( 'swps_prune_404_logs' ) ) {
         wp_schedule_event( time(), 'daily', 'swps_prune_404_logs' );
     }
@@ -1125,6 +1148,7 @@ function swps_deactivate(): void {
     SWPS_Search_Console::unschedule_cron();
     SWPS_Keyword_Tracker::unschedule_cron();
     SWPS_Competitors::unschedule_cron();
+    SWPS_Backlinks::unschedule_cron();
     flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'swps_deactivate' );

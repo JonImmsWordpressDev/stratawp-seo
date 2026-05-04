@@ -1,8 +1,27 @@
 # StrataWP SEO
 
-**AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, and a per-post meta editor — on autopilot or on demand.
+<p align="center">
+  <a href="https://github.com/JonImmsWordpressDev/stratawp-seo/releases/latest/download/stratawp-seo.zip">
+    <img alt="Download the plugin (latest release)" src="https://img.shields.io/badge/⬇%20Download%20the%20plugin-Install%20on%20WordPress-10b981?style=for-the-badge&labelColor=059669" />
+  </a>
+</p>
 
-[![Version](https://img.shields.io/badge/version-4.1.7-blue.svg)]()
+<p align="center">
+  <sub>One-click download of the latest production-ready zip. Always points to the most recent release —
+  rebuilt automatically on every push.</sub>
+</p>
+
+<p align="center">
+  <a href="https://github.com/JonImmsWordpressDev/stratawp-seo/releases">All releases</a> ·
+  <a href="#installation">Install instructions</a> ·
+  <a href="#how-to-guide-page-by-page">How-to guide</a>
+</p>
+
+---
+
+**AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, a per-post meta editor, **Local SEO** (LocalBusiness schema with NAP and opening hours), **Image SEO** (auto-alt + filename sanitization + lazy-load), **Crawlers & Files** (in-admin editor for /llms.txt and /robots.txt), and **Backlinks** (manual/CSV-import tracker with daily health monitoring) — on autopilot or on demand.
+
+[![Version](https://img.shields.io/badge/version-4.2.2-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -166,6 +185,46 @@ It's designed to **replace** Yoast/RankMath/AIOSEO if you want to, or **coexist*
 - **One-click apply** — only accepted edits are applied; the post is automatically re-scored after
 - **Threshold control** — surface only posts below your score floor (default 75)
 - **Per-row dismiss** — hide posts you don't want optimized
+
+### Local SEO (v4.2) ★
+
+- **30+ business types** — LocalBusiness, Restaurant, Plumber, Dentist, Hotel, RealEstateAgent, Attorney, AccountingService, BeautySalon, etc.
+- **NAP fields** — name, address (street/city/region/postal/country), phone, email, price range
+- **Opening hours per day** — 24-hour-format inputs, with a "Closed" tick for off-days
+- **Geo coordinates** — latitude/longitude for `GeoCoordinates` schema
+- **Area served** — newline-separated list of cities/regions for service-area businesses (plumbers, electricians)
+- **Google Place ID** — emits a `hasMap` link when set
+- **LocalBusiness JSON-LD** on the homepage with `OpeningHoursSpecification`, `PostalAddress`, `GeoCoordinates`, and the existing `swps_schema_logo` + `swps_schema_social_profiles` woven in as `image`/`logo`/`sameAs`
+- **Schema preview** — live JSON-LD preview on the settings page so you can validate before publishing
+- **Coexists with Yoast / RankMath / AIOSEO** — defers automatically when those plugins are active
+
+### Image SEO (v4.2) ★
+
+- **Auto-alt on upload** — heuristic mode (free, instant — derives alt from filename + parent post title) or AI mode (uses your configured AI provider for a one-line description; falls back to heuristic on error)
+- **Filename sanitization** — strips device prefixes (`IMG_`, `DSC_`, `Screenshot`), lowercases, dash-separates, on the way into the Media Library
+- **Lazy-loading enforcement** — adds `loading="lazy" decoding="async"` to any post-content `<img>` still missing it
+- **Bulk fix tool** — page-level button that processes the existing library in 20-image AJAX batches with live progress
+- **Stats tiles** — total images, missing alt, % covered
+
+### Crawlers & Files (v4.2) ★
+
+- **Edit /llms.txt** — toggle between **Auto** (StrataWP-generated default built from posts/pages/categories) and **Custom** (paste your own markdown, served verbatim)
+- **Edit /robots.txt** — toggle between **Auto** (WP default + AI-bot allow/disallow), **Append** (auto + your extra rules), or **Replace** (your content only)
+- **Side-by-side editor + preview** — write your version on the left, see the auto-generated default on the right; one-click "copy auto into editor" to use the default as a starting point
+- **Physical-file warning** — detects `robots.txt` in the site root and warns that it overrides the dynamic version
+- **Hooks into the existing pipeline** — custom mode rides the existing `swps_llms_txt_content` filter; robots filter runs at priority 200 so AI-bot rules added at priority 100 are preserved in Append mode
+
+### Backlinks (v4.2) ★
+
+- **Manual + CSV import** — add backlinks one at a time, or paste/upload a CSV (one URL per line, source/target/anchor CSV, or Google Search Console "Top linking sites" export — all auto-detected)
+- **Daily health monitoring** — WP-cron re-fetches every source page once a day, parses anchors, classifies as **Live** / **Lost** / **Broken** (HTTP error)
+- **Real anchor text + first/last seen** — captured on every successful verify
+- **AJAX bulk verify** — "Verify all" runs in 25-row batches with live progress
+- **Per-row re-verify and delete**
+- **CSV export** — full table export for offline analysis or to import into another tool
+- **Stats tiles** — total tracked, live, lost, broken, +30d gained, 30d lost, unique referring domains
+- **Dashboard widget** — live count + 3 most-recently-verified backlinks with status pills
+- **No paid index required** — tracks links you give it; pair with the GSC "Top linking sites" CSV for a real-world starting set
 
 ### Competitor Watch (v4.1) ★
 
@@ -661,6 +720,90 @@ Tracks competitor sites for content velocity, schema diff, title/H1 changes.
 
 **Limit:** 10 competitors. **Storage:** last 12 snapshots per competitor (~12 days of daily history). **Out of scope:** keyword-gap analysis (needs paid backlink API).
 
+### Local SEO (`SEO → Local SEO`) ★ v4.2
+
+LocalBusiness JSON-LD output for brick-and-mortar and service-area sites. Lives at `admin.php?page=swps-local-seo`.
+
+**How to use it:**
+1. Tick **Enable Local SEO schema output** at the top of the page. Schema only emits when this is on AND a business name + city are filled.
+2. Pick the most specific **Business type** that matches your business — Restaurant, Plumber, Dentist, Hotel, etc. (defaults to generic LocalBusiness). The picker covers 30+ schema.org sub-types.
+3. Fill **Business identity**: name, phone, email, price range (`$`/`$$`/`$$$`/`$$$$` or a range like `$10-30`).
+4. Fill **Address** fields: street, city, state/region, postal code, country (two-letter ISO preferred — `US`, `GB`, `AU`).
+5. **Map & geo (optional but recommended for ranking):** open Google Maps, right-click your location, click the lat/lng to copy, paste into the Latitude/Longitude fields. Optionally paste your **Google Place ID** to emit a `hasMap` link.
+6. **Opening hours:** for each day, set Open and Close in 24-hour format (`09:00`, `17:30`), or tick **Closed** for off-days. Days without hours are omitted from the schema.
+7. **Area served** (service-area businesses): paste one city/region per line, up to 25.
+8. Click **Save**. A **Schema preview** card renders at the bottom showing the exact JSON-LD that will be injected into your homepage `<head>`.
+9. Verify the live output with Google's [Rich Results Test](https://search.google.com/test/rich-results) once the homepage is published.
+
+**Coexistence:** if Yoast / RankMath / AIOSEO are active, StrataWP defers all schema output to them — turn this off and use their LocalBusiness panel instead.
+
+### Image SEO (`SEO → Image SEO`) ★ v4.2
+
+Auto-fills missing alt text, sanitizes filenames on upload, and enforces lazy-loading. Lives at `admin.php?page=swps-image-seo`.
+
+**How to use it:**
+1. Open the page — the **stats tiles** at the top show total library size, count missing alt text, % covered, and current auto-alt mode.
+2. **Bulk fix existing library:** click the **Fix missing alt text** button to write alt for every image that doesn't have any. Runs in 20-image batches via AJAX so you can leave the tab open while it works. Uses the auto-alt mode you have selected below.
+3. **Auto-alt on upload** card:
+   - Tick **Generate alt text automatically when an image is uploaded** to enable.
+   - Pick **Heuristic** (free, instant — derives alt from filename + parent post title) or **AI** (sends filename + post context to your configured AI provider for a one-line description; falls back to heuristic on error or quota).
+4. **Filename sanitization** card: tick to clean filenames on upload — `IMG_4523 Vacation.JPG` becomes `vacation.jpg`. Strips device prefixes (`IMG_`, `DSC_`, `DSCN`, `Screenshot`, etc.).
+5. **Lazy loading** card: tick to add `loading="lazy" decoding="async"` to any post-content `<img>` still missing those attributes. Improves Core Web Vitals.
+6. Click **Save Image SEO settings**.
+
+**Tips:** AI mode costs a fraction of a cent per image (one short call to your configured provider). For most sites, Heuristic mode is plenty good — it's especially strong when your filenames already have meaningful slugs (e.g. `seo-checklist-2026.jpg`).
+
+### Crawlers & Files (`SEO → Crawlers & Files`) ★ v4.2
+
+Edits the dynamic `/llms.txt` and `/robots.txt` files served by your site. Lives at `admin.php?page=swps-crawl-files`.
+
+**How to use the /llms.txt editor:**
+1. Pick a **mode**:
+   - **Auto** — serve the StrataWP-generated default (built from your most recent 100 posts, top-level pages, and busiest 20 categories with one-line summaries). This is the recommended default.
+   - **Custom** — serve the markdown you paste below, verbatim.
+2. The page shows two textareas side-by-side: **Your llms.txt** (editable) on the left and **Auto preview** (read-only) on the right.
+3. Click **↑ Copy auto-generated content into the editor** to start from the auto version, then tweak.
+4. Save — visit `/llms.txt` or click **View /llms.txt** in the page header to confirm.
+
+**How to use the /robots.txt editor:**
+1. If a physical `robots.txt` exists in your site root, you'll see a warning — that file always overrides the WordPress dynamic version. Delete it to use the editor.
+2. Pick a **mode**:
+   - **Auto** — what WordPress would normally serve, plus the AI-bot Allow/Disallow rules StrataWP adds.
+   - **Append** — Auto + your extra rules (good for adding `Disallow: /private/` or extra `Sitemap:` entries).
+   - **Replace** — serve only your content (full manual control — be careful, since this skips the AI-bot rules).
+3. Edit your version on the left; auto preview is on the right; "copy auto into editor" works the same way.
+4. Save — visit `/robots.txt` or click **View /robots.txt** to confirm.
+
+**Tip:** Append mode is the safest middle ground for most sites — keeps the StrataWP-managed AI bot allowlist intact while letting you add custom rules.
+
+### Backlinks (`Insights → Backlinks`) ★ v4.2
+
+Tracks pages that link to your site, with daily health monitoring. Lives at `admin.php?page=swps-backlinks`. No paid backlink index required.
+
+**How to seed your initial list:**
+- **Option A — manual:** use the **Add backlink** form. Paste the source URL (the page linking to you), optionally the target URL on your site and the anchor text, then click **Add & verify**. The page is fetched immediately so you see Live/Lost/Broken right away.
+- **Option B — CSV import (recommended):**
+  1. Go to Google Search Console → **Links** → **Top linking sites** → click the export button → save as CSV.
+  2. In the **Bulk import** card, paste the CSV (or just one URL per line) into the textarea.
+  3. Click **Import**. Existing source URLs are skipped automatically. The page reloads with the new rows pending verification.
+  4. Click **Verify all** in the page header to fetch every imported row in 25-row AJAX batches.
+
+**How rows get classified:**
+- **Live** (green) — page loaded and contains at least one `<a href="...">` whose href hostname matches yours
+- **Lost** (amber) — page loaded fine but no link to your site is on it any more
+- **Broken** (red) — page returned an HTTP error (4xx/5xx) or timed out; the HTTP code shows in the pill
+
+**Daily routine:**
+- A WP-cron job (`swps_backlinks_daily_verify`) re-checks every backlink once per day with 250ms politeness delays between requests
+- Anchor text + first/last-seen dates update automatically when a link is found
+- Use the **Lost** count as a link-reclamation list — those are sites that used to link to you and now don't
+
+**Per-row controls:** ⟳ re-verifies one row immediately; ✕ deletes it (history is gone — use Export CSV first if you want a backup).
+
+**Export:** the **Export CSV** button in the page header downloads everything (source, target, anchor, status, http code, first seen, last seen, last checked) — useful for offline analysis or migrating to another tool.
+
+**What this is NOT:** this does not *discover* new backlinks (no paid web index). It tracks the list you give it. To discover new ones, paste the GSC export periodically — that's GSC's view of who links to you.
+
 ### Settings (`System → Settings`)
 
 The control panel — split into tabs:
@@ -833,6 +976,12 @@ The plugin handles model-specific quirks automatically — for example, Claude 4
 | Internal Links | `swps-internal-links` | Link suggestions admin |
 | Sitemaps | `swps-sitemaps` | Sitemap status + IndexNow ping |
 | Redirects | `swps-redirects` | Redirect manager + 404 log |
+| Auto-Optimize | `swps-auto-optimize` | Re-score + AI proposals for low-scoring posts |
+| Competitors | `swps-competitors` | Competitor site tracker (RSS/sitemap diff) |
+| Local SEO | `swps-local-seo` | LocalBusiness JSON-LD: NAP, hours, geo, area served |
+| Image SEO | `swps-image-seo` | Auto-alt, filename sanitization, lazy-load, bulk fix |
+| Crawlers & Files | `swps-crawl-files` | Edit `/llms.txt` and `/robots.txt` (auto/custom modes) |
+| Backlinks | `swps-backlinks` | Manual + CSV-import backlink tracker with daily verify |
 | Debug | `swps-debug` | Last failed AI response (raw + cleaned) |
 
 ---
@@ -1075,9 +1224,37 @@ Two things: (1) writes `Allow: /` rules in robots.txt for the AI bots you've che
 
 Click **Sitemaps → Ping Search Engines** and the plugin submits your 50 most recently modified posts to `api.indexnow.org`. Bing, Yandex, and Seznam pick these up within minutes — and Bing's IndexNow feed is what powers ChatGPT's web search.
 
+### Do I need a paid Ahrefs or Moz account to use Backlinks?
+
+No. The Backlinks page tracks the links you provide it (manually or via CSV) and re-checks them daily. Pair it with the Google Search Console "Top linking sites" CSV export to seed a real-world list — that's GSC's view of who links to you, free. A direct paid-partner integration (Ahrefs/Moz/SE Ranking) is on the roadmap for a future release.
+
+### How does Local SEO interact with my existing schema settings?
+
+The Organization/Person schema configured under **System → Settings → Schema** (name, logo, social profiles) keeps emitting on the homepage. The new LocalBusiness schema is a *separate* JSON-LD block, but it reuses your existing logo (`swps_schema_logo`) as the `image`/`logo` property and your social profiles (`swps_schema_social_profiles`) as the `sameAs` property — so you don't have to re-enter that data. If Yoast/RankMath/AIOSEO is active, both blocks defer.
+
+### What's the difference between Image SEO's Heuristic and AI alt modes?
+
+Heuristic is free and instant — it derives alt text from the image filename plus the parent post's title (e.g. an image called `seo-checklist-2026.jpg` attached to a post titled "10 Steps to Better SEO" gets reasonable alt text without any API call). AI mode sends filename + parent context to your configured AI provider for a one-line description; it costs a fraction of a cent per image and is most useful when filenames are device-camera junk like `IMG_4523.JPG`. AI mode automatically falls back to Heuristic on error or quota.
+
+### Will editing /robots.txt in Crawlers & Files break the AI-bot allowlist?
+
+Only if you choose **Replace** mode — that serves your content verbatim with no auto rules. **Append** mode preserves everything (the WP defaults plus the StrataWP-managed AI-bot Allow/Disallow block) and adds your custom rules underneath. Use Append unless you have a specific reason to fully take over.
+
 ---
 
 ## Changelog
+
+### 4.2.2
+- **Backlinks (Insights → Backlinks):** new manual + CSV-import backlink tracker. Custom DB table, daily WP-cron health verification (live/lost/broken), AJAX bulk-verify with 25-row batches, per-row re-verify and delete, CSV import (auto-detects Google Search Console "Top linking sites" exports), CSV export, dashboard tile + recent-activity list. Replaces the previous "coming soon" placeholder with a real, working feature.
+
+### 4.2.1
+- **Crawlers & Files (SEO → Crawlers & Files):** new page to edit `/llms.txt` (Auto / Custom modes) and `/robots.txt` (Auto / Append / Replace modes) directly from the admin. Side-by-side editor + auto preview, one-click "copy auto into editor", warning when a physical robots.txt would override the dynamic version.
+
+### 4.2.0
+- **Local SEO (SEO → Local SEO):** LocalBusiness JSON-LD output for brick-and-mortar and service-area sites. 30+ business types (Restaurant, Plumber, Dentist, Hotel, etc.), full NAP fields, opening hours per day, geo coordinates, area served, Google Place ID. Live schema preview. Defers to Yoast/RankMath/AIOSEO when active.
+- **Image SEO (SEO → Image SEO):** auto-alt on upload (Heuristic free mode or AI mode using the configured provider), device-prefix-stripping filename sanitization, lazy-loading enforcement on `the_content`, bulk-fix tool for the existing media library with batched AJAX progress, library coverage stats.
+- **Modules registry:** Local SEO and Image SEO unlocked with NEW badges; Backlinks added as a "soon" entry; WooCommerce SEO retained as the only remaining "soon" module.
+- **Dashboard:** backlinks tiles updated to honest framing ("BYO API key" / "integration in development") prior to 4.2.2 lighting them up with live data.
 
 ### 4.1.7
 - **Critical fix:** moved `swps_render_optimize_row()` and `swps_render_competitor_row()` declarations to the top of their templates. PHP doesn't hoist conditionally-declared functions, so calling them from the queue/list loop before the `if ( ! function_exists() )` block ran was a fatal once any post had a cached score. Fixes "There has been a critical error" on Auto-Optimize and Competitors pages.

@@ -44,6 +44,10 @@ class SWPS_Admin_Shell {
         'swps-search-console',
         'swps-auto-optimize',
         'swps-competitors',
+        'swps-local-seo',
+        'swps-image-seo',
+        'swps-crawl-files',
+        'swps-backlinks',
     ];
 
     private SWPS_User_Prefs $prefs;
@@ -285,11 +289,15 @@ class SWPS_Admin_Shell {
                 [ 'slug' => 'swps-sitemaps',          'label' => __( 'Sitemaps', 'stratawp-seo' ) ],
                 [ 'slug' => 'swps-redirects',         'label' => __( 'Redirects', 'stratawp-seo' ) ],
                 [ 'slug' => 'swps-internal-links',    'label' => __( 'Internal Links', 'stratawp-seo' ) ],
+                [ 'slug' => 'swps-local-seo',         'label' => __( 'Local SEO', 'stratawp-seo' ),  'badge' => [ 'type' => 'new', 'label' => 'NEW' ] ],
+                [ 'slug' => 'swps-image-seo',         'label' => __( 'Image SEO', 'stratawp-seo' ),  'badge' => [ 'type' => 'new', 'label' => 'NEW' ] ],
+                [ 'slug' => 'swps-crawl-files',       'label' => __( 'Crawlers & Files', 'stratawp-seo' ), 'badge' => [ 'type' => 'new', 'label' => 'NEW' ] ],
             ],
             __( 'Insights', 'stratawp-seo' ) => [
                 [ 'slug' => 'swps-analytics',   'label' => __( 'Analytics', 'stratawp-seo' ) ],
                 [ 'slug' => 'swps-keywords',    'label' => __( 'Keywords', 'stratawp-seo' ) ],
                 [ 'slug' => 'swps-competitors', 'label' => __( 'Competitors', 'stratawp-seo' ), 'badge' => [ 'type' => 'new', 'label' => 'NEW' ] ],
+                [ 'slug' => 'swps-backlinks',   'label' => __( 'Backlinks', 'stratawp-seo' ),   'badge' => [ 'type' => 'new', 'label' => 'NEW' ] ],
             ],
             __( 'System', 'stratawp-seo' ) => [
                 [ 'slug' => 'stratawp-seo', 'label' => __( 'Settings', 'stratawp-seo' ) ],
