@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.2.2
+Stable tag: 4.2.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -251,6 +251,9 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.2.3 =
+* Fix: Sitemap Disable/Enable toggle now correctly reflects status in the admin UI (button label and row state were stuck because the JS read the wrong response field). Backend exclusion was already honored. (#20)
 
 = 4.2.2 =
 * New: Backlinks page (Insights → Backlinks). Manual + CSV-import backlink tracker. Daily WP-cron classifies each link as Live, Lost, or Broken; captures real anchor text and first/last seen dates. AJAX bulk-verify in 25-row batches, per-row re-verify and delete, CSV import (auto-detects Google Search Console "Top linking sites" exports), CSV export. Backed by a custom DB table created via dbDelta with a runtime upgrade path so existing installs get the table without re-activation. Replaces the previous "coming soon" placeholder with a real, working feature.

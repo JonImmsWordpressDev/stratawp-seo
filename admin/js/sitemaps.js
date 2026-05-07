@@ -35,7 +35,7 @@
                 if (res.data.sitemaps && Array.isArray(res.data.sitemaps)) {
                     res.data.sitemaps.forEach(sitemap => {
                         const tr = document.createElement('tr');
-                        const isExcluded = sitemap.is_excluded === '1' || sitemap.is_excluded === true;
+                        const isExcluded = sitemap.excluded === true || sitemap.excluded === '1' || sitemap.excluded === 1;
                         const rowStyle = isExcluded ? 'style="opacity: 0.5"' : '';
 
                         let typeBadge = '';
