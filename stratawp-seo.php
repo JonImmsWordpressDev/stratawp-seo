@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.2.3
+ * Version: 4.3.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'SWPS_VERSION', '4.2.3' );
+define( 'SWPS_VERSION', '4.3.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -135,6 +135,9 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-cron.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-calendar.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-background-processor.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rest-api.php';
+
+// GitHub-based plugin updater.
+require_once SWPS_PLUGIN_DIR . 'includes/class-github-updater.php';
 
 // v4.0 admin shell.
 require_once SWPS_PLUGIN_DIR . 'includes/class-user-prefs.php';
@@ -282,6 +285,11 @@ final class StrataWP_SEO {
         $this->modules     = new SWPS_Modules();
         $this->admin_shell = new SWPS_Admin_Shell( $this->user_prefs );
         $this->dashboard   = new SWPS_Dashboard();
+
+        // GitHub release-based updater (admin only).
+        if ( is_admin() ) {
+            new SWPS_GitHub_Updater( __FILE__, SWPS_VERSION );
+        }
 
         // Register CPT.
         add_action( 'init', [ SWPS_Topic_Queue::class, 'register_post_type' ] );
