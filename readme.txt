@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.3.0
+Stable tag: 4.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -251,6 +251,9 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.4.0 =
+* New: Migration tool (StrataWP SEO → Migrate). Imports settings from Yoast SEO, Yoast SEO Premium, Rank Math, and Rank Math Pro into StrataWP SEO. Auto-detects installed source plugins, shows post counts, offers Preview before Run, lets users choose skip-existing vs overwrite, and keeps a typed backup so any migration can be undone with one click. Migrates per-post meta (title, description, focus keyword, canonical, breadcrumb title, social title/description/image — streamed in 100-post batches), global settings (title separator with Yoast sc-* codes decoded, title templates per post type / taxonomy / archive with Rank Math %var% → StrataWP %%var%% rewriting, per-post-type noindex flags), and redirects from Yoast Premium (wpseo-premium-redirects-base) and Rank Math Pro (wp_rank_math_redirections active rows) — 301/302/307/410 supported, regex preserved. UI has phase checkboxes (post meta / settings / redirects); Undo reverts everything atomically.
 
 = 4.3.0 =
 * New: GitHub-based auto-updates. When a new release is published on the official GitHub repository, all installs see "Update available" on the WordPress Plugins screen and can one-click update directly — no manual zip download needed. Cached for 12 hours to respect GitHub's rate limits.
