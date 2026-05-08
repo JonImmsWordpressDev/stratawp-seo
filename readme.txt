@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.2.2
+Stable tag: 4.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -251,6 +251,12 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.4.0 =
+* Migration tool — Phase 2 + 3. Now also imports global settings and redirects, not just per-post meta. Settings: title separator (Yoast separator codes like sc-dash are decoded), title templates per post type / taxonomy / archive, per-post-type noindex flags. Rank Math template variables (%title%, %sep%, %sitename%, etc.) are rewritten to StrataWP's %%var%% syntax during import. Redirects: imports active redirects from Yoast Premium (wpseo-premium-redirects-base option) and Rank Math Pro (wp_rank_math_redirections table) into StrataWP's redirect table; 301/302/307/410 supported, regex preserved. Migration UI now has checkboxes to choose which phases to run, and the Undo button reverts post meta + settings + redirects together.
+
+= 4.3.0 =
+* New: Migration tool (StrataWP SEO → Migrate). Imports per-post SEO meta from Yoast SEO, Yoast SEO Premium, Rank Math, and Rank Math Pro into StrataWP SEO. Auto-detects installed source plugins, shows post counts, offers Preview before Run, lets users choose skip-existing vs overwrite, and keeps a backup so any migration can be undone with one click. Migrates meta title, meta description, focus keyword, canonical URL, breadcrumb title, and social title/description/image. Streams in batches of 100 posts so it scales to large sites without timing out.
 
 = 4.2.2 =
 * New: Backlinks page (Insights → Backlinks). Manual + CSV-import backlink tracker. Daily WP-cron classifies each link as Live, Lost, or Broken; captures real anchor text and first/last seen dates. AJAX bulk-verify in 25-row batches, per-row re-verify and delete, CSV import (auto-detects Google Search Console "Top linking sites" exports), CSV export. Backed by a custom DB table created via dbDelta with a runtime upgrade path so existing installs get the table without re-activation. Replaces the previous "coming soon" placeholder with a real, working feature.

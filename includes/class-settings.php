@@ -83,12 +83,31 @@ class SWPS_Settings {
 
         add_submenu_page(
             'stratawp-seo',
+            __( 'Migrate from Yoast / Rank Math', 'stratawp-seo' ),
+            __( 'Migrate', 'stratawp-seo' ),
+            'manage_options',
+            'swps-migration',
+            [ $this, 'render_migration_page' ]
+        );
+
+        add_submenu_page(
+            'stratawp-seo',
             __( 'Debug — Last AI Failure', 'stratawp-seo' ),
             __( 'Debug', 'stratawp-seo' ),
             'manage_options',
             'swps-debug',
             [ $this, 'render_debug_page' ]
         );
+    }
+
+    /**
+     * Render the migration tool page.
+     */
+    public function render_migration_page(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You do not have permission to view this page.', 'stratawp-seo' ) );
+        }
+        include SWPS_PLUGIN_DIR . 'templates/migration-page.php';
     }
 
     /**

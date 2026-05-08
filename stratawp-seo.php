@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.2.2
+ * Version: 4.4.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'SWPS_VERSION', '4.2.2' );
+define( 'SWPS_VERSION', '4.4.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -125,6 +125,9 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-internal-links.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-internal-links-admin.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-ai-bots.php';
 
+// Migration tool (Yoast / Rank Math import).
+require_once SWPS_PLUGIN_DIR . 'includes/class-migration.php';
+
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-analyzer.php';
@@ -205,6 +208,7 @@ final class StrataWP_SEO {
     public SWPS_Modules $modules;
     public SWPS_Admin_Shell $admin_shell;
     public SWPS_Dashboard $dashboard;
+    public SWPS_Migration $migration;
 
     public static function instance(): self {
         if ( null === self::$instance ) {
@@ -282,6 +286,7 @@ final class StrataWP_SEO {
         $this->modules     = new SWPS_Modules();
         $this->admin_shell = new SWPS_Admin_Shell( $this->user_prefs );
         $this->dashboard   = new SWPS_Dashboard();
+        $this->migration   = new SWPS_Migration();
 
         // Register CPT.
         add_action( 'init', [ SWPS_Topic_Queue::class, 'register_post_type' ] );

@@ -21,7 +21,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, a per-post meta editor, **Local SEO** (LocalBusiness schema with NAP and opening hours), **Image SEO** (auto-alt + filename sanitization + lazy-load), **Crawlers & Files** (in-admin editor for /llms.txt and /robots.txt), and **Backlinks** (manual/CSV-import tracker with daily health monitoring) — on autopilot or on demand.
 
-[![Version](https://img.shields.io/badge/version-4.2.2-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.4.0-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -235,6 +235,17 @@ It's designed to **replace** Yoast/RankMath/AIOSEO if you want to, or **coexist*
 - **Content velocity** — posts-per-week trend across the snapshot history (last 12 snapshots, ~12 days at daily cadence)
 - **Dashboard widget** — 3 most-recently-changed competitors with a one-line summary on the dashboard
 
+### Migration Tool (v4.3 / v4.4) ★
+
+- **Import from Yoast SEO, Yoast SEO Premium, Rank Math, and Rank Math Pro** — auto-detects each source plugin by scanning postmeta + options, shows post counts so users know what they're about to migrate
+- **Per-post meta** (Phase 1, v4.3.0) — meta title, meta description, focus keyword, canonical URL, breadcrumb title, social title/description/image. First non-empty source wins, streamed in 100-post batches via SQL so it scales to large sites without timing out
+- **Global settings** (Phase 2, v4.4.0) — title separator (Yoast `sc-dash` / `sc-ndash` / etc. codes decoded to literal characters), title templates per post type / taxonomy / archive (author, date, search, 404, post-type-archive), per-post-type noindex flags. Rank Math's single-percent variables (`%title%`, `%sep%`, `%sitename%`, `%term%`, …) are rewritten to StrataWP's `%%var%%` syntax with longest-match-first ordering
+- **Redirects** (Phase 3, v4.4.0) — Yoast Premium reads `wpseo-premium-redirects-base` (and the regex variant), Rank Math Pro reads `{prefix}rank_math_redirections` for `status='active'` rows and expands the serialized `sources` array. All inserts go through `SWPS_Redirect_Manager::add_redirect()` so validation/normalization matches manually-created redirects; 301/302/307/410 supported, regex flag preserved
+- **Phase checkboxes** — pick any combination of post meta / settings / redirects per run
+- **Preview before run** — counts what would change without writing
+- **Conflict policy** — when StrataWP already has a value, choose Skip-existing or Overwrite (per run)
+- **One-click Undo** — typed backup snapshot reverts post meta (restores previous values or deletes if they didn't exist), restores option values, and DELETEs the redirect rows the migration inserted, all in one click
+
 ### Admin Shell (v4.0)
 
 - **Branded shell** — top bar (logo, breadcrumb, search, theme toggle, help) sits above every plugin page
@@ -286,6 +297,7 @@ stratawp-seo/
 │   ├── class-link-ai-engine.php       AI-powered internal link suggestions
 │   ├── class-link-keyword-engine.php  Keyword-anchor link suggestions
 │   ├── class-meta-editor.php          Per-post SEO metabox + frontend output
+│   ├── class-migration.php            Import settings + post meta + redirects from Yoast / Rank Math
 │   ├── class-post-list-seo.php        Posts list table SEO column + bulk edits
 │   ├── class-provider-factory.php     Resolves the active AI/image provider class
 │   ├── class-rate-limiter.php         Cooldown between generations
@@ -335,6 +347,7 @@ stratawp-seo/
 │   ├── internal-links-page.php
 │   ├── keywords-page.php
 │   ├── meta-editor-metabox.php
+│   ├── migration-page.php
 │   ├── redirects-page.php
 │   ├── search-appearance-page.php
 │   ├── settings-page.php
@@ -982,6 +995,7 @@ The plugin handles model-specific quirks automatically — for example, Claude 4
 | Image SEO | `swps-image-seo` | Auto-alt, filename sanitization, lazy-load, bulk fix |
 | Crawlers & Files | `swps-crawl-files` | Edit `/llms.txt` and `/robots.txt` (auto/custom modes) |
 | Backlinks | `swps-backlinks` | Manual + CSV-import backlink tracker with daily verify |
+| Migrate | `swps-migration` | Import settings + per-post meta + redirects from Yoast / Rank Math |
 | Debug | `swps-debug` | Last failed AI response (raw + cleaned) |
 
 ---
@@ -1184,6 +1198,10 @@ Anthropic (Claude) is recommended for the best content quality. Opus 4.7 for hig
 
 No. Schema and meta-tag output **automatically disable** themselves when Yoast, RankMath, or AIOSEO is detected. Sitemaps, content generation, audit, redirects, breadcrumbs, analytics, and AI Crawlers/llms.txt features all work alongside any SEO plugin.
 
+### Can I migrate from Yoast SEO or Rank Math?
+
+Yes — **StrataWP SEO → Migrate** (added v4.3.0, expanded v4.4.0). Imports per-post SEO meta (title, description, focus keyword, canonical, breadcrumb title, social overrides) from Yoast SEO / Yoast Premium / Rank Math / Rank Math Pro, plus global settings (title separator, title templates with variable rewriting, per-post-type noindex) and redirects (Yoast Premium and Rank Math Pro). Preview before run, choose skip-existing or overwrite on conflicts, and one-click Undo restores everything.
+
 ### Does the AI generate unique content?
 
 Yes. Each generation is original, based on your site context. The optional duplicate detection (configurable threshold) prevents content too similar to existing posts.
@@ -1243,6 +1261,15 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 ---
 
 ## Changelog
+
+### 4.4.0
+- **Migration tool — Phase 2 + 3:** the migrator now also imports global settings and redirects, not just per-post meta.
+  - Settings: title separator (Yoast separator codes like `sc-dash` decoded to literal characters), title templates per post type / taxonomy / archive (author, date, search, 404, post-type-archive), per-post-type noindex flags. Rank Math template variables (`%title%`, `%sep%`, `%sitename%`, `%term%`, `%search_query%`, …) are rewritten to StrataWP's `%%var%%` syntax with longest-match-first ordering to avoid partial replaces.
+  - Redirects: imports active redirects from Yoast Premium (`wpseo-premium-redirects-base` + regex variant) and Rank Math Pro (`wp_rank_math_redirections` table, `status='active'` rows). All inserts go through `SWPS_Redirect_Manager::add_redirect()` for validation; 301/302/307/410 supported; regex flag preserved.
+  - Migration UI now has phase checkboxes (post meta / settings / redirects), preview and report show counts for all three phase types, and the Undo button reverts everything atomically. Backup format moved to a typed structure with backwards-compat for any v4.3.0 backup still in the database.
+
+### 4.3.0
+- **Migration tool — Phase 1 (StrataWP SEO → Migrate):** new admin page that imports per-post SEO meta from Yoast SEO, Yoast SEO Premium, Rank Math, and Rank Math Pro. Auto-detects installed source plugins by scanning postmeta + options, shows post counts, offers Preview before Run, lets users choose skip-existing vs overwrite, and keeps a backup so any migration can be undone with one click. Migrates meta title, meta description, focus keyword, canonical URL, breadcrumb title, and social title/description/image. Streams in batches of 100 posts so it scales to large sites.
 
 ### 4.2.2
 - **Backlinks (Insights → Backlinks):** new manual + CSV-import backlink tracker. Custom DB table, daily WP-cron health verification (live/lost/broken), AJAX bulk-verify with 25-row batches, per-row re-verify and delete, CSV import (auto-detects Google Search Console "Top linking sites" exports), CSV export, dashboard tile + recent-activity list. Replaces the previous "coming soon" placeholder with a real, working feature.
