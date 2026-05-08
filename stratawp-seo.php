@@ -139,6 +139,9 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-calendar.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-background-processor.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rest-api.php';
 
+// GitHub-based plugin updater.
+require_once SWPS_PLUGIN_DIR . 'includes/class-github-updater.php';
+
 // v4.0 admin shell.
 require_once SWPS_PLUGIN_DIR . 'includes/class-user-prefs.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-modules.php';
@@ -287,6 +290,11 @@ final class StrataWP_SEO {
         $this->admin_shell = new SWPS_Admin_Shell( $this->user_prefs );
         $this->dashboard   = new SWPS_Dashboard();
         $this->migration   = new SWPS_Migration();
+
+        // GitHub release-based updater (admin only).
+        if ( is_admin() ) {
+            new SWPS_GitHub_Updater( __FILE__, SWPS_VERSION );
+        }
 
         // Register CPT.
         add_action( 'init', [ SWPS_Topic_Queue::class, 'register_post_type' ] );

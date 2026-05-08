@@ -25,6 +25,7 @@
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/jonimmswordpressdev)
 
 ---
 
@@ -1263,13 +1264,17 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 ## Changelog
 
 ### 4.4.0
-- **Migration tool — Phase 2 + 3:** the migrator now also imports global settings and redirects, not just per-post meta.
-  - Settings: title separator (Yoast separator codes like `sc-dash` decoded to literal characters), title templates per post type / taxonomy / archive (author, date, search, 404, post-type-archive), per-post-type noindex flags. Rank Math template variables (`%title%`, `%sep%`, `%sitename%`, `%term%`, `%search_query%`, …) are rewritten to StrataWP's `%%var%%` syntax with longest-match-first ordering to avoid partial replaces.
-  - Redirects: imports active redirects from Yoast Premium (`wpseo-premium-redirects-base` + regex variant) and Rank Math Pro (`wp_rank_math_redirections` table, `status='active'` rows). All inserts go through `SWPS_Redirect_Manager::add_redirect()` for validation; 301/302/307/410 supported; regex flag preserved.
-  - Migration UI now has phase checkboxes (post meta / settings / redirects), preview and report show counts for all three phase types, and the Undo button reverts everything atomically. Backup format moved to a typed structure with backwards-compat for any v4.3.0 backup still in the database.
+- **Migration tool (StrataWP SEO → Migrate):** new admin page that imports settings from Yoast SEO, Yoast SEO Premium, Rank Math, and Rank Math Pro into StrataWP SEO. Auto-detects installed source plugins by scanning postmeta + options, shows post counts, offers Preview before Run, lets users choose skip-existing vs overwrite, and keeps a typed backup so any migration can be undone with one click.
+  - **Per-post meta:** meta title, meta description, focus keyword, canonical URL, breadcrumb title, social title/description/image. First non-empty source wins; streamed in 100-post batches so it scales to large sites.
+  - **Global settings:** title separator (Yoast separator codes like `sc-dash` decoded to literal characters), title templates per post type / taxonomy / archive (author, date, search, 404, post-type-archive), per-post-type noindex flags. Rank Math template variables (`%title%`, `%sep%`, `%sitename%`, `%term%`, `%search_query%`, …) are rewritten to StrataWP's `%%var%%` syntax with longest-match-first ordering to avoid partial replaces.
+  - **Redirects:** imports active redirects from Yoast Premium (`wpseo-premium-redirects-base` + regex variant) and Rank Math Pro (`wp_rank_math_redirections` table, `status='active'` rows). All inserts go through `SWPS_Redirect_Manager::add_redirect()` for validation; 301/302/307/410 supported; regex flag preserved.
+  - **UI:** phase checkboxes (post meta / settings / redirects), preview and report show counts for all three phase types, and the Undo button reverts everything atomically — restores post meta values (or deletes them if they didn't exist before), restores option values, and DELETEs the redirect rows the migration inserted.
 
 ### 4.3.0
-- **Migration tool — Phase 1 (StrataWP SEO → Migrate):** new admin page that imports per-post SEO meta from Yoast SEO, Yoast SEO Premium, Rank Math, and Rank Math Pro. Auto-detects installed source plugins by scanning postmeta + options, shows post counts, offers Preview before Run, lets users choose skip-existing vs overwrite, and keeps a backup so any migration can be undone with one click. Migrates meta title, meta description, focus keyword, canonical URL, breadcrumb title, and social title/description/image. Streams in batches of 100 posts so it scales to large sites.
+- **GitHub-based auto-updates:** when a new release is published on the official GitHub repository, all installs see "Update available" on the WordPress Plugins screen and can one-click update directly — no manual zip download needed. Cached for 12 hours to respect GitHub's rate limits.
+
+### 4.2.3
+- **Fix — Sitemap Disable/Enable toggle:** button label and row state were stuck because the JS read the wrong response field. Backend exclusion was already honored. (#20)
 
 ### 4.2.2
 - **Backlinks (Insights → Backlinks):** new manual + CSV-import backlink tracker. Custom DB table, daily WP-cron health verification (live/lost/broken), AJAX bulk-verify with 25-row batches, per-row re-verify and delete, CSV import (auto-detects Google Search Console "Top linking sites" exports), CSV export, dashboard tile + recent-activity list. Replaces the previous "coming soon" placeholder with a real, working feature.
