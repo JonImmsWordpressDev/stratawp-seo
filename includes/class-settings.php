@@ -221,10 +221,20 @@ class SWPS_Settings {
             'row_class'   => 'swps-image-key-row swps-image-provider-pixabay',
         ] );
 
-        $this->add_field( 'google_api_key', __( 'Google API Key', 'stratawp-seo' ), 'password', 'swps_images_section', [
-            'description' => __( 'Uses your Google API key. Get one from <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>', 'stratawp-seo' ),
-            'row_class'   => 'swps-image-key-row swps-image-provider-gemini',
-        ] );
+        // Note: Gemini image generation reuses the Google API key from the AI Provider
+        // section above. We intentionally do NOT register another input for
+        // `swps_google_api_key` here — duplicate inputs with the same name cause the
+        // hidden row's empty value to clobber the visible row's value on save (see #24).
+        add_settings_field(
+            'swps_gemini_image_key_info',
+            __( 'Google API Key', 'stratawp-seo' ),
+            function () {
+                echo '<p class="description">' . wp_kses_post( __( 'Gemini image generation uses the Google API Key set in the <strong>AI Provider</strong> section above.', 'stratawp-seo' ) ) . '</p>';
+            },
+            'stratawp-seo',
+            'swps_images_section',
+            [ 'class' => 'swps-image-key-row swps-image-provider-gemini' ]
+        );
 
         $this->add_field( 'insert_content_images', __( 'In-Content Images', 'stratawp-seo' ), 'checkbox', 'swps_images_section', [
             'label' => __( 'Insert contextual images within the post body (in addition to featured image)', 'stratawp-seo' ),
