@@ -39,6 +39,16 @@ class SWPS_AI_Bots {
     }
 
     /**
+     * Return the canonical bot list. Filter `swps_ai_bots_known` lets third
+     * parties add custom AI crawlers (custom keys → UA tokens).
+     *
+     * @return array<string, string> Map of bot key → User-agent token.
+     */
+    public static function get_bots(): array {
+        return (array) apply_filters( 'swps_ai_bots_known', self::KNOWN_BOTS );
+    }
+
+    /**
      * Append AI bot allow/disallow rules to robots.txt.
      */
     public function filter_robots_txt( string $output, $public ): string {

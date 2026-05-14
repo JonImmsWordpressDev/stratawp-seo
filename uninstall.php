@@ -50,8 +50,15 @@ if ( function_exists( 'as_unschedule_all_actions' ) ) {
 $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}swps_redirects" );
 $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}swps_404_log" );
 
+// 7a. Drop bot analytics tables (v4.5).
+$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}swps_bot_hits" );
+$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}swps_bot_hits_daily" );
+
 // 8. Remove term meta.
 $wpdb->query( "DELETE FROM {$wpdb->termmeta} WHERE meta_key LIKE '\_swps\_%'" );
 
 // 9. Unschedule v3.0 cron events.
 wp_unschedule_hook( 'swps_prune_404_logs' );
+
+// 10. Unschedule v4.5 cron events.
+wp_unschedule_hook( 'swps_bot_analytics_aggregate' );

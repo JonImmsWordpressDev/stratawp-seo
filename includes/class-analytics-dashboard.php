@@ -66,6 +66,19 @@ class SWPS_Analytics_Dashboard {
         $gsc_auth_url  = $this->search_console->get_auth_url();
         $properties    = $gsc_connected ? $this->search_console->get_properties() : [];
 
+        // AI Bot Analytics — server-side crawler insights.
+        $bot_tracker = stratawp_seo()->bot_analytics_tracker ?? null;
+        $bot_data    = [];
+        if ( $bot_tracker instanceof SWPS_Bot_Analytics_Tracker ) {
+            $bot_data = [
+                'totals'    => $bot_tracker->get_totals( 30 ),
+                'bots'      => $bot_tracker->get_bot_summary( 30 ),
+                'top_pages' => $bot_tracker->get_top_pages( 30, 15 ),
+                'gaps'      => $bot_tracker->get_gap_posts( 30, 10 ),
+                'top_404s'  => $bot_tracker->get_top_404s( 30, 10 ),
+            ];
+        }
+
         include SWPS_PLUGIN_DIR . 'templates/analytics-page.php';
     }
 
@@ -233,6 +246,17 @@ class SWPS_Analytics_Dashboard {
             'avg_scroll_depth' => $stats_30d['avg_scroll_depth'],
             'bounce_rate'      => $stats_30d['bounce_rate'],
         ];
+
+        // Bot crawler stats for this post.
+        $bot_tracker = stratawp_seo()->bot_analytics_tracker ?? null;
+        if ( $bot_tracker instanceof SWPS_Bot_Analytics_Tracker ) {
+            $bot_stats           = $bot_tracker->get_post_stats( $post_id );
+            $result['bot_hits_7d']  = $bot_stats['hits_7d'];
+            $result['bot_hits_30d'] = $bot_stats['hits_30d'];
+            $result['bot_last_seen'] = $bot_stats['last_seen']
+                ? human_time_diff( strtotime( $bot_stats['last_seen'] ), time() ) . ' ago'
+                : null;
+        }
 
         // GSC queries for this post.
         if ( $this->search_console->is_connected() ) {

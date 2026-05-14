@@ -196,6 +196,37 @@ class SWPS_REST_API {
             ],
         ] );
 
+        // Bot Analytics (v4.5).
+        register_rest_route( self::NAMESPACE, '/bot-analytics/summary', [
+            'methods'             => 'GET',
+            'callback'            => [ $this, 'bot_analytics_summary' ],
+            'permission_callback' => [ $this, 'check_permissions' ],
+            'args'                => [
+                'days' => [ 'type' => 'integer', 'default' => 30, 'sanitize_callback' => 'absint' ],
+            ],
+        ] );
+
+        register_rest_route( self::NAMESPACE, '/bot-analytics/top-pages', [
+            'methods'             => 'GET',
+            'callback'            => [ $this, 'bot_analytics_top_pages' ],
+            'permission_callback' => [ $this, 'check_permissions' ],
+            'args'                => [
+                'days'  => [ 'type' => 'integer', 'default' => 30, 'sanitize_callback' => 'absint' ],
+                'limit' => [ 'type' => 'integer', 'default' => 20, 'sanitize_callback' => 'absint' ],
+                'bot'   => [ 'type' => 'string', 'default' => '', 'sanitize_callback' => 'sanitize_key' ],
+            ],
+        ] );
+
+        register_rest_route( self::NAMESPACE, '/bot-analytics/gaps', [
+            'methods'             => 'GET',
+            'callback'            => [ $this, 'bot_analytics_gaps' ],
+            'permission_callback' => [ $this, 'check_permissions' ],
+            'args'                => [
+                'days'  => [ 'type' => 'integer', 'default' => 30, 'sanitize_callback' => 'absint' ],
+                'limit' => [ 'type' => 'integer', 'default' => 25, 'sanitize_callback' => 'absint' ],
+            ],
+        ] );
+
         // Modules registry — toggle a module on/off.
         register_rest_route( self::NAMESPACE, '/modules/(?P<slug>[a-z0-9-]+)/toggle', [
             'methods'             => 'POST',
@@ -557,6 +588,51 @@ class SWPS_REST_API {
             'success'  => true,
             'data'     => $results,
             'last_run' => $audit->get_last_run(),
+        ] );
+    }
+
+    /**
+     * GET /bot-analytics/summary - Headline totals + per-bot summary.
+     */
+    public function bot_analytics_summary( WP_REST_Request $request ): WP_REST_Response {
+        $days    = max( 1, min( 365, (int) $request->get_param( 'days' ) ) );
+        $tracker = stratawp_seo()->bot_analytics_tracker;
+
+        return new WP_REST_Response( [
+            'success' => true,
+            'data'    => [
+                'totals' => $tracker->get_totals( $days ),
+                'bots'   => $tracker->get_bot_summary( $days ),
+            ],
+        ] );
+    }
+
+    /**
+     * GET /bot-analytics/top-pages - Top crawled pages.
+     */
+    public function bot_analytics_top_pages( WP_REST_Request $request ): WP_REST_Response {
+        $days    = max( 1, min( 365, (int) $request->get_param( 'days' ) ) );
+        $limit   = max( 1, min( 100, (int) $request->get_param( 'limit' ) ) );
+        $bot     = (string) $request->get_param( 'bot' );
+        $tracker = stratawp_seo()->bot_analytics_tracker;
+
+        return new WP_REST_Response( [
+            'success' => true,
+            'data'    => $tracker->get_top_pages( $days, $limit, '' !== $bot ? $bot : null ),
+        ] );
+    }
+
+    /**
+     * GET /bot-analytics/gaps - Posts never crawled in the window.
+     */
+    public function bot_analytics_gaps( WP_REST_Request $request ): WP_REST_Response {
+        $days    = max( 1, min( 365, (int) $request->get_param( 'days' ) ) );
+        $limit   = max( 1, min( 100, (int) $request->get_param( 'limit' ) ) );
+        $tracker = stratawp_seo()->bot_analytics_tracker;
+
+        return new WP_REST_Response( [
+            'success' => true,
+            'data'    => $tracker->get_gap_posts( $days, $limit ),
         ] );
     }
 
