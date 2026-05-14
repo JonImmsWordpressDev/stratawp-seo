@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.4.1
+Stable tag: 4.4.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -251,6 +251,9 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.4.2 =
+* Fix: Scheduled (WP-Cron) posts were created without a featured image or in-content images, with nothing logged to debug.log. Root cause was PHP `max_execution_time` killing the worker mid-image-download — the AI text call plus Gemini image generation easily exceeds the 30–60s default. `SWPS_Generator::generate_post()` now calls `@set_time_limit(0)`, raises the memory limit, and sets `ignore_user_abort(true)` before kicking off the pipeline. Manual generation was unaffected; only cron/background paths benefit.
 
 = 4.4.1 =
 * Fix: Saving the Google (Gemini) API key from the Settings screen had no effect. The same field was registered in both the AI Provider and Featured Images sections, so a hidden duplicate input overwrote the value with an empty string on save. The Featured Images section now references the AI Provider key instead of duplicating the input. (#24)

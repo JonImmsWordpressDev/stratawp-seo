@@ -21,7 +21,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, a per-post meta editor, **Local SEO** (LocalBusiness schema with NAP and opening hours), **Image SEO** (auto-alt + filename sanitization + lazy-load), **Crawlers & Files** (in-admin editor for /llms.txt and /robots.txt), and **Backlinks** (manual/CSV-import tracker with daily health monitoring) — on autopilot or on demand.
 
-[![Version](https://img.shields.io/badge/version-4.4.1-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.4.2-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -1262,6 +1262,9 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 ---
 
 ## Changelog
+
+### 4.4.2
+- **Fix — Scheduled posts had no images:** WP-Cron-generated posts were being saved without a featured image or in-content images, and nothing was reaching `debug.log`. Root cause was PHP `max_execution_time` killing the worker mid-image-download — AI text + Gemini featured image + 3 in-content Gemini images stack well past the 30–60s default cron limit, and `error_log()` calls inside the catch paths can't fire when PHP dies inside `wp_remote_post`. `SWPS_Generator::generate_post()` now calls `@set_time_limit(0)`, `wp_raise_memory_limit('admin')`, and `ignore_user_abort(true)` before kicking off the pipeline. Manual generation worked already (admin-ajax has its own request context); the fix covers cron, background processor, REST, CLI, and bulk AJAX entry points. Any real provider errors (blocked prompts, missing keys, decode failures) now surface through the existing handlers in `class-gemini-provider.php` instead of being swallowed by a timeout.
 
 ### 4.4.1
 - **Fix (#24):** Saving the Google (Gemini) API key from the Settings screen had no effect. The same `swps_google_api_key` field was registered in both the AI Provider and Featured Images sections, so the form contained two inputs with the same name. The hidden Featured Images duplicate (empty by default) was submitted last and overwrote the value the user typed in the AI Provider section. The Featured Images section now shows an info row pointing to the AI Provider key instead of duplicating the input.

@@ -44,6 +44,17 @@ class SWPS_Generator {
      * @return array|WP_Error Post data on success, error on failure.
      */
     public function generate_post( string $topic = '', string $template = 'auto' ): array|WP_Error {
+        // Image generation (especially Gemini) can take several minutes per post.
+        // Lift PHP execution caps so cron/background jobs don't die mid-download,
+        // leaving posts with no images and an empty debug.log.
+        if ( function_exists( 'set_time_limit' ) ) {
+            @set_time_limit( 0 );
+        }
+        if ( function_exists( 'wp_raise_memory_limit' ) ) {
+            wp_raise_memory_limit( 'admin' );
+        }
+        ignore_user_abort( true );
+
         // Fire before_generate action.
         SWPS_Hooks::do_before_generate( $topic, $template );
 
