@@ -240,4 +240,108 @@ class SWPS_CLI {
                 WP_CLI::error( "Unknown action: {$action}. Use list, add, remove, or clear." );
         }
     }
+
+    /**
+     * Show AI bot analytics summary.
+     *
+     * ## OPTIONS
+     *
+     * [--days=<days>]
+     * : Window in days.
+     * ---
+     * default: 30
+     * ---
+     *
+     * [--bot=<bot>]
+     * : Filter top-pages by bot key (e.g. gptbot, claudebot).
+     *
+     * [--format=<format>]
+     * : Output format.
+     * ---
+     * default: table
+     * options:
+     *   - table
+     *   - json
+     * ---
+     *
+     * ## EXAMPLES
+     *
+     *     wp swps bot-stats
+     *     wp swps bot-stats --days=7
+     *     wp swps bot-stats --bot=gptbot
+     *     wp swps bot-stats --format=json
+     *
+     * @param array $args       Positional arguments.
+     * @param array $assoc_args Named arguments.
+     */
+    public function bot_stats( array $args, array $assoc_args ): void {
+        $days   = (int) ( $assoc_args['days'] ?? 30 );
+        $bot    = (string) ( $assoc_args['bot'] ?? '' );
+        $format = (string) ( $assoc_args['format'] ?? 'table' );
+
+        $tracker = stratawp_seo()->bot_analytics_tracker;
+        $totals  = $tracker->get_totals( $days );
+        $bots    = $tracker->get_bot_summary( $days );
+        $pages   = $tracker->get_top_pages( $days, 10, '' !== $bot ? $bot : null );
+
+        if ( 'json' === $format ) {
+            WP_CLI::log( wp_json_encode( [
+                'days'      => $days,
+                'totals'    => $totals,
+                'bots'      => $bots,
+                'top_pages' => $pages,
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
+            return;
+        }
+
+        WP_CLI::log( sprintf(
+            '--- AI Bot Analytics (last %d days) ---',
+            $days
+        ) );
+        WP_CLI::log( "Total hits:  {$totals['total_hits']}" );
+        WP_CLI::log( "404s to bots: {$totals['total_404']}" );
+        WP_CLI::log( "Active bots: {$totals['active_bots']}" );
+        WP_CLI::log( '' );
+
+        if ( empty( $bots ) ) {
+            WP_CLI::log( 'No bot activity recorded.' );
+            return;
+        }
+
+        WP_CLI::log( 'By Crawler:' );
+        WP_CLI\Utils\format_items(
+            'table',
+            array_map(
+                static function ( $b ) {
+                    return [
+                        'bot'       => $b['label'],
+                        'key'       => $b['bot_key'],
+                        'hits'      => $b['hits'],
+                        'last_seen' => $b['last_seen'] ?? '—',
+                    ];
+                },
+                $bots
+            ),
+            [ 'bot', 'key', 'hits', 'last_seen' ]
+        );
+
+        if ( ! empty( $pages ) ) {
+            WP_CLI::log( '' );
+            WP_CLI::log( 'Top Pages:' );
+            WP_CLI\Utils\format_items(
+                'table',
+                array_map(
+                    static function ( $p ) {
+                        return [
+                            'page'       => $p['title'] !== '' ? $p['title'] : $p['request_uri'],
+                            'hits'       => $p['hits'],
+                            'errors_404' => $p['errors_404'],
+                        ];
+                    },
+                    $pages
+                ),
+                [ 'page', 'hits', 'errors_404' ]
+            );
+        }
+    }
 }

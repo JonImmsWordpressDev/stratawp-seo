@@ -6,6 +6,7 @@
  * @var string $gsc_property  Selected GSC property.
  * @var string $gsc_auth_url  OAuth authorization URL.
  * @var array  $properties    Available GSC properties.
+ * @var array  $bot_data      AI bot analytics summary (totals, bots, top_pages, gaps, top_404s).
  *
  * @package StrataWP_SEO
  */
@@ -132,4 +133,166 @@ if ( ! defined( 'ABSPATH' ) ) {
         </tbody>
     </table>
     <?php endif; ?>
+
+    <?php if ( ! empty( $bot_data ) ) :
+        $totals    = $bot_data['totals'];
+        $bots      = $bot_data['bots'];
+        $top_pages = $bot_data['top_pages'];
+        $gaps      = $bot_data['gaps'];
+        $top_404s  = $bot_data['top_404s'];
+
+        $delta = 0;
+        if ( $totals['prev_hits'] > 0 ) {
+            $delta = (int) round( ( ( $totals['total_hits'] - $totals['prev_hits'] ) / $totals['prev_hits'] ) * 100 );
+        }
+        ?>
+    <div class="swps-section-h" style="margin-top:40px">
+        <h3><?php esc_html_e( 'AI Crawlers', 'stratawp-seo' ); ?></h3>
+        <p style="color:var(--swps-text-muted);font-size:12px;margin:4px 0 0">
+            <?php esc_html_e( 'Server-side hits from known AI bots (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, etc.) in the last 30 days.', 'stratawp-seo' ); ?>
+        </p>
+    </div>
+
+    <div class="swps-summary-tiles" style="margin-bottom:16px">
+        <div class="swps-summary-tile">
+            <div class="swps-summary-tile-h"><?php esc_html_e( 'Bot Hits (30d)', 'stratawp-seo' ); ?></div>
+            <div class="swps-summary-tile-num is-grad"><?php echo esc_html( number_format_i18n( $totals['total_hits'] ) ); ?></div>
+            <?php if ( $totals['prev_hits'] > 0 ) : ?>
+                <div class="swps-summary-tile-foot" style="color:<?php echo $delta >= 0 ? 'var(--swps-success)' : 'var(--swps-danger)'; ?>">
+                    <?php echo esc_html( ( $delta >= 0 ? '+' : '' ) . $delta . '%' ); ?>
+                    <?php esc_html_e( 'vs prior 30d', 'stratawp-seo' ); ?>
+                </div>
+            <?php endif; ?>
+        </div>
+        <div class="swps-summary-tile">
+            <div class="swps-summary-tile-h"><?php esc_html_e( 'Active Bots', 'stratawp-seo' ); ?></div>
+            <div class="swps-summary-tile-num is-grad"><?php echo esc_html( number_format_i18n( $totals['active_bots'] ) ); ?></div>
+            <div class="swps-summary-tile-foot"><?php esc_html_e( 'distinct crawlers', 'stratawp-seo' ); ?></div>
+        </div>
+        <div class="swps-summary-tile">
+            <div class="swps-summary-tile-h"><?php esc_html_e( '404s to Bots', 'stratawp-seo' ); ?></div>
+            <div class="swps-summary-tile-num is-grad"><?php echo esc_html( number_format_i18n( $totals['total_404'] ) ); ?></div>
+            <div class="swps-summary-tile-foot"><?php esc_html_e( 'broken URLs hit', 'stratawp-seo' ); ?></div>
+        </div>
+    </div>
+
+    <?php if ( empty( $bots ) ) : ?>
+        <div class="swps-tile" style="margin-bottom:16px">
+            <p style="margin:0;color:var(--swps-text-muted)">
+                <?php esc_html_e( 'No AI bot traffic detected yet. AI crawler activity will appear here once bots start visiting your site.', 'stratawp-seo' ); ?>
+            </p>
+        </div>
+    <?php else : ?>
+        <div class="swps-tile" style="margin-bottom:16px">
+            <div class="swps-tile-h"><?php esc_html_e( 'By Crawler', 'stratawp-seo' ); ?></div>
+            <table class="widefat striped" style="margin-top:8px">
+                <thead>
+                    <tr>
+                        <th><?php esc_html_e( 'Bot', 'stratawp-seo' ); ?></th>
+                        <th style="text-align:right"><?php esc_html_e( 'Hits (30d)', 'stratawp-seo' ); ?></th>
+                        <th><?php esc_html_e( 'Last Seen', 'stratawp-seo' ); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $bots as $bot ) :
+                        $last = $bot['last_seen'] ? human_time_diff( strtotime( $bot['last_seen'] ), time() ) . ' ago' : '—';
+                        ?>
+                        <tr>
+                            <td><code><?php echo esc_html( $bot['label'] ); ?></code></td>
+                            <td style="text-align:right"><?php echo esc_html( number_format_i18n( $bot['hits'] ) ); ?></td>
+                            <td style="color:var(--swps-text-muted)"><?php echo esc_html( $last ); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
+
+    <?php if ( ! empty( $top_pages ) ) : ?>
+        <div class="swps-section-h" style="margin-top:24px">
+            <h3><?php esc_html_e( 'Top Crawled Pages (30d)', 'stratawp-seo' ); ?></h3>
+        </div>
+        <table class="widefat striped">
+            <thead>
+                <tr>
+                    <th><?php esc_html_e( 'Page', 'stratawp-seo' ); ?></th>
+                    <th style="text-align:right"><?php esc_html_e( 'Bot Hits', 'stratawp-seo' ); ?></th>
+                    <th style="text-align:right"><?php esc_html_e( '404s', 'stratawp-seo' ); ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ( $top_pages as $page ) :
+                    $label = '' !== $page['title'] ? $page['title'] : ( '' !== $page['request_uri'] ? $page['request_uri'] : __( '(Unknown)', 'stratawp-seo' ) );
+                    ?>
+                    <tr>
+                        <td>
+                            <?php if ( ! empty( $page['url'] ) ) : ?>
+                                <a href="<?php echo esc_url( $page['url'] ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $label ); ?></a>
+                            <?php else : ?>
+                                <?php echo esc_html( $label ); ?>
+                            <?php endif; ?>
+                        </td>
+                        <td style="text-align:right"><?php echo esc_html( number_format_i18n( $page['hits'] ) ); ?></td>
+                        <td style="text-align:right;color:<?php echo $page['errors_404'] > 0 ? 'var(--swps-danger)' : 'var(--swps-text-muted)'; ?>">
+                            <?php echo esc_html( number_format_i18n( $page['errors_404'] ) ); ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+
+    <?php if ( ! empty( $gaps ) ) : ?>
+        <div class="swps-section-h" style="margin-top:24px">
+            <h3><?php esc_html_e( 'AEO Gap — Posts Never Crawled (30d)', 'stratawp-seo' ); ?></h3>
+            <p style="color:var(--swps-text-muted);font-size:12px;margin:4px 0 0">
+                <?php esc_html_e( 'Published content that no AI crawler has fetched. Candidates for sitemap re-submission, internal linking, or refresh.', 'stratawp-seo' ); ?>
+            </p>
+        </div>
+        <table class="widefat striped">
+            <thead>
+                <tr>
+                    <th><?php esc_html_e( 'Post', 'stratawp-seo' ); ?></th>
+                    <th><?php esc_html_e( 'Published', 'stratawp-seo' ); ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ( $gaps as $gap ) : ?>
+                    <tr>
+                        <td>
+                            <a href="<?php echo esc_url( get_edit_post_link( $gap['post_id'] ) ); ?>"><?php echo esc_html( $gap['title'] ); ?></a>
+                            &nbsp;<a href="<?php echo esc_url( $gap['url'] ); ?>" target="_blank" rel="noopener" style="color:var(--swps-text-muted);font-size:11px">↗</a>
+                        </td>
+                        <td style="color:var(--swps-text-muted)"><?php echo esc_html( mysql2date( get_option( 'date_format' ), $gap['post_date'] ) ); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+
+    <?php if ( ! empty( $top_404s ) ) : ?>
+        <div class="swps-section-h" style="margin-top:24px">
+            <h3><?php esc_html_e( 'Bot 404s (last 7d)', 'stratawp-seo' ); ?></h3>
+            <p style="color:var(--swps-text-muted);font-size:12px;margin:4px 0 0">
+                <?php esc_html_e( 'URLs that AI bots are requesting but returning 404. Consider adding redirects.', 'stratawp-seo' ); ?>
+            </p>
+        </div>
+        <table class="widefat striped">
+            <thead>
+                <tr>
+                    <th><?php esc_html_e( 'URL', 'stratawp-seo' ); ?></th>
+                    <th style="text-align:right"><?php esc_html_e( 'Hits', 'stratawp-seo' ); ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ( $top_404s as $row ) : ?>
+                    <tr>
+                        <td><code style="font-size:12px"><?php echo esc_html( $row['request_uri'] ); ?></code></td>
+                        <td style="text-align:right"><?php echo esc_html( number_format_i18n( $row['hits'] ) ); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+    <?php endif; // bot_data ?>
 </div>

@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.4.2
+ * Version: 4.5.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'SWPS_VERSION', '4.4.2' );
+define( 'SWPS_VERSION', '4.5.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -83,6 +83,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-schema.php';
 // Analytics.
 require_once SWPS_PLUGIN_DIR . 'includes/class-analytics-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-search-console.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-bot-analytics-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-analytics-dashboard.php';
 
 // Keywords & Meta Editor.
@@ -182,6 +183,7 @@ final class StrataWP_SEO {
     public SWPS_SEO_Audit $seo_audit;
     public SWPS_Schema $schema;
     public SWPS_Analytics_Tracker $analytics_tracker;
+    public SWPS_Bot_Analytics_Tracker $bot_analytics_tracker;
     public SWPS_Search_Console $search_console;
     public SWPS_Analytics_Dashboard $analytics_dashboard;
     public SWPS_Keyword_Tracker $keyword_tracker;
@@ -238,9 +240,10 @@ final class StrataWP_SEO {
         $this->image_inserter = new SWPS_Image_Inserter( $this->images );
         $this->seo_audit = new SWPS_SEO_Audit();
         $this->schema    = new SWPS_Schema();
-        $this->analytics_tracker   = new SWPS_Analytics_Tracker();
-        $this->search_console      = new SWPS_Search_Console();
-        $this->analytics_dashboard = new SWPS_Analytics_Dashboard( $this->analytics_tracker, $this->search_console );
+        $this->analytics_tracker     = new SWPS_Analytics_Tracker();
+        $this->bot_analytics_tracker = new SWPS_Bot_Analytics_Tracker();
+        $this->search_console        = new SWPS_Search_Console();
+        $this->analytics_dashboard   = new SWPS_Analytics_Dashboard( $this->analytics_tracker, $this->search_console );
         $this->keyword_tracker = new SWPS_Keyword_Tracker( $this->search_console );
         $this->keywords_page   = new SWPS_Keywords_Page( $this->keyword_tracker );
         $this->meta_editor     = new SWPS_Meta_Editor();
@@ -1095,6 +1098,11 @@ function swps_activate(): void {
         'analytics_enabled'        => 1,
         'analytics_retention'      => 90,
         'analytics_exclude_admins' => 1,
+        // Bot Analytics defaults.
+        'bot_analytics_enabled'       => 1,
+        'bot_analytics_retention'     => 90,
+        'bot_analytics_sample_rate'   => 100,
+        'bot_analytics_exclude_paths' => "/wp-admin\n/wp-json\n/wp-login\n/feed\n/xmlrpc.php",
         'gsc_client_id'            => '',
         'gsc_client_secret'        => '',
         // Keywords & Meta defaults.
@@ -1129,6 +1137,8 @@ function swps_activate(): void {
 
     SWPS_Analytics_Tracker::create_tables();
     SWPS_Analytics_Tracker::schedule_cron();
+    SWPS_Bot_Analytics_Tracker::create_tables();
+    SWPS_Bot_Analytics_Tracker::schedule_cron();
     SWPS_Search_Console::schedule_cron();
     SWPS_Keyword_Tracker::create_tables();
     SWPS_Keyword_Tracker::schedule_cron();
@@ -1158,6 +1168,7 @@ function swps_deactivate(): void {
     SWPS_Cron::unschedule();
     SWPS_SEO_Audit::unschedule_cron();
     SWPS_Analytics_Tracker::unschedule_cron();
+    SWPS_Bot_Analytics_Tracker::unschedule_cron();
     SWPS_Search_Console::unschedule_cron();
     SWPS_Keyword_Tracker::unschedule_cron();
     SWPS_Competitors::unschedule_cron();

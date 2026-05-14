@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.4.2
+Stable tag: 4.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -84,6 +84,7 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 * **Per-post analytics** — metabox on every post editor with views, time, scroll depth, and top queries
 * **Views column** — sortable "Views (30d)" column in the posts list table
 * **Configurable retention** — keep data for 30, 90, 180, or 365 days
+* **AI Bot Analytics** — server-side tracking of GPTBot, ClaudeBot, PerplexityBot, Google-Extended and 11 more AI crawlers, with per-bot hit counts, top crawled pages, AEO gap report (posts no AI engine has fetched), and 404 monitoring
 
 = Full Sitemap System =
 
@@ -251,6 +252,14 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.5.0 =
+* New: AI Bot Analytics. Server-side tracking of hits from known AI crawlers (GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-Web, anthropic-ai, PerplexityBot, Perplexity-User, Google-Extended, Applebot-Extended, CCBot, Meta-ExternalAgent, Bytespider, Amazonbot, DuckAssistBot). Captures on `shutdown` so post ID and status code are accurate, batches into a raw table for 7 days, then aggregates into a daily summary with configurable retention (default 90 days). Mirrors the existing analytics pattern — no JS, no external services, GDPR-friendly (no IP or referrer storage). Excludes admin/AJAX/REST/cron/CLI by default and supports a configurable path exclusion list and 0–100% sample rate for high-traffic sites.
+* New: "AI Crawlers" section on the Analytics page. Shows bot hit totals (with delta vs prior period), per-bot breakdown with last-seen, top crawled pages with 404 counts, an **AEO Gap report** (published posts that no AI bot has fetched), and recent bot 404s for redirect candidates.
+* New: REST endpoints — `GET /wp-json/swps/v1/bot-analytics/summary`, `/top-pages`, `/gaps`.
+* New: WP-CLI — `wp swps bot-stats [--days=N] [--bot=KEY] [--format=table|json]`.
+* New: Per-post analytics widget now includes bot hit counts (7d / 30d) and last-seen alongside human pageview stats.
+* New: Filters `swps_ai_bots_known`, `swps_bot_analytics_capture`, `swps_bot_analytics_normalize_uri` and action `swps_bot_analytics_hit` for extending the pipeline.
 
 = 4.4.2 =
 * Fix: Scheduled (WP-Cron) posts were created without a featured image or in-content images, with nothing logged to debug.log. Root cause was PHP `max_execution_time` killing the worker mid-image-download — the AI text call plus Gemini image generation easily exceeds the 30–60s default. `SWPS_Generator::generate_post()` now calls `@set_time_limit(0)`, raises the memory limit, and sets `ignore_user_abort(true)` before kicking off the pipeline. Manual generation was unaffected; only cron/background paths benefit.
