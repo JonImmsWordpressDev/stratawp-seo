@@ -71,6 +71,15 @@ jobs:
             --exclude='*.zip' \
             --exclude='AGENTS.md' \
             --exclude='CLAUDE.md' \
+            --exclude='.claude' \
+            --exclude='.claude-flow' \
+            --exclude='**/.claude-flow' \
+            --exclude='.superpowers' \
+            --exclude='.agents' \
+            --exclude='.codex' \
+            --exclude='.idea' \
+            --exclude='.vscode' \
+            --exclude='.mcp.json' \
             --exclude='.DS_Store' \
             --exclude='**/.DS_Store' \
             ./ build/stratawp-seo/
