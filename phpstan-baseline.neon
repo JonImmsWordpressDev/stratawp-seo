@@ -1,0 +1,206 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Left side of && is always true\\.$#"
+			count: 1
+			path: includes/audit/class-sitemap-module.php
+
+		-
+			message: "#^Method SWPS_Admin_Shell\\:\\:render_top_nav\\(\\) is unused\\.$#"
+			count: 1
+			path: includes/class-admin-shell.php
+
+		-
+			message: "#^Method SWPS_AI_Bots\\:\\:detect_sitemap_url\\(\\) never returns null so it can be removed from the return type\\.$#"
+			count: 1
+			path: includes/class-ai-bots.php
+
+		-
+			message: "#^Strict comparison using \\=\\=\\= between null and 'max_tokens' will always evaluate to false\\.$#"
+			count: 1
+			path: includes/class-ai-provider.php
+
+		-
+			message: "#^Unreachable statement \\- code above always terminates\\.$#"
+			count: 1
+			path: includes/class-analytics-tracker.php
+
+		-
+			message: "#^Parameter \\#1 \\$args of function wp_count_terms expects array\\{taxonomy\\?\\: array\\<string\\>\\|string, object_ids\\?\\: array\\<int\\>\\|int, orderby\\?\\: string, order\\?\\: string, hide_empty\\?\\: bool\\|int, include\\?\\: array\\<int\\>\\|string, exclude\\?\\: array\\<int\\>\\|string, exclude_tree\\?\\: array\\<int\\>\\|string, \\.\\.\\.\\}, 'category' given\\.$#"
+			count: 1
+			path: includes/class-analyzer.php
+
+		-
+			message: "#^Parameter \\#1 \\$args of function wp_count_terms expects array\\{taxonomy\\?\\: array\\<string\\>\\|string, object_ids\\?\\: array\\<int\\>\\|int, orderby\\?\\: string, order\\?\\: string, hide_empty\\?\\: bool\\|int, include\\?\\: array\\<int\\>\\|string, exclude\\?\\: array\\<int\\>\\|string, exclude_tree\\?\\: array\\<int\\>\\|string, \\.\\.\\.\\}, 'post_tag' given\\.$#"
+			count: 1
+			path: includes/class-analyzer.php
+
+		-
+			message: "#^Function as_schedule_single_action not found\\.$#"
+			count: 1
+			path: includes/class-background-processor.php
+
+		-
+			message: "#^Offset 'anchor' on array\\{href\\: string, anchor\\: string\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: includes/class-backlinks.php
+
+		-
+			message: "#^Offset 'href' on array\\{href\\: string, anchor\\: string\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: includes/class-backlinks.php
+
+		-
+			message: "#^Ternary operator condition is always true\\.$#"
+			count: 1
+			path: includes/class-backlinks.php
+
+		-
+			message: "#^Variable \\$cols in empty\\(\\) always exists and is not falsy\\.$#"
+			count: 1
+			path: includes/class-backlinks.php
+
+		-
+			message: "#^Call to static method error\\(\\) on an unknown class WP_CLI\\.$#"
+			count: 5
+			path: includes/class-cli.php
+
+		-
+			message: "#^Call to static method log\\(\\) on an unknown class WP_CLI\\.$#"
+			count: 28
+			path: includes/class-cli.php
+
+		-
+			message: "#^Call to static method success\\(\\) on an unknown class WP_CLI\\.$#"
+			count: 4
+			path: includes/class-cli.php
+
+		-
+			message: "#^Function WP_CLI\\\\Utils\\\\format_items not found\\.$#"
+			count: 4
+			path: includes/class-cli.php
+
+		-
+			message: "#^Comparison operation \"\\>\" between 14 and 0 is always true\\.$#"
+			count: 1
+			path: includes/class-content-scorer.php
+
+		-
+			message: "#^Else branch is unreachable because ternary operator condition is always true\\.$#"
+			count: 1
+			path: includes/class-content-scorer.php
+
+		-
+			message: "#^Method SWPS_Generator\\:\\:convert_to_blocks\\(\\) is unused\\.$#"
+			count: 1
+			path: includes/class-generator.php
+
+		-
+			message: "#^Offset 'body' on array\\{tag_name\\: string, body\\: string, package_url\\: string, published_at\\: string\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: includes/class-github-updater.php
+
+		-
+			message: "#^Offset 'package_url' on array\\{tag_name\\: string, body\\: string, package_url\\: string, published_at\\: string\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 2
+			path: includes/class-github-updater.php
+
+		-
+			message: "#^Offset 'published_at' on array\\{tag_name\\: string, body\\: string, package_url\\: string, published_at\\: string\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: includes/class-github-updater.php
+
+		-
+			message: "#^Offset 'tag_name' on array\\{tag_name\\: string, body\\: string, package_url\\: string, published_at\\: string\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 2
+			path: includes/class-github-updater.php
+
+		-
+			message: "#^Property SWPS_GitHub_Updater\\:\\:\\$plugin_file is never read, only written\\.$#"
+			count: 1
+			path: includes/class-github-updater.php
+
+		-
+			message: "#^Parameter \\#1 \\$text of function esc_attr expects string, int\\<min, \\-1\\>\\|int\\<1, max\\> given\\.$#"
+			count: 2
+			path: includes/class-image-inserter.php
+
+		-
+			message: "#^Property SWPS_Image_Inserter\\:\\:\\$image_provider is never read, only written\\.$#"
+			count: 1
+			path: includes/class-image-inserter.php
+
+		-
+			message: "#^Offset 'filename' on array\\{dirname\\?\\: string, basename\\: string, extension\\?\\: string, filename\\: string\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: includes/class-image-seo.php
+
+		-
+			message: "#^Parameter \\#1 \\$text of function esc_attr expects string, int given\\.$#"
+			count: 2
+			path: includes/class-internal-links.php
+
+		-
+			message: "#^Variable \\$keys in empty\\(\\) always exists and is not falsy\\.$#"
+			count: 1
+			path: includes/class-migration.php
+
+		-
+			message: "#^Parameter \\#1 \\$text of function esc_attr expects string, int given\\.$#"
+			count: 6
+			path: includes/class-post-list-seo.php
+
+		-
+			message: "#^Parameter \\#1 \\$text of function esc_html expects string, int given\\.$#"
+			count: 2
+			path: includes/class-post-list-seo.php
+
+		-
+			message: "#^Parameter \\#1 \\$user_id of function get_userdata expects int, string given\\.$#"
+			count: 1
+			path: includes/class-schema.php
+
+		-
+			message: "#^Constant SWPS_Search_Appearance\\:\\:VARIABLES is unused\\.$#"
+			count: 1
+			path: includes/class-search-appearance.php
+
+		-
+			message: "#^Parameter \\#2 \\$user_id of function get_the_author_meta expects int\\|false, string given\\.$#"
+			count: 1
+			path: includes/class-search-appearance.php
+
+		-
+			message: "#^Action callback returns array but should not return anything\\.$#"
+			count: 1
+			path: includes/class-seo-audit.php
+
+		-
+			message: "#^Parameter \\#1 \\$args of function wp_dropdown_categories expects array\\{show_option_all\\?\\: string, show_option_none\\?\\: string, option_none_value\\?\\: string, orderby\\?\\: string, pad_counts\\?\\: bool, show_count\\?\\: bool\\|int, echo\\?\\: bool\\|int, hierarchical\\?\\: bool\\|int, \\.\\.\\.\\}, array\\{name\\: mixed, selected\\: mixed, show_option_none\\: string, option_none_value\\: 0, hide_empty\\: false\\} given\\.$#"
+			count: 1
+			path: includes/class-settings.php
+
+		-
+			message: "#^Callback expects 1 parameter, \\$accepted_args is set to 2\\.$#"
+			count: 2
+			path: includes/class-taxonomy-meta.php
+
+		-
+			message: "#^Constant SWPS_Taxonomy_Meta\\:\\:META_FIELDS is unused\\.$#"
+			count: 1
+			path: includes/class-taxonomy-meta.php
+
+		-
+			message: "#^Strict comparison using \\=\\=\\= between false and string will always evaluate to false\\.$#"
+			count: 1
+			path: includes/providers/images/class-gemini-provider.php
+
+		-
+			message: "#^Action callback returns StrataWP_SEO but should not return anything\\.$#"
+			count: 1
+			path: stratawp-seo.php
+
+		-
+			message: "#^Call to static method add_command\\(\\) on an unknown class WP_CLI\\.$#"
+			count: 1
+			path: stratawp-seo.php

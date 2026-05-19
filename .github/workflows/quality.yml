@@ -1,0 +1,73 @@
+name: Code quality
+
+# Lint, coding standards, and static analysis. Runs on PRs and on pushes
+# to working branches so regressions are caught before they reach main.
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+      - "chore/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php-syntax:
+    name: PHP ${{ matrix.php }} syntax
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.0', '8.1', '8.2', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: Lint all PHP files
+        run: |
+          find stratawp-seo.php uninstall.php includes admin templates \
+            -name '*.php' -print0 \
+            | xargs -0 -n1 -P4 php -l > /dev/null
+
+  coding-standards:
+    name: PHPCS (WordPress)
+    runs-on: ubuntu-latest
+    # Advisory until the legacy WPCS backlog is cleared (run `composer
+    # lint:fix`, commit, then flip this to a hard gate). PHPStan + the
+    # syntax matrix are the enforcing gates in the meantime.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: cs2pr
+      - name: Validate composer.json
+        run: composer validate --strict --no-check-publish
+      - uses: ramsey/composer-install@v3
+      - name: Run PHP_CodeSniffer
+        run: composer lint -- --report=checkstyle | cs2pr
+
+  static-analysis:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - uses: ramsey/composer-install@v3
+      - name: Run PHPStan
+        run: composer analyze -- --no-progress --error-format=github
