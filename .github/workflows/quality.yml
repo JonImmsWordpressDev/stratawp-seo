@@ -1,14 +1,13 @@
 name: Code quality
 
-# Lint, coding standards, and static analysis. Runs on PRs and on pushes
-# to working branches so regressions are caught before they reach main.
+# Lint, coding standards, and static analysis. PRs are gated via the
+# pull_request trigger; main is checked post-merge. (No feature/chore
+# push triggers — combined with pull_request they ran CI twice per PR.)
 
 on:
   push:
     branches:
       - main
-      - "feature/**"
-      - "chore/**"
   pull_request:
   workflow_dispatch:
 
@@ -45,7 +44,6 @@ jobs:
     # Advisory until the legacy WPCS backlog is cleared (run `composer
     # lint:fix`, commit, then flip this to a hard gate). PHPStan + the
     # syntax matrix are the enforcing gates in the meantime.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -57,6 +55,7 @@ jobs:
         run: composer validate --strict --no-check-publish
       - uses: ramsey/composer-install@v3
       - name: Run PHP_CodeSniffer
+        continue-on-error: true
         run: composer lint -- --report=checkstyle | cs2pr
 
   static-analysis:
