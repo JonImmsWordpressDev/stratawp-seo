@@ -1,14 +1,13 @@
 name: Code quality
 
-# Lint, coding standards, and static analysis. Runs on PRs and on pushes
-# to working branches so regressions are caught before they reach main.
+# Lint, coding standards, and static analysis. PRs are gated via the
+# pull_request trigger; main is checked post-merge. (No feature/chore
+# push triggers — combined with pull_request they ran CI twice per PR.)
 
 on:
   push:
     branches:
       - main
-      - "feature/**"
-      - "chore/**"
   pull_request:
   workflow_dispatch:
 
