@@ -1,0 +1,24 @@
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+
+    paths:
+        - stratawp-seo.php
+        - uninstall.php
+        - includes
+        - admin
+
+    excludePaths:
+        - vendor/*
+        - node_modules/*
+        - build/*
+
+    parallel:
+        maximumNumberOfProcesses: 4
+
+    # Define the SWPS_* constants without executing the ABSPATH guard.
+    bootstrapFiles:
+        - .phpstan/bootstrap.php
