@@ -9,7 +9,7 @@
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+	exit;
 }
 
 /**
@@ -20,349 +20,349 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class SWPS_Schema {
 
-    /**
-     * Constructor — bail if schema is disabled or another SEO plugin handles it.
-     */
-    public function __construct() {
-        if ( is_admin() ) {
-            return;
-        }
+	/**
+	 * Constructor — bail if schema is disabled or another SEO plugin handles it.
+	 */
+	public function __construct() {
+		if ( is_admin() ) {
+			return;
+		}
 
-        if ( ! get_option( 'swps_schema_enabled', 1 ) ) {
-            return;
-        }
+		if ( ! get_option( 'swps_schema_enabled', 1 ) ) {
+			return;
+		}
 
-        // Defer to other SEO plugins that output their own schema.
-        if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) ) {
-            return;
-        }
+		// Defer to other SEO plugins that output their own schema.
+		if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) ) {
+			return;
+		}
 
-        add_action( 'wp_head', [ $this, 'output_schema' ], 1 );
-    }
+		add_action( 'wp_head', array( $this, 'output_schema' ), 1 );
+	}
 
-    /**
-     * Main wp_head callback — dispatches to individual schema methods.
-     */
-    public function output_schema(): void {
-        if ( is_front_page() ) {
-            $this->website_schema();
-            $this->organization_schema();
-        }
+	/**
+	 * Main wp_head callback — dispatches to individual schema methods.
+	 */
+	public function output_schema(): void {
+		if ( is_front_page() ) {
+			$this->website_schema();
+			$this->organization_schema();
+		}
 
-        if ( is_singular( 'post' ) ) {
-            $this->article_schema();
-        }
+		if ( is_singular( 'post' ) ) {
+			$this->article_schema();
+		}
 
-        // Output JSON-LD breadcrumbs only when the HTML breadcrumbs feature is disabled.
-        // When enabled, SWPS_Breadcrumbs outputs inline microdata schema instead.
-        if ( ! is_front_page() && ! get_option( 'swps_breadcrumbs_enabled', 1 ) ) {
-            $this->breadcrumb_schema();
-        }
-    }
+		// Output JSON-LD breadcrumbs only when the HTML breadcrumbs feature is disabled.
+		// When enabled, SWPS_Breadcrumbs outputs inline microdata schema instead.
+		if ( ! is_front_page() && ! get_option( 'swps_breadcrumbs_enabled', 1 ) ) {
+			$this->breadcrumb_schema();
+		}
+	}
 
-    /**
-     * Output a JSON-LD script tag from a schema array.
-     *
-     * @param array $schema Schema data array.
-     */
-    private function output_jsonld( array $schema ): void {
-        if ( empty( $schema ) ) {
-            return;
-        }
+	/**
+	 * Output a JSON-LD script tag from a schema array.
+	 *
+	 * @param array $schema Schema data array.
+	 */
+	private function output_jsonld( array $schema ): void {
+		if ( empty( $schema ) ) {
+			return;
+		}
 
         // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-LD script tag.
-        echo '<script type="application/ld+json">'
-           . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
-           . '</script>' . "\n";
-    }
+		echo '<script type="application/ld+json">'
+			. wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
+			. '</script>' . "\n";
+	}
 
-    /**
-     * Output Article schema on single posts.
-     */
-    private function article_schema(): void {
-        $post = get_post();
+	/**
+	 * Output Article schema on single posts.
+	 */
+	private function article_schema(): void {
+		$post = get_post();
 
-        if ( ! $post ) {
-            return;
-        }
+		if ( ! $post ) {
+			return;
+		}
 
-        $article_type = get_option( 'swps_schema_article_type', 'Article' );
-        $author       = get_userdata( $post->post_author );
-        $excerpt      = get_the_excerpt( $post );
+		$article_type = get_option( 'swps_schema_article_type', 'Article' );
+		$author       = get_userdata( $post->post_author );
+		$excerpt      = get_the_excerpt( $post );
 
-        if ( empty( $excerpt ) ) {
-            $excerpt = wp_trim_words( wp_strip_all_tags( $post->post_content ), 25, '...' );
-        }
+		if ( empty( $excerpt ) ) {
+			$excerpt = wp_trim_words( wp_strip_all_tags( $post->post_content ), 25, '...' );
+		}
 
-        $schema = [
-            '@context'         => 'https://schema.org',
-            '@type'            => $article_type,
-            'headline'         => get_the_title( $post ),
-            'description'      => $excerpt,
-            'datePublished'    => get_the_date( 'c', $post ),
-            'dateModified'     => get_the_modified_date( 'c', $post ),
-            'mainEntityOfPage' => [
-                '@type' => 'WebPage',
-                '@id'   => get_permalink( $post ),
-            ],
-            'wordCount'        => str_word_count( wp_strip_all_tags( $post->post_content ) ),
-        ];
+		$schema = array(
+			'@context'         => 'https://schema.org',
+			'@type'            => $article_type,
+			'headline'         => get_the_title( $post ),
+			'description'      => $excerpt,
+			'datePublished'    => get_the_date( 'c', $post ),
+			'dateModified'     => get_the_modified_date( 'c', $post ),
+			'mainEntityOfPage' => array(
+				'@type' => 'WebPage',
+				'@id'   => get_permalink( $post ),
+			),
+			'wordCount'        => str_word_count( wp_strip_all_tags( $post->post_content ) ),
+		);
 
-        // Author.
-        if ( $author ) {
-            $schema['author'] = [
-                '@type' => 'Person',
-                'name'  => $author->display_name,
-                'url'   => get_author_posts_url( $author->ID ),
-            ];
-        }
+		// Author.
+		if ( $author ) {
+			$schema['author'] = array(
+				'@type' => 'Person',
+				'name'  => $author->display_name,
+				'url'   => get_author_posts_url( $author->ID ),
+			);
+		}
 
-        // Featured image.
-        $thumb_id = get_post_thumbnail_id( $post );
+		// Featured image.
+		$thumb_id = get_post_thumbnail_id( $post );
 
-        if ( $thumb_id ) {
-            $img_data = wp_get_attachment_image_src( $thumb_id, 'full' );
+		if ( $thumb_id ) {
+			$img_data = wp_get_attachment_image_src( $thumb_id, 'full' );
 
-            if ( $img_data ) {
-                $schema['image'] = [
-                    '@type'  => 'ImageObject',
-                    'url'    => $img_data[0],
-                    'width'  => $img_data[1],
-                    'height' => $img_data[2],
-                ];
-            }
-        }
+			if ( $img_data ) {
+				$schema['image'] = array(
+					'@type'  => 'ImageObject',
+					'url'    => $img_data[0],
+					'width'  => $img_data[1],
+					'height' => $img_data[2],
+				);
+			}
+		}
 
-        // Publisher — references Organization settings.
-        $org_name = get_option( 'swps_schema_name', '' );
+		// Publisher — references Organization settings.
+		$org_name = get_option( 'swps_schema_name', '' );
 
-        if ( empty( $org_name ) ) {
-            $org_name = get_bloginfo( 'name' );
-        }
+		if ( empty( $org_name ) ) {
+			$org_name = get_bloginfo( 'name' );
+		}
 
-        $publisher = [
-            '@type' => 'Organization',
-            'name'  => $org_name,
-        ];
+		$publisher = array(
+			'@type' => 'Organization',
+			'name'  => $org_name,
+		);
 
-        $logo_url = get_option( 'swps_schema_logo', '' );
+		$logo_url = get_option( 'swps_schema_logo', '' );
 
-        if ( ! empty( $logo_url ) ) {
-            $publisher['logo'] = [
-                '@type' => 'ImageObject',
-                'url'   => $logo_url,
-            ];
-        }
+		if ( ! empty( $logo_url ) ) {
+			$publisher['logo'] = array(
+				'@type' => 'ImageObject',
+				'url'   => $logo_url,
+			);
+		}
 
-        $schema['publisher'] = $publisher;
+		$schema['publisher'] = $publisher;
 
-        /**
-         * Filter the Article schema before output.
-         *
-         * @param array $schema  Article schema array.
-         * @param int   $post_id Post ID.
-         */
-        $schema = SWPS_Hooks::filter_schema_article( $schema, $post->ID );
+		/**
+		 * Filter the Article schema before output.
+		 *
+		 * @param array $schema  Article schema array.
+		 * @param int   $post_id Post ID.
+		 */
+		$schema = SWPS_Hooks::filter_schema_article( $schema, $post->ID );
 
-        $this->output_jsonld( $schema );
-    }
+		$this->output_jsonld( $schema );
+	}
 
-    /**
-     * Output BreadcrumbList schema on all pages except homepage.
-     */
-    private function breadcrumb_schema(): void {
-        $items = [];
+	/**
+	 * Output BreadcrumbList schema on all pages except homepage.
+	 */
+	private function breadcrumb_schema(): void {
+		$items = array();
 
-        // Home is always first.
-        $items[] = [
-            'name' => get_bloginfo( 'name' ),
-            'url'  => home_url( '/' ),
-        ];
+		// Home is always first.
+		$items[] = array(
+			'name' => get_bloginfo( 'name' ),
+			'url'  => home_url( '/' ),
+		);
 
-        if ( is_singular( 'post' ) ) {
-            $post       = get_post();
-            $category   = $this->get_primary_category( $post );
+		if ( is_singular( 'post' ) ) {
+			$post     = get_post();
+			$category = $this->get_primary_category( $post );
 
-            if ( $category ) {
-                $items[] = [
-                    'name' => $category->name,
-                    'url'  => get_category_link( $category->term_id ),
-                ];
-            }
+			if ( $category ) {
+				$items[] = array(
+					'name' => $category->name,
+					'url'  => get_category_link( $category->term_id ),
+				);
+			}
 
-            $items[] = [
-                'name' => get_the_title( $post ),
-                'url'  => get_permalink( $post ),
-            ];
-        } elseif ( is_page() ) {
-            $post      = get_post();
-            $ancestors = array_reverse( get_post_ancestors( $post ) );
+			$items[] = array(
+				'name' => get_the_title( $post ),
+				'url'  => get_permalink( $post ),
+			);
+		} elseif ( is_page() ) {
+			$post      = get_post();
+			$ancestors = array_reverse( get_post_ancestors( $post ) );
 
-            foreach ( $ancestors as $ancestor_id ) {
-                $items[] = [
-                    'name' => get_the_title( $ancestor_id ),
-                    'url'  => get_permalink( $ancestor_id ),
-                ];
-            }
+			foreach ( $ancestors as $ancestor_id ) {
+				$items[] = array(
+					'name' => get_the_title( $ancestor_id ),
+					'url'  => get_permalink( $ancestor_id ),
+				);
+			}
 
-            $items[] = [
-                'name' => get_the_title( $post ),
-                'url'  => get_permalink( $post ),
-            ];
-        } elseif ( is_category() || is_tag() || is_tax() ) {
-            $term = get_queried_object();
+			$items[] = array(
+				'name' => get_the_title( $post ),
+				'url'  => get_permalink( $post ),
+			);
+		} elseif ( is_category() || is_tag() || is_tax() ) {
+			$term = get_queried_object();
 
-            if ( $term ) {
-                $items[] = [
-                    'name' => $term->name,
-                    'url'  => get_term_link( $term ),
-                ];
-            }
-        } elseif ( is_author() ) {
-            $author = get_queried_object();
+			if ( $term ) {
+				$items[] = array(
+					'name' => $term->name,
+					'url'  => get_term_link( $term ),
+				);
+			}
+		} elseif ( is_author() ) {
+			$author = get_queried_object();
 
-            if ( $author ) {
-                $items[] = [
-                    'name' => $author->display_name,
-                    'url'  => get_author_posts_url( $author->ID ),
-                ];
-            }
-        }
+			if ( $author ) {
+				$items[] = array(
+					'name' => $author->display_name,
+					'url'  => get_author_posts_url( $author->ID ),
+				);
+			}
+		}
 
-        // Need at least 2 items (Home + something) for a valid breadcrumb.
-        if ( count( $items ) < 2 ) {
-            return;
-        }
+		// Need at least 2 items (Home + something) for a valid breadcrumb.
+		if ( count( $items ) < 2 ) {
+			return;
+		}
 
-        $list_items = [];
+		$list_items = array();
 
-        foreach ( $items as $position => $item ) {
-            $list_items[] = [
-                '@type'    => 'ListItem',
-                'position' => $position + 1,
-                'name'     => $item['name'],
-                'item'     => $item['url'],
-            ];
-        }
+		foreach ( $items as $position => $item ) {
+			$list_items[] = array(
+				'@type'    => 'ListItem',
+				'position' => $position + 1,
+				'name'     => $item['name'],
+				'item'     => $item['url'],
+			);
+		}
 
-        $schema = [
-            '@context'        => 'https://schema.org',
-            '@type'           => 'BreadcrumbList',
-            'itemListElement' => $list_items,
-        ];
+		$schema = array(
+			'@context'        => 'https://schema.org',
+			'@type'           => 'BreadcrumbList',
+			'itemListElement' => $list_items,
+		);
 
-        /** Filter the Breadcrumb schema before output. */
-        $schema = SWPS_Hooks::filter_schema_breadcrumb( $schema );
+		/** Filter the Breadcrumb schema before output. */
+		$schema = SWPS_Hooks::filter_schema_breadcrumb( $schema );
 
-        $this->output_jsonld( $schema );
-    }
+		$this->output_jsonld( $schema );
+	}
 
-    /**
-     * Get the primary category for a post.
-     *
-     * Uses Yoast primary category if set, otherwise falls back to first category.
-     *
-     * @param WP_Post $post Post object.
-     * @return WP_Term|null Category term or null.
-     */
-    private function get_primary_category( WP_Post $post ): ?WP_Term {
-        // Check Yoast primary category first.
-        $primary_id = get_post_meta( $post->ID, '_yoast_wpseo_primary_category', true );
+	/**
+	 * Get the primary category for a post.
+	 *
+	 * Uses Yoast primary category if set, otherwise falls back to first category.
+	 *
+	 * @param WP_Post $post Post object.
+	 * @return WP_Term|null Category term or null.
+	 */
+	private function get_primary_category( WP_Post $post ): ?WP_Term {
+		// Check Yoast primary category first.
+		$primary_id = get_post_meta( $post->ID, '_yoast_wpseo_primary_category', true );
 
-        if ( $primary_id ) {
-            $term = get_term( (int) $primary_id, 'category' );
+		if ( $primary_id ) {
+			$term = get_term( (int) $primary_id, 'category' );
 
-            if ( $term && ! is_wp_error( $term ) ) {
-                return $term;
-            }
-        }
+			if ( $term && ! is_wp_error( $term ) ) {
+				return $term;
+			}
+		}
 
-        // Fall back to first assigned category.
-        $categories = get_the_category( $post->ID );
+		// Fall back to first assigned category.
+		$categories = get_the_category( $post->ID );
 
-        if ( ! empty( $categories ) ) {
-            return $categories[0];
-        }
+		if ( ! empty( $categories ) ) {
+			return $categories[0];
+		}
 
-        return null;
-    }
+		return null;
+	}
 
-    /**
-     * Output WebSite schema on the homepage.
-     */
-    private function website_schema(): void {
-        $name = get_option( 'swps_schema_name', '' );
+	/**
+	 * Output WebSite schema on the homepage.
+	 */
+	private function website_schema(): void {
+		$name = get_option( 'swps_schema_name', '' );
 
-        if ( empty( $name ) ) {
-            $name = get_bloginfo( 'name' );
-        }
+		if ( empty( $name ) ) {
+			$name = get_bloginfo( 'name' );
+		}
 
-        $schema = [
-            '@context' => 'https://schema.org',
-            '@type'    => 'WebSite',
-            'name'     => $name,
-            'url'      => home_url( '/' ),
-        ];
+		$schema = array(
+			'@context' => 'https://schema.org',
+			'@type'    => 'WebSite',
+			'name'     => $name,
+			'url'      => home_url( '/' ),
+		);
 
-        // Optional sitelinks searchbox.
-        if ( get_option( 'swps_schema_searchbox', 1 ) ) {
-            $schema['potentialAction'] = [
-                '@type'       => 'SearchAction',
-                'target'      => [
-                    '@type'       => 'EntryPoint',
-                    'urlTemplate' => home_url( '/?s={search_term_string}' ),
-                ],
-                'query-input' => 'required name=search_term_string',
-            ];
-        }
+		// Optional sitelinks searchbox.
+		if ( get_option( 'swps_schema_searchbox', 1 ) ) {
+			$schema['potentialAction'] = array(
+				'@type'       => 'SearchAction',
+				'target'      => array(
+					'@type'       => 'EntryPoint',
+					'urlTemplate' => home_url( '/?s={search_term_string}' ),
+				),
+				'query-input' => 'required name=search_term_string',
+			);
+		}
 
-        $this->output_jsonld( $schema );
-    }
+		$this->output_jsonld( $schema );
+	}
 
-    /**
-     * Output Organization or Person schema on the homepage.
-     */
-    private function organization_schema(): void {
-        $entity_type = get_option( 'swps_schema_entity_type', 'Organization' );
-        $name        = get_option( 'swps_schema_name', '' );
+	/**
+	 * Output Organization or Person schema on the homepage.
+	 */
+	private function organization_schema(): void {
+		$entity_type = get_option( 'swps_schema_entity_type', 'Organization' );
+		$name        = get_option( 'swps_schema_name', '' );
 
-        if ( empty( $name ) ) {
-            $name = get_bloginfo( 'name' );
-        }
+		if ( empty( $name ) ) {
+			$name = get_bloginfo( 'name' );
+		}
 
-        $schema = [
-            '@context' => 'https://schema.org',
-            '@type'    => $entity_type,
-            'name'     => $name,
-            'url'      => home_url( '/' ),
-        ];
+		$schema = array(
+			'@context' => 'https://schema.org',
+			'@type'    => $entity_type,
+			'name'     => $name,
+			'url'      => home_url( '/' ),
+		);
 
-        // Logo (Organization only, per Google spec).
-        if ( 'Organization' === $entity_type ) {
-            $logo_url = get_option( 'swps_schema_logo', '' );
+		// Logo (Organization only, per Google spec).
+		if ( 'Organization' === $entity_type ) {
+			$logo_url = get_option( 'swps_schema_logo', '' );
 
-            if ( ! empty( $logo_url ) ) {
-                $schema['logo'] = [
-                    '@type' => 'ImageObject',
-                    'url'   => $logo_url,
-                ];
-            }
-        }
+			if ( ! empty( $logo_url ) ) {
+				$schema['logo'] = array(
+					'@type' => 'ImageObject',
+					'url'   => $logo_url,
+				);
+			}
+		}
 
-        // Social profiles.
-        $social_raw = get_option( 'swps_schema_social_profiles', '' );
+		// Social profiles.
+		$social_raw = get_option( 'swps_schema_social_profiles', '' );
 
-        if ( ! empty( $social_raw ) ) {
-            $urls = array_filter( array_map( 'trim', explode( "\n", $social_raw ) ) );
+		if ( ! empty( $social_raw ) ) {
+			$urls = array_filter( array_map( 'trim', explode( "\n", $social_raw ) ) );
 
-            if ( ! empty( $urls ) ) {
-                $schema['sameAs'] = array_values( $urls );
-            }
-        }
+			if ( ! empty( $urls ) ) {
+				$schema['sameAs'] = array_values( $urls );
+			}
+		}
 
-        /** Filter the Organization/Person schema before output. */
-        $schema = SWPS_Hooks::filter_schema_organization( $schema );
+		/** Filter the Organization/Person schema before output. */
+		$schema = SWPS_Hooks::filter_schema_organization( $schema );
 
-        $this->output_jsonld( $schema );
-    }
+		$this->output_jsonld( $schema );
+	}
 }

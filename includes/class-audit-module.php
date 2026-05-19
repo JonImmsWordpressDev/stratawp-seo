@@ -45,7 +45,10 @@ abstract class SWPS_Audit_Module {
 	 * @return array { @type int $fixed Count of fixed issues. @type string[] $messages Log messages. }
 	 */
 	public function auto_fix( array $issues ): array {
-		return [ 'fixed' => 0, 'messages' => [] ];
+		return array(
+			'fixed'    => 0,
+			'messages' => array(),
+		);
 	}
 
 	/**
@@ -71,13 +74,15 @@ abstract class SWPS_Audit_Module {
 	 * @return WP_Post[]
 	 */
 	protected function get_public_posts( int $limit = 500 ): array {
-		return get_posts( [
-			'post_type'      => get_post_types( [ 'public' => true ] ),
-			'post_status'    => 'publish',
-			'posts_per_page' => $limit,
-			'orderby'        => 'date',
-			'order'          => 'DESC',
-			'no_found_rows'  => true,
-		] );
+		return get_posts(
+			array(
+				'post_type'      => get_post_types( array( 'public' => true ) ),
+				'post_status'    => 'publish',
+				'posts_per_page' => $limit,
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+				'no_found_rows'  => true,
+			)
+		);
 	}
 }

@@ -29,53 +29,55 @@ class SWPS_Image_SEO_Module extends SWPS_Audit_Module {
 	}
 
 	public function run(): array {
-		$issues = [];
+		$issues = array();
 
 		// Query recent attachments (images).
-		$attachments = get_posts( [
-			'post_type'      => 'attachment',
-			'post_mime_type' => 'image',
-			'post_status'    => 'inherit',
-			'posts_per_page' => 200,
-			'orderby'        => 'date',
-			'order'          => 'DESC',
-			'no_found_rows'  => true,
-		] );
+		$attachments = get_posts(
+			array(
+				'post_type'      => 'attachment',
+				'post_mime_type' => 'image',
+				'post_status'    => 'inherit',
+				'posts_per_page' => 200,
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+				'no_found_rows'  => true,
+			)
+		);
 
-		$missing_alt    = 0;
-		$bad_filenames  = 0;
-		$fixable_ids    = [];
+		$missing_alt   = 0;
+		$bad_filenames = 0;
+		$fixable_ids   = array();
 
 		foreach ( $attachments as $attachment ) {
 			$alt = get_post_meta( $attachment->ID, '_wp_attachment_image_alt', true );
 
 			if ( '' === trim( (string) $alt ) ) {
-				$missing_alt++;
+				++$missing_alt;
 				$fixable_ids[] = $attachment->ID;
 
-				$issues[] = [
+				$issues[] = array(
 					'post_id' => $attachment->ID,
 					'message' => sprintf(
 						__( 'Image "%s" is missing alt text.', 'stratawp-seo' ),
 						basename( get_attached_file( $attachment->ID ) )
 					),
 					'fixable' => true,
-				];
+				);
 			}
 
 			// Check filename quality.
 			$filename = basename( get_attached_file( $attachment->ID ) );
 			if ( preg_match( '/^(IMG_|DSC_|Screenshot|image|photo)\d*/i', $filename ) ) {
-				$bad_filenames++;
+				++$bad_filenames;
 
-				$issues[] = [
+				$issues[] = array(
 					'post_id' => $attachment->ID,
 					'message' => sprintf(
 						__( 'Image "%s" has a non-descriptive filename.', 'stratawp-seo' ),
 						$filename
 					),
 					'fixable' => false,
-				];
+				);
 			}
 		}
 
@@ -83,18 +85,18 @@ class SWPS_Image_SEO_Module extends SWPS_Audit_Module {
 		$failing = $missing_alt + $bad_filenames;
 		$score   = $total > 0 ? max( 0, (int) round( ( ( $total - $failing ) / $total ) * 100 ) ) : 100;
 
-		return [
+		return array(
 			'score'   => $score,
 			'status'  => $this->status_from_score( $score ),
 			'issues'  => $issues,
 			'summary' => 0 === $failing
 				? __( 'All images have alt text and descriptive filenames.', 'stratawp-seo' )
 				: sprintf(
-					__( '%d missing alt text, %d non-descriptive filenames.', 'stratawp-seo' ),
+					__( '%1$d missing alt text, %2$d non-descriptive filenames.', 'stratawp-seo' ),
 					$missing_alt,
 					$bad_filenames
 				),
-		];
+		);
 	}
 
 	public function auto_fix( array $issues ): array {
@@ -102,7 +104,7 @@ class SWPS_Image_SEO_Module extends SWPS_Audit_Module {
 		$fixable = array_slice( $fixable, 0, self::MAX_BATCH );
 
 		$fixed    = 0;
-		$messages = [];
+		$messages = array();
 
 		foreach ( $fixable as $issue ) {
 			$attachment = get_post( $issue['post_id'] );
@@ -115,19 +117,19 @@ class SWPS_Image_SEO_Module extends SWPS_Audit_Module {
 
 			if ( ! empty( $alt ) ) {
 				update_post_meta( $attachment->ID, '_wp_attachment_image_alt', sanitize_text_field( $alt ) );
-				$fixed++;
+				++$fixed;
 				$messages[] = sprintf(
-					__( 'Set alt text for "%s": "%s"', 'stratawp-seo' ),
+					__( 'Set alt text for "%1$s": "%2$s"', 'stratawp-seo' ),
 					basename( get_attached_file( $attachment->ID ) ),
 					$alt
 				);
 			}
 		}
 
-		return [
+		return array(
 			'fixed'    => $fixed,
 			'messages' => $messages,
-		];
+		);
 	}
 
 	/**
@@ -163,6 +165,6 @@ class SWPS_Image_SEO_Module extends SWPS_Audit_Module {
 
 		// Last resort: clean up filename.
 		$filename = pathinfo( basename( get_attached_file( $attachment->ID ) ), PATHINFO_FILENAME );
-		return ucfirst( str_replace( [ '-', '_' ], ' ', $filename ) );
+		return ucfirst( str_replace( array( '-', '_' ), ' ', $filename ) );
 	}
 }

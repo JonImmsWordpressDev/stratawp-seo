@@ -27,7 +27,7 @@ class SWPS_Robots_Module extends SWPS_Audit_Module {
 	}
 
 	public function run(): array {
-		$issues = [];
+		$issues = array();
 
 		// Check for a physical robots.txt.
 		$has_physical = file_exists( ABSPATH . 'robots.txt' );
@@ -40,20 +40,20 @@ class SWPS_Robots_Module extends SWPS_Audit_Module {
 
 			// Check for blocking /wp-content/.
 			if ( false !== stripos( $content, 'disallow: /wp-content/' ) ) {
-				$issues[] = [
+				$issues[] = array(
 					'post_id' => null,
 					'message' => __( 'robots.txt blocks /wp-content/ which may prevent image indexing.', 'stratawp-seo' ),
 					'fixable' => false, // Don't auto-modify a physical file.
-				];
+				);
 			}
 
 			// Check for sitemap line.
 			if ( false === stripos( $content, 'sitemap:' ) ) {
-				$issues[] = [
+				$issues[] = array(
 					'post_id' => null,
 					'message' => __( 'robots.txt does not include a Sitemap directive.', 'stratawp-seo' ),
 					'fixable' => false,
-				];
+				);
 			}
 		}
 		// WordPress virtual robots.txt is always present if no physical file exists.
@@ -62,22 +62,22 @@ class SWPS_Robots_Module extends SWPS_Audit_Module {
 		$failing = count( $issues );
 		$score   = 0 === $failing ? 100 : ( 1 === $failing ? 60 : 30 );
 
-		return [
+		return array(
 			'score'   => $score,
 			'status'  => $this->status_from_score( $score ),
 			'issues'  => $issues,
 			'summary' => 0 === $failing
 				? __( 'robots.txt is properly configured.', 'stratawp-seo' )
 				: sprintf( __( '%d robots.txt issue(s) found.', 'stratawp-seo' ), $failing ),
-		];
+		);
 	}
 
 	public function auto_fix( array $issues ): array {
 		// We can't modify a physical file, but we can ensure our filter is active.
-		return [
+		return array(
 			'fixed'    => 0,
-			'messages' => [ __( 'SWPS enhances the virtual robots.txt with sitemap directives automatically.', 'stratawp-seo' ) ],
-		];
+			'messages' => array( __( 'SWPS enhances the virtual robots.txt with sitemap directives automatically.', 'stratawp-seo' ) ),
+		);
 	}
 
 	/**

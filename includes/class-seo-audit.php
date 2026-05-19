@@ -18,7 +18,7 @@ class SWPS_SEO_Audit {
 	/**
 	 * Default weights per module ID for overall score.
 	 */
-	private const WEIGHTS = [
+	private const WEIGHTS = array(
 		'canonical'   => 15,
 		'sitemap'     => 15,
 		'opengraph'   => 12,
@@ -27,15 +27,15 @@ class SWPS_SEO_Audit {
 		'meta_robots' => 15,
 		'image_seo'   => 15,
 		'pagespeed'   => 10,
-	];
+	);
 
 	/** @var SWPS_Audit_Module[] */
-	private array $modules = [];
+	private array $modules = array();
 
 	public function __construct() {
-		add_action( 'init', [ $this, 'register_default_modules' ], 20 );
-		add_action( self::CRON_HOOK, [ $this, 'run_all' ] );
-		add_filter( 'cron_schedules', [ $this, 'register_custom_schedules' ] );
+		add_action( 'init', array( $this, 'register_default_modules' ), 20 );
+		add_action( self::CRON_HOOK, array( $this, 'run_all' ) );
+		add_filter( 'cron_schedules', array( $this, 'register_custom_schedules' ) );
 	}
 
 	/**
@@ -43,10 +43,10 @@ class SWPS_SEO_Audit {
 	 */
 	public function register_custom_schedules( array $schedules ): array {
 		if ( ! isset( $schedules['swps_monthly'] ) ) {
-			$schedules['swps_monthly'] = [
+			$schedules['swps_monthly'] = array(
 				'interval' => 30 * DAY_IN_SECONDS,
 				'display'  => __( 'Monthly', 'stratawp-seo' ),
-			];
+			);
 		}
 		return $schedules;
 	}
@@ -55,7 +55,7 @@ class SWPS_SEO_Audit {
 	 * Register the 8 built-in audit modules.
 	 */
 	public function register_default_modules(): void {
-		$defaults = [
+		$defaults = array(
 			new SWPS_Canonical_Module(),
 			new SWPS_Sitemap_Module(),
 			new SWPS_OpenGraph_Module(),
@@ -64,7 +64,7 @@ class SWPS_SEO_Audit {
 			new SWPS_Meta_Robots_Module(),
 			new SWPS_Image_SEO_Module(),
 			new SWPS_PageSpeed_Module(),
-		];
+		);
 
 		foreach ( $defaults as $module ) {
 			$this->modules[ $module->get_id() ] = $module;
@@ -84,19 +84,19 @@ class SWPS_SEO_Audit {
 	 * @return array { @type int $overall_score, @type array $modules keyed by ID }
 	 */
 	public function run_all(): array {
-		$results = [];
+		$results = array();
 
 		foreach ( $this->modules as $id => $module ) {
-			$result          = $module->run();
-			$results[ $id ]  = apply_filters( 'swps_audit_result', $result, $id );
+			$result         = $module->run();
+			$results[ $id ] = apply_filters( 'swps_audit_result', $result, $id );
 		}
 
 		$overall = $this->calculate_overall_score( $results );
 
-		$data = [
+		$data = array(
 			'overall_score' => $overall,
 			'modules'       => $results,
-		];
+		);
 
 		update_option( self::RESULTS_OPTION, $data, false );
 		update_option( self::LAST_RUN_OPTION, current_time( 'mysql' ), false );
@@ -121,7 +121,7 @@ class SWPS_SEO_Audit {
 		$result = apply_filters( 'swps_audit_result', $result, $id );
 
 		// Update the cached results for this module.
-		$cached                    = $this->get_cached_results();
+		$cached                   = $this->get_cached_results();
 		$cached['modules'][ $id ] = $result;
 		$cached['overall_score']  = $this->calculate_overall_score( $cached['modules'] );
 
@@ -142,7 +142,7 @@ class SWPS_SEO_Audit {
 		}
 
 		$cached = $this->get_cached_results();
-		$issues = $cached['modules'][ $id ]['issues'] ?? [];
+		$issues = $cached['modules'][ $id ]['issues'] ?? array();
 
 		$fix_result = $this->modules[ $id ]->auto_fix( $issues );
 
@@ -158,10 +158,13 @@ class SWPS_SEO_Audit {
 	 * @return array { @type int $overall_score, @type array $modules }
 	 */
 	public function get_cached_results(): array {
-		return get_option( self::RESULTS_OPTION, [
-			'overall_score' => 0,
-			'modules'       => [],
-		] );
+		return get_option(
+			self::RESULTS_OPTION,
+			array(
+				'overall_score' => 0,
+				'modules'       => array(),
+			)
+		);
 	}
 
 	/**
@@ -213,11 +216,11 @@ class SWPS_SEO_Audit {
 
 		$schedule = get_option( 'swps_audit_cron_schedule', 'weekly' );
 
-		$recurrence_map = [
+		$recurrence_map = array(
 			'daily'   => 'daily',
 			'weekly'  => 'weekly',
 			'monthly' => 'swps_monthly',
-		];
+		);
 
 		$recurrence = $recurrence_map[ $schedule ] ?? 'weekly';
 		$next_run   = time() + DAY_IN_SECONDS; // Start tomorrow.

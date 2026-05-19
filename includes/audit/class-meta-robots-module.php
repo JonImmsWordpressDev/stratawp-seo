@@ -28,10 +28,10 @@ class SWPS_Meta_Robots_Module extends SWPS_Audit_Module {
 
 	public function run(): array {
 		$posts  = $this->get_public_posts();
-		$issues = [];
+		$issues = array();
 
 		foreach ( $posts as $post ) {
-			$problems = [];
+			$problems = array();
 
 			// Yoast noindex check.
 			$yoast_noindex = get_post_meta( $post->ID, '_yoast_wpseo_meta-robots-noindex', true );
@@ -57,15 +57,15 @@ class SWPS_Meta_Robots_Module extends SWPS_Audit_Module {
 			}
 
 			if ( ! empty( $problems ) ) {
-				$issues[] = [
+				$issues[] = array(
 					'post_id' => $post->ID,
 					'message' => sprintf(
-						__( '"%s" has restrictive meta robots: %s.', 'stratawp-seo' ),
+						__( '"%1$s" has restrictive meta robots: %2$s.', 'stratawp-seo' ),
 						$post->post_title,
 						implode( ', ', $problems )
 					),
 					'fixable' => false,
-				];
+				);
 			}
 		}
 
@@ -73,13 +73,13 @@ class SWPS_Meta_Robots_Module extends SWPS_Audit_Module {
 		$failing = count( $issues );
 		$score   = $total > 0 ? (int) round( ( ( $total - $failing ) / $total ) * 100 ) : 100;
 
-		return [
+		return array(
 			'score'   => $score,
 			'status'  => $this->status_from_score( $score ),
 			'issues'  => $issues,
 			'summary' => 0 === $failing
 				? __( 'No conflicting meta robots directives found.', 'stratawp-seo' )
 				: sprintf( __( '%d published posts have restrictive robots settings.', 'stratawp-seo' ), $failing ),
-		];
+		);
 	}
 }

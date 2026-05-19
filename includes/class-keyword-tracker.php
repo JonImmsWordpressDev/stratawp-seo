@@ -18,7 +18,7 @@ class SWPS_Keyword_Tracker {
 
 	public function __construct( SWPS_Search_Console $search_console ) {
 		$this->search_console = $search_console;
-		add_action( self::CRON_HOOK, [ $this, 'sync_from_gsc' ] );
+		add_action( self::CRON_HOOK, array( $this, 'sync_from_gsc' ) );
 	}
 
 	/**
@@ -92,16 +92,18 @@ class SWPS_Keyword_Tracker {
 		}
 
 		// Check if already tracked.
-		$exists = $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM {$wpdb->prefix}" . self::TABLE . " WHERE keyword = %s LIMIT 1",
-			$keyword
-		) );
+		$exists = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}" . self::TABLE . ' WHERE keyword = %s LIMIT 1',
+				$keyword
+			)
+		);
 
 		if ( $exists ) {
 			return true; // Already tracking.
 		}
 
-		$data = [
+		$data    = array(
 			'keyword'     => $keyword,
 			'post_id'     => $post_id ?: null,
 			'position'    => null,
@@ -109,8 +111,8 @@ class SWPS_Keyword_Tracker {
 			'impressions' => 0,
 			'ctr'         => 0,
 			'date'        => gmdate( 'Y-m-d' ),
-		];
-		$formats = [ '%s', '%d', '%f', '%d', '%d', '%f', '%s' ];
+		);
+		$formats = array( '%s', '%d', '%f', '%d', '%d', '%f', '%s' );
 
 		return (bool) $wpdb->insert( $wpdb->prefix . self::TABLE, $data, $formats );
 	}
@@ -125,8 +127,8 @@ class SWPS_Keyword_Tracker {
 		global $wpdb;
 		return (bool) $wpdb->delete(
 			$wpdb->prefix . self::TABLE,
-			[ 'keyword' => sanitize_text_field( strtolower( trim( $keyword ) ) ) ],
-			[ '%s' ]
+			array( 'keyword' => sanitize_text_field( strtolower( trim( $keyword ) ) ) ),
+			array( '%s' )
 		);
 	}
 
@@ -141,10 +143,10 @@ class SWPS_Keyword_Tracker {
 		global $wpdb;
 		return (bool) $wpdb->update(
 			$wpdb->prefix . self::TABLE,
-			[ 'post_id' => $post_id ],
-			[ 'keyword' => sanitize_text_field( strtolower( trim( $keyword ) ) ) ],
-			[ '%d' ],
-			[ '%s' ]
+			array( 'post_id' => $post_id ),
+			array( 'keyword' => sanitize_text_field( strtolower( trim( $keyword ) ) ) ),
+			array( '%d' ),
+			array( '%s' )
 		);
 	}
 
@@ -160,8 +162,9 @@ class SWPS_Keyword_Tracker {
 		$table = $wpdb->prefix . self::TABLE;
 
 		// Get the most recent row per keyword.
-		$results = $wpdb->get_results( $wpdb->prepare(
-			"SELECT t1.*
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT t1.*
 			 FROM {$table} t1
 			 INNER JOIN (
 				 SELECT keyword, MAX(date) as max_date
@@ -170,10 +173,12 @@ class SWPS_Keyword_Tracker {
 			 ) t2 ON t1.keyword = t2.keyword AND t1.date = t2.max_date
 			 ORDER BY t1.impressions DESC
 			 LIMIT %d",
-			$limit
-		), ARRAY_A );
+				$limit
+			),
+			ARRAY_A
+		);
 
-		return $results ?: [];
+		return $results ?: array();
 	}
 
 	/**
@@ -189,16 +194,19 @@ class SWPS_Keyword_Tracker {
 		$table = $wpdb->prefix . self::TABLE;
 		$since = gmdate( 'Y-m-d', strtotime( "-{$days} days" ) );
 
-		$results = $wpdb->get_results( $wpdb->prepare(
-			"SELECT date, position, clicks, impressions, ctr
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT date, position, clicks, impressions, ctr
 			 FROM {$table}
 			 WHERE keyword = %s AND date >= %s
 			 ORDER BY date ASC",
-			sanitize_text_field( strtolower( trim( $keyword ) ) ),
-			$since
-		), ARRAY_A );
+				sanitize_text_field( strtolower( trim( $keyword ) ) ),
+				$since
+			),
+			ARRAY_A
+		);
 
-		return $results ?: [];
+		return $results ?: array();
 	}
 
 	/**
@@ -212,8 +220,9 @@ class SWPS_Keyword_Tracker {
 
 		$table = $wpdb->prefix . self::TABLE;
 
-		$results = $wpdb->get_results( $wpdb->prepare(
-			"SELECT t1.*
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT t1.*
 			 FROM {$table} t1
 			 INNER JOIN (
 				 SELECT keyword, MAX(date) as max_date
@@ -224,10 +233,12 @@ class SWPS_Keyword_Tracker {
 			 AND t1.impressions > 0
 			 ORDER BY t1.impressions DESC
 			 LIMIT %d",
-			$limit
-		), ARRAY_A );
+				$limit
+			),
+			ARRAY_A
+		);
 
-		return $results ?: [];
+		return $results ?: array();
 	}
 
 	/**
@@ -245,10 +256,10 @@ class SWPS_Keyword_Tracker {
 		}
 
 		// Pull GSC query data for the last 7 days.
-		$gsc_data = $this->search_console->get_search_data( 7 );
-		$gsc_queries = [];
+		$gsc_data    = $this->search_console->get_search_data( 7 );
+		$gsc_queries = array();
 
-		foreach ( $gsc_data['queries'] ?? [] as $row ) {
+		foreach ( $gsc_data['queries'] ?? array() as $row ) {
 			$query = strtolower( $row['keys'][0] ?? '' );
 			if ( $query ) {
 				$gsc_queries[ $query ] = $row;
@@ -267,7 +278,7 @@ class SWPS_Keyword_Tracker {
 
 			$wpdb->replace(
 				$table,
-				[
+				array(
 					'keyword'     => $keyword,
 					'post_id'     => $this->find_post_for_keyword( $keyword, $tracked ),
 					'position'    => $gsc_row ? round( $gsc_row['position'] ?? 0, 1 ) : null,
@@ -275,8 +286,8 @@ class SWPS_Keyword_Tracker {
 					'impressions' => $gsc_row['impressions'] ?? 0,
 					'ctr'         => $gsc_row ? round( ( $gsc_row['ctr'] ?? 0 ) * 100, 1 ) : 0,
 					'date'        => $today,
-				],
-				[ '%s', '%d', '%f', '%d', '%d', '%f', '%s' ]
+				),
+				array( '%s', '%d', '%f', '%d', '%d', '%f', '%s' )
 			);
 		}
 	}
@@ -302,7 +313,7 @@ class SWPS_Keyword_Tracker {
 			. "- difficulty: low, medium, or high (estimate)\n"
 			. "- suggested_title: a blog post title targeting this keyword\n\n"
 			. "Return JSON array only. No markdown, no explanation.\n"
-			. "Example: [{\"keyword\":\"best running shoes\",\"intent\":\"transactional\",\"difficulty\":\"high\",\"suggested_title\":\"10 Best Running Shoes for Every Budget in 2026\"}]",
+			. 'Example: [{"keyword":"best running shoes","intent":"transactional","difficulty":"high","suggested_title":"10 Best Running Shoes for Every Budget in 2026"}]',
 			$niche,
 			$desc,
 			$seed_topic
@@ -317,7 +328,7 @@ class SWPS_Keyword_Tracker {
 		$text = $response;
 
 		// Extract JSON from response.
-		$json_match = [];
+		$json_match = array();
 		if ( preg_match( '/\[.*\]/s', $text, $json_match ) ) {
 			$suggestions = json_decode( $json_match[0], true );
 			if ( is_array( $suggestions ) ) {

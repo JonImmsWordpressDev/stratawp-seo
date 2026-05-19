@@ -19,10 +19,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class SWPS_GitHub_Updater {
 
-	private const REPO            = 'JonImmsWordpressDev/stratawp-seo';
-	private const ASSET_NAME      = 'stratawp-seo.zip';
-	private const TRANSIENT_KEY   = 'swps_github_release_v1';
-	private const TRANSIENT_TTL   = 12 * HOUR_IN_SECONDS;
+	private const REPO          = 'JonImmsWordpressDev/stratawp-seo';
+	private const ASSET_NAME    = 'stratawp-seo.zip';
+	private const TRANSIENT_KEY = 'swps_github_release_v1';
+	private const TRANSIENT_TTL = 12 * HOUR_IN_SECONDS;
 
 	private string $plugin_file;
 	private string $plugin_basename;
@@ -35,10 +35,10 @@ class SWPS_GitHub_Updater {
 		$this->plugin_slug     = dirname( $this->plugin_basename );
 		$this->current_version = $current_version;
 
-		add_filter( 'pre_set_site_transient_update_plugins', [ $this, 'inject_update' ] );
-		add_filter( 'plugins_api', [ $this, 'plugin_info' ], 10, 3 );
-		add_filter( 'upgrader_source_selection', [ $this, 'rename_source_dir' ], 10, 4 );
-		add_action( 'upgrader_process_complete', [ $this, 'flush_cache_after_update' ], 10, 2 );
+		add_filter( 'pre_set_site_transient_update_plugins', array( $this, 'inject_update' ) );
+		add_filter( 'plugins_api', array( $this, 'plugin_info' ), 10, 3 );
+		add_filter( 'upgrader_source_selection', array( $this, 'rename_source_dir' ), 10, 4 );
+		add_action( 'upgrader_process_complete', array( $this, 'flush_cache_after_update' ), 10, 2 );
 	}
 
 	/**
@@ -52,10 +52,10 @@ class SWPS_GitHub_Updater {
 			$transient = new stdClass();
 		}
 		if ( ! isset( $transient->response ) || ! is_array( $transient->response ) ) {
-			$transient->response = [];
+			$transient->response = array();
 		}
 		if ( ! isset( $transient->no_update ) || ! is_array( $transient->no_update ) ) {
-			$transient->no_update = [];
+			$transient->no_update = array();
 		}
 
 		$release = $this->get_latest_release();
@@ -70,20 +70,20 @@ class SWPS_GitHub_Updater {
 			return $transient;
 		}
 
-		$item = (object) [
+		$item = (object) array(
 			'id'            => $this->plugin_basename,
 			'slug'          => $this->plugin_slug,
 			'plugin'        => $this->plugin_basename,
 			'new_version'   => $remote_version,
 			'url'           => 'https://github.com/' . self::REPO,
 			'package'       => $package_url,
-			'icons'         => [],
-			'banners'       => [],
-			'banners_rtl'   => [],
+			'icons'         => array(),
+			'banners'       => array(),
+			'banners_rtl'   => array(),
 			'tested'        => '',
 			'requires_php'  => '8.0',
 			'compatibility' => new stdClass(),
-		];
+		);
 
 		if ( version_compare( $remote_version, $this->current_version, '>' ) ) {
 			$transient->response[ $this->plugin_basename ] = $item;
@@ -122,20 +122,20 @@ class SWPS_GitHub_Updater {
 		$package_url    = (string) ( $release['package_url'] ?? '' );
 		$published      = (string) ( $release['published_at'] ?? '' );
 
-		$info               = new stdClass();
-		$info->name         = 'StrataWP SEO';
-		$info->slug         = $this->plugin_slug;
-		$info->version      = $remote_version;
-		$info->author       = '<a href="https://jonimms.com">Jon Imms</a>';
-		$info->homepage     = 'https://github.com/' . self::REPO;
-		$info->requires     = '6.0';
-		$info->requires_php = '8.0';
+		$info                = new stdClass();
+		$info->name          = 'StrataWP SEO';
+		$info->slug          = $this->plugin_slug;
+		$info->version       = $remote_version;
+		$info->author        = '<a href="https://jonimms.com">Jon Imms</a>';
+		$info->homepage      = 'https://github.com/' . self::REPO;
+		$info->requires      = '6.0';
+		$info->requires_php  = '8.0';
 		$info->download_link = $package_url;
-		$info->last_updated = $published ? gmdate( 'Y-m-d H:i:s', strtotime( $published ) ) : '';
-		$info->sections     = [
+		$info->last_updated  = $published ? gmdate( 'Y-m-d H:i:s', strtotime( $published ) ) : '';
+		$info->sections      = array(
 			'description' => 'AI-powered SEO content generator for WordPress. Updates are delivered directly from the official GitHub repository.',
 			'changelog'   => '<pre style="white-space:pre-wrap;">' . esc_html( $body ) . '</pre>',
-		];
+		);
 
 		return $info;
 	}
@@ -153,7 +153,7 @@ class SWPS_GitHub_Updater {
 	 * @param array       $hook_extra    Extra args.
 	 * @return string|WP_Error
 	 */
-	public function rename_source_dir( $source, $remote_source, $upgrader, $hook_extra = [] ) {
+	public function rename_source_dir( $source, $remote_source, $upgrader, $hook_extra = array() ) {
 		if ( empty( $hook_extra['plugin'] ) || $hook_extra['plugin'] !== $this->plugin_basename ) {
 			return $source;
 		}
@@ -202,24 +202,24 @@ class SWPS_GitHub_Updater {
 
 		$response = wp_remote_get(
 			'https://api.github.com/repos/' . self::REPO . '/releases/latest',
-			[
+			array(
 				'timeout' => 10,
-				'headers' => [
+				'headers' => array(
 					'Accept'     => 'application/vnd.github+json',
 					'User-Agent' => 'StrataWP-SEO-Updater',
-				],
-			]
+				),
+			)
 		);
 
 		if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
 			// Cache a short empty result so we don't hammer the API on transient failures.
-			set_transient( self::TRANSIENT_KEY, [], 15 * MINUTE_IN_SECONDS );
+			set_transient( self::TRANSIENT_KEY, array(), 15 * MINUTE_IN_SECONDS );
 			return null;
 		}
 
 		$data = json_decode( wp_remote_retrieve_body( $response ), true );
 		if ( ! is_array( $data ) ) {
-			set_transient( self::TRANSIENT_KEY, [], 15 * MINUTE_IN_SECONDS );
+			set_transient( self::TRANSIENT_KEY, array(), 15 * MINUTE_IN_SECONDS );
 			return null;
 		}
 
@@ -239,12 +239,12 @@ class SWPS_GitHub_Updater {
 			$package_url = 'https://github.com/' . self::REPO . '/releases/latest/download/' . self::ASSET_NAME;
 		}
 
-		$release = [
+		$release = array(
 			'tag_name'     => (string) ( $data['tag_name'] ?? '' ),
 			'body'         => (string) ( $data['body'] ?? '' ),
 			'package_url'  => $package_url,
 			'published_at' => (string) ( $data['published_at'] ?? '' ),
-		];
+		);
 
 		set_transient( self::TRANSIENT_KEY, $release, self::TRANSIENT_TTL );
 		return $release;

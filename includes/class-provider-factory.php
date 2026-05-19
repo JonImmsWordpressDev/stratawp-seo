@@ -6,92 +6,92 @@
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+	exit;
 }
 
 class SWPS_Provider_Factory {
 
-    /**
-     * AI provider slug => class name.
-     */
-    private const AI_PROVIDERS = [
-        'anthropic' => 'SWPS_Anthropic_Provider',
-        'openai'    => 'SWPS_OpenAI_Provider',
-        'google'    => 'SWPS_Google_Provider',
-        'xai'       => 'SWPS_XAI_Provider',
-    ];
+	/**
+	 * AI provider slug => class name.
+	 */
+	private const AI_PROVIDERS = array(
+		'anthropic' => 'SWPS_Anthropic_Provider',
+		'openai'    => 'SWPS_OpenAI_Provider',
+		'google'    => 'SWPS_Google_Provider',
+		'xai'       => 'SWPS_XAI_Provider',
+	);
 
-    /**
-     * Image provider slug => class name.
-     */
-    private const IMAGE_PROVIDERS = [
-        'unsplash' => 'SWPS_Unsplash_Provider',
-        'pexels'   => 'SWPS_Pexels_Provider',
-        'pixabay'  => 'SWPS_Pixabay_Provider',
-        'gemini'   => 'SWPS_Gemini_Image_Provider',
-    ];
+	/**
+	 * Image provider slug => class name.
+	 */
+	private const IMAGE_PROVIDERS = array(
+		'unsplash' => 'SWPS_Unsplash_Provider',
+		'pexels'   => 'SWPS_Pexels_Provider',
+		'pixabay'  => 'SWPS_Pixabay_Provider',
+		'gemini'   => 'SWPS_Gemini_Image_Provider',
+	);
 
-    /**
-     * Create the active AI provider based on the stored option.
-     */
-    public static function create_ai_provider(): SWPS_AI_Provider {
-        $slug  = get_option( 'swps_ai_provider', 'anthropic' );
-        $class = self::AI_PROVIDERS[ $slug ] ?? self::AI_PROVIDERS['anthropic'];
+	/**
+	 * Create the active AI provider based on the stored option.
+	 */
+	public static function create_ai_provider(): SWPS_AI_Provider {
+		$slug  = get_option( 'swps_ai_provider', 'anthropic' );
+		$class = self::AI_PROVIDERS[ $slug ] ?? self::AI_PROVIDERS['anthropic'];
 
-        return new $class();
-    }
+		return new $class();
+	}
 
-    /**
-     * Create the active image provider based on the stored option.
-     */
-    public static function create_image_provider(): SWPS_Image_Provider {
-        $slug  = get_option( 'swps_image_provider', 'unsplash' );
-        $class = self::IMAGE_PROVIDERS[ $slug ] ?? self::IMAGE_PROVIDERS['unsplash'];
+	/**
+	 * Create the active image provider based on the stored option.
+	 */
+	public static function create_image_provider(): SWPS_Image_Provider {
+		$slug  = get_option( 'swps_image_provider', 'unsplash' );
+		$class = self::IMAGE_PROVIDERS[ $slug ] ?? self::IMAGE_PROVIDERS['unsplash'];
 
-        return new $class();
-    }
+		return new $class();
+	}
 
-    /**
-     * Get AI provider options for a settings dropdown.
-     *
-     * @return array<string, string> slug => display name.
-     */
-    public static function get_ai_provider_options(): array {
-        $options = [];
-        foreach ( self::AI_PROVIDERS as $slug => $class ) {
-            $instance = new $class();
-            $options[ $slug ] = $instance->get_name();
-        }
-        return $options;
-    }
+	/**
+	 * Get AI provider options for a settings dropdown.
+	 *
+	 * @return array<string, string> slug => display name.
+	 */
+	public static function get_ai_provider_options(): array {
+		$options = array();
+		foreach ( self::AI_PROVIDERS as $slug => $class ) {
+			$instance         = new $class();
+			$options[ $slug ] = $instance->get_name();
+		}
+		return $options;
+	}
 
-    /**
-     * Get image provider options for a settings dropdown.
-     *
-     * @return array<string, string> slug => display name.
-     */
-    public static function get_image_provider_options(): array {
-        $options = [];
-        foreach ( self::IMAGE_PROVIDERS as $slug => $class ) {
-            $instance = new $class();
-            $options[ $slug ] = $instance->get_name();
-        }
-        return $options;
-    }
+	/**
+	 * Get image provider options for a settings dropdown.
+	 *
+	 * @return array<string, string> slug => display name.
+	 */
+	public static function get_image_provider_options(): array {
+		$options = array();
+		foreach ( self::IMAGE_PROVIDERS as $slug => $class ) {
+			$instance         = new $class();
+			$options[ $slug ] = $instance->get_name();
+		}
+		return $options;
+	}
 
-    /**
-     * Get available models for a specific AI provider slug.
-     *
-     * @return array<string, string> model ID => display name.
-     */
-    public static function get_models_for_provider( string $slug ): array {
-        $class = self::AI_PROVIDERS[ $slug ] ?? null;
+	/**
+	 * Get available models for a specific AI provider slug.
+	 *
+	 * @return array<string, string> model ID => display name.
+	 */
+	public static function get_models_for_provider( string $slug ): array {
+		$class = self::AI_PROVIDERS[ $slug ] ?? null;
 
-        if ( ! $class ) {
-            return [];
-        }
+		if ( ! $class ) {
+			return array();
+		}
 
-        $instance = new $class();
-        return $instance->get_available_models();
-    }
+		$instance = new $class();
+		return $instance->get_available_models();
+	}
 }
