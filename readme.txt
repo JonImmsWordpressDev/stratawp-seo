@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.5.0
+Stable tag: 4.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -252,6 +252,12 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.5.1 =
+* Security/Fix: Hardened encryption of stored API keys and Google Search Console OAuth secrets. New values now use authenticated AES-256-GCM (tampering is detected) instead of AES-256-CBC.
+* Fix: `decrypt()` previously returned the still-encrypted value if decryption failed — so after a WordPress security-salt rotation a corrupt string was silently sent to AI / Search Console APIs as the credential. It now fails safe (returns empty and logs when `WP_DEBUG` is on); the affected settings field renders blank, prompting you to re-enter the secret.
+* Fix: `encrypt()` no longer falls back to storing the secret in plain text if encryption fails.
+* Compatibility: Secrets written by earlier versions (AES-256-CBC) are still read transparently and upgrade to AES-256-GCM the next time you save that setting. No action required on upgrade.
 
 = 4.5.0 =
 * New: AI Bot Analytics. Server-side tracking of hits from known AI crawlers (GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-Web, anthropic-ai, PerplexityBot, Perplexity-User, Google-Extended, Applebot-Extended, CCBot, Meta-ExternalAgent, Bytespider, Amazonbot, DuckAssistBot). Captures on `shutdown` so post ID and status code are accurate, batches into a raw table for 7 days, then aggregates into a daily summary with configurable retention (default 90 days). Mirrors the existing analytics pattern — no JS, no external services, GDPR-friendly (no IP or referrer storage). Excludes admin/AJAX/REST/cron/CLI by default and supports a configurable path exclusion list and 0–100% sample rate for high-traffic sites.
