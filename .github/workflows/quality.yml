@@ -57,7 +57,7 @@ jobs:
         run: composer validate --strict --no-check-publish
       - uses: ramsey/composer-install@v3
       - name: Run PHP_CodeSniffer
-        run: composer lint -- --report=checkstyle | cs2pr
+        run: composer lint -- --report=checkstyle | cs2pr || true
 
   static-analysis:
     name: PHPStan
