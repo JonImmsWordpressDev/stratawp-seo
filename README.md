@@ -1264,6 +1264,12 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 
 ## Changelog
 
+### 4.5.1
+- **Security/Fix — encryption hardened:** stored API keys and Google Search Console OAuth secrets now use authenticated **AES-256-GCM** (tamper detection) instead of AES-256-CBC.
+- **Fix — fail-safe decryption:** `SWPS_Encryption::decrypt()` previously returned the *still-encrypted* blob when decryption failed, so after a WordPress salt rotation a corrupt value was silently sent to AI / Search Console APIs as the credential. It now returns `''` and logs (under `WP_DEBUG`); the settings field renders blank, prompting re-entry.
+- **Fix — no plaintext fallback:** `encrypt()` no longer returns the raw secret (storing it unencrypted) if encryption fails.
+- **Compatibility:** legacy AES-256-CBC values written by earlier versions are still transparently decrypted and are upgraded to GCM the next time the owning setting is saved. No migration or action required on upgrade.
+
 ### 4.5.0
 - **New — AI Bot Analytics:** server-side tracking of hits from 15 known AI crawlers (GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-Web, anthropic-ai, PerplexityBot, Perplexity-User, Google-Extended, Applebot-Extended, CCBot, Meta-ExternalAgent, Bytespider, Amazonbot, DuckAssistBot). New `SWPS_Bot_Analytics_Tracker` captures on `shutdown` priority 999 so the post ID, `is_404()` state, and `http_response_code()` are settled; writes one row per bot request into `{$wpdb->prefix}swps_bot_hits`, then a daily cron rolls anything older than 7 days into `swps_bot_hits_daily` and prunes per `swps_bot_analytics_retention` (default 90). Excludes admin / AJAX / cron / REST / WP-CLI and configurable path prefixes (`/wp-admin`, `/wp-json`, `/feed`, `/xmlrpc.php` by default). Optional 0–100 % sample rate for high-traffic sites via `swps_bot_analytics_sample_rate`. No IP or referrer storage — keeps the GDPR-friendly stance of the existing pageview tracker.
 - **New — "AI Crawlers" section on the Analytics page:** total bot hits (with % delta vs prior 30 days), distinct active bots, 404s to bots, per-bot breakdown with last-seen, top crawled pages with 404 counts, AEO gap report (published posts no AI crawler has fetched in 30 days — actionable for sitemap re-submission and internal linking), and recent bot 404s for redirect candidates.
