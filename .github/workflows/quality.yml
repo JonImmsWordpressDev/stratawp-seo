@@ -45,7 +45,6 @@ jobs:
     # Advisory until the legacy WPCS backlog is cleared (run `composer
     # lint:fix`, commit, then flip this to a hard gate). PHPStan + the
     # syntax matrix are the enforcing gates in the meantime.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -57,7 +56,8 @@ jobs:
         run: composer validate --strict --no-check-publish
       - uses: ramsey/composer-install@v3
       - name: Run PHP_CodeSniffer
-        run: composer lint -- --report=checkstyle | cs2pr || true
+        continue-on-error: true
+        run: composer lint -- --report=checkstyle | cs2pr
 
   static-analysis:
     name: PHPStan
