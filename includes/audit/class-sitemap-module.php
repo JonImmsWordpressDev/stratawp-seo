@@ -28,67 +28,67 @@ class SWPS_Sitemap_Module extends SWPS_Audit_Module {
 	}
 
 	public function run(): array {
-		$issues = [];
+		$issues = array();
 
 		$has_other_sitemap = $this->detect_other_sitemap();
 
 		if ( $has_other_sitemap ) {
-			return [
+			return array(
 				'score'   => 100,
 				'status'  => 'pass',
-				'issues'  => [],
+				'issues'  => array(),
 				'summary' => __( 'Sitemap provided by another plugin.', 'stratawp-seo' ),
-			];
+			);
 		}
 
 		$our_sitemap_enabled = (bool) get_option( 'swps_audit_auto_sitemap', 1 );
 
 		if ( ! $our_sitemap_enabled ) {
-			$issues[] = [
+			$issues[] = array(
 				'post_id' => null,
 				'message' => __( 'No sitemap detected and SWPS sitemap generation is disabled.', 'stratawp-seo' ),
 				'fixable' => true,
-			];
+			);
 
-			return [
+			return array(
 				'score'   => 0,
 				'status'  => 'fail',
 				'issues'  => $issues,
 				'summary' => __( 'No sitemap found.', 'stratawp-seo' ),
-			];
+			);
 		}
 
 		// Sitemap is enabled — check that posts are covered.
-		$posts = $this->get_public_posts();
+		$posts         = $this->get_public_posts();
 		$noindex_count = 0;
 
 		foreach ( $posts as $post ) {
-			$noindex = get_post_meta( $post->ID, '_yoast_wpseo_meta-robots-noindex', true );
+			$noindex   = get_post_meta( $post->ID, '_yoast_wpseo_meta-robots-noindex', true );
 			$rm_robots = get_post_meta( $post->ID, 'rank_math_robots', true );
 
 			if ( '1' === $noindex || ( is_array( $rm_robots ) && in_array( 'noindex', $rm_robots, true ) ) ) {
-				$noindex_count++;
+				++$noindex_count;
 			}
 		}
 
 		$indexed = count( $posts ) - $noindex_count;
 
-		return [
+		return array(
 			'score'   => 100,
 			'status'  => 'pass',
-			'issues'  => [],
+			'issues'  => array(),
 			'summary' => sprintf( __( 'SWPS sitemap active with %d URLs.', 'stratawp-seo' ), $indexed ),
-		];
+		);
 	}
 
 	public function auto_fix( array $issues ): array {
 		update_option( 'swps_audit_auto_sitemap', 1 );
 		flush_rewrite_rules();
 
-		return [
+		return array(
 			'fixed'    => 1,
-			'messages' => [ __( 'SWPS sitemap generation enabled at /swps-sitemap.xml.', 'stratawp-seo' ) ],
-		];
+			'messages' => array( __( 'SWPS sitemap generation enabled at /swps-sitemap.xml.', 'stratawp-seo' ) ),
+		);
 	}
 
 	/**
@@ -126,10 +126,13 @@ class SWPS_Sitemap_Module extends SWPS_Audit_Module {
 		}
 
 		add_rewrite_rule( 'swps-sitemap\.xml$', 'index.php?swps_sitemap=1', 'top' );
-		add_filter( 'query_vars', function ( array $vars ): array {
-			$vars[] = 'swps_sitemap';
-			return $vars;
-		} );
+		add_filter(
+			'query_vars',
+			function ( array $vars ): array {
+				$vars[] = 'swps_sitemap';
+				return $vars;
+			}
+		);
 	}
 
 	/**
@@ -165,20 +168,22 @@ class SWPS_Sitemap_Module extends SWPS_Audit_Module {
 			gmdate( 'Y-m-d\TH:i:s+00:00' )
 		);
 
-		$posts = get_posts( [
-			'post_type'      => get_post_types( [ 'public' => true ] ),
-			'post_status'    => 'publish',
-			'posts_per_page' => 2000,
-			'orderby'        => 'modified',
-			'order'          => 'DESC',
-			'no_found_rows'  => true,
-		] );
+		$posts = get_posts(
+			array(
+				'post_type'      => get_post_types( array( 'public' => true ) ),
+				'post_status'    => 'publish',
+				'posts_per_page' => 2000,
+				'orderby'        => 'modified',
+				'order'          => 'DESC',
+				'no_found_rows'  => true,
+			)
+		);
 
 		$now = time();
 
 		foreach ( $posts as $post ) {
 			// Skip noindex posts.
-			$noindex = get_post_meta( $post->ID, '_yoast_wpseo_meta-robots-noindex', true );
+			$noindex   = get_post_meta( $post->ID, '_yoast_wpseo_meta-robots-noindex', true );
 			$rm_robots = get_post_meta( $post->ID, 'rank_math_robots', true );
 			if ( '1' === $noindex || ( is_array( $rm_robots ) && in_array( 'noindex', $rm_robots, true ) ) ) {
 				continue;
@@ -225,16 +230,22 @@ class SWPS_Sitemap_Module extends SWPS_Audit_Module {
 
 		$sitemap_url = home_url( '/swps-sitemap.xml' );
 
-		wp_remote_get( 'https://www.google.com/ping?sitemap=' . urlencode( $sitemap_url ), [
-			'timeout'   => 5,
-			'blocking'  => false,
-			'sslverify' => false,
-		] );
+		wp_remote_get(
+			'https://www.google.com/ping?sitemap=' . urlencode( $sitemap_url ),
+			array(
+				'timeout'   => 5,
+				'blocking'  => false,
+				'sslverify' => false,
+			)
+		);
 
-		wp_remote_get( 'https://www.bing.com/ping?sitemap=' . urlencode( $sitemap_url ), [
-			'timeout'   => 5,
-			'blocking'  => false,
-			'sslverify' => false,
-		] );
+		wp_remote_get(
+			'https://www.bing.com/ping?sitemap=' . urlencode( $sitemap_url ),
+			array(
+				'timeout'   => 5,
+				'blocking'  => false,
+				'sslverify' => false,
+			)
+		);
 	}
 }

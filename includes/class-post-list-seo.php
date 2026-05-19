@@ -19,28 +19,28 @@ class SWPS_Post_List_SEO {
 	public function __construct( SWPS_Content_Scorer $scorer ) {
 		$this->scorer = $scorer;
 
-		$enabled_types = (array) get_option( 'swps_seo_column_post_types', [ 'post', 'page' ] );
+		$enabled_types = (array) get_option( 'swps_seo_column_post_types', array( 'post', 'page' ) );
 
 		foreach ( $enabled_types as $post_type ) {
 			if ( 'post' === $post_type ) {
-				add_filter( 'manage_posts_columns', [ $this, 'add_column' ] );
-				add_action( 'manage_posts_custom_column', [ $this, 'render_column' ], 10, 2 );
+				add_filter( 'manage_posts_columns', array( $this, 'add_column' ) );
+				add_action( 'manage_posts_custom_column', array( $this, 'render_column' ), 10, 2 );
 			} elseif ( 'page' === $post_type ) {
-				add_filter( 'manage_pages_columns', [ $this, 'add_column' ] );
-				add_action( 'manage_pages_custom_column', [ $this, 'render_column' ], 10, 2 );
+				add_filter( 'manage_pages_columns', array( $this, 'add_column' ) );
+				add_action( 'manage_pages_custom_column', array( $this, 'render_column' ), 10, 2 );
 			} else {
-				add_filter( "manage_{$post_type}_posts_columns", [ $this, 'add_column' ] );
-				add_action( "manage_{$post_type}_posts_custom_column", [ $this, 'render_column' ], 10, 2 );
+				add_filter( "manage_{$post_type}_posts_columns", array( $this, 'add_column' ) );
+				add_action( "manage_{$post_type}_posts_custom_column", array( $this, 'render_column' ), 10, 2 );
 			}
 
-			add_filter( "manage_edit-{$post_type}_sortable_columns", [ $this, 'sortable_column' ] );
+			add_filter( "manage_edit-{$post_type}_sortable_columns", array( $this, 'sortable_column' ) );
 		}
 
-		add_action( 'pre_get_posts', [ $this, 'handle_orderby' ] );
-		add_action( 'save_post', [ $this, 'invalidate_score' ] );
-		add_action( 'wp_ajax_swps_refresh_seo_score', [ $this, 'ajax_refresh' ] );
-		add_action( 'wp_ajax_swps_bulk_refresh_seo_scores', [ $this, 'ajax_bulk_refresh' ] );
-		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+		add_action( 'pre_get_posts', array( $this, 'handle_orderby' ) );
+		add_action( 'save_post', array( $this, 'invalidate_score' ) );
+		add_action( 'wp_ajax_swps_refresh_seo_score', array( $this, 'ajax_refresh' ) );
+		add_action( 'wp_ajax_swps_bulk_refresh_seo_scores', array( $this, 'ajax_bulk_refresh' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 	}
 
 	/**
@@ -76,7 +76,7 @@ class SWPS_Post_List_SEO {
 
 		$score  = (int) ( $cached['score'] ?? 0 );
 		$status = $cached['status'] ?? 'poor';
-		$checks = $cached['checks'] ?? [];
+		$checks = $cached['checks'] ?? array();
 
 		if ( 'no_keyword' === $status ) {
 			echo '<div class="swps-seo-indicator" data-post-id="' . esc_attr( $post_id ) . '">';
@@ -164,12 +164,12 @@ class SWPS_Post_List_SEO {
 		check_ajax_referer( 'swps_nonce', 'nonce' );
 
 		if ( ! current_user_can( 'edit_posts' ) ) {
-			wp_send_json_error( [ 'message' => 'Insufficient permissions.' ] );
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
 		}
 
 		$post_id = absint( $_POST['post_id'] ?? 0 );
 		if ( ! $post_id ) {
-			wp_send_json_error( [ 'message' => 'Invalid post ID.' ] );
+			wp_send_json_error( array( 'message' => 'Invalid post ID.' ) );
 		}
 
 		$result = $this->scorer->score_post( $post_id );
@@ -178,10 +178,12 @@ class SWPS_Post_List_SEO {
 		$this->render_column( 'swps_seo', $post_id );
 		$html = ob_get_clean();
 
-		wp_send_json_success( [
-			'html'  => $html,
-			'score' => $result['score'],
-		] );
+		wp_send_json_success(
+			array(
+				'html'  => $html,
+				'score' => $result['score'],
+			)
+		);
 	}
 
 	/**
@@ -191,23 +193,25 @@ class SWPS_Post_List_SEO {
 		check_ajax_referer( 'swps_nonce', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( [ 'message' => 'Insufficient permissions.' ] );
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
 		}
 
 		$offset = absint( $_POST['offset'] ?? 0 );
 		$batch  = 20;
 
-		$enabled_types = (array) get_option( 'swps_seo_column_post_types', [ 'post', 'page' ] );
+		$enabled_types = (array) get_option( 'swps_seo_column_post_types', array( 'post', 'page' ) );
 
-		$posts = get_posts( [
-			'post_type'      => $enabled_types,
-			'post_status'    => [ 'publish', 'draft' ],
-			'posts_per_page' => $batch,
-			'offset'         => $offset,
-			'fields'         => 'ids',
-			'orderby'        => 'ID',
-			'order'          => 'ASC',
-		] );
+		$posts = get_posts(
+			array(
+				'post_type'      => $enabled_types,
+				'post_status'    => array( 'publish', 'draft' ),
+				'posts_per_page' => $batch,
+				'offset'         => $offset,
+				'fields'         => 'ids',
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+			)
+		);
 
 		foreach ( $posts as $pid ) {
 			$this->scorer->score_post( $pid );
@@ -219,11 +223,13 @@ class SWPS_Post_List_SEO {
 			$total += ( $counts->publish ?? 0 ) + ( $counts->draft ?? 0 );
 		}
 
-		wp_send_json_success( [
-			'processed' => $offset + count( $posts ),
-			'total'     => $total,
-			'done'      => count( $posts ) < $batch,
-		] );
+		wp_send_json_success(
+			array(
+				'processed' => $offset + count( $posts ),
+				'total'     => $total,
+				'done'      => count( $posts ) < $batch,
+			)
+		);
 	}
 
 	/**
@@ -239,7 +245,7 @@ class SWPS_Post_List_SEO {
 			return;
 		}
 
-		$enabled_types = (array) get_option( 'swps_seo_column_post_types', [ 'post', 'page' ] );
+		$enabled_types = (array) get_option( 'swps_seo_column_post_types', array( 'post', 'page' ) );
 		if ( ! in_array( $screen->post_type, $enabled_types, true ) ) {
 			return;
 		}
@@ -247,21 +253,25 @@ class SWPS_Post_List_SEO {
 		wp_enqueue_style(
 			'swps-admin',
 			SWPS_PLUGIN_URL . 'admin/css/admin.css',
-			[],
+			array(),
 			SWPS_VERSION
 		);
 
 		wp_enqueue_script(
 			'swps-post-list-seo',
 			SWPS_PLUGIN_URL . 'admin/js/post-list-seo.js',
-			[ 'jquery' ],
+			array( 'jquery' ),
 			SWPS_VERSION,
 			true
 		);
 
-		wp_localize_script( 'swps-post-list-seo', 'swpsPostListSeo', [
-			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-			'nonce'   => wp_create_nonce( 'swps_nonce' ),
-		] );
+		wp_localize_script(
+			'swps-post-list-seo',
+			'swpsPostListSeo',
+			array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'swps_nonce' ),
+			)
+		);
 	}
 }

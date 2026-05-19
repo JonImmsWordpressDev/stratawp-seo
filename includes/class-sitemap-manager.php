@@ -9,374 +9,393 @@
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+	exit;
 }
 
 class SWPS_Sitemap_Manager {
 
-    private function get_urls_per_sitemap(): int {
-        return max( 100, min( 50000, (int) get_option( 'swps_sitemap_urls_per_page', 1000 ) ) );
-    }
-    private function is_post_type_hidden_from_sitemap( string $post_type ): bool {
-        return 'attachment' === $post_type
-            || (bool) get_option( "swps_sitemap_exclude_{$post_type}", 0 )
-            || (bool) get_option( "swps_noindex_{$post_type}", 0 );
-    }
+	private function get_urls_per_sitemap(): int {
+		return max( 100, min( 50000, (int) get_option( 'swps_sitemap_urls_per_page', 1000 ) ) );
+	}
+	private function is_post_type_hidden_from_sitemap( string $post_type ): bool {
+		return 'attachment' === $post_type
+			|| (bool) get_option( "swps_sitemap_exclude_{$post_type}", 0 )
+			|| (bool) get_option( "swps_noindex_{$post_type}", 0 );
+	}
 
-    private function is_taxonomy_hidden_from_sitemap( string $taxonomy ): bool {
-        return 'post_format' === $taxonomy
-            || (bool) get_option( "swps_sitemap_exclude_{$taxonomy}", 0 )
-            || (bool) get_option( "swps_noindex_{$taxonomy}", 0 );
-    }
+	private function is_taxonomy_hidden_from_sitemap( string $taxonomy ): bool {
+		return 'post_format' === $taxonomy
+			|| (bool) get_option( "swps_sitemap_exclude_{$taxonomy}", 0 )
+			|| (bool) get_option( "swps_noindex_{$taxonomy}", 0 );
+	}
 
-    public function __construct() {
-        // Disable WP core sitemaps to prevent conflict detection from blocking us.
-        add_filter( 'wp_sitemaps_enabled', '__return_false' );
+	public function __construct() {
+		// Disable WP core sitemaps to prevent conflict detection from blocking us.
+		add_filter( 'wp_sitemaps_enabled', '__return_false' );
 
-        // Rewrite rules.
-        add_action( 'init', [ $this, 'register_rewrite_rules' ] );
+		// Rewrite rules.
+		add_action( 'init', array( $this, 'register_rewrite_rules' ) );
 
-        // Auto-flush after a plugin upgrade so cached rewrite_rules pick up
-        // new sitemap URLs without the user manually visiting Settings →
-        // Permalinks. Runs once per version change.
-        add_action( 'wp_loaded', [ $this, 'maybe_flush_rewrites' ] );
+		// Auto-flush after a plugin upgrade so cached rewrite_rules pick up
+		// new sitemap URLs without the user manually visiting Settings →
+		// Permalinks. Runs once per version change.
+		add_action( 'wp_loaded', array( $this, 'maybe_flush_rewrites' ) );
 
-        // Serve sitemaps.
-        add_action( 'template_redirect', [ $this, 'serve_sitemap' ], 1 );
-    }
+		// Serve sitemaps.
+		add_action( 'template_redirect', array( $this, 'serve_sitemap' ), 1 );
+	}
 
-    /**
-     * Register rewrite rules for all sitemap URLs.
-     */
-    public function register_rewrite_rules(): void {
-        // Sitemap index.
-        add_rewrite_rule( 'sitemap_index\.xml$', 'index.php?swps_sitemap=index', 'top' );
+	/**
+	 * Register rewrite rules for all sitemap URLs.
+	 */
+	public function register_rewrite_rules(): void {
+		// Sitemap index.
+		add_rewrite_rule( 'sitemap_index\.xml$', 'index.php?swps_sitemap=index', 'top' );
 
-        // Post type sitemaps.
-        add_rewrite_rule( '([a-z0-9_-]+)-sitemap(\d*)\.xml$', 'index.php?swps_sitemap=$matches[1]&swps_sitemap_page=$matches[2]', 'top' );
+		// Post type sitemaps.
+		add_rewrite_rule( '([a-z0-9_-]+)-sitemap(\d*)\.xml$', 'index.php?swps_sitemap=$matches[1]&swps_sitemap_page=$matches[2]', 'top' );
 
-        // Author sitemap.
-        add_rewrite_rule( 'author-sitemap\.xml$', 'index.php?swps_sitemap=author', 'top' );
+		// Author sitemap.
+		add_rewrite_rule( 'author-sitemap\.xml$', 'index.php?swps_sitemap=author', 'top' );
 
-        // Legacy URL redirect.
-        add_rewrite_rule( 'swps-sitemap\.xml$', 'index.php?swps_sitemap=legacy_redirect', 'top' );
+		// Legacy URL redirect.
+		add_rewrite_rule( 'swps-sitemap\.xml$', 'index.php?swps_sitemap=legacy_redirect', 'top' );
 
-        add_filter( 'query_vars', function ( array $vars ): array {
-            $vars[] = 'swps_sitemap';
-            $vars[] = 'swps_sitemap_page';
-            return $vars;
-        } );
-    }
+		add_filter(
+			'query_vars',
+			function ( array $vars ): array {
+				$vars[] = 'swps_sitemap';
+				$vars[] = 'swps_sitemap_page';
+				return $vars;
+			}
+		);
+	}
 
-    /**
-     * Flush rewrite rules once per plugin version so users do not have to
-     * manually re-save permalinks after every upgrade.
-     */
-    public function maybe_flush_rewrites(): void {
-        if ( get_option( 'swps_rewrite_version' ) === SWPS_VERSION ) {
-            return;
-        }
-        update_option( 'swps_rewrite_version', SWPS_VERSION, false );
-        flush_rewrite_rules( false );
-    }
+	/**
+	 * Flush rewrite rules once per plugin version so users do not have to
+	 * manually re-save permalinks after every upgrade.
+	 */
+	public function maybe_flush_rewrites(): void {
+		if ( get_option( 'swps_rewrite_version' ) === SWPS_VERSION ) {
+			return;
+		}
+		update_option( 'swps_rewrite_version', SWPS_VERSION, false );
+		flush_rewrite_rules( false );
+	}
 
-    /**
-     * Serve the appropriate sitemap based on the query var.
-     */
-    public function serve_sitemap(): void {
-        $type = get_query_var( 'swps_sitemap', '' );
-        if ( empty( $type ) ) {
-            return;
-        }
+	/**
+	 * Serve the appropriate sitemap based on the query var.
+	 */
+	public function serve_sitemap(): void {
+		$type = get_query_var( 'swps_sitemap', '' );
+		if ( empty( $type ) ) {
+			return;
+		}
 
-        // Skip if another SEO plugin is actively handling sitemaps.
-        if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) ) {
-            return;
-        }
+		// Skip if another SEO plugin is actively handling sitemaps.
+		if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) ) {
+			return;
+		}
 
-        // Legacy redirect.
-        if ( 'legacy_redirect' === $type ) {
-            wp_redirect( home_url( '/sitemap_index.xml' ), 301 );
-            exit;
-        }
+		// Legacy redirect.
+		if ( 'legacy_redirect' === $type ) {
+			wp_redirect( home_url( '/sitemap_index.xml' ), 301 );
+			exit;
+		}
 
-        $page = (int) get_query_var( 'swps_sitemap_page', 1 );
-        if ( $page < 1 ) {
-            $page = 1;
-        }
+		$page = (int) get_query_var( 'swps_sitemap_page', 1 );
+		if ( $page < 1 ) {
+			$page = 1;
+		}
 
-        header( 'Content-Type: application/xml; charset=UTF-8' );
-        header( 'X-Robots-Tag: noindex' );
+		header( 'Content-Type: application/xml; charset=UTF-8' );
+		header( 'X-Robots-Tag: noindex' );
 
-        if ( 'index' === $type ) {
-            $this->render_sitemap_index();
-        } elseif ( 'author' === $type ) {
-            $this->render_author_sitemap();
-        } else {
-            // Check if it's a taxonomy.
-            $taxonomies = get_taxonomies( [ 'public' => true ] );
-            if ( in_array( $type, $taxonomies, true ) && ! $this->is_taxonomy_hidden_from_sitemap( $type ) ) {
-                $this->render_taxonomy_sitemap( $type );
-            } else {
-                // Post type sitemap.
-                $post_types = get_post_types( [ 'public' => true ] );
-                if ( in_array( $type, $post_types, true ) && ! $this->is_post_type_hidden_from_sitemap( $type ) ) {
-                    $this->render_post_type_sitemap( $type, $page );
-                } else {
-                    status_header( 404 );
-                    exit;
-                }
-            }
-        }
+		if ( 'index' === $type ) {
+			$this->render_sitemap_index();
+		} elseif ( 'author' === $type ) {
+			$this->render_author_sitemap();
+		} else {
+			// Check if it's a taxonomy.
+			$taxonomies = get_taxonomies( array( 'public' => true ) );
+			if ( in_array( $type, $taxonomies, true ) && ! $this->is_taxonomy_hidden_from_sitemap( $type ) ) {
+				$this->render_taxonomy_sitemap( $type );
+			} else {
+				// Post type sitemap.
+				$post_types = get_post_types( array( 'public' => true ) );
+				if ( in_array( $type, $post_types, true ) && ! $this->is_post_type_hidden_from_sitemap( $type ) ) {
+					$this->render_post_type_sitemap( $type, $page );
+				} else {
+					status_header( 404 );
+					exit;
+				}
+			}
+		}
 
-        exit;
-    }
+		exit;
+	}
 
-    /**
-     * Render the sitemap index.
-     */
-    private function render_sitemap_index(): void {
-        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-        echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+	/**
+	 * Render the sitemap index.
+	 */
+	private function render_sitemap_index(): void {
+		echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+		echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
 
-        // Post type sitemaps.
-        $post_types = get_post_types( [ 'public' => true ] );
-        foreach ( $post_types as $pt ) {
-            if ( $this->is_post_type_hidden_from_sitemap( $pt ) ) {
-                continue;
-            }
+		// Post type sitemaps.
+		$post_types = get_post_types( array( 'public' => true ) );
+		foreach ( $post_types as $pt ) {
+			if ( $this->is_post_type_hidden_from_sitemap( $pt ) ) {
+				continue;
+			}
 
-            $count = $this->get_post_type_count( $pt );
-            $pages = max( 1, (int) ceil( $count / $this->get_urls_per_sitemap() ) );
+			$count = $this->get_post_type_count( $pt );
+			$pages = max( 1, (int) ceil( $count / $this->get_urls_per_sitemap() ) );
 
-            for ( $i = 1; $i <= $pages; $i++ ) {
-                $suffix = $i > 1 ? $i : '';
-                printf(
-                    "<sitemap>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n</sitemap>\n",
-                    esc_url( home_url( "/{$pt}-sitemap{$suffix}.xml" ) ),
-                    $this->get_post_type_lastmod( $pt )
-                );
-            }
-        }
+			for ( $i = 1; $i <= $pages; $i++ ) {
+				$suffix = $i > 1 ? $i : '';
+				printf(
+					"<sitemap>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n</sitemap>\n",
+					esc_url( home_url( "/{$pt}-sitemap{$suffix}.xml" ) ),
+					$this->get_post_type_lastmod( $pt )
+				);
+			}
+		}
 
-        // Taxonomy sitemaps.
-        $taxonomies = get_taxonomies( [ 'public' => true ] );
-        foreach ( $taxonomies as $tax ) {
-            if ( $this->is_taxonomy_hidden_from_sitemap( $tax ) ) {
-                continue;
-            }
+		// Taxonomy sitemaps.
+		$taxonomies = get_taxonomies( array( 'public' => true ) );
+		foreach ( $taxonomies as $tax ) {
+			if ( $this->is_taxonomy_hidden_from_sitemap( $tax ) ) {
+				continue;
+			}
 
-            $terms = get_terms( [ 'taxonomy' => $tax, 'hide_empty' => true, 'number' => 1 ] );
-            if ( empty( $terms ) || is_wp_error( $terms ) ) {
-                continue;
-            }
+			$terms = get_terms(
+				array(
+					'taxonomy'   => $tax,
+					'hide_empty' => true,
+					'number'     => 1,
+				)
+			);
+			if ( empty( $terms ) || is_wp_error( $terms ) ) {
+				continue;
+			}
 
-            printf(
-                "<sitemap>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n</sitemap>\n",
-                esc_url( home_url( "/{$tax}-sitemap.xml" ) ),
-                gmdate( 'Y-m-d\TH:i:s+00:00' )
-            );
-        }
+			printf(
+				"<sitemap>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n</sitemap>\n",
+				esc_url( home_url( "/{$tax}-sitemap.xml" ) ),
+				gmdate( 'Y-m-d\TH:i:s+00:00' )
+			);
+		}
 
-        // Author sitemap.
-        if ( ! get_option( 'swps_sitemap_exclude_author', 0 ) ) {
-            printf(
-                "<sitemap>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n</sitemap>\n",
-                esc_url( home_url( '/author-sitemap.xml' ) ),
-                gmdate( 'Y-m-d\TH:i:s+00:00' )
-            );
-        }
+		// Author sitemap.
+		if ( ! get_option( 'swps_sitemap_exclude_author', 0 ) ) {
+			printf(
+				"<sitemap>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n</sitemap>\n",
+				esc_url( home_url( '/author-sitemap.xml' ) ),
+				gmdate( 'Y-m-d\TH:i:s+00:00' )
+			);
+		}
 
-        echo '</sitemapindex>';
-    }
+		echo '</sitemapindex>';
+	}
 
-    /**
-     * Render a post type sub-sitemap.
-     */
-    private function render_post_type_sitemap( string $post_type, int $page ): void {
-        if ( $this->is_post_type_hidden_from_sitemap( $post_type ) ) {
-            return;
-        }
+	/**
+	 * Render a post type sub-sitemap.
+	 */
+	private function render_post_type_sitemap( string $post_type, int $page ): void {
+		if ( $this->is_post_type_hidden_from_sitemap( $post_type ) ) {
+			return;
+		}
 
-        $offset = ( $page - 1 ) * $this->get_urls_per_sitemap();
+		$offset = ( $page - 1 ) * $this->get_urls_per_sitemap();
 
-        $posts = get_posts( [
-            'post_type'      => $post_type,
-            'post_status'    => 'publish',
-            'posts_per_page' => $this->get_urls_per_sitemap(),
-            'offset'         => $offset,
-            'orderby'        => 'modified',
-            'order'          => 'DESC',
-            'no_found_rows'  => true,
-        ] );
+		$posts = get_posts(
+			array(
+				'post_type'      => $post_type,
+				'post_status'    => 'publish',
+				'posts_per_page' => $this->get_urls_per_sitemap(),
+				'offset'         => $offset,
+				'orderby'        => 'modified',
+				'order'          => 'DESC',
+				'no_found_rows'  => true,
+			)
+		);
 
-        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-        echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n";
-        echo '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">' . "\n";
+		echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+		echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n";
+		echo '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">' . "\n";
 
-        // Include homepage on first page of 'page' sitemap.
-        if ( 'page' === $post_type && 1 === $page ) {
-            printf(
-                "<url>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n  <priority>1.0</priority>\n</url>\n",
-                esc_url( home_url( '/' ) ),
-                gmdate( 'Y-m-d\TH:i:s+00:00' )
-            );
-        }
+		// Include homepage on first page of 'page' sitemap.
+		if ( 'page' === $post_type && 1 === $page ) {
+			printf(
+				"<url>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n  <priority>1.0</priority>\n</url>\n",
+				esc_url( home_url( '/' ) ),
+				gmdate( 'Y-m-d\TH:i:s+00:00' )
+			);
+		}
 
-        foreach ( $posts as $post ) {
-            // Respect exclusions.
-            if ( get_post_meta( $post->ID, '_swps_sitemap_exclude', true ) ) {
-                continue;
-            }
+		foreach ( $posts as $post ) {
+			// Respect exclusions.
+			if ( get_post_meta( $post->ID, '_swps_sitemap_exclude', true ) ) {
+				continue;
+			}
 
-            // Respect noindex.
-            $robots = get_post_meta( $post->ID, '_swps_robots', true );
-            if ( ! empty( $robots ) && str_contains( (string) $robots, 'noindex' ) ) {
-                continue;
-            }
+			// Respect noindex.
+			$robots = get_post_meta( $post->ID, '_swps_robots', true );
+			if ( ! empty( $robots ) && str_contains( (string) $robots, 'noindex' ) ) {
+				continue;
+			}
 
-            $modified = get_post_modified_time( 'U', true, $post );
-            $priority = get_post_meta( $post->ID, '_swps_sitemap_priority', true );
-            if ( empty( $priority ) ) {
-                $priority = 'page' === $post_type ? '0.8' : '0.6';
-            }
-            $changefreq = get_post_meta( $post->ID, '_swps_sitemap_changefreq', true ) ?: 'weekly';
+			$modified = get_post_modified_time( 'U', true, $post );
+			$priority = get_post_meta( $post->ID, '_swps_sitemap_priority', true );
+			if ( empty( $priority ) ) {
+				$priority = 'page' === $post_type ? '0.8' : '0.6';
+			}
+			$changefreq = get_post_meta( $post->ID, '_swps_sitemap_changefreq', true ) ?: 'weekly';
 
-            echo "<url>\n";
-            printf( "  <loc>%s</loc>\n", esc_url( get_permalink( $post ) ) );
-            printf( "  <lastmod>%s</lastmod>\n", gmdate( 'Y-m-d\TH:i:s+00:00', $modified ) );
-            printf( "  <changefreq>%s</changefreq>\n", esc_xml( $changefreq ) );
-            printf( "  <priority>%s</priority>\n", esc_attr( $priority ) );
+			echo "<url>\n";
+			printf( "  <loc>%s</loc>\n", esc_url( get_permalink( $post ) ) );
+			printf( "  <lastmod>%s</lastmod>\n", gmdate( 'Y-m-d\TH:i:s+00:00', $modified ) );
+			printf( "  <changefreq>%s</changefreq>\n", esc_xml( $changefreq ) );
+			printf( "  <priority>%s</priority>\n", esc_attr( $priority ) );
 
-            // Image entries.
-            if ( ! get_option( 'swps_sitemap_exclude_images', 0 ) ) {
-                $this->render_image_entries( $post->ID );
-            }
+			// Image entries.
+			if ( ! get_option( 'swps_sitemap_exclude_images', 0 ) ) {
+				$this->render_image_entries( $post->ID );
+			}
 
-            echo "</url>\n";
-        }
+			echo "</url>\n";
+		}
 
-        echo '</urlset>';
-    }
+		echo '</urlset>';
+	}
 
-    /**
-     * Render a taxonomy sub-sitemap.
-     */
-    private function render_taxonomy_sitemap( string $taxonomy ): void {
-        if ( $this->is_taxonomy_hidden_from_sitemap( $taxonomy ) ) {
-            return;
-        }
+	/**
+	 * Render a taxonomy sub-sitemap.
+	 */
+	private function render_taxonomy_sitemap( string $taxonomy ): void {
+		if ( $this->is_taxonomy_hidden_from_sitemap( $taxonomy ) ) {
+			return;
+		}
 
-        $terms = get_terms( [
-            'taxonomy'   => $taxonomy,
-            'hide_empty' => true,
-            'number'     => $this->get_urls_per_sitemap(),
-        ] );
+		$terms = get_terms(
+			array(
+				'taxonomy'   => $taxonomy,
+				'hide_empty' => true,
+				'number'     => $this->get_urls_per_sitemap(),
+			)
+		);
 
-        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-        echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+		echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+		echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
 
-        if ( ! is_wp_error( $terms ) ) {
-            foreach ( $terms as $term ) {
-                // Respect exclusions.
-                if ( get_term_meta( $term->term_id, '_swps_sitemap_exclude', true ) ) {
-                    continue;
-                }
+		if ( ! is_wp_error( $terms ) ) {
+			foreach ( $terms as $term ) {
+				// Respect exclusions.
+				if ( get_term_meta( $term->term_id, '_swps_sitemap_exclude', true ) ) {
+					continue;
+				}
 
-                $robots = get_term_meta( $term->term_id, '_swps_robots', true );
-                if ( ! empty( $robots ) && str_contains( (string) $robots, 'noindex' ) ) {
-                    continue;
-                }
+				$robots = get_term_meta( $term->term_id, '_swps_robots', true );
+				if ( ! empty( $robots ) && str_contains( (string) $robots, 'noindex' ) ) {
+					continue;
+				}
 
-                echo "<url>\n";
-                printf( "  <loc>%s</loc>\n", esc_url( get_term_link( $term ) ) );
-                printf( "  <changefreq>weekly</changefreq>\n" );
-                printf( "  <priority>0.4</priority>\n" );
-                echo "</url>\n";
-            }
-        }
+				echo "<url>\n";
+				printf( "  <loc>%s</loc>\n", esc_url( get_term_link( $term ) ) );
+				printf( "  <changefreq>weekly</changefreq>\n" );
+				printf( "  <priority>0.4</priority>\n" );
+				echo "</url>\n";
+			}
+		}
 
-        echo '</urlset>';
-    }
+		echo '</urlset>';
+	}
 
-    /**
-     * Render author sub-sitemap.
-     */
-    private function render_author_sitemap(): void {
-        $authors = get_users( [
-            'has_published_posts' => true,
-            'fields'             => [ 'ID', 'user_nicename' ],
-        ] );
+	/**
+	 * Render author sub-sitemap.
+	 */
+	private function render_author_sitemap(): void {
+		$authors = get_users(
+			array(
+				'has_published_posts' => true,
+				'fields'              => array( 'ID', 'user_nicename' ),
+			)
+		);
 
-        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-        echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+		echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+		echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
 
-        foreach ( $authors as $author ) {
-            echo "<url>\n";
-            printf( "  <loc>%s</loc>\n", esc_url( get_author_posts_url( $author->ID ) ) );
-            printf( "  <changefreq>weekly</changefreq>\n" );
-            printf( "  <priority>0.3</priority>\n" );
-            echo "</url>\n";
-        }
+		foreach ( $authors as $author ) {
+			echo "<url>\n";
+			printf( "  <loc>%s</loc>\n", esc_url( get_author_posts_url( $author->ID ) ) );
+			printf( "  <changefreq>weekly</changefreq>\n" );
+			printf( "  <priority>0.3</priority>\n" );
+			echo "</url>\n";
+		}
 
-        echo '</urlset>';
-    }
+		echo '</urlset>';
+	}
 
-    /**
-     * Render image entries for a post.
-     */
-    private function render_image_entries( int $post_id ): void {
-        // Featured image.
-        $thumb_id = get_post_thumbnail_id( $post_id );
-        if ( $thumb_id ) {
-            $img_url = wp_get_attachment_url( $thumb_id );
-            if ( $img_url ) {
-                echo "  <image:image>\n";
-                printf( "    <image:loc>%s</image:loc>\n", esc_url( $img_url ) );
-                $alt = get_post_meta( $thumb_id, '_wp_attachment_image_alt', true );
-                if ( $alt ) {
-                    printf( "    <image:title>%s</image:title>\n", esc_xml( $alt ) );
-                }
-                echo "  </image:image>\n";
-            }
-        }
+	/**
+	 * Render image entries for a post.
+	 */
+	private function render_image_entries( int $post_id ): void {
+		// Featured image.
+		$thumb_id = get_post_thumbnail_id( $post_id );
+		if ( $thumb_id ) {
+			$img_url = wp_get_attachment_url( $thumb_id );
+			if ( $img_url ) {
+				echo "  <image:image>\n";
+				printf( "    <image:loc>%s</image:loc>\n", esc_url( $img_url ) );
+				$alt = get_post_meta( $thumb_id, '_wp_attachment_image_alt', true );
+				if ( $alt ) {
+					printf( "    <image:title>%s</image:title>\n", esc_xml( $alt ) );
+				}
+				echo "  </image:image>\n";
+			}
+		}
 
-        // In-content images.
-        $post = get_post( $post_id );
-        if ( $post && preg_match_all( '/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $post->post_content, $matches ) ) {
-            $seen = [ $thumb_id ? wp_get_attachment_url( $thumb_id ) : '' ];
-            foreach ( $matches[1] as $img_url ) {
-                if ( in_array( $img_url, $seen, true ) ) {
-                    continue;
-                }
-                $seen[] = $img_url;
-                echo "  <image:image>\n";
-                printf( "    <image:loc>%s</image:loc>\n", esc_url( $img_url ) );
-                echo "  </image:image>\n";
-            }
-        }
-    }
+		// In-content images.
+		$post = get_post( $post_id );
+		if ( $post && preg_match_all( '/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $post->post_content, $matches ) ) {
+			$seen = array( $thumb_id ? wp_get_attachment_url( $thumb_id ) : '' );
+			foreach ( $matches[1] as $img_url ) {
+				if ( in_array( $img_url, $seen, true ) ) {
+					continue;
+				}
+				$seen[] = $img_url;
+				echo "  <image:image>\n";
+				printf( "    <image:loc>%s</image:loc>\n", esc_url( $img_url ) );
+				echo "  </image:image>\n";
+			}
+		}
+	}
 
-    /**
-     * Get post count for a post type (excluding sitemap-excluded posts).
-     */
-    private function get_post_type_count( string $post_type ): int {
-        global $wpdb;
-        return (int) $wpdb->get_var( $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_status = 'publish'",
-            $post_type
-        ) );
-    }
+	/**
+	 * Get post count for a post type (excluding sitemap-excluded posts).
+	 */
+	private function get_post_type_count( string $post_type ): int {
+		global $wpdb;
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_status = 'publish'",
+				$post_type
+			)
+		);
+	}
 
-    /**
-     * Get the most recent lastmod for a post type.
-     */
-    private function get_post_type_lastmod( string $post_type ): string {
-        global $wpdb;
-        $date = $wpdb->get_var( $wpdb->prepare(
-            "SELECT MAX(post_modified_gmt) FROM {$wpdb->posts} WHERE post_type = %s AND post_status = 'publish'",
-            $post_type
-        ) );
-        return $date ? gmdate( 'Y-m-d\TH:i:s+00:00', strtotime( $date ) ) : gmdate( 'Y-m-d\TH:i:s+00:00' );
-    }
+	/**
+	 * Get the most recent lastmod for a post type.
+	 */
+	private function get_post_type_lastmod( string $post_type ): string {
+		global $wpdb;
+		$date = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT MAX(post_modified_gmt) FROM {$wpdb->posts} WHERE post_type = %s AND post_status = 'publish'",
+				$post_type
+			)
+		);
+		return $date ? gmdate( 'Y-m-d\TH:i:s+00:00', strtotime( $date ) ) : gmdate( 'Y-m-d\TH:i:s+00:00' );
+	}
 }

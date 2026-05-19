@@ -18,7 +18,7 @@ class SWPS_Content_Scorer {
 	/**
 	 * Default weights for each scoring dimension (must sum to 100).
 	 */
-	public const DEFAULT_WEIGHTS = [
+	public const DEFAULT_WEIGHTS = array(
 		'keyword_density'   => 15,
 		'readability'       => 20,
 		'heading_structure' => 15,
@@ -26,7 +26,7 @@ class SWPS_Content_Scorer {
 		'internal_links'    => 10,
 		'content_depth'     => 15,
 		'engagement'        => 10,
-	];
+	);
 
 	/**
 	 * Score a generated post across all quality dimensions.
@@ -44,18 +44,18 @@ class SWPS_Content_Scorer {
 		$title              = $ai_result['title'] ?? '';
 		$meta_description   = $ai_result['meta_description'] ?? '';
 		$focus_keyword      = $ai_result['focus_keyword'] ?? '';
-		$secondary_keywords = $ai_result['secondary_keywords'] ?? [];
-		$internal_links     = $ai_result['internal_links_used'] ?? [];
+		$secondary_keywords = $ai_result['secondary_keywords'] ?? array();
+		$internal_links     = $ai_result['internal_links_used'] ?? array();
 		$estimated_words    = (int) ( $ai_result['estimated_word_count'] ?? 0 );
 		$post_type          = get_post_type( $post_id );
 
 		// Note: passes $post_id as extra arg beyond the design doc's ($weights, $post_type) for per-post customization.
 		$weights = apply_filters( 'swps_score_weights', self::DEFAULT_WEIGHTS, $post_id, $post_type );
 
-		$recommendations = [];
+		$recommendations = array();
 		$plain_text      = wp_strip_all_tags( $content_html );
 
-		$details = [
+		$details = array(
 			'keyword_density'   => $this->analyze_keyword_density( $plain_text, $focus_keyword, $secondary_keywords, $recommendations ),
 			'readability'       => $this->analyze_readability( $plain_text, $recommendations ),
 			'heading_structure' => $this->analyze_heading_structure( $content_html, $focus_keyword, $recommendations ),
@@ -63,13 +63,13 @@ class SWPS_Content_Scorer {
 			'internal_links'    => $this->analyze_internal_links( $content_html, $recommendations ),
 			'content_depth'     => $this->analyze_content_depth( $plain_text, $content_html, $estimated_words, $recommendations ),
 			'engagement'        => $this->analyze_engagement( $content_html, $plain_text, $recommendations ),
-		];
+		);
 
-		$weighted_sum   = 0;
-		$weight_total   = 0;
+		$weighted_sum = 0;
+		$weight_total = 0;
 
 		foreach ( $details as $dimension => $dimension_score ) {
-			$weight       = $weights[ $dimension ] ?? 0;
+			$weight        = $weights[ $dimension ] ?? 0;
 			$weighted_sum += $dimension_score * $weight;
 			$weight_total += $weight;
 		}
@@ -77,11 +77,11 @@ class SWPS_Content_Scorer {
 		$overall_score = ( $weight_total > 0 ) ? (int) round( $weighted_sum / $weight_total ) : 0;
 		$overall_score = max( 0, min( 100, $overall_score ) );
 
-		return [
+		return array(
 			'overall_score'   => $overall_score,
 			'details'         => $details,
 			'recommendations' => $recommendations,
-		];
+		);
 	}
 
 	/**
@@ -134,7 +134,7 @@ class SWPS_Content_Scorer {
 		}
 
 		// Check secondary keywords.
-		$missing_secondary = [];
+		$missing_secondary = array();
 		foreach ( $secondary_keywords as $secondary ) {
 			if ( ! is_string( $secondary ) || empty( $secondary ) ) {
 				continue;
@@ -247,9 +247,14 @@ class SWPS_Content_Scorer {
 		$score = 100;
 
 		// Penalize H1 in content body (-20).
-		$h1_count = count( array_filter( $levels, function ( $level ) {
-			return 1 === $level;
-		} ) );
+		$h1_count = count(
+			array_filter(
+				$levels,
+				function ( $level ) {
+					return 1 === $level;
+				}
+			)
+		);
 
 		if ( $h1_count > 0 ) {
 			$score -= 20;
@@ -257,9 +262,14 @@ class SWPS_Content_Scorer {
 		}
 
 		// Count H2s, penalize if fewer than 2 (-20).
-		$h2_count = count( array_filter( $levels, function ( $level ) {
-			return 2 === $level;
-		} ) );
+		$h2_count = count(
+			array_filter(
+				$levels,
+				function ( $level ) {
+					return 2 === $level;
+				}
+			)
+		);
 
 		if ( $h2_count < 2 ) {
 			$score -= 20;
@@ -270,9 +280,14 @@ class SWPS_Content_Scorer {
 		}
 
 		// Check for skipped heading levels (-10).
-		$non_h1_levels = array_values( array_filter( $levels, function ( $level ) {
-			return $level > 1;
-		} ) );
+		$non_h1_levels = array_values(
+			array_filter(
+				$levels,
+				function ( $level ) {
+					return $level > 1;
+				}
+			)
+		);
 
 		$has_skipped = false;
 		for ( $i = 0; $i < count( $non_h1_levels ) - 1; $i++ ) {
@@ -291,7 +306,7 @@ class SWPS_Content_Scorer {
 
 		// Check focus keyword in headings (-15).
 		if ( ! empty( $focus_keyword ) ) {
-			$keyword_lower     = mb_strtolower( $focus_keyword );
+			$keyword_lower      = mb_strtolower( $focus_keyword );
 			$keyword_in_heading = false;
 
 			foreach ( $texts as $heading_text ) {
@@ -397,8 +412,8 @@ class SWPS_Content_Scorer {
 		preg_match_all( '/<a\s[^>]*href=["\']([^"\']*)["\'][^>]*>(.*?)<\/a>/is', $content_html, $matches );
 
 		$site_url       = home_url();
-		$internal_hrefs = [];
-		$internal_texts = [];
+		$internal_hrefs = array();
+		$internal_texts = array();
 
 		foreach ( $matches[1] as $index => $href ) {
 			$href_trimmed = trim( $href );
@@ -442,13 +457,13 @@ class SWPS_Content_Scorer {
 		}
 
 		// Check for generic anchor text on internal links.
-		$generic_anchors = [ 'click here', 'read more', 'here', 'this', 'link', 'this link', 'learn more', 'more' ];
+		$generic_anchors = array( 'click here', 'read more', 'here', 'this', 'link', 'this link', 'learn more', 'more' );
 		$generic_count   = 0;
 
 		foreach ( $internal_texts as $anchor_text ) {
 			$anchor_clean = mb_strtolower( trim( wp_strip_all_tags( $anchor_text ) ) );
 			if ( in_array( $anchor_clean, $generic_anchors, true ) ) {
-				$generic_count++;
+				++$generic_count;
 			}
 		}
 
@@ -572,7 +587,7 @@ class SWPS_Content_Scorer {
 		foreach ( $link_matches[1] as $href ) {
 			// External if it starts with http and does not start with site URL.
 			if ( preg_match( '/^https?:\/\//i', $href ) && 0 !== mb_strpos( $href, $site_url ) ) {
-				$external_count++;
+				++$external_count;
 			}
 		}
 
@@ -597,8 +612,8 @@ class SWPS_Content_Scorer {
 	 * @return int Total syllable count.
 	 */
 	private function count_syllables( string $text ): int {
-		$words  = preg_split( '/\s+/', $text, -1, PREG_SPLIT_NO_EMPTY );
-		$total  = 0;
+		$words = preg_split( '/\s+/', $text, -1, PREG_SPLIT_NO_EMPTY );
+		$total = 0;
 
 		foreach ( $words as $word ) {
 			$word = mb_strtolower( trim( $word ) );
@@ -646,69 +661,69 @@ class SWPS_Content_Scorer {
 		$post = get_post( $post_id );
 
 		if ( ! $post ) {
-			return [
+			return array(
 				'score'  => 0,
 				'status' => 'poor',
-				'checks' => [],
-			];
+				'checks' => array(),
+			);
 		}
 
-		$focus_keyword   = get_post_meta( $post_id, '_swps_focus_keyword', true );
-		$meta_title      = get_post_meta( $post_id, '_swps_meta_title', true );
-		$meta_desc       = get_post_meta( $post_id, '_swps_meta_description', true );
-		$social_image    = get_post_meta( $post_id, '_swps_social_image', true );
-		$content_html    = $post->post_content;
-		$plain_text      = wp_strip_all_tags( $content_html );
-		$keyword_lower   = mb_strtolower( trim( $focus_keyword ) );
-		$min_words       = (int) get_option( 'swps_seo_score_content_min', 300 );
+		$focus_keyword = get_post_meta( $post_id, '_swps_focus_keyword', true );
+		$meta_title    = get_post_meta( $post_id, '_swps_meta_title', true );
+		$meta_desc     = get_post_meta( $post_id, '_swps_meta_description', true );
+		$social_image  = get_post_meta( $post_id, '_swps_social_image', true );
+		$content_html  = $post->post_content;
+		$plain_text    = wp_strip_all_tags( $content_html );
+		$keyword_lower = mb_strtolower( trim( $focus_keyword ) );
+		$min_words     = (int) get_option( 'swps_seo_score_content_min', 300 );
 
 		// Check 1: Focus keyword set.
 		$has_keyword = ! empty( $keyword_lower );
-		$checks = [];
+		$checks      = array();
 
-		$checks['focus_keyword_set'] = [
+		$checks['focus_keyword_set'] = array(
 			'pass'  => $has_keyword,
 			'label' => __( 'Focus keyword set', 'stratawp-seo' ),
-		];
+		);
 
 		if ( ! $has_keyword ) {
-			$result = [
+			$result = array(
 				'score'  => 0,
 				'status' => 'no_keyword',
 				'checks' => $checks,
-			];
+			);
 			update_post_meta( $post_id, '_swps_seo_score', $result );
 			update_post_meta( $post_id, '_swps_seo_score_value', 0 );
 			return $result;
 		}
 
 		// Check 2: Keyword in meta title.
-		$checks['keyword_in_title'] = [
+		$checks['keyword_in_title'] = array(
 			'pass'  => ! empty( $meta_title ) && false !== mb_strpos( mb_strtolower( $meta_title ), $keyword_lower ),
 			'label' => __( 'Keyword in meta title', 'stratawp-seo' ),
-		];
+		);
 
 		// Check 3: Keyword in meta description.
-		$checks['keyword_in_desc'] = [
+		$checks['keyword_in_desc'] = array(
 			'pass'  => ! empty( $meta_desc ) && false !== mb_strpos( mb_strtolower( $meta_desc ), $keyword_lower ),
 			'label' => __( 'Keyword in meta description', 'stratawp-seo' ),
-		];
+		);
 
 		// Check 4: Title length (50-60 chars).
-		$title_len = mb_strlen( $meta_title );
-		$checks['title_length'] = [
+		$title_len              = mb_strlen( $meta_title );
+		$checks['title_length'] = array(
 			'pass'  => $title_len >= 50 && $title_len <= 60,
 			'label' => __( 'Meta title length (50-60 chars)', 'stratawp-seo' ),
 			'value' => sprintf( '%d chars', $title_len ),
-		];
+		);
 
 		// Check 5: Description length (150-160 chars).
-		$desc_len = mb_strlen( $meta_desc );
-		$checks['desc_length'] = [
+		$desc_len              = mb_strlen( $meta_desc );
+		$checks['desc_length'] = array(
 			'pass'  => $desc_len >= 147 && $desc_len <= 160,
 			'label' => __( 'Meta description length (147-160 chars)', 'stratawp-seo' ),
 			'value' => sprintf( '%d chars', $desc_len ),
-		];
+		);
 
 		// Check 6: Keyword in first paragraph.
 		// Strip TOC, key takeaways, and other structural blocks before finding the first real <p>.
@@ -727,10 +742,10 @@ class SWPS_Content_Scorer {
 			$first_para_text = mb_strtolower( wp_strip_all_tags( $p_match[1] ) );
 			$first_para_pass = false !== mb_strpos( $first_para_text, $keyword_lower );
 		}
-		$checks['keyword_first_para'] = [
+		$checks['keyword_first_para'] = array(
 			'pass'  => $first_para_pass,
 			'label' => __( 'Keyword in first paragraph', 'stratawp-seo' ),
-		];
+		);
 
 		// Check 7: Keyword in at least one H2.
 		$h2_pass = false;
@@ -742,24 +757,24 @@ class SWPS_Content_Scorer {
 				}
 			}
 		}
-		$checks['keyword_in_h2'] = [
+		$checks['keyword_in_h2'] = array(
 			'pass'  => $h2_pass,
 			'label' => __( 'Keyword in an H2 heading', 'stratawp-seo' ),
-		];
+		);
 
 		// Check 8: Content length.
-		$word_count = str_word_count( $plain_text );
-		$checks['content_length'] = [
+		$word_count               = str_word_count( $plain_text );
+		$checks['content_length'] = array(
 			'pass'  => $word_count >= $min_words,
 			'label' => sprintf( __( 'Content length (min %d words)', 'stratawp-seo' ), $min_words ),
 			'value' => sprintf( '%s words', number_format_i18n( $word_count ) ),
-		];
+		);
 
 		// Check 9: Internal links present.
 		$site_url        = home_url();
-		$has_internal     = false;
-		$has_external     = false;
-		$has_alt_keyword  = false;
+		$has_internal    = false;
+		$has_external    = false;
+		$has_alt_keyword = false;
 
 		if ( preg_match_all( '/<a\s[^>]*href=["\']([^"\']*)["\'][^>]*>/is', $content_html, $link_matches ) ) {
 			foreach ( $link_matches[1] as $href ) {
@@ -776,16 +791,16 @@ class SWPS_Content_Scorer {
 			}
 		}
 
-		$checks['internal_links'] = [
+		$checks['internal_links'] = array(
 			'pass'  => $has_internal,
 			'label' => __( 'Internal link present', 'stratawp-seo' ),
-		];
+		);
 
 		// Check 10: External links present.
-		$checks['external_links'] = [
+		$checks['external_links'] = array(
 			'pass'  => $has_external,
 			'label' => __( 'External link present', 'stratawp-seo' ),
-		];
+		);
 
 		// Check 11: Image alt text contains keyword.
 		if ( preg_match_all( '/<img\s[^>]*alt=["\']([^"\']*)["\'][^>]*>/is', $content_html, $img_matches ) ) {
@@ -796,15 +811,15 @@ class SWPS_Content_Scorer {
 				}
 			}
 		}
-		$checks['image_alt_keyword'] = [
+		$checks['image_alt_keyword'] = array(
 			'pass'  => $has_alt_keyword,
 			'label' => __( 'Image alt text contains keyword', 'stratawp-seo' ),
-		];
+		);
 
 		// Check 12: Slug contains keyword.
-		$slug_words   = explode( ' ', $keyword_lower );
-		$slug         = $post->post_name;
-		$slug_pass    = true;
+		$slug_words = explode( ' ', $keyword_lower );
+		$slug       = $post->post_name;
+		$slug_pass  = true;
 		foreach ( $slug_words as $word ) {
 			$word = trim( $word );
 			if ( ! empty( $word ) && false === mb_strpos( $slug, sanitize_title( $word ) ) ) {
@@ -812,42 +827,42 @@ class SWPS_Content_Scorer {
 				break;
 			}
 		}
-		$checks['slug_keyword'] = [
+		$checks['slug_keyword'] = array(
 			'pass'  => $slug_pass,
 			'label' => __( 'Slug contains keyword', 'stratawp-seo' ),
-		];
+		);
 
 		// Check 13: OG image set.
-		$checks['og_image_set'] = [
+		$checks['og_image_set'] = array(
 			'pass'  => ! empty( $social_image ),
 			'label' => __( 'OG image is set', 'stratawp-seo' ),
-		];
+		);
 
 		// Check 14: Readability (Flesch-Kincaid grade 6-10).
 		$readability_pass = false;
 		$grade_value      = '';
 		if ( str_word_count( $plain_text ) >= 10 ) {
-			$recs = [];
+			$recs              = array();
 			$readability_score = $this->analyze_readability( $plain_text, $recs );
-			$sentences      = preg_split( '/[.!?]+/', $plain_text, -1, PREG_SPLIT_NO_EMPTY );
-			$sentence_count = max( count( $sentences ), 1 );
-			$wc             = str_word_count( $plain_text );
-			$syllables      = $this->count_syllables( $plain_text );
-			$grade          = max( 0, ( 0.39 * ( $wc / $sentence_count ) ) + ( 11.8 * ( $syllables / $wc ) ) - 15.59 );
-			$readability_pass = ( $grade >= 6 && $grade <= 10 );
-			$grade_value      = sprintf( 'Grade %.0f', $grade );
+			$sentences         = preg_split( '/[.!?]+/', $plain_text, -1, PREG_SPLIT_NO_EMPTY );
+			$sentence_count    = max( count( $sentences ), 1 );
+			$wc                = str_word_count( $plain_text );
+			$syllables         = $this->count_syllables( $plain_text );
+			$grade             = max( 0, ( 0.39 * ( $wc / $sentence_count ) ) + ( 11.8 * ( $syllables / $wc ) ) - 15.59 );
+			$readability_pass  = ( $grade >= 6 && $grade <= 10 );
+			$grade_value       = sprintf( 'Grade %.0f', $grade );
 		}
-		$checks['readability'] = [
+		$checks['readability'] = array(
 			'pass'  => $readability_pass,
 			'label' => __( 'Readability score OK', 'stratawp-seo' ),
 			'value' => $grade_value,
-		];
+		);
 
 		// Calculate score: each check worth equal weight.
 		$passed = 0;
 		foreach ( $checks as $check ) {
 			if ( $check['pass'] ) {
-				$passed++;
+				++$passed;
 			}
 		}
 		$total_checks = count( $checks );
@@ -862,11 +877,11 @@ class SWPS_Content_Scorer {
 			$status = 'poor';
 		}
 
-		$result = [
+		$result = array(
 			'score'  => $score,
 			'status' => $status,
 			'checks' => $checks,
-		];
+		);
 
 		// Cache the result.
 		update_post_meta( $post_id, '_swps_seo_score', $result );

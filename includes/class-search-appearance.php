@@ -11,323 +11,332 @@
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+	exit;
 }
 
 class SWPS_Search_Appearance {
 
-    /**
-     * Supported template variables.
-     */
-    private const VARIABLES = [
-        '%%title%%', '%%sitename%%', '%%sep%%', '%%excerpt%%',
-        '%%category%%', '%%tag%%', '%%author%%', '%%date%%',
-        '%%page%%', '%%searchphrase%%', '%%pt_single%%', '%%pt_plural%%',
-    ];
+	/**
+	 * Supported template variables.
+	 */
+	private const VARIABLES = array(
+		'%%title%%',
+		'%%sitename%%',
+		'%%sep%%',
+		'%%excerpt%%',
+		'%%category%%',
+		'%%tag%%',
+		'%%author%%',
+		'%%date%%',
+		'%%page%%',
+		'%%searchphrase%%',
+		'%%pt_single%%',
+		'%%pt_plural%%',
+	);
 
-    public function __construct() {
-        if ( is_admin() ) {
-            return;
-        }
+	public function __construct() {
+		if ( is_admin() ) {
+			return;
+		}
 
-        // Conflict detection — defer when competing plugins active.
-        if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) ) {
-            return;
-        }
+		// Conflict detection — defer when competing plugins active.
+		if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) ) {
+			return;
+		}
 
-        // Title template — priority 10 (Meta Editor overrides at 20).
-        add_filter( 'document_title_parts', [ $this, 'filter_title_parts' ], 10 );
-        add_filter( 'document_title_separator', [ $this, 'filter_separator' ], 10 );
+		// Title template — priority 10 (Meta Editor overrides at 20).
+		add_filter( 'document_title_parts', array( $this, 'filter_title_parts' ), 10 );
+		add_filter( 'document_title_separator', array( $this, 'filter_separator' ), 10 );
 
-        // Meta description for non-singular pages — priority 2 (same as Meta Editor).
-        add_action( 'wp_head', [ $this, 'output_meta_description' ], 2 );
+		// Meta description for non-singular pages — priority 2 (same as Meta Editor).
+		add_action( 'wp_head', array( $this, 'output_meta_description' ), 2 );
 
-        // Robots directives from Search Appearance noindex controls.
-        add_action( 'wp_head', [ $this, 'output_robots_directives' ], 2 );
-    }
+		// Robots directives from Search Appearance noindex controls.
+		add_action( 'wp_head', array( $this, 'output_robots_directives' ), 2 );
+	}
 
-    /**
-     * Filter the document title parts array.
-     */
-    public function filter_title_parts( array $title_parts ): array {
-        $template = $this->get_title_template();
+	/**
+	 * Filter the document title parts array.
+	 */
+	public function filter_title_parts( array $title_parts ): array {
+		$template = $this->get_title_template();
 
-        if ( empty( $template ) ) {
-            return $title_parts;
-        }
+		if ( empty( $template ) ) {
+			return $title_parts;
+		}
 
-        $resolved = $this->resolve_variables( $template );
-        $title_parts['title'] = $resolved;
+		$resolved             = $this->resolve_variables( $template );
+		$title_parts['title'] = $resolved;
 
-        // Remove site name from parts since template includes it.
-        unset( $title_parts['site'], $title_parts['tagline'] );
+		// Remove site name from parts since template includes it.
+		unset( $title_parts['site'], $title_parts['tagline'] );
 
-        return $title_parts;
-    }
+		return $title_parts;
+	}
 
-    /**
-     * Filter the title separator.
-     */
-    public function filter_separator( string $sep ): string {
-        $custom = get_option( 'swps_title_separator', '-' );
-        return ! empty( $custom ) ? $custom : $sep;
-    }
+	/**
+	 * Filter the title separator.
+	 */
+	public function filter_separator( string $sep ): string {
+		$custom = get_option( 'swps_title_separator', '-' );
+		return ! empty( $custom ) ? $custom : $sep;
+	}
 
-    /**
-     * Output meta description for non-singular pages.
-     * Singular pages are handled by SWPS_Meta_Editor.
-     */
-    public function output_meta_description(): void {
-        // Singular pages: only output if Meta Editor hasn't set one.
-        if ( is_singular() ) {
-            $post_desc = get_post_meta( get_the_ID(), '_swps_meta_description', true );
-            if ( ! empty( $post_desc ) ) {
-                return; // Meta Editor handles it.
-            }
-        }
+	/**
+	 * Output meta description for non-singular pages.
+	 * Singular pages are handled by SWPS_Meta_Editor.
+	 */
+	public function output_meta_description(): void {
+		// Singular pages: only output if Meta Editor hasn't set one.
+		if ( is_singular() ) {
+			$post_desc = get_post_meta( get_the_ID(), '_swps_meta_description', true );
+			if ( ! empty( $post_desc ) ) {
+				return; // Meta Editor handles it.
+			}
+		}
 
-        $description = $this->get_description();
+		$description = $this->get_description();
 
-        if ( ! empty( $description ) ) {
-            printf(
-                '<meta name="description" content="%s" />' . "\n",
-                esc_attr( wp_strip_all_tags( $description ) )
-            );
-        }
-    }
+		if ( ! empty( $description ) ) {
+			printf(
+				'<meta name="description" content="%s" />' . "\n",
+				esc_attr( wp_strip_all_tags( $description ) )
+			);
+		}
+	}
 
-    /**
-     * Output robots meta tags for Search Appearance visibility settings.
-     */
-    public function output_robots_directives(): void {
-        $robots = $this->get_robots_directives();
+	/**
+	 * Output robots meta tags for Search Appearance visibility settings.
+	 */
+	public function output_robots_directives(): void {
+		$robots = $this->get_robots_directives();
 
-        if ( empty( $robots ) ) {
-            return;
-        }
+		if ( empty( $robots ) ) {
+			return;
+		}
 
-        printf(
-            '<meta name="robots" content="%s" />' . "\n",
-            esc_attr( implode( ', ', $robots ) )
-        );
-    }
+		printf(
+			'<meta name="robots" content="%s" />' . "\n",
+			esc_attr( implode( ', ', $robots ) )
+		);
+	}
 
-    /**
-     * Resolve robots directives for the current request.
-     *
-     * Per-post and per-term explicit robots settings win; this method only fills
-     * in the global noindex controls from Search Appearance to avoid duplicate
-     * meta tags from the Meta Editor or Taxonomy Meta modules.
-     */
-    private function get_robots_directives(): array {
-        if ( is_singular() ) {
-            $post_id = get_the_ID();
-            if ( ! $post_id ) {
-                return [];
-            }
+	/**
+	 * Resolve robots directives for the current request.
+	 *
+	 * Per-post and per-term explicit robots settings win; this method only fills
+	 * in the global noindex controls from Search Appearance to avoid duplicate
+	 * meta tags from the Meta Editor or Taxonomy Meta modules.
+	 */
+	private function get_robots_directives(): array {
+		if ( is_singular() ) {
+			$post_id = get_the_ID();
+			if ( ! $post_id ) {
+				return array();
+			}
 
-            $explicit = get_post_meta( $post_id, '_swps_robots', true );
-            if ( ! empty( $explicit ) ) {
-                return [];
-            }
+			$explicit = get_post_meta( $post_id, '_swps_robots', true );
+			if ( ! empty( $explicit ) ) {
+				return array();
+			}
 
-            $post_type = get_post_type( $post_id );
-            if ( $post_type && get_option( "swps_noindex_{$post_type}", 0 ) ) {
-                return [ 'noindex', 'follow' ];
-            }
+			$post_type = get_post_type( $post_id );
+			if ( $post_type && get_option( "swps_noindex_{$post_type}", 0 ) ) {
+				return array( 'noindex', 'follow' );
+			}
 
-            return [];
-        }
+			return array();
+		}
 
-        if ( is_category() || is_tag() || is_tax() ) {
-            $term = get_queried_object();
-            if ( ! $term instanceof WP_Term ) {
-                return [];
-            }
+		if ( is_category() || is_tag() || is_tax() ) {
+			$term = get_queried_object();
+			if ( ! $term instanceof WP_Term ) {
+				return array();
+			}
 
-            $explicit = get_term_meta( $term->term_id, '_swps_robots', true );
-            if ( ! empty( $explicit ) ) {
-                return [];
-            }
+			$explicit = get_term_meta( $term->term_id, '_swps_robots', true );
+			if ( ! empty( $explicit ) ) {
+				return array();
+			}
 
-            if ( get_option( "swps_noindex_{$term->taxonomy}", 0 ) ) {
-                return [ 'noindex', 'follow' ];
-            }
+			if ( get_option( "swps_noindex_{$term->taxonomy}", 0 ) ) {
+				return array( 'noindex', 'follow' );
+			}
 
-            return [];
-        }
+			return array();
+		}
 
-        if ( is_post_type_archive() ) {
-            $post_type = get_query_var( 'post_type' );
-            if ( is_array( $post_type ) ) {
-                $post_type = reset( $post_type );
-            }
+		if ( is_post_type_archive() ) {
+			$post_type = get_query_var( 'post_type' );
+			if ( is_array( $post_type ) ) {
+				$post_type = reset( $post_type );
+			}
 
-            if ( is_string( $post_type ) && get_option( "swps_noindex_{$post_type}", 0 ) ) {
-                return [ 'noindex', 'follow' ];
-            }
-        }
+			if ( is_string( $post_type ) && get_option( "swps_noindex_{$post_type}", 0 ) ) {
+				return array( 'noindex', 'follow' );
+			}
+		}
 
-        return [];
-    }
+		return array();
+	}
 
-    /**
-     * Get the title template for the current page context.
-     */
-    private function get_title_template(): string {
-        if ( is_front_page() && is_home() ) {
-            return get_option( 'swps_title_template_homepage', '%%sitename%%' );
-        }
+	/**
+	 * Get the title template for the current page context.
+	 */
+	private function get_title_template(): string {
+		if ( is_front_page() && is_home() ) {
+			return get_option( 'swps_title_template_homepage', '%%sitename%%' );
+		}
 
-        if ( is_singular() ) {
-            $post_type = get_post_type();
-            return get_option( "swps_title_template_{$post_type}", '%%title%% %%sep%% %%sitename%%' );
-        }
+		if ( is_singular() ) {
+			$post_type = get_post_type();
+			return get_option( "swps_title_template_{$post_type}", '%%title%% %%sep%% %%sitename%%' );
+		}
 
-        if ( is_category() ) {
-            return get_option( 'swps_title_template_category', '%%title%% Archives %%sep%% %%sitename%%' );
-        }
+		if ( is_category() ) {
+			return get_option( 'swps_title_template_category', '%%title%% Archives %%sep%% %%sitename%%' );
+		}
 
-        if ( is_tag() ) {
-            return get_option( 'swps_title_template_post_tag', '%%title%% %%sep%% %%sitename%%' );
-        }
+		if ( is_tag() ) {
+			return get_option( 'swps_title_template_post_tag', '%%title%% %%sep%% %%sitename%%' );
+		}
 
-        if ( is_tax() ) {
-            $taxonomy = get_queried_object()->taxonomy ?? '';
-            return get_option( "swps_title_template_{$taxonomy}", '%%title%% %%sep%% %%sitename%%' );
-        }
+		if ( is_tax() ) {
+			$taxonomy = get_queried_object()->taxonomy ?? '';
+			return get_option( "swps_title_template_{$taxonomy}", '%%title%% %%sep%% %%sitename%%' );
+		}
 
-        if ( is_author() ) {
-            return get_option( 'swps_title_template_author', '%%author%% %%sep%% %%sitename%%' );
-        }
+		if ( is_author() ) {
+			return get_option( 'swps_title_template_author', '%%author%% %%sep%% %%sitename%%' );
+		}
 
-        if ( is_post_type_archive() ) {
-            $post_type = get_query_var( 'post_type' );
-            if ( is_array( $post_type ) ) {
-                $post_type = reset( $post_type );
-            }
-            return get_option( "swps_title_template_{$post_type}_archive", '%%pt_plural%% %%sep%% %%sitename%%' );
-        }
+		if ( is_post_type_archive() ) {
+			$post_type = get_query_var( 'post_type' );
+			if ( is_array( $post_type ) ) {
+				$post_type = reset( $post_type );
+			}
+			return get_option( "swps_title_template_{$post_type}_archive", '%%pt_plural%% %%sep%% %%sitename%%' );
+		}
 
-        if ( is_date() ) {
-            return get_option( 'swps_title_template_date', '%%title%% %%sep%% %%sitename%%' );
-        }
+		if ( is_date() ) {
+			return get_option( 'swps_title_template_date', '%%title%% %%sep%% %%sitename%%' );
+		}
 
-        if ( is_search() ) {
-            return get_option( 'swps_title_template_search', 'Search: %%searchphrase%% %%sep%% %%sitename%%' );
-        }
+		if ( is_search() ) {
+			return get_option( 'swps_title_template_search', 'Search: %%searchphrase%% %%sep%% %%sitename%%' );
+		}
 
-        if ( is_404() ) {
-            return get_option( 'swps_title_template_404', 'Page Not Found %%sep%% %%sitename%%' );
-        }
+		if ( is_404() ) {
+			return get_option( 'swps_title_template_404', 'Page Not Found %%sep%% %%sitename%%' );
+		}
 
-        return '';
-    }
+		return '';
+	}
 
-    /**
-     * Get the meta description for the current page context.
-     */
-    private function get_description(): string {
-        if ( is_singular() ) {
-            $post_type = get_post_type();
-            $template  = get_option( "swps_desc_template_{$post_type}", '%%excerpt%%' );
-            return $this->resolve_variables( $template );
-        }
+	/**
+	 * Get the meta description for the current page context.
+	 */
+	private function get_description(): string {
+		if ( is_singular() ) {
+			$post_type = get_post_type();
+			$template  = get_option( "swps_desc_template_{$post_type}", '%%excerpt%%' );
+			return $this->resolve_variables( $template );
+		}
 
-        if ( is_category() || is_tag() || is_tax() ) {
-            $term = get_queried_object();
-            if ( $term && ! empty( $term->description ) ) {
-                return wp_trim_words( $term->description, 30 );
-            }
-            // Check for per-term meta description (from Taxonomy Meta).
-            if ( $term ) {
-                $meta_desc = get_term_meta( $term->term_id, '_swps_meta_description', true );
-                if ( ! empty( $meta_desc ) ) {
-                    return $meta_desc;
-                }
-            }
-        }
+		if ( is_category() || is_tag() || is_tax() ) {
+			$term = get_queried_object();
+			if ( $term && ! empty( $term->description ) ) {
+				return wp_trim_words( $term->description, 30 );
+			}
+			// Check for per-term meta description (from Taxonomy Meta).
+			if ( $term ) {
+				$meta_desc = get_term_meta( $term->term_id, '_swps_meta_description', true );
+				if ( ! empty( $meta_desc ) ) {
+					return $meta_desc;
+				}
+			}
+		}
 
-        if ( is_author() ) {
-            $author = get_queried_object();
-            if ( $author ) {
-                return wp_trim_words( get_the_author_meta( 'description', $author->ID ), 30 );
-            }
-        }
+		if ( is_author() ) {
+			$author = get_queried_object();
+			if ( $author ) {
+				return wp_trim_words( get_the_author_meta( 'description', $author->ID ), 30 );
+			}
+		}
 
-        return '';
-    }
+		return '';
+	}
 
-    /**
-     * Resolve template variables to their current values.
-     */
-    public function resolve_variables( string $template ): string {
-        $sep      = get_option( 'swps_title_separator', '-' );
-        $sitename = get_bloginfo( 'name' );
+	/**
+	 * Resolve template variables to their current values.
+	 */
+	public function resolve_variables( string $template ): string {
+		$sep      = get_option( 'swps_title_separator', '-' );
+		$sitename = get_bloginfo( 'name' );
 
-        $replacements = [
-            '%%sitename%%'     => $sitename,
-            '%%sep%%'          => $sep,
-            '%%searchphrase%%' => get_search_query(),
-        ];
+		$replacements = array(
+			'%%sitename%%'     => $sitename,
+			'%%sep%%'          => $sep,
+			'%%searchphrase%%' => get_search_query(),
+		);
 
-        // Context-specific replacements.
-        if ( is_singular() ) {
-            $post = get_queried_object();
-            if ( $post ) {
-                $replacements['%%title%%']    = $post->post_title;
-                $replacements['%%excerpt%%']  = wp_trim_words( $post->post_excerpt ?: wp_strip_all_tags( $post->post_content ), 30 );
-                $replacements['%%author%%']   = get_the_author_meta( 'display_name', $post->post_author );
-                $replacements['%%date%%']     = get_the_date( '', $post );
+		// Context-specific replacements.
+		if ( is_singular() ) {
+			$post = get_queried_object();
+			if ( $post ) {
+				$replacements['%%title%%']   = $post->post_title;
+				$replacements['%%excerpt%%'] = wp_trim_words( $post->post_excerpt ?: wp_strip_all_tags( $post->post_content ), 30 );
+				$replacements['%%author%%']  = get_the_author_meta( 'display_name', $post->post_author );
+				$replacements['%%date%%']    = get_the_date( '', $post );
 
-                $categories = get_the_category( $post->ID );
-                $replacements['%%category%%'] = ! empty( $categories ) ? $categories[0]->name : '';
+				$categories                   = get_the_category( $post->ID );
+				$replacements['%%category%%'] = ! empty( $categories ) ? $categories[0]->name : '';
 
-                $tags = get_the_tags( $post->ID );
-                $replacements['%%tag%%']      = ! empty( $tags ) ? $tags[0]->name : '';
-            }
-        } elseif ( is_category() || is_tag() || is_tax() ) {
-            $term = get_queried_object();
-            if ( $term ) {
-                $replacements['%%title%%'] = $term->name;
-            }
-        } elseif ( is_author() ) {
-            $author = get_queried_object();
-            if ( $author ) {
-                $replacements['%%title%%']  = $author->display_name;
-                $replacements['%%author%%'] = $author->display_name;
-            }
-        } elseif ( is_post_type_archive() ) {
-            $post_type = get_query_var( 'post_type' );
-            if ( is_array( $post_type ) ) {
-                $post_type = reset( $post_type );
-            }
-            $pto = get_post_type_object( $post_type );
-            if ( $pto ) {
-                $replacements['%%title%%']     = $pto->labels->name;
-                $replacements['%%pt_single%%'] = $pto->labels->singular_name;
-                $replacements['%%pt_plural%%'] = $pto->labels->name;
-            }
-        } elseif ( is_date() ) {
-            if ( is_year() ) {
-                $replacements['%%title%%'] = get_the_date( 'Y' );
-            } elseif ( is_month() ) {
-                $replacements['%%title%%'] = get_the_date( 'F Y' );
-            } else {
-                $replacements['%%title%%'] = get_the_date();
-            }
-        }
+				$tags                    = get_the_tags( $post->ID );
+				$replacements['%%tag%%'] = ! empty( $tags ) ? $tags[0]->name : '';
+			}
+		} elseif ( is_category() || is_tag() || is_tax() ) {
+			$term = get_queried_object();
+			if ( $term ) {
+				$replacements['%%title%%'] = $term->name;
+			}
+		} elseif ( is_author() ) {
+			$author = get_queried_object();
+			if ( $author ) {
+				$replacements['%%title%%']  = $author->display_name;
+				$replacements['%%author%%'] = $author->display_name;
+			}
+		} elseif ( is_post_type_archive() ) {
+			$post_type = get_query_var( 'post_type' );
+			if ( is_array( $post_type ) ) {
+				$post_type = reset( $post_type );
+			}
+			$pto = get_post_type_object( $post_type );
+			if ( $pto ) {
+				$replacements['%%title%%']     = $pto->labels->name;
+				$replacements['%%pt_single%%'] = $pto->labels->singular_name;
+				$replacements['%%pt_plural%%'] = $pto->labels->name;
+			}
+		} elseif ( is_date() ) {
+			if ( is_year() ) {
+				$replacements['%%title%%'] = get_the_date( 'Y' );
+			} elseif ( is_month() ) {
+				$replacements['%%title%%'] = get_the_date( 'F Y' );
+			} else {
+				$replacements['%%title%%'] = get_the_date();
+			}
+		}
 
-        // Pagination.
-        $paged = get_query_var( 'paged', 0 );
-        $replacements['%%page%%'] = $paged > 1 ? sprintf( __( 'Page %d', 'stratawp-seo' ), $paged ) : '';
+		// Pagination.
+		$paged                    = get_query_var( 'paged', 0 );
+		$replacements['%%page%%'] = $paged > 1 ? sprintf( __( 'Page %d', 'stratawp-seo' ), $paged ) : '';
 
-        $result = str_replace( array_keys( $replacements ), array_values( $replacements ), $template );
+		$result = str_replace( array_keys( $replacements ), array_values( $replacements ), $template );
 
-        // Clean up empty variables and double separators.
-        $result = preg_replace( '/%%\w+%%/', '', $result );
-        $result = preg_replace( '/\s+/', ' ', trim( $result ) );
+		// Clean up empty variables and double separators.
+		$result = preg_replace( '/%%\w+%%/', '', $result );
+		$result = preg_replace( '/\s+/', ' ', trim( $result ) );
 
-        return $result;
-    }
+		return $result;
+	}
 }

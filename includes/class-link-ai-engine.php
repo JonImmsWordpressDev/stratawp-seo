@@ -38,24 +38,24 @@ class SWPS_Link_AI_Engine {
 		$batch_size = (int) get_option( 'swps_link_ai_batch_size', 10 );
 		$candidates = array_slice( $candidates, 0, $batch_size );
 
-		$candidate_data = [];
+		$candidate_data = array();
 		foreach ( $candidates as $candidate ) {
 			$post = get_post( $candidate['post_id'] );
 			if ( ! $post ) {
 				continue;
 			}
 			$focus_kw         = get_post_meta( $post->ID, '_swps_focus_keyword', true );
-			$candidate_data[] = [
+			$candidate_data[] = array(
 				'post_id'       => $post->ID,
 				'title'         => $post->post_title,
 				'excerpt'       => wp_trim_words( wp_strip_all_tags( $post->post_content ), 50 ),
 				'url'           => get_permalink( $post->ID ),
 				'focus_keyword' => $focus_kw ?: '',
-			];
+			);
 		}
 
 		if ( empty( $candidate_data ) ) {
-			return [];
+			return array();
 		}
 
 		$source_focus_kw = get_post_meta( $source_post_id, '_swps_focus_keyword', true );
@@ -83,10 +83,10 @@ PROMPT;
 
 		$user_prompt  = "SOURCE POST:\n";
 		$user_prompt .= "Title: {$source_post->post_title}\n";
-		$user_prompt .= "Focus Keyword: " . ( $source_focus_kw ?: 'none' ) . "\n";
-		$user_prompt .= "Excerpt: " . wp_trim_words( wp_strip_all_tags( $source_post->post_content ), 80 ) . "\n\n";
+		$user_prompt .= 'Focus Keyword: ' . ( $source_focus_kw ?: 'none' ) . "\n";
+		$user_prompt .= 'Excerpt: ' . wp_trim_words( wp_strip_all_tags( $source_post->post_content ), 80 ) . "\n\n";
 		$user_prompt .= "CANDIDATE TARGET POSTS:\n{$candidates_json}\n\n";
-		$user_prompt .= "Analyze each candidate and respond with the JSON array.";
+		$user_prompt .= 'Analyze each candidate and respond with the JSON array.';
 
 		$result = $this->api->chat_json( $system_prompt, $user_prompt, 2048 );
 
@@ -114,17 +114,17 @@ PROMPT;
 			$analysis = $result['candidates'];
 		}
 
-		$enriched = [];
+		$enriched = array();
 		foreach ( $analysis as $item ) {
 			if ( ! isset( $item['post_id'], $item['relevance_score'] ) ) {
 				continue;
 			}
-			$enriched[] = [
+			$enriched[] = array(
 				'post_id'         => (int) $item['post_id'],
 				'relevance_score' => max( 0.0, min( 1.0, (float) $item['relevance_score'] ) ),
 				'anchor_text'     => sanitize_text_field( $item['anchor_text'] ?? '' ),
 				'rationale'       => sanitize_text_field( $item['rationale'] ?? '' ),
-			];
+			);
 		}
 
 		return $enriched;

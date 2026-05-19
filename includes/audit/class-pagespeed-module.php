@@ -28,7 +28,7 @@ class SWPS_PageSpeed_Module extends SWPS_Audit_Module {
 	}
 
 	public function run(): array {
-		$issues = [];
+		$issues = array();
 
 		// Check recent posts for image issues in content.
 		$posts = $this->get_public_posts( 50 );
@@ -44,37 +44,37 @@ class SWPS_PageSpeed_Module extends SWPS_Audit_Module {
 				foreach ( $matches[0] as $img_tag ) {
 					// Check for width/height attributes.
 					if ( ! preg_match( '/\bwidth\s*=/', $img_tag ) || ! preg_match( '/\bheight\s*=/', $img_tag ) ) {
-						$missing_dimensions++;
+						++$missing_dimensions;
 					}
 
 					// Check for lazy loading.
 					if ( false === stripos( $img_tag, 'loading=' ) ) {
-						$missing_lazy++;
+						++$missing_lazy;
 					}
 				}
 			}
 		}
 
 		if ( $missing_dimensions > 0 ) {
-			$issues[] = [
+			$issues[] = array(
 				'post_id' => null,
 				'message' => sprintf(
 					__( '%d images across recent posts are missing width/height attributes (causes layout shift).', 'stratawp-seo' ),
 					$missing_dimensions
 				),
 				'fixable' => false,
-			];
+			);
 		}
 
 		if ( $missing_lazy > 0 ) {
-			$issues[] = [
+			$issues[] = array(
 				'post_id' => null,
 				'message' => sprintf(
 					__( '%d images are missing loading="lazy" attribute.', 'stratawp-seo' ),
 					$missing_lazy
 				),
 				'fixable' => false,
-			];
+			);
 		}
 
 		// Note: WordPress 5.5+ adds lazy loading and 5.9+ adds dimensions automatically
@@ -96,13 +96,13 @@ class SWPS_PageSpeed_Module extends SWPS_Audit_Module {
 
 		$score = max( 0, $score );
 
-		return [
+		return array(
 			'score'   => $score,
 			'status'  => $this->status_from_score( $score ),
 			'issues'  => $issues,
 			'summary' => empty( $issues )
 				? __( 'No page speed issues detected in recent content.', 'stratawp-seo' )
 				: sprintf( __( '%d performance issue(s) found.', 'stratawp-seo' ), count( $issues ) ),
-		];
+		);
 	}
 }

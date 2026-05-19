@@ -30,46 +30,46 @@ class SWPS_Twitter_Module extends SWPS_Audit_Module {
 		// Twitter cards are output by the OpenGraph module.
 		// This module just checks the same conditions.
 		if ( defined( 'WPSEO_VERSION' ) || class_exists( 'RankMath' ) ) {
-			return [
+			return array(
 				'score'   => 100,
 				'status'  => 'pass',
-				'issues'  => [],
+				'issues'  => array(),
 				'summary' => __( 'Twitter Cards managed by SEO plugin.', 'stratawp-seo' ),
-			];
+			);
 		}
 
 		$our_og = (bool) get_option( 'swps_audit_auto_og', 1 );
 
 		if ( $our_og ) {
-			return [
+			return array(
 				'score'   => 100,
 				'status'  => 'pass',
-				'issues'  => [],
+				'issues'  => array(),
 				'summary' => __( 'Twitter Cards output via SWPS OG auto-tags.', 'stratawp-seo' ),
-			];
+			);
 		}
 
-		return [
+		return array(
 			'score'   => 0,
 			'status'  => 'fail',
-			'issues'  => [
-				[
+			'issues'  => array(
+				array(
 					'post_id' => null,
 					'message' => __( 'No Twitter Card tags detected. Enable OG auto-tags to fix.', 'stratawp-seo' ),
 					'fixable' => true,
-				],
-			],
+				),
+			),
 			'summary' => __( 'No Twitter Card tags found.', 'stratawp-seo' ),
-		];
+		);
 	}
 
 	public function auto_fix( array $issues ): array {
 		// Enable OG (which includes Twitter tags).
 		update_option( 'swps_audit_auto_og', 1 );
 
-		return [
+		return array(
 			'fixed'    => 1,
-			'messages' => [ __( 'OG auto-tags enabled (includes Twitter Cards).', 'stratawp-seo' ) ],
-		];
+			'messages' => array( __( 'OG auto-tags enabled (includes Twitter Cards).', 'stratawp-seo' ) ),
+		);
 	}
 }

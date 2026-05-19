@@ -6,135 +6,146 @@
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+	exit;
 }
 
 class SWPS_XAI_Provider extends SWPS_AI_Provider {
 
-    private const API_URL = 'https://api.x.ai/v1/chat/completions';
+	private const API_URL = 'https://api.x.ai/v1/chat/completions';
 
-    public function get_slug(): string {
-        return 'xai';
-    }
+	public function get_slug(): string {
+		return 'xai';
+	}
 
-    public function get_name(): string {
-        return 'xAI (Grok)';
-    }
+	public function get_name(): string {
+		return 'xAI (Grok)';
+	}
 
-    public function get_api_key_url(): string {
-        return 'https://console.x.ai/';
-    }
+	public function get_api_key_url(): string {
+		return 'https://console.x.ai/';
+	}
 
-    public function get_available_models(): array {
-        return [
-            'grok-3'       => 'Grok 3 (Most capable)',
-            'grok-3-mini'  => 'Grok 3 Mini (Fast & efficient)',
-            'grok-3-fast'  => 'Grok 3 Fast (Balanced)',
-        ];
-    }
+	public function get_available_models(): array {
+		return array(
+			'grok-3'      => 'Grok 3 (Most capable)',
+			'grok-3-mini' => 'Grok 3 Mini (Fast & efficient)',
+			'grok-3-fast' => 'Grok 3 Fast (Balanced)',
+		);
+	}
 
-    public function chat( string $system_prompt, string $user_message, int $max_tokens = 4096 ): string|WP_Error {
-        $api_key = $this->get_api_key();
+	public function chat( string $system_prompt, string $user_message, int $max_tokens = 4096 ): string|WP_Error {
+		$api_key = $this->get_api_key();
 
-        if ( empty( $api_key ) ) {
-            return new WP_Error( 'swps_no_api_key', __( 'Please enter your xAI API key in StrataWP SEO settings.', 'stratawp-seo' ) );
-        }
+		if ( empty( $api_key ) ) {
+			return new WP_Error( 'swps_no_api_key', __( 'Please enter your xAI API key in StrataWP SEO settings.', 'stratawp-seo' ) );
+		}
 
-        $body = [
-            'model'      => $this->get_validated_model(),
-            'max_tokens' => $max_tokens,
-            'messages'   => [
-                [
-                    'role'    => 'system',
-                    'content' => $system_prompt,
-                ],
-                [
-                    'role'    => 'user',
-                    'content' => $user_message,
-                ],
-            ],
-        ];
+		$body = array(
+			'model'      => $this->get_validated_model(),
+			'max_tokens' => $max_tokens,
+			'messages'   => array(
+				array(
+					'role'    => 'system',
+					'content' => $system_prompt,
+				),
+				array(
+					'role'    => 'user',
+					'content' => $user_message,
+				),
+			),
+		);
 
-        if ( $this->requesting_json ) {
-            $body['response_format'] = [ 'type' => 'json_object' ];
-        }
+		if ( $this->requesting_json ) {
+			$body['response_format'] = array( 'type' => 'json_object' );
+		}
 
-        $response = wp_remote_post( self::API_URL, [
-            'timeout' => 180,
-            'headers' => [
-                'Content-Type'  => 'application/json',
-                'Authorization' => 'Bearer ' . $api_key,
-            ],
-            'body' => wp_json_encode( $body ),
-        ] );
+		$response = wp_remote_post(
+			self::API_URL,
+			array(
+				'timeout' => 180,
+				'headers' => array(
+					'Content-Type'  => 'application/json',
+					'Authorization' => 'Bearer ' . $api_key,
+				),
+				'body'    => wp_json_encode( $body ),
+			)
+		);
 
-        if ( is_wp_error( $response ) ) {
-            return new WP_Error(
-                'swps_api_request_failed',
-                sprintf( __( 'API request failed: %s', 'stratawp-seo' ), $response->get_error_message() )
-            );
-        }
+		if ( is_wp_error( $response ) ) {
+			return new WP_Error(
+				'swps_api_request_failed',
+				sprintf( __( 'API request failed: %s', 'stratawp-seo' ), $response->get_error_message() )
+			);
+		}
 
-        $status_code = wp_remote_retrieve_response_code( $response );
-        $body        = json_decode( wp_remote_retrieve_body( $response ), true );
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
 
-        if ( 200 !== $status_code ) {
-            $error_message = $body['error']['message'] ?? __( 'Unknown API error.', 'stratawp-seo' );
-            return new WP_Error(
-                'swps_api_error',
-                sprintf( __( 'Grok API error (%d): %s', 'stratawp-seo' ), $status_code, $error_message )
-            );
-        }
+		if ( 200 !== $status_code ) {
+			$error_message = $body['error']['message'] ?? __( 'Unknown API error.', 'stratawp-seo' );
+			return new WP_Error(
+				'swps_api_error',
+				sprintf( __( 'Grok API error (%1$d): %2$s', 'stratawp-seo' ), $status_code, $error_message )
+			);
+		}
 
-        if ( empty( $body['choices'][0]['message']['content'] ) ) {
-            return new WP_Error( 'swps_empty_response', __( 'Received empty response from Grok.', 'stratawp-seo' ) );
-        }
+		if ( empty( $body['choices'][0]['message']['content'] ) ) {
+			return new WP_Error( 'swps_empty_response', __( 'Received empty response from Grok.', 'stratawp-seo' ) );
+		}
 
-        // Store usage data for cost tracking.
-        if ( ! empty( $body['usage'] ) ) {
-            $this->last_usage = [
-                'input_tokens'  => (int) ( $body['usage']['prompt_tokens'] ?? 0 ),
-                'output_tokens' => (int) ( $body['usage']['completion_tokens'] ?? 0 ),
-            ];
-        }
+		// Store usage data for cost tracking.
+		if ( ! empty( $body['usage'] ) ) {
+			$this->last_usage = array(
+				'input_tokens'  => (int) ( $body['usage']['prompt_tokens'] ?? 0 ),
+				'output_tokens' => (int) ( $body['usage']['completion_tokens'] ?? 0 ),
+			);
+		}
 
-        // Store stop reason for truncation detection.
-        // xAI uses OpenAI-compatible format: 'stop', 'length' (truncated).
-        $finish_reason = $body['choices'][0]['finish_reason'] ?? null;
-        $this->last_stop_reason = ( $finish_reason === 'length' ) ? 'max_tokens' : $finish_reason;
+		// Store stop reason for truncation detection.
+		// xAI uses OpenAI-compatible format: 'stop', 'length' (truncated).
+		$finish_reason          = $body['choices'][0]['finish_reason'] ?? null;
+		$this->last_stop_reason = ( $finish_reason === 'length' ) ? 'max_tokens' : $finish_reason;
 
-        return $body['choices'][0]['message']['content'];
-    }
+		return $body['choices'][0]['message']['content'];
+	}
 
-    public function test_key( string $api_key ): bool|WP_Error {
-        $response = wp_remote_post( self::API_URL, [
-            'timeout' => 30,
-            'headers' => [
-                'Content-Type'  => 'application/json',
-                'Authorization' => 'Bearer ' . $api_key,
-            ],
-            'body' => wp_json_encode( [
-                'model'      => $this->get_validated_model(),
-                'max_tokens' => 10,
-                'messages'   => [
-                    [ 'role' => 'user', 'content' => 'Say "ok"' ],
-                ],
-            ] ),
-        ] );
+	public function test_key( string $api_key ): bool|WP_Error {
+		$response = wp_remote_post(
+			self::API_URL,
+			array(
+				'timeout' => 30,
+				'headers' => array(
+					'Content-Type'  => 'application/json',
+					'Authorization' => 'Bearer ' . $api_key,
+				),
+				'body'    => wp_json_encode(
+					array(
+						'model'      => $this->get_validated_model(),
+						'max_tokens' => 10,
+						'messages'   => array(
+							array(
+								'role'    => 'user',
+								'content' => 'Say "ok"',
+							),
+						),
+					)
+				),
+			)
+		);
 
-        if ( is_wp_error( $response ) ) {
-            return $response;
-        }
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
 
-        $status_code = wp_remote_retrieve_response_code( $response );
+		$status_code = wp_remote_retrieve_response_code( $response );
 
-        if ( 200 === $status_code ) {
-            return true;
-        }
+		if ( 200 === $status_code ) {
+			return true;
+		}
 
-        $body          = json_decode( wp_remote_retrieve_body( $response ), true );
-        $error_message = $body['error']['message'] ?? 'Invalid API key.';
+		$body          = json_decode( wp_remote_retrieve_body( $response ), true );
+		$error_message = $body['error']['message'] ?? 'Invalid API key.';
 
-        return new WP_Error( 'swps_invalid_key', $error_message );
-    }
+		return new WP_Error( 'swps_invalid_key', $error_message );
+	}
 }

@@ -28,16 +28,16 @@ class SWPS_OpenGraph_Module extends SWPS_Audit_Module {
 
 	public function run(): array {
 		$posts  = $this->get_public_posts();
-		$issues = [];
+		$issues = array();
 
 		// If another SEO plugin handles OG or we handle it, skip post-level checks.
 		if ( defined( 'WPSEO_VERSION' ) || class_exists( 'RankMath' ) ) {
-			return [
+			return array(
 				'score'   => 100,
 				'status'  => 'pass',
-				'issues'  => [],
+				'issues'  => array(),
 				'summary' => __( 'Open Graph tags managed by SEO plugin.', 'stratawp-seo' ),
-			];
+			);
 		}
 
 		$our_og = (bool) get_option( 'swps_audit_auto_og', 1 );
@@ -46,28 +46,28 @@ class SWPS_OpenGraph_Module extends SWPS_Audit_Module {
 			// Check posts for missing OG signals (no featured image = no OG image).
 			foreach ( $posts as $post ) {
 				if ( ! has_post_thumbnail( $post->ID ) ) {
-					$issues[] = [
+					$issues[] = array(
 						'post_id' => $post->ID,
 						'message' => sprintf(
 							__( '"%s" has no featured image for og:image.', 'stratawp-seo' ),
 							$post->post_title
 						),
 						'fixable' => false,
-					];
+					);
 				}
 			}
 		} else {
 			// OG enabled — just check for missing images.
 			foreach ( $posts as $post ) {
 				if ( ! has_post_thumbnail( $post->ID ) ) {
-					$issues[] = [
+					$issues[] = array(
 						'post_id' => $post->ID,
 						'message' => sprintf(
 							__( '"%s" will use fallback og:image (no featured image).', 'stratawp-seo' ),
 							$post->post_title
 						),
 						'fixable' => false,
-					];
+					);
 				}
 			}
 		}
@@ -80,23 +80,23 @@ class SWPS_OpenGraph_Module extends SWPS_Audit_Module {
 			$score = 50;
 		}
 
-		return [
+		return array(
 			'score'   => $score,
 			'status'  => $this->status_from_score( $score ),
 			'issues'  => $issues,
 			'summary' => 0 === $failing
 				? __( 'All posts have Open Graph tags.', 'stratawp-seo' )
 				: sprintf( __( '%d posts with OG image issues.', 'stratawp-seo' ), $failing ),
-		];
+		);
 	}
 
 	public function auto_fix( array $issues ): array {
 		update_option( 'swps_audit_auto_og', 1 );
 
-		return [
+		return array(
 			'fixed'    => 1,
-			'messages' => [ __( 'Auto Open Graph tag output enabled.', 'stratawp-seo' ) ],
-		];
+			'messages' => array( __( 'Auto Open Graph tag output enabled.', 'stratawp-seo' ) ),
+		);
 	}
 
 	/**
