@@ -13,4 +13,15 @@ if ( ! defined( 'ABSPATH' ) ) {
     define( 'ABSPATH', '/tmp/wp-fake/' );
 }
 
+if ( ! function_exists( 'wp_strip_all_tags' ) ) {
+    function wp_strip_all_tags( $string, $remove_breaks = false ) {
+        $string = preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', (string) $string );
+        $string = strip_tags( $string );
+        if ( $remove_breaks ) {
+            $string = preg_replace( '/[\r\n\t ]+/', ' ', $string );
+        }
+        return trim( $string );
+    }
+}
+
 require_once __DIR__ . '/../vendor/autoload.php';
