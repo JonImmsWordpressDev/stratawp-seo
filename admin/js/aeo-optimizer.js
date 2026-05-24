@@ -96,17 +96,9 @@
         $('#swps-aeo-tile-low-dim .swps-tile-num').text(weakestLabel);
     }
 
-    function showEl($el) {
-        // Removes the `hidden` attribute AND any inline display:none jQuery may have set.
-        $el.prop('hidden', false).css('display', '');
-    }
-    function hideEl($el) {
-        $el.prop('hidden', true).css('display', '');
-    }
-
     function rescan() {
         allResults = [];
-        showEl($progress);
+        $progress.show();
         $progressFill.css('width', '0%');
         $progressText.text(swpsAeo.i18n.scanning);
         scanChunk(0);
@@ -129,7 +121,7 @@
             $progressText.text(done + ' / ' + total);
 
             if (resp.data.done) {
-                hideEl($progress);
+                $progress.hide();
                 updateTiles();
                 renderQueue();
             } else {
@@ -137,7 +129,7 @@
             }
         }).fail(function () {
             $progressText.text(swpsAeo.i18n.genericFail);
-            hideEl($progress);
+            $progress.hide();
         });
     }
 
@@ -210,7 +202,7 @@
         html += '</div>';
 
         $modalInner.html(html);
-        showEl($modal);
+        $modal.show();
     }
 
     function apply(postId) {
@@ -237,7 +229,7 @@
                 allResults[idx].subscores    = resp.data.new_subscores;
                 allResults[idx].has_proposal = false;
             }
-            hideEl($modal);
+            $modal.hide();
             updateTiles();
             renderQueue();
         }).fail(function () { alert(swpsAeo.i18n.genericFail); });
@@ -265,7 +257,7 @@
     $(document).on('click', '.swps-aeo-propose', function () { propose(parseInt($(this).data('id'), 10)); });
     $(document).on('click', '.swps-aeo-review',  function () { propose(parseInt($(this).data('id'), 10)); });
     $(document).on('click', '.swps-aeo-dismiss', function () { dismiss(parseInt($(this).data('id'), 10)); });
-    $(document).on('click', '#swps-aeo-cancel',  function () { hideEl($modal); });
+    $(document).on('click', '#swps-aeo-cancel',  function () { $modal.hide(); });
     $(document).on('click', '#swps-aeo-apply',   function () { apply(parseInt($(this).data('id'), 10)); });
 
     // Support ?focus_post=N URL param: deep-link from Bot Analytics (Task 19).

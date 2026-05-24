@@ -21,7 +21,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, a per-post meta editor, **Local SEO** (LocalBusiness schema with NAP and opening hours), **Image SEO** (auto-alt + filename sanitization + lazy-load), **Crawlers & Files** (in-admin editor for /llms.txt and /robots.txt), and **Backlinks** (manual/CSV-import tracker with daily health monitoring) — on autopilot or on demand.
 
-[![Version](https://img.shields.io/badge/version-4.6.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.6.1-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -1274,6 +1274,9 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 ---
 
 ## Changelog
+
+### v4.6.1 — May 2026
+- Fix: AEO Optimize admin page no longer renders a blank dark overlay on load. The modal template now uses inline `style="display:none;"` instead of the `hidden` attribute so jQuery's `.show()` / `.hide()` toggle naturally without fighting the modal's `display: flex` layout rule. Asset version bumped to force browser-cache refresh on existing installs.
 
 ### v4.6.0 — May 2026
 - New: AEO Optimize (score + bulk page + editor panel + dynamic schema for 5 new types)

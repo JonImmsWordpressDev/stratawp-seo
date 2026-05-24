@@ -94,10 +94,10 @@
 .swps-aeo-subscore-chip.dim-authority      { background: #bfdbfe; }
 .swps-aeo-subscore-chip.dim-coverage       { background: #fecaca; }
 
-/* Modal — scoped to :not([hidden]) so the author stylesheet's `display: flex`
-   doesn't override the browser default `[hidden] { display: none }`. JS must
-   add/remove the `hidden` attribute when toggling visibility. */
-.swps-aeo-modal:not([hidden]) {
+/* Modal — initial display:none lives on the template element (inline style),
+   so jQuery's .show() / .hide() toggles inline display naturally. The rule
+   below provides the visible-state layout. */
+.swps-aeo-modal {
 	position: fixed;
 	inset: 0;
 	background: rgba(0, 0, 0, 0.5);
