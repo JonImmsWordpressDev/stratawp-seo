@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.6.1
+Stable tag: 4.6.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -252,6 +252,9 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.6.2 — 2026-05-24 =
+* Fix: AEO Optimize queue no longer blanks when you navigate away and come back. The scored-posts list is now loaded from post meta on every page render (via `wp_localize_script`) so the queue survives a reload — re-scan still overwrites with fresh scores. Fixes a confusing UX where the queue appeared "lost" after browsing away.
 
 = 4.6.1 — 2026-05-24 =
 * Fix: AEO Optimize admin page rendered a blank dark overlay on load — the modal's CSS `display: flex` overrode the browser default `[hidden] { display: none }`. Modal now uses inline `style="display:none;"` so jQuery `.show()` / `.hide()` toggle naturally. Asset version bumped to force browser-cache refresh on existing installs.

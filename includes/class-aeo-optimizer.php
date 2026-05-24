@@ -102,7 +102,7 @@ class SWPS_AEO_Optimizer {
 					SWPS_VERSION,
 					true
 				);
-				wp_localize_script( 'swps-aeo-optimizer', 'swpsAeo', $this->localize_data() );
+				wp_localize_script( 'swps-aeo-optimizer', 'swpsAeo', $this->localize_data( true ) );
 			}
 		}
 
@@ -117,13 +117,18 @@ class SWPS_AEO_Optimizer {
 				SWPS_VERSION,
 				true
 			);
-			wp_localize_script( 'swps-aeo-editor-panel', 'swpsAeo', $this->localize_data() );
+			wp_localize_script( 'swps-aeo-editor-panel', 'swpsAeo', $this->localize_data( false ) );
 		}
 	}
 
-	/** @return array<string, mixed> */
-	private function localize_data(): array {
-		return array(
+	/**
+	 * @param bool $include_initial_results When true, includes the persisted queue
+	 *   data so the JS can render the queue on page load without re-scanning.
+	 *   Only the optimizer page needs this; the editor panel doesn't.
+	 * @return array<string, mixed>
+	 */
+	private function localize_data( bool $include_initial_results = false ): array {
+		$data = array(
 			'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
 			'nonce'     => wp_create_nonce( 'swps_nonce' ),
 			'threshold' => (int) get_option( 'swps_aeo_threshold', SWPS_AEO_Scorer::DEFAULT_THRESHOLD ),
@@ -145,6 +150,67 @@ class SWPS_AEO_Optimizer {
 				'editsSection'   => __( 'Edits', 'stratawp-seo' ),
 			),
 		);
+		if ( $include_initial_results ) {
+			$data['initialResults'] = $this->get_scored_posts();
+		}
+		return $data;
+	}
+
+	/**
+	 * Load the persisted AEO queue from post meta — used to populate the
+	 * optimizer page on load (no AJAX, no re-scoring).
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function get_scored_posts(): array {
+		global $wpdb;
+		$types = (array) get_option( 'swps_aeo_post_types', array( 'post', 'page' ) );
+		if ( empty( $types ) ) {
+			return array();
+		}
+		// Build a safe IN(...) clause for post_type — types come from a sanitized option.
+		$placeholders = implode( ', ', array_fill( 0, count( $types ), '%s' ) );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- read-only queue load, no caching benefit.
+		$sql  = "SELECT p.ID, p.post_title, p.post_type, m.meta_value AS score
+				FROM {$wpdb->posts} p
+				INNER JOIN {$wpdb->postmeta} m ON m.post_id = p.ID
+				WHERE m.meta_key = %s
+				  AND p.post_status = 'publish'
+				  AND p.post_type IN ( {$placeholders} )
+				ORDER BY CAST(m.meta_value AS UNSIGNED) ASC
+				LIMIT 500";
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$rows = $wpdb->get_results( $wpdb->prepare( $sql, array_merge( array( SWPS_AEO_Scorer::META_TOTAL ), $types ) ) );
+
+		if ( empty( $rows ) ) {
+			return array();
+		}
+
+		$results = array();
+		foreach ( $rows as $row ) {
+			$post_id = (int) $row->ID;
+			if ( get_post_meta( $post_id, self::META_DISMISSED, true ) ) {
+				continue;
+			}
+			$coverage = get_post_meta( $post_id, SWPS_AEO_Scorer::META_SUBSCORE_PREFIX . 'coverage', true );
+			$results[] = array(
+				'post_id'      => $post_id,
+				'title'        => (string) $row->post_title,
+				'permalink'    => get_permalink( $post_id ) ?: '',
+				'edit_url'     => get_edit_post_link( $post_id, 'raw' ) ?: '',
+				'post_type'    => (string) $row->post_type,
+				'score'        => (int) $row->score,
+				'subscores'    => array(
+					'extractability' => (int) get_post_meta( $post_id, SWPS_AEO_Scorer::META_SUBSCORE_PREFIX . 'extractability', true ),
+					'markup'         => (int) get_post_meta( $post_id, SWPS_AEO_Scorer::META_SUBSCORE_PREFIX . 'markup', true ),
+					'authority'      => (int) get_post_meta( $post_id, SWPS_AEO_Scorer::META_SUBSCORE_PREFIX . 'authority', true ),
+					'coverage'       => '' === $coverage ? null : (int) $coverage,
+				),
+				'has_proposal' => '' !== get_post_meta( $post_id, self::META_PROPOSAL, true ),
+			);
+		}
+		return $results;
 	}
 
 	private function verify_request(): void {
