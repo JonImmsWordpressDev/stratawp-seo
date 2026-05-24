@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.6.5
+Stable tag: 4.6.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -252,6 +252,9 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.6.6 — 2026-05-24 =
+* Fix: Applying an AEO proposal failed with "Apply failed: invalid_proposal" because `update_post_meta()` internally calls `wp_unslash()` on stored values, which stripped the JSON's `\"` escapes and corrupted the cached proposal. Same bug affected the snapshot (undo) and the rendered JSON-LD schema. All three storage sites now `wp_slash()` before storing so the round-trip preserves valid JSON. Pre-4.6.6 corrupted proposals are auto-cleared on next apply with a friendly "please re-generate" message.
 
 = 4.6.5 — 2026-05-24 =
 * Fix: AEO Optimize "Request failed." alerts now show the actual error message. The JS `.fail()` handler previously displayed the generic fallback regardless of what the server returned — so AI-provider errors (rate limits, invalid API key, JSON parse failures, etc.) were being swallowed. A new `extractErrorMessage()` helper digs into `jqXHR.responseJSON.data.message`, falls back to the HTTP status, and appends a "Check StrataWP SEO → Debug" hint for AI-side failures.

@@ -21,7 +21,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, a per-post meta editor, **Local SEO** (LocalBusiness schema with NAP and opening hours), **Image SEO** (auto-alt + filename sanitization + lazy-load), **Crawlers & Files** (in-admin editor for /llms.txt and /robots.txt), and **Backlinks** (manual/CSV-import tracker with daily health monitoring) — on autopilot or on demand.
 
-[![Version](https://img.shields.io/badge/version-4.6.5-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.6.6-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -1274,6 +1274,9 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 ---
 
 ## Changelog
+
+### v4.6.6 — May 2026
+- Fix: "Apply selected" on an AEO proposal failed with `invalid_proposal` (and the rendered front-end JSON-LD schema silently broke) because WordPress's `update_post_meta()` runs `wp_unslash()` internally — which stripped the `\"` escapes inside JSON strings, corrupting them on write. All three storage sites (`META_PROPOSAL`, `META_SNAPSHOT`, `META_SCHEMA_JSON` — including the undo restore) now call `wp_slash()` before `update_post_meta()` so the round-trip preserves valid JSON. Pre-v4.6.6 corrupted proposals are auto-cleared on the next apply with a friendly "please re-generate" message. The undo handler likewise auto-clears corrupted snapshots.
 
 ### v4.6.5 — May 2026
 - Fix: AEO Optimize "Request failed." alerts now surface the actual server error. The JS `.fail()` handlers were displaying the generic fallback message regardless of what the response body said — so AI-provider errors (rate limit, invalid API key, JSON parse failure) were being swallowed. New `extractErrorMessage()` helper digs into `jqXHR.responseJSON.data.message`, falls back to the HTTP status, and appends a "Check StrataWP SEO → Debug for the raw AI response" hint for likely AI-side failures. Applies to scan / proposal / apply.

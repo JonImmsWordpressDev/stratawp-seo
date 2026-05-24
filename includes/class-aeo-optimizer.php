@@ -387,7 +387,13 @@ class SWPS_AEO_Optimizer {
 		/** Filter the AI-returned proposal. */
 		$proposal = (array) apply_filters( 'swps_aeo_proposal', $proposal, $post_id );
 
-		update_post_meta( $post_id, self::META_PROPOSAL, wp_json_encode( $proposal ) );
+		// IMPORTANT: wp_slash() before update_post_meta(). WordPress's
+		// update_metadata() internally calls wp_unslash() on the value, which
+		// would strip the \" escapes inside our JSON string and corrupt it.
+		// Pre-slashing means the round-trip leaves the stored value as valid
+		// JSON. The same pattern is applied to META_SNAPSHOT and
+		// META_SCHEMA_JSON below.
+		update_post_meta( $post_id, self::META_PROPOSAL, wp_slash( (string) wp_json_encode( $proposal ) ) );
 
 		return array( 'proposal' => $proposal );
 	}
@@ -428,20 +434,30 @@ class SWPS_AEO_Optimizer {
 
 		$raw = (string) get_post_meta( $post_id, self::META_PROPOSAL, true );
 		if ( '' === $raw ) {
-			return array( 'error' => 'no_proposal', 'http_status' => 400 );
+			return array(
+				'error'       => __( 'No proposal cached. Click "Generate proposal" again — the previous one may have expired (proposals are cleared after 24h) or never been saved.', 'stratawp-seo' ),
+				'http_status' => 400,
+			);
 		}
 		$proposal = json_decode( $raw, true );
 		if ( ! is_array( $proposal ) ) {
-			return array( 'error' => 'invalid_proposal', 'http_status' => 500 );
+			// Likely a stale proposal stored under the pre-v4.6.6 wp_unslash bug
+			// (JSON's \" escapes were stripped, breaking json_decode here). Auto-
+			// clear so the next "Generate proposal" overwrites cleanly.
+			delete_post_meta( $post_id, self::META_PROPOSAL );
+			return array(
+				'error'       => __( 'Cached proposal could not be parsed (likely corrupted by a pre-v4.6.6 storage bug). The bad proposal has been cleared — please click "Generate proposal" again.', 'stratawp-seo' ),
+				'http_status' => 400,
+			);
 		}
 
-		// Snapshot for undo.
-		update_post_meta( $post_id, self::META_SNAPSHOT, wp_json_encode( array(
+		// Snapshot for undo. wp_slash for the same reason as META_PROPOSAL above.
+		update_post_meta( $post_id, self::META_SNAPSHOT, wp_slash( (string) wp_json_encode( array(
 			'content'     => $post->post_content,
 			'schema_type' => get_post_meta( $post_id, self::META_SCHEMA_TYPE, true ),
 			'schema_json' => get_post_meta( $post_id, self::META_SCHEMA_JSON, true ),
 			'taken_at'    => time(),
-		) ) );
+		) ) ) );
 
 		$new_content = $post->post_content;
 		$applied     = 0;
@@ -497,7 +513,11 @@ class SWPS_AEO_Optimizer {
 			&& empty( $proposal['schema']['validation_error'] )
 		) {
 			update_post_meta( $post_id, self::META_SCHEMA_TYPE, (string) $proposal['schema']['type'] );
-			update_post_meta( $post_id, self::META_SCHEMA_JSON, wp_json_encode( $proposal['schema']['json'] ) );
+			// wp_slash for the same reason as META_PROPOSAL above. Without it
+			// the JSON-LD stored here would be corrupted by update_metadata's
+			// internal wp_unslash, and the frontend schema renderer would
+			// silently fail to emit the JSON-LD.
+			update_post_meta( $post_id, self::META_SCHEMA_JSON, wp_slash( (string) wp_json_encode( $proposal['schema']['json'] ) ) );
 			++$applied;
 		}
 
@@ -534,11 +554,18 @@ class SWPS_AEO_Optimizer {
 	public function do_undo( int $post_id ): array {
 		$raw = (string) get_post_meta( $post_id, self::META_SNAPSHOT, true );
 		if ( '' === $raw ) {
-			return array( 'error' => 'no_snapshot', 'http_status' => 404 );
+			return array(
+				'error'       => __( 'No snapshot available to undo (snapshots are taken automatically when you apply a proposal).', 'stratawp-seo' ),
+				'http_status' => 404,
+			);
 		}
 		$snap = json_decode( $raw, true );
 		if ( ! is_array( $snap ) ) {
-			return array( 'error' => 'invalid_snapshot', 'http_status' => 500 );
+			delete_post_meta( $post_id, self::META_SNAPSHOT );
+			return array(
+				'error'       => __( 'Snapshot could not be parsed (likely corrupted by a pre-v4.6.6 storage bug). The bad snapshot has been cleared.', 'stratawp-seo' ),
+				'http_status' => 400,
+			);
 		}
 
 		wp_update_post( array(
@@ -552,7 +579,9 @@ class SWPS_AEO_Optimizer {
 			delete_post_meta( $post_id, self::META_SCHEMA_TYPE );
 		}
 		if ( ! empty( $snap['schema_json'] ) ) {
-			update_post_meta( $post_id, self::META_SCHEMA_JSON, (string) $snap['schema_json'] );
+			// wp_slash so update_metadata's internal wp_unslash doesn't strip
+			// the JSON-LD's \" escapes (same issue as the store sites above).
+			update_post_meta( $post_id, self::META_SCHEMA_JSON, wp_slash( (string) $snap['schema_json'] ) );
 		} else {
 			delete_post_meta( $post_id, self::META_SCHEMA_JSON );
 		}
