@@ -14,7 +14,7 @@
  * Output filterable via swps_aeo_schema_json before validation.
  *
  * Provider is dependency-injected (any object with
- * chat_json(array, int): array) — tests use FakeAIProvider.
+ * chat_json(string, string, int): array|WP_Error) — tests use FakeAIProvider.
  *
  * @package StrataWP_SEO
  */
@@ -34,7 +34,7 @@ class SWPS_AEO_Schema_Generator {
 	private array $fields;
 
 	/**
-	 * @param object $provider     Anything with chat_json(array, int): array.
+	 * @param object $provider     Anything with chat_json(string, string, int): array|WP_Error.
 	 * @param string $fields_path  Path to the schema-fields JSON manifest.
 	 */
 	public function __construct( $provider, string $fields_path ) {
@@ -87,26 +87,22 @@ class SWPS_AEO_Schema_Generator {
 			$expected_type
 		);
 
-		try {
-			$json = $this->provider->chat_json(
-				array(
-					array(
-						'role'    => 'system',
-						'content' => $system,
-					),
-					array(
-						'role'    => 'user',
-						'content' => $user,
-					),
-				),
-				2048
-			);
-		} catch ( \Throwable $e ) {
+		$response = $this->provider->chat_json( $system, $user, 2048 );
+
+		if ( $response instanceof WP_Error ) {
 			return array(
 				'json'  => null,
-				'error' => $e->getMessage(),
+				'error' => $response->get_error_message(),
 			);
 		}
+		if ( ! is_array( $response ) ) {
+			return array(
+				'json'  => null,
+				'error' => 'invalid_response',
+			);
+		}
+
+		$json = $response;
 
 		if ( function_exists( 'apply_filters' ) ) {
 			$json = (array) apply_filters( 'swps_aeo_schema_json', $json, $type, null );

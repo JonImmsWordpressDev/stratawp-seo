@@ -10,8 +10,8 @@
  * for find/replace suggestions.
  *
  * Provider is dependency-injected (any object with
- * `chat_json(array $messages, int $max_tokens): array`) so tests use
- * a pure-PHP FakeAIProvider — no AI calls in CI.
+ * `chat_json(string $system, string $user, int $max_tokens): array|WP_Error`)
+ * so tests use a pure-PHP FakeAIProvider — no AI calls in CI.
  *
  * @package StrataWP_SEO
  */
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class SWPS_AEO_Coverage_Scorer {
 
-	/** @var object|null Anything with chat_json(array, int): array */
+	/** @var object|null Anything with chat_json(string, string, int): array|WP_Error */
 	private $provider;
 
 	public function __construct( $provider = null ) {
@@ -58,26 +58,22 @@ class SWPS_AEO_Coverage_Scorer {
 			$outline
 		);
 
-		try {
-			$response = $this->provider->chat_json(
-				array(
-					array(
-						'role'    => 'system',
-						'content' => $system,
-					),
-					array(
-						'role'    => 'user',
-						'content' => $user,
-					),
-				),
-				512
-			);
-		} catch ( \Throwable $e ) {
+		$response = $this->provider->chat_json( $system, $user, 512 );
+
+		if ( $response instanceof WP_Error ) {
 			return array(
 				'score'         => null,
 				'coverage_gaps' => array(),
 				'entity_issues' => array(),
-				'error'         => $e->getMessage(),
+				'error'         => $response->get_error_message(),
+			);
+		}
+		if ( ! is_array( $response ) ) {
+			return array(
+				'score'         => null,
+				'coverage_gaps' => array(),
+				'entity_issues' => array(),
+				'error'         => 'invalid_response',
 			);
 		}
 

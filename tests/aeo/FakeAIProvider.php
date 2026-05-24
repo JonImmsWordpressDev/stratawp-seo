@@ -2,28 +2,31 @@
 /**
  * Pure-PHP stand-in for SWPS_AI_Provider used by AEO unit tests.
  *
- * Implements only what the AEO scorers call: chat_json(array, int): array.
- * Configurable response (next_response) + failure mode (should_fail) +
- * captured input (last_messages) for assertions.
+ * Matches the real SWPS_AI_Provider::chat_json(string, string, int): array|WP_Error
+ * signature. Configurable response (next_response) + failure mode (should_fail) +
+ * captured prompts (last_system / last_user) for assertions.
  *
  * @package StrataWP_SEO
  */
 
 final class FakeAIProvider {
-	/** @var array<string, mixed> */
-	public array $next_response = array();
+	/** @var array<string, mixed>|WP_Error */
+	public $next_response = array();
 	public bool $should_fail = false;
-	/** @var array<int, array{role:string, content:string}> */
-	public array $last_messages = array();
+	public string $last_system = '';
+	public string $last_user   = '';
 
 	/**
-	 * @param array<int, array{role:string, content:string}> $messages
-	 * @return array<string, mixed>
+	 * @param string $system_prompt
+	 * @param string $user_message
+	 * @param int    $max_tokens
+	 * @return array<string, mixed>|WP_Error
 	 */
-	public function chat_json( array $messages, int $max_tokens = 1024 ): array {
-		$this->last_messages = $messages;
+	public function chat_json( string $system_prompt, string $user_message, int $max_tokens = 4096 ) {
+		$this->last_system = $system_prompt;
+		$this->last_user   = $user_message;
 		if ( $this->should_fail ) {
-			throw new RuntimeException( 'AI provider error' );
+			return new WP_Error( 'ai_failure', 'AI provider error' );
 		}
 		return $this->next_response;
 	}
