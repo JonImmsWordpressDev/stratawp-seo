@@ -92,14 +92,14 @@ class SWPS_AEO_Optimizer {
 		// Admin page assets (Task 15/16 provide aeo.css and aeo-optimizer.js).
 		if ( 'stratawp-seo_page_swps-aeo-optimize' === $hook ) {
 			if ( file_exists( SWPS_PLUGIN_DIR . 'admin/css/aeo.css' ) ) {
-				wp_enqueue_style( 'swps-aeo', SWPS_PLUGIN_URL . 'admin/css/aeo.css', array(), SWPS_VERSION );
+				wp_enqueue_style( 'swps-aeo', SWPS_PLUGIN_URL . 'admin/css/aeo.css', array(), $this->asset_ver( 'admin/css/aeo.css' ) );
 			}
 			if ( file_exists( SWPS_PLUGIN_DIR . 'admin/js/aeo-optimizer.js' ) ) {
 				wp_enqueue_script(
 					'swps-aeo-optimizer',
 					SWPS_PLUGIN_URL . 'admin/js/aeo-optimizer.js',
 					array( 'jquery' ),
-					SWPS_VERSION,
+					$this->asset_ver( 'admin/js/aeo-optimizer.js' ),
 					true
 				);
 				wp_localize_script( 'swps-aeo-optimizer', 'swpsAeo', $this->localize_data( true ) );
@@ -109,16 +109,37 @@ class SWPS_AEO_Optimizer {
 		// Editor-panel assets (Task 17/18). Optimizer enqueues them on post edit screens.
 		if ( in_array( $hook, array( 'post.php', 'post-new.php' ), true )
 			&& file_exists( SWPS_PLUGIN_DIR . 'admin/js/aeo-editor-panel.js' ) ) {
-			wp_enqueue_style( 'swps-aeo', SWPS_PLUGIN_URL . 'admin/css/aeo.css', array(), SWPS_VERSION );
+			wp_enqueue_style( 'swps-aeo', SWPS_PLUGIN_URL . 'admin/css/aeo.css', array(), $this->asset_ver( 'admin/css/aeo.css' ) );
 			wp_enqueue_script(
 				'swps-aeo-editor-panel',
 				SWPS_PLUGIN_URL . 'admin/js/aeo-editor-panel.js',
 				array( 'jquery', 'wp-plugins', 'wp-edit-post', 'wp-element', 'wp-components', 'wp-data' ),
-				SWPS_VERSION,
+				$this->asset_ver( 'admin/js/aeo-editor-panel.js' ),
 				true
 			);
 			wp_localize_script( 'swps-aeo-editor-panel', 'swpsAeo', $this->localize_data( false ) );
 		}
+	}
+
+	/**
+	 * Build a cache-busting asset version from the file's mtime, falling
+	 * back to SWPS_VERSION if the file isn't readable.
+	 *
+	 * Using mtime means any code change to an AEO asset auto-invalidates
+	 * the browser cache without requiring a SWPS_VERSION bump — fixing the
+	 * pattern that caused v4.6.0/4.6.1/4.6.2 to each need a version bump
+	 * just to ship a bugfix. PHP's stat cache makes filemtime() ~free on
+	 * repeated calls within the same request.
+	 *
+	 * Scope: AEO assets only. Other plugin assets keep SWPS_VERSION until
+	 * a broader cleanup adopts the same pattern.
+	 *
+	 * @param string $relative_path Path relative to SWPS_PLUGIN_DIR (no leading slash).
+	 */
+	private function asset_ver( string $relative_path ): string {
+		$full  = SWPS_PLUGIN_DIR . $relative_path;
+		$mtime = is_readable( $full ) ? filemtime( $full ) : false;
+		return false !== $mtime ? (string) $mtime : SWPS_VERSION;
 	}
 
 	/**
