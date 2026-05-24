@@ -15,6 +15,43 @@
         return $('<i>').text(String(s == null ? '' : s)).html();
     }
 
+    // Extract a useful error message from a jQuery AJAX failure.
+    // wp_send_json_error( $data, $http_status ) sends HTTP 4xx/5xx with a
+    // body like {success:false, data:{message:"..."}}. jQuery's .fail()
+    // doesn't auto-parse that — this helper digs the message out, falls
+    // back to the HTTP status, then to the generic i18n string. Includes
+    // a hint to check the Debug page for likely AI-provider failures.
+    function extractErrorMessage(jqXHR, prefix) {
+        var msg = '';
+        if (jqXHR && jqXHR.responseJSON && jqXHR.responseJSON.data && jqXHR.responseJSON.data.message) {
+            msg = String(jqXHR.responseJSON.data.message);
+        } else if (jqXHR && jqXHR.responseText) {
+            // Fall back to raw response when JSON parsing failed.
+            try {
+                var parsed = JSON.parse(jqXHR.responseText);
+                if (parsed && parsed.data && parsed.data.message) {
+                    msg = String(parsed.data.message);
+                }
+            } catch (e) { /* ignore */ }
+        }
+        if (!msg && jqXHR && jqXHR.status) {
+            msg = 'HTTP ' + jqXHR.status + (jqXHR.statusText ? ' ' + jqXHR.statusText : '');
+        }
+        if (!msg) {
+            msg = swpsAeo.i18n.genericFail;
+        }
+        // Cap very-long AI provider error messages so the alert stays readable.
+        if (msg.length > 600) {
+            msg = msg.substring(0, 600) + '...';
+        }
+        // Hint at the Debug page for AI-side failures (rate limits, JSON parse, etc.).
+        var hint = '';
+        if (/json|parse|invalid|api|rate|quota|token|provider/i.test(msg)) {
+            hint = '\n\nCheck StrataWP SEO → Debug for the raw AI response.';
+        }
+        return (prefix ? prefix + ': ' : '') + msg + hint;
+    }
+
     function scoreClass(s) {
         if (s < 50) return 'low';
         if (s < 75) return 'mid';
@@ -111,7 +148,8 @@
             offset: offset
         }).done(function (resp) {
             if (!resp || !resp.success) {
-                $progressText.text(swpsAeo.i18n.genericFail);
+                $progressText.text((resp && resp.data && resp.data.message) || swpsAeo.i18n.genericFail);
+                $progress.hide();
                 return;
             }
             allResults = allResults.concat(resp.data.results || []);
@@ -127,9 +165,9 @@
             } else {
                 scanChunk(resp.data.next_offset);
             }
-        }).fail(function () {
-            $progressText.text(swpsAeo.i18n.genericFail);
-            $progress.hide();
+        }).fail(function (jqXHR) {
+            $progressText.text(extractErrorMessage(jqXHR, 'Scan failed'));
+            // Keep the progress block visible so the user can read the error.
         });
     }
 
@@ -143,14 +181,14 @@
         }).done(function (resp) {
             $btn.prop('disabled', false);
             if (!resp || !resp.success) {
-                alert((resp && resp.data && resp.data.message) || swpsAeo.i18n.genericFail);
                 $btn.text(swpsAeo.i18n.generate);
+                alert('Proposal failed: ' + ((resp && resp.data && resp.data.message) || swpsAeo.i18n.genericFail));
                 return;
             }
             openModal(postId, resp.data.proposal || {});
-        }).fail(function () {
+        }).fail(function (jqXHR) {
             $btn.prop('disabled', false).text(swpsAeo.i18n.generate);
-            alert(swpsAeo.i18n.genericFail);
+            alert(extractErrorMessage(jqXHR, 'Proposal failed'));
         });
     }
 
@@ -219,7 +257,7 @@
             schema:  schema ? 1 : 0
         }).done(function (resp) {
             if (!resp || !resp.success) {
-                alert((resp && resp.data && resp.data.message) || swpsAeo.i18n.genericFail);
+                alert('Apply failed: ' + ((resp && resp.data && resp.data.message) || swpsAeo.i18n.genericFail));
                 return;
             }
             // Update local cache.
@@ -232,7 +270,7 @@
             $modal.hide();
             updateTiles();
             renderQueue();
-        }).fail(function () { alert(swpsAeo.i18n.genericFail); });
+        }).fail(function (jqXHR) { alert(extractErrorMessage(jqXHR, 'Apply failed')); });
     }
 
     function dismiss(postId) {
