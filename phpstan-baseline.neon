@@ -121,11 +121,6 @@ parameters:
 			path: includes/class-aeo-scorer.php
 
 		-
-			message: "#^Property SWPS_AEO_Editor_Panel\\:\\:\\$scorer is never read, only written\\.$#"
-			count: 1
-			path: includes/class-aeo-editor-panel.php
-
-		-
 			message: "#^Property SWPS_AEO_Optimizer\\:\\:\\$cost is never read, only written\\.$#"
 			count: 1
 			path: includes/class-aeo-optimizer.php
