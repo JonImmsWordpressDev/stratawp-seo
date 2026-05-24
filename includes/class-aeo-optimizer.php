@@ -152,8 +152,18 @@ class SWPS_AEO_Optimizer {
 	public function ajax_scan_chunk(): void {
 		$this->verify_request();
 		$offset = isset( $_POST['offset'] ) ? max( 0, (int) $_POST['offset'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified in verify_request()
-		$limit  = 10;
-		$types  = (array) get_option( 'swps_aeo_post_types', array( 'post', 'page' ) );
+		wp_send_json_success( $this->do_scan_chunk( $offset, 10 ) );
+	}
+
+	/**
+	 * Score a chunk of posts starting at $offset.
+	 *
+	 * @param int $offset Zero-based post offset.
+	 * @param int $limit  Number of posts to process (1–100).
+	 * @return array{scored:int,next_offset:int,total:int,done:bool,results:array<int,array<string,mixed>>}
+	 */
+	public function do_scan_chunk( int $offset, int $limit = 10 ): array {
+		$types = (array) get_option( 'swps_aeo_post_types', array( 'post', 'page' ) );
 
 		$query = new WP_Query( array(
 			'post_type'      => $types,
@@ -188,15 +198,14 @@ class SWPS_AEO_Optimizer {
 
 		$total = (int) $query->found_posts;
 		$next  = $offset + count( $query->posts );
-		$done  = $next >= $total;
 
-		wp_send_json_success( array(
+		return array(
 			'scored'      => count( $results ),
 			'next_offset' => $next,
 			'total'       => $total,
-			'done'        => $done,
+			'done'        => $next >= $total,
 			'results'     => $results,
-		) );
+		);
 	}
 
 	public function ajax_score(): void {
@@ -205,20 +214,45 @@ class SWPS_AEO_Optimizer {
 		if ( $post_id <= 0 ) {
 			wp_send_json_error( array( 'message' => 'invalid post_id' ), 400 );
 		}
-		$r = $this->scorer->score_post( $post_id );
-		wp_send_json_success( $r );
+		wp_send_json_success( $this->do_score( $post_id ) );
+	}
+
+	/**
+	 * Re-score a single post and return the score data.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return array<string,mixed>
+	 */
+	public function do_score( int $post_id ): array {
+		return $this->scorer->score_post( $post_id );
 	}
 
 	public function ajax_propose(): void {
 		$this->verify_request();
 		$post_id = isset( $_POST['post_id'] ) ? (int) $_POST['post_id'] : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified in verify_request()
 		if ( $post_id <= 0 ) {
-			wp_send_json_error( array( 'message' => 'invalid post_id' ), 400 );
+			wp_send_json_error( array( 'message' => 'invalid_post_id' ), 400 );
 		}
+		$result = $this->do_propose( $post_id );
+		if ( isset( $result['error'] ) ) {
+			wp_send_json_error( array( 'message' => $result['error'] ), $result['http_status'] ?? 500 );
+		}
+		wp_send_json_success( $result );
+	}
 
+	/**
+	 * Generate an AI proposal for a post.
+	 *
+	 * On success returns array with key 'proposal'.
+	 * On error returns array with keys 'error' (string) and 'http_status' (int).
+	 *
+	 * @param int $post_id Post ID.
+	 * @return array<string,mixed>
+	 */
+	public function do_propose( int $post_id ): array {
 		$post = get_post( $post_id );
 		if ( ! $post ) {
-			wp_send_json_error( array( 'message' => 'post_not_found' ), 404 );
+			return array( 'error' => 'post_not_found', 'http_status' => 404 );
 		}
 
 		// Detect expected schema type from content.
@@ -241,7 +275,7 @@ class SWPS_AEO_Optimizer {
 
 		$result = $this->ai_provider->chat_json( $system, $user, 4096 );
 		if ( is_wp_error( $result ) ) {
-			wp_send_json_error( array( 'message' => $result->get_error_message() ), 500 );
+			return array( 'error' => $result->get_error_message(), 'http_status' => 500 );
 		}
 		$proposal = $result;
 
@@ -263,7 +297,7 @@ class SWPS_AEO_Optimizer {
 
 		update_post_meta( $post_id, self::META_PROPOSAL, wp_json_encode( $proposal ) );
 
-		wp_send_json_success( array( 'proposal' => $proposal ) );
+		return array( 'proposal' => $proposal );
 	}
 
 	public function ajax_apply(): void {
@@ -275,18 +309,38 @@ class SWPS_AEO_Optimizer {
 		$apply_schema     = ! empty( $_POST['schema'] );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
+		$result = $this->do_apply( $post_id, $selected_edits, $selected_inserts, $apply_schema );
+		if ( isset( $result['error'] ) ) {
+			wp_send_json_error( array( 'message' => $result['error'] ), $result['http_status'] ?? 500 );
+		}
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * Apply selected edits, inserts, and/or schema from a stored proposal.
+	 *
+	 * On success returns array with keys 'applied_count', 'new_score', 'new_subscores'.
+	 * On error returns array with keys 'error' (string) and 'http_status' (int).
+	 *
+	 * @param int   $post_id          Post ID.
+	 * @param int[] $selected_edits   Indexes into proposal['edits'] to apply.
+	 * @param int[] $selected_inserts Indexes into proposal['inserts'] to apply.
+	 * @param bool  $apply_schema     Whether to apply the proposed schema block.
+	 * @return array<string,mixed>
+	 */
+	public function do_apply( int $post_id, array $selected_edits, array $selected_inserts, bool $apply_schema ): array {
 		$post = get_post( $post_id );
 		if ( ! $post ) {
-			wp_send_json_error( array( 'message' => 'post_not_found' ), 404 );
+			return array( 'error' => 'post_not_found', 'http_status' => 404 );
 		}
 
 		$raw = (string) get_post_meta( $post_id, self::META_PROPOSAL, true );
 		if ( '' === $raw ) {
-			wp_send_json_error( array( 'message' => 'no_proposal' ), 400 );
+			return array( 'error' => 'no_proposal', 'http_status' => 400 );
 		}
 		$proposal = json_decode( $raw, true );
 		if ( ! is_array( $proposal ) ) {
-			wp_send_json_error( array( 'message' => 'invalid_proposal' ), 500 );
+			return array( 'error' => 'invalid_proposal', 'http_status' => 500 );
 		}
 
 		// Snapshot for undo.
@@ -359,23 +413,40 @@ class SWPS_AEO_Optimizer {
 		delete_post_meta( $post_id, self::META_PROPOSAL );
 		$rescore = $this->scorer->score_post( $post_id );
 
-		wp_send_json_success( array(
+		return array(
 			'applied_count' => $applied,
 			'new_score'     => $rescore['total'],
 			'new_subscores' => $rescore['subscores'],
-		) );
+		);
 	}
 
 	public function ajax_undo(): void {
 		$this->verify_request();
 		$post_id = isset( $_POST['post_id'] ) ? (int) $_POST['post_id'] : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified in verify_request()
-		$raw     = (string) get_post_meta( $post_id, self::META_SNAPSHOT, true );
+		$result  = $this->do_undo( $post_id );
+		if ( isset( $result['error'] ) ) {
+			wp_send_json_error( array( 'message' => $result['error'] ), $result['http_status'] ?? 500 );
+		}
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * Restore the last snapshot for a post.
+	 *
+	 * On success returns array with keys 'restored', 'score', 'subscores'.
+	 * On error returns array with keys 'error' (string) and 'http_status' (int).
+	 *
+	 * @param int $post_id Post ID.
+	 * @return array<string,mixed>
+	 */
+	public function do_undo( int $post_id ): array {
+		$raw = (string) get_post_meta( $post_id, self::META_SNAPSHOT, true );
 		if ( '' === $raw ) {
-			wp_send_json_error( array( 'message' => 'no_snapshot' ), 404 );
+			return array( 'error' => 'no_snapshot', 'http_status' => 404 );
 		}
 		$snap = json_decode( $raw, true );
 		if ( ! is_array( $snap ) ) {
-			wp_send_json_error( array( 'message' => 'invalid_snapshot' ), 500 );
+			return array( 'error' => 'invalid_snapshot', 'http_status' => 500 );
 		}
 
 		wp_update_post( array(
@@ -397,11 +468,11 @@ class SWPS_AEO_Optimizer {
 		delete_post_meta( $post_id, self::META_SNAPSHOT );
 		$r = $this->scorer->score_post( $post_id );
 
-		wp_send_json_success( array(
+		return array(
 			'restored'  => true,
 			'score'     => $r['total'],
 			'subscores' => $r['subscores'],
-		) );
+		);
 	}
 
 	public function ajax_dismiss(): void {
@@ -410,11 +481,22 @@ class SWPS_AEO_Optimizer {
 		$post_id   = isset( $_POST['post_id'] )   ? (int) $_POST['post_id']    : 0;
 		$dismissed = isset( $_POST['dismissed'] ) ? (bool) $_POST['dismissed'] : true;
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
+		wp_send_json_success( $this->do_dismiss( $post_id, $dismissed ) );
+	}
+
+	/**
+	 * Set or clear the dismissed flag for a post.
+	 *
+	 * @param int  $post_id   Post ID.
+	 * @param bool $dismissed True to dismiss, false to un-dismiss.
+	 * @return array{ok:bool}
+	 */
+	public function do_dismiss( int $post_id, bool $dismissed ): array {
 		if ( $dismissed ) {
 			update_post_meta( $post_id, self::META_DISMISSED, 1 );
 		} else {
 			delete_post_meta( $post_id, self::META_DISMISSED );
 		}
-		wp_send_json_success( array( 'ok' => true ) );
+		return array( 'ok' => true );
 	}
 }

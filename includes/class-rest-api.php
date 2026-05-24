@@ -384,6 +384,79 @@ class SWPS_REST_API {
 				),
 			)
 		);
+
+		// AEO Optimizer endpoints (v4.6).
+		register_rest_route(
+			self::NAMESPACE,
+			'/aeo/scan-batch',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'rest_aeo_scan_batch' ),
+				'permission_callback' => array( $this, 'check_permissions' ),
+				'args'                => array(
+					'offset' => array( 'type' => 'integer', 'default' => 0,  'sanitize_callback' => 'absint' ),
+					'limit'  => array( 'type' => 'integer', 'default' => 10, 'sanitize_callback' => 'absint' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/aeo/score/(?P<id>\d+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'rest_aeo_score' ),
+				'permission_callback' => array( $this, 'check_permissions' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/aeo/proposal/(?P<id>\d+)',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'rest_aeo_proposal' ),
+				'permission_callback' => array( $this, 'check_permissions' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/aeo/apply/(?P<id>\d+)',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'rest_aeo_apply' ),
+				'permission_callback' => array( $this, 'check_permissions' ),
+				'args'                => array(
+					'edits'   => array( 'type' => 'array', 'default' => array() ),
+					'inserts' => array( 'type' => 'array', 'default' => array() ),
+					'schema'  => array( 'type' => 'boolean', 'default' => false ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/aeo/undo/(?P<id>\d+)',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'rest_aeo_undo' ),
+				'permission_callback' => array( $this, 'check_permissions' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/aeo/dismiss/(?P<id>\d+)',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'rest_aeo_dismiss' ),
+				'permission_callback' => array( $this, 'check_permissions' ),
+				'args'                => array(
+					'dismissed' => array( 'type' => 'boolean', 'default' => true ),
+				),
+			)
+		);
 	}
 
 	/**
@@ -875,5 +948,129 @@ class SWPS_REST_API {
 				),
 			)
 		);
+	}
+
+	// -------------------------------------------------------------------------
+	// AEO Optimizer REST callbacks (v4.6)
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Resolve SWPS_AEO_Optimizer from the singleton, or return a 503 response.
+	 *
+	 * @return SWPS_AEO_Optimizer|WP_REST_Response
+	 */
+	private function aeo_optimizer(): mixed {
+		$optimizer = stratawp_seo()->aeo_optimizer ?? null;
+		if ( null === $optimizer ) {
+			return new WP_REST_Response( array( 'error' => 'unavailable' ), 503 );
+		}
+		return $optimizer;
+	}
+
+	/**
+	 * POST /aeo/scan-batch — Score a paginated chunk of published posts.
+	 */
+	public function rest_aeo_scan_batch( WP_REST_Request $request ): WP_REST_Response {
+		$optimizer = $this->aeo_optimizer();
+		if ( $optimizer instanceof WP_REST_Response ) {
+			return $optimizer;
+		}
+		$offset = (int) $request->get_param( 'offset' );
+		$limit  = (int) $request->get_param( 'limit' );
+		if ( $limit <= 0 || $limit > 100 ) {
+			$limit = 10;
+		}
+		return new WP_REST_Response( $optimizer->do_scan_chunk( $offset, $limit ), 200 );
+	}
+
+	/**
+	 * GET /aeo/score/{id} — Re-score a single post.
+	 */
+	public function rest_aeo_score( WP_REST_Request $request ): WP_REST_Response {
+		$optimizer = $this->aeo_optimizer();
+		if ( $optimizer instanceof WP_REST_Response ) {
+			return $optimizer;
+		}
+		$post_id = (int) $request->get_param( 'id' );
+		if ( $post_id <= 0 ) {
+			return new WP_REST_Response( array( 'error' => 'invalid_post_id' ), 400 );
+		}
+		return new WP_REST_Response( $optimizer->do_score( $post_id ), 200 );
+	}
+
+	/**
+	 * POST /aeo/proposal/{id} — Generate an AI proposal for a post.
+	 */
+	public function rest_aeo_proposal( WP_REST_Request $request ): WP_REST_Response {
+		$optimizer = $this->aeo_optimizer();
+		if ( $optimizer instanceof WP_REST_Response ) {
+			return $optimizer;
+		}
+		$post_id = (int) $request->get_param( 'id' );
+		if ( $post_id <= 0 ) {
+			return new WP_REST_Response( array( 'error' => 'invalid_post_id' ), 400 );
+		}
+		$result = $optimizer->do_propose( $post_id );
+		if ( isset( $result['error'] ) ) {
+			return new WP_REST_Response( $result, $result['http_status'] ?? 500 );
+		}
+		return new WP_REST_Response( $result, 200 );
+	}
+
+	/**
+	 * POST /aeo/apply/{id} — Apply selected edits/inserts/schema from the stored proposal.
+	 */
+	public function rest_aeo_apply( WP_REST_Request $request ): WP_REST_Response {
+		$optimizer = $this->aeo_optimizer();
+		if ( $optimizer instanceof WP_REST_Response ) {
+			return $optimizer;
+		}
+		$post_id  = (int) $request->get_param( 'id' );
+		if ( $post_id <= 0 ) {
+			return new WP_REST_Response( array( 'error' => 'invalid_post_id' ), 400 );
+		}
+		$edits   = array_map( 'intval', (array) ( $request->get_param( 'edits' )   ?? array() ) );
+		$inserts = array_map( 'intval', (array) ( $request->get_param( 'inserts' ) ?? array() ) );
+		$schema  = (bool) $request->get_param( 'schema' );
+		$result  = $optimizer->do_apply( $post_id, $edits, $inserts, $schema );
+		if ( isset( $result['error'] ) ) {
+			return new WP_REST_Response( $result, $result['http_status'] ?? 500 );
+		}
+		return new WP_REST_Response( $result, 200 );
+	}
+
+	/**
+	 * POST /aeo/undo/{id} — Restore the last snapshot for a post.
+	 */
+	public function rest_aeo_undo( WP_REST_Request $request ): WP_REST_Response {
+		$optimizer = $this->aeo_optimizer();
+		if ( $optimizer instanceof WP_REST_Response ) {
+			return $optimizer;
+		}
+		$post_id = (int) $request->get_param( 'id' );
+		if ( $post_id <= 0 ) {
+			return new WP_REST_Response( array( 'error' => 'invalid_post_id' ), 400 );
+		}
+		$result = $optimizer->do_undo( $post_id );
+		if ( isset( $result['error'] ) ) {
+			return new WP_REST_Response( $result, $result['http_status'] ?? 500 );
+		}
+		return new WP_REST_Response( $result, 200 );
+	}
+
+	/**
+	 * POST /aeo/dismiss/{id} — Set or clear the dismissed flag for a post.
+	 */
+	public function rest_aeo_dismiss( WP_REST_Request $request ): WP_REST_Response {
+		$optimizer = $this->aeo_optimizer();
+		if ( $optimizer instanceof WP_REST_Response ) {
+			return $optimizer;
+		}
+		$post_id   = (int) $request->get_param( 'id' );
+		if ( $post_id <= 0 ) {
+			return new WP_REST_Response( array( 'error' => 'invalid_post_id' ), 400 );
+		}
+		$dismissed = (bool) $request->get_param( 'dismissed' );
+		return new WP_REST_Response( $optimizer->do_dismiss( $post_id, $dismissed ), 200 );
 	}
 }
