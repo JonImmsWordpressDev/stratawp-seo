@@ -116,11 +116,6 @@ parameters:
 			path: includes/class-github-updater.php
 
 		-
-			message: "#^Property SWPS_AEO_Coverage_Scorer\\:\\:\\$provider is never read, only written\\.$#"
-			count: 1
-			path: includes/aeo/class-coverage-scorer.php
-
-		-
 			message: "#^Property SWPS_AEO_Scorer\\:\\:\\$coverage is never read, only written\\.$#"
 			count: 1
 			path: includes/class-aeo-scorer.php
