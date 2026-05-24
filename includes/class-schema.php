@@ -2,8 +2,14 @@
 /**
  * Schema / Structured Data output.
  *
- * Outputs JSON-LD structured data on the frontend for Article,
- * Breadcrumb, WebSite, and Organization/Person schema types.
+ * Outputs JSON-LD on the frontend:
+ *   - Legacy set (v1-v4): Article, Breadcrumb, WebSite, Organization/Person.
+ *     Hooked at wp_head priority 1. Bails entirely if Yoast / RankMath /
+ *     AIOSEO is active.
+ *   - AEO (v4.6+): dynamic per-post HowTo / Recipe / Product / Review /
+ *     QAPage from _swps_aeo_schema_json post meta. Hooked at wp_head
+ *     priority 10. Defers to other SEO plugins by default; respects the
+ *     swps_schema_override option for per-type re-enable.
  *
  * @package StrataWP_SEO
  */
@@ -15,8 +21,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Class SWPS_Schema
  *
- * Hooked to wp_head at priority 1. Auto-detects Yoast, RankMath,
- * and AIOSEO — defers entirely when any is active.
+ * Two hook registrations on construction (see __construct):
+ *   - maybe_render_aeo_schema at priority 10 (always, with internal defer)
+ *   - output_schema at priority 1 (only when no other SEO plugin is active)
  */
 class SWPS_Schema {
 
@@ -32,7 +39,15 @@ class SWPS_Schema {
 			return;
 		}
 
-		// Defer to other SEO plugins that output their own schema.
+		// AEO schema (v4.6) always registers — it does its own per-type
+		// deferral check inside the callback so a future override toggle
+		// (swps_schema_override) can re-enable per-type emission when
+		// another SEO plugin is active.
+		add_action( 'wp_head', array( $this, 'maybe_render_aeo_schema' ), 10 );
+
+		// Defer the legacy (v1-v4) schema set entirely to other SEO plugins
+		// when they're active. This is the pre-existing behavior; AEO is
+		// handled above with its own deferral.
 		if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) ) {
 			return;
 		}
@@ -74,6 +89,76 @@ class SWPS_Schema {
 		echo '<script type="application/ld+json">'
 			. wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
 			. '</script>' . "\n";
+	}
+
+	/**
+	 * Render dynamic AEO JSON-LD on singulars if the post has a schema type assigned.
+	 *
+	 * Reads _swps_aeo_schema_type + _swps_aeo_schema_json post meta. Respects
+	 * the swps_aeo_enabled_schema_types option. Defers when another SEO plugin
+	 * is active unless the swps_schema_override toggle is on.
+	 *
+	 * Filterable via swps_schema_{type} (e.g. swps_schema_recipe).
+	 */
+	public function maybe_render_aeo_schema(): void {
+		if ( ! is_singular() ) {
+			return;
+		}
+
+		$post_id = (int) get_queried_object_id();
+		if ( $post_id <= 0 ) {
+			return;
+		}
+
+		$type = (string) get_post_meta( $post_id, '_swps_aeo_schema_type', true );
+		if ( '' === $type ) {
+			return;
+		}
+
+		$enabled = (array) get_option(
+			'swps_aeo_enabled_schema_types',
+			array( 'howto', 'recipe', 'product', 'review', 'qapage' )
+		);
+		if ( ! in_array( $type, $enabled, true ) ) {
+			return;
+		}
+
+		if ( $this->is_aeo_schema_deferred() ) {
+			return;
+		}
+
+		$raw = (string) get_post_meta( $post_id, '_swps_aeo_schema_json', true );
+		if ( '' === $raw ) {
+			return;
+		}
+
+		$decoded = json_decode( $raw, true );
+		if ( ! is_array( $decoded ) ) {
+			return;
+		}
+
+		/**
+		 * Filter the AEO-generated schema array before output.
+		 *
+		 * @param array $decoded Schema array.
+		 * @param int   $post_id Post ID being rendered.
+		 */
+		$decoded = (array) apply_filters( "swps_schema_{$type}", $decoded, $post_id );
+
+		$this->output_jsonld( $decoded );
+	}
+
+	/**
+	 * Should AEO schema defer to another SEO plugin?
+	 *
+	 * True when Yoast / RankMath / AIOSEO is active AND the user has NOT
+	 * enabled the swps_schema_override toggle.
+	 */
+	private function is_aeo_schema_deferred(): bool {
+		if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) ) {
+			return ! (bool) get_option( 'swps_schema_override', false );
+		}
+		return false;
 	}
 
 	/**
