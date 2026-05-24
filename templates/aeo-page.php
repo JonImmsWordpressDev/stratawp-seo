@@ -36,13 +36,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<button type="button" class="button button-primary" id="swps-aeo-rescan">
 				<?php esc_html_e( 'Re-scan all posts', 'stratawp-seo' ); ?>
 			</button>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=stratawp-seo-settings#aeo' ) ); ?>" class="button">
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=swps-settings#aeo' ) ); ?>" class="button">
 				<?php esc_html_e( 'Settings', 'stratawp-seo' ); ?>
 			</a>
 		</div>
 	</div>
 
-	<div class="swps-aeo-progress" id="swps-aeo-progress" hidden>
+	<div class="swps-aeo-progress" id="swps-aeo-progress" style="display:none;">
 		<div class="swps-aeo-progress-bar"><span id="swps-aeo-progress-fill"></span></div>
 		<p id="swps-aeo-progress-text"></p>
 	</div>
@@ -85,6 +85,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	</table>
 </div>
 
-<div class="swps-aeo-modal" id="swps-aeo-modal" hidden>
+<div class="swps-aeo-modal" id="swps-aeo-modal" style="display:none;">
 	<div class="swps-aeo-modal-inner"></div>
 </div>

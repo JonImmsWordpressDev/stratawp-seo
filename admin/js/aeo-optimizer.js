@@ -129,6 +129,7 @@
             }
         }).fail(function () {
             $progressText.text(swpsAeo.i18n.genericFail);
+            $progress.hide();
         });
     }
 
