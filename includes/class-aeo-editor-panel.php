@@ -10,5 +10,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class SWPS_AEO_Editor_Panel {
-	// Implementation: Task 17.
+
+	private SWPS_AEO_Scorer $scorer;
+
+	public function __construct( SWPS_AEO_Scorer $scorer ) {
+		$this->scorer = $scorer;
+	}
+
+	// Full implementation: Task 17.
 }

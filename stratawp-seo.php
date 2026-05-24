@@ -218,6 +218,12 @@ final class StrataWP_SEO {
 	public SWPS_Crawl_Files $crawl_files;
 	public SWPS_Backlinks $backlinks;
 
+	// AEO Optimize (v4.6).
+	public SWPS_AEO_Scorer            $aeo_scorer;
+	public SWPS_AEO_Schema_Generator  $aeo_schema_gen;
+	public SWPS_AEO_Optimizer         $aeo_optimizer;
+	public SWPS_AEO_Editor_Panel      $aeo_editor_panel;
+
 	// v4.0 admin shell.
 	public SWPS_User_Prefs $user_prefs;
 	public SWPS_Modules $modules;
@@ -275,6 +281,26 @@ final class StrataWP_SEO {
 		$this->internal_links_admin = new SWPS_Internal_Links_Admin( $this->internal_links );
 		$this->ai_bots              = new SWPS_AI_Bots();
 		$this->auto_optimize        = new SWPS_Auto_Optimize( $this->content_scorer );
+
+		// AEO Optimize (v4.6).
+		$aeo_extractability      = new SWPS_AEO_Extractability_Scorer();
+		$aeo_markup              = new SWPS_AEO_Markup_Scorer();
+		$aeo_authority           = new SWPS_AEO_Authority_Scorer();
+		$aeo_coverage            = new SWPS_AEO_Coverage_Scorer( $this->api );
+		$this->aeo_scorer        = new SWPS_AEO_Scorer( $aeo_extractability, $aeo_markup, $aeo_authority, $aeo_coverage );
+		$this->aeo_schema_gen    = new SWPS_AEO_Schema_Generator(
+			$this->api,
+			SWPS_PLUGIN_DIR . 'includes/data/aeo-schema-fields.json'
+		);
+		$this->aeo_optimizer     = new SWPS_AEO_Optimizer(
+			$this->aeo_scorer,
+			$this->aeo_schema_gen,
+			$this->api,
+			$this->cost_tracker,
+			$this->rate_limiter
+		);
+		$this->aeo_editor_panel  = new SWPS_AEO_Editor_Panel( $this->aeo_scorer );
+
 		$this->competitors          = new SWPS_Competitors();
 		$this->local_seo            = new SWPS_Local_SEO();
 		$this->image_seo            = new SWPS_Image_SEO();
