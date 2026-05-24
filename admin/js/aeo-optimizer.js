@@ -248,6 +248,16 @@
         });
     }
 
+    // Populate from persisted queue (localized server-side) so navigating
+    // away and back doesn't blank the queue. Re-scan still overwrites.
+    if (swpsAeo.initialResults && swpsAeo.initialResults.length > 0) {
+        allResults = swpsAeo.initialResults;
+        $(function () {
+            updateTiles();
+            renderQueue();
+        });
+    }
+
     // Wire events.
     $('#swps-aeo-rescan').on('click', rescan);
     $('#swps-aeo-threshold, #swps-aeo-post-type').on('change input', function () {
