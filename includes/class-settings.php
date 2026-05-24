@@ -989,6 +989,91 @@ class SWPS_Settings {
 		$this->add_field( 'rss_before', __( 'Content Before Post in RSS', 'stratawp-seo' ), 'textarea', 'swps_rss_section' );
 		$this->add_field( 'rss_after', __( 'Content After Post in RSS', 'stratawp-seo' ), 'textarea', 'swps_rss_section' );
 
+		// --- AEO Optimize Section (v4.6) ---
+		add_settings_section(
+			'swps_aeo_section',
+			__( 'AEO Optimize', 'stratawp-seo' ),
+			array( $this, 'render_aeo_section' ),
+			'stratawp-seo'
+		);
+
+		$this->add_field(
+			'aeo_threshold',
+			__( 'Score threshold', 'stratawp-seo' ),
+			'number',
+			'swps_aeo_section',
+			array(
+				'min'         => 50,
+				'max'         => 95,
+				'default'     => 70,
+				'description' => __( 'Posts scoring below this appear in the AEO Optimize queue.', 'stratawp-seo' ),
+			)
+		);
+
+		$this->add_field(
+			'aeo_coverage_enabled',
+			__( 'Coverage scoring', 'stratawp-seo' ),
+			'checkbox',
+			'swps_aeo_section',
+			array(
+				'label'       => __( 'Enable Coverage dimension (uses 1 AI call per post — about $0.001–$0.003 each)', 'stratawp-seo' ),
+				'description' => __( 'When enabled, the orchestrator calls the active AI provider once per post to evaluate topic completeness and entity clarity.', 'stratawp-seo' ),
+			)
+		);
+
+		$this->add_field(
+			'aeo_enabled_schema_types',
+			__( 'Dynamic schema types', 'stratawp-seo' ),
+			'multi_checkbox',
+			'swps_aeo_section',
+			array(
+				'options' => array(
+					'howto'   => 'HowTo',
+					'recipe'  => 'Recipe',
+					'product' => 'Product',
+					'review'  => 'Review',
+					'qapage'  => 'QAPage',
+				),
+				'default'     => array( 'howto', 'recipe', 'product', 'review', 'qapage' ),
+				'description' => __( 'Which dynamic schema types the renderer emits. Defers automatically when Yoast / RankMath / AIOSEO is active.', 'stratawp-seo' ),
+			)
+		);
+
+		$this->add_field(
+			'aeo_post_types',
+			__( 'Post types to score', 'stratawp-seo' ),
+			'multi_checkbox',
+			'swps_aeo_section',
+			array(
+				'options'     => $this->get_public_post_type_options(),
+				'default'     => array( 'post', 'page' ),
+				'description' => __( 'AEO scoring only runs on the selected post types.', 'stratawp-seo' ),
+			)
+		);
+
+		// Weights is a complex (associative array) option — register directly,
+		// not via add_field() (which assumes scalar/list options).
+		register_setting(
+			'stratawp-seo',
+			'swps_aeo_weights',
+			array(
+				'sanitize_callback' => array( $this, 'sanitize_aeo_weights' ),
+				'default'           => array(
+					'extractability' => 0.30,
+					'markup'         => 0.30,
+					'authority'      => 0.20,
+					'coverage'       => 0.20,
+				),
+			)
+		);
+		add_settings_field(
+			'swps_aeo_weights',
+			__( 'Dimension weights', 'stratawp-seo' ),
+			array( $this, 'render_aeo_weights_field' ),
+			'stratawp-seo',
+			'swps_aeo_section'
+		);
+
 		// --- Search Appearance Settings (separate options group) ---
 		register_setting( 'swps_search_appearance', 'swps_title_separator', array( 'sanitize_callback' => 'sanitize_text_field' ) );
 
@@ -1391,6 +1476,99 @@ class SWPS_Settings {
 		) . '</p>';
 	}
 
+	public function render_aeo_section(): void {
+		echo '<p>' . esc_html__( 'Score posts on AI-citeability across 4 dimensions (Extractability, Markup, Authority, Coverage). Surface low-scoring posts in the AEO Optimize queue and generate AI proposals to improve them.', 'stratawp-seo' ) . '</p>';
+	}
+
+	/**
+	 * Render the weights grid (4 number inputs that share the swps_aeo_weights array option).
+	 */
+	public function render_aeo_weights_field(): void {
+		$defaults = array(
+			'extractability' => 0.30,
+			'markup'         => 0.30,
+			'authority'      => 0.20,
+			'coverage'       => 0.20,
+		);
+		$weights = (array) get_option( 'swps_aeo_weights', $defaults );
+
+		$labels = array(
+			'extractability' => __( 'Extractability', 'stratawp-seo' ),
+			'markup'         => __( 'Markup', 'stratawp-seo' ),
+			'authority'      => __( 'Authority', 'stratawp-seo' ),
+			'coverage'       => __( 'Coverage', 'stratawp-seo' ),
+		);
+
+		echo '<fieldset style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:6px 16px;">';
+		foreach ( $labels as $key => $label ) {
+			$val = isset( $weights[ $key ] ) ? (float) $weights[ $key ] : $defaults[ $key ];
+			printf(
+				'<label>%s <input type="number" name="swps_aeo_weights[%s]" value="%s" step="0.05" min="0" max="1" style="width:80px;margin-left:8px;" /></label>',
+				esc_html( $label ),
+				esc_attr( $key ),
+				esc_attr( (string) $val )
+			);
+		}
+		echo '</fieldset>';
+		echo '<p class="description">' . esc_html__( 'Weights are auto-normalized to sum to 1.0 on save.', 'stratawp-seo' ) . '</p>';
+	}
+
+	/**
+	 * Sanitize AEO dimension weights: clamp each to 0-1 and re-normalize to sum 1.0.
+	 *
+	 * @param mixed $value Raw POST value.
+	 * @return array<string, float>
+	 */
+	public function sanitize_aeo_weights( $value ): array {
+		$defaults = array(
+			'extractability' => 0.30,
+			'markup'         => 0.30,
+			'authority'      => 0.20,
+			'coverage'       => 0.20,
+		);
+		if ( ! is_array( $value ) ) {
+			return $defaults;
+		}
+		$clean = array();
+		foreach ( $defaults as $k => $d ) {
+			$clean[ $k ] = isset( $value[ $k ] ) ? max( 0.0, min( 1.0, (float) $value[ $k ] ) ) : $d;
+		}
+		$sum = array_sum( $clean );
+		if ( $sum <= 0 ) {
+			return $defaults;
+		}
+		foreach ( $clean as $k => $v ) {
+			$clean[ $k ] = round( $v / $sum, 2 );
+		}
+		// Correct rounding drift so the stored sum is exactly 1.0.
+		$sum_clean = array_sum( $clean );
+		if ( abs( $sum_clean - 1.0 ) > 0.001 ) {
+			arsort( $clean );
+			$largest_key = (string) array_key_first( $clean );
+			$clean[ $largest_key ] = round( $clean[ $largest_key ] + ( 1.0 - $sum_clean ), 2 );
+			// Restore original key order: extractability, markup, authority, coverage.
+			$ordered = array();
+			foreach ( array_keys( $defaults ) as $k ) {
+				$ordered[ $k ] = $clean[ $k ];
+			}
+			$clean = $ordered;
+		}
+		return $clean;
+	}
+
+	/**
+	 * Public post-type options for the AEO post-types multi_checkbox.
+	 *
+	 * @return array<string, string>
+	 */
+	private function get_public_post_type_options(): array {
+		$options = array();
+		foreach ( get_post_types( array( 'public' => true ), 'objects' ) as $pt ) {
+			$options[ $pt->name ] = $pt->label . ' (' . $pt->name . ')';
+		}
+		return $options;
+	}
+
 	/**
 	 * Tab groups for the settings page. Each tab lists the section IDs it contains.
 	 */
@@ -1433,6 +1611,10 @@ class SWPS_Settings {
 				'sections' => array(
 					'swps_analytics_section',
 				),
+			),
+			'aeo'             => array(
+				'label'    => __( 'AEO', 'stratawp-seo' ),
+				'sections' => array( 'swps_aeo_section' ),
 			),
 			'advanced'        => array(
 				'label'    => __( 'Advanced', 'stratawp-seo' ),
