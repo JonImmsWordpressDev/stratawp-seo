@@ -94,6 +94,16 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-meta-editor.php';
 // Auto-Optimize (v4.1).
 require_once SWPS_PLUGIN_DIR . 'includes/class-auto-optimize.php';
 
+// AEO Optimize (v4.6) — heuristic + AI scoring, dynamic schema generator.
+require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-extractability-scorer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-markup-scorer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-authority-scorer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-coverage-scorer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-scorer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-schema-generator.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-optimizer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-editor-panel.php';
+
 // Competitors (v4.1).
 require_once SWPS_PLUGIN_DIR . 'includes/class-competitors.php';
 
