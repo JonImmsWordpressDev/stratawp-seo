@@ -24,4 +24,10 @@ if ( ! function_exists( 'wp_strip_all_tags' ) ) {
     }
 }
 
+if ( ! function_exists( 'wp_parse_url' ) ) {
+    function wp_parse_url( $url, $component = -1 ) {
+        return parse_url( $url, $component );
+    }
+}
+
 require_once __DIR__ . '/../vendor/autoload.php';
