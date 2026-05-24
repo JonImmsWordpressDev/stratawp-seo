@@ -94,8 +94,10 @@
 .swps-aeo-subscore-chip.dim-authority      { background: #bfdbfe; }
 .swps-aeo-subscore-chip.dim-coverage       { background: #fecaca; }
 
-/* Modal */
-.swps-aeo-modal {
+/* Modal — scoped to :not([hidden]) so the author stylesheet's `display: flex`
+   doesn't override the browser default `[hidden] { display: none }`. JS must
+   add/remove the `hidden` attribute when toggling visibility. */
+.swps-aeo-modal:not([hidden]) {
 	position: fixed;
 	inset: 0;
 	background: rgba(0, 0, 0, 0.5);

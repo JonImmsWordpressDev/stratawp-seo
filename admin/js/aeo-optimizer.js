@@ -96,9 +96,17 @@
         $('#swps-aeo-tile-low-dim .swps-tile-num').text(weakestLabel);
     }
 
+    function showEl($el) {
+        // Removes the `hidden` attribute AND any inline display:none jQuery may have set.
+        $el.prop('hidden', false).css('display', '');
+    }
+    function hideEl($el) {
+        $el.prop('hidden', true).css('display', '');
+    }
+
     function rescan() {
         allResults = [];
-        $progress.show();
+        showEl($progress);
         $progressFill.css('width', '0%');
         $progressText.text(swpsAeo.i18n.scanning);
         scanChunk(0);
@@ -121,7 +129,7 @@
             $progressText.text(done + ' / ' + total);
 
             if (resp.data.done) {
-                $progress.hide();
+                hideEl($progress);
                 updateTiles();
                 renderQueue();
             } else {
@@ -129,6 +137,7 @@
             }
         }).fail(function () {
             $progressText.text(swpsAeo.i18n.genericFail);
+            hideEl($progress);
         });
     }
 
@@ -201,7 +210,7 @@
         html += '</div>';
 
         $modalInner.html(html);
-        $modal.show();
+        showEl($modal);
     }
 
     function apply(postId) {
@@ -228,7 +237,7 @@
                 allResults[idx].subscores    = resp.data.new_subscores;
                 allResults[idx].has_proposal = false;
             }
-            $modal.hide();
+            hideEl($modal);
             updateTiles();
             renderQueue();
         }).fail(function () { alert(swpsAeo.i18n.genericFail); });
@@ -256,7 +265,7 @@
     $(document).on('click', '.swps-aeo-propose', function () { propose(parseInt($(this).data('id'), 10)); });
     $(document).on('click', '.swps-aeo-review',  function () { propose(parseInt($(this).data('id'), 10)); });
     $(document).on('click', '.swps-aeo-dismiss', function () { dismiss(parseInt($(this).data('id'), 10)); });
-    $(document).on('click', '#swps-aeo-cancel',  function () { $modal.hide(); });
+    $(document).on('click', '#swps-aeo-cancel',  function () { hideEl($modal); });
     $(document).on('click', '#swps-aeo-apply',   function () { apply(parseInt($(this).data('id'), 10)); });
 
     // Support ?focus_post=N URL param: deep-link from Bot Analytics (Task 19).
