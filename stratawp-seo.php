@@ -1221,6 +1221,7 @@ function swps_deactivate(): void {
 	SWPS_Keyword_Tracker::unschedule_cron();
 	SWPS_Competitors::unschedule_cron();
 	SWPS_Backlinks::unschedule_cron();
+	wp_clear_scheduled_hook( 'swps_aeo_sweep_proposals' );
 	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'swps_deactivate' );

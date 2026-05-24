@@ -55,6 +55,11 @@ class SWPS_AEO_Optimizer {
 		add_action( 'wp_ajax_swps_aeo_undo',       array( $this, 'ajax_undo' ) );
 		add_action( 'wp_ajax_swps_aeo_dismiss',    array( $this, 'ajax_dismiss' ) );
 		add_action( 'wp_ajax_swps_aeo_score',      array( $this, 'ajax_score' ) );
+
+		add_action( 'swps_aeo_sweep_proposals', array( $this, 'sweep_proposals' ) );
+		if ( ! wp_next_scheduled( 'swps_aeo_sweep_proposals' ) ) {
+			wp_schedule_event( time() + DAY_IN_SECONDS, 'daily', 'swps_aeo_sweep_proposals' );
+		}
 	}
 
 	public function register_menu(): void {
@@ -498,5 +503,32 @@ class SWPS_AEO_Optimizer {
 			delete_post_meta( $post_id, self::META_DISMISSED );
 		}
 		return array( 'ok' => true );
+	}
+
+	/**
+	 * Cron: delete cached AEO proposals older than 24 hours.
+	 *
+	 * Proposals are stored in post meta (META_PROPOSAL) by ajax_propose().
+	 * Each proposal includes a `_generated_at` UNIX timestamp.
+	 */
+	public function sweep_proposals(): void {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- cron sweep, no caching concern.
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = %s LIMIT 500",
+			self::META_PROPOSAL
+		) );
+		if ( ! $rows ) {
+			return;
+		}
+		foreach ( $rows as $row ) {
+			$proposal = json_decode( (string) $row->meta_value, true );
+			$age      = is_array( $proposal ) && isset( $proposal['_generated_at'] )
+				? time() - (int) $proposal['_generated_at']
+				: DAY_IN_SECONDS + 1;
+			if ( $age > DAY_IN_SECONDS ) {
+				delete_post_meta( (int) $row->post_id, self::META_PROPOSAL );
+			}
+		}
 	}
 }

@@ -94,6 +94,7 @@ class SWPS_Dashboard {
 		return array(
 			'first_name'          => $current_user->first_name ?: $current_user->display_name,
 			'site_health'         => $this->safe_get_health(),
+			'aeo_health'          => $this->safe_get_aeo_health(),
 			'recent_generations'  => $this->safe_get_recent_generations(),
 			'ai_cost_30d'         => $this->safe_get_ai_cost(),
 			'posts_30d'           => $this->safe_get_post_views(),
@@ -150,6 +151,56 @@ class SWPS_Dashboard {
 				'warn_count' => 0,
 				'pass_count' => 0,
 				'last_run'   => 0,
+			);
+		}
+	}
+
+	/**
+	 * Build AEO health summary for the dashboard tile.
+	 *
+	 * @return array{avg_score:int, above_threshold_pct:int, total_scored:int, threshold:int}
+	 */
+	private function safe_get_aeo_health(): array {
+		try {
+			global $wpdb;
+			$threshold = (int) get_option( 'swps_aeo_threshold', 70 );
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$total = (int) $wpdb->get_var(
+				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_swps_aeo_score'"
+			);
+			if ( $total <= 0 ) {
+				return array(
+					'avg_score'           => 0,
+					'above_threshold_pct' => 0,
+					'total_scored'        => 0,
+					'threshold'           => $threshold,
+				);
+			}
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$avg = (float) $wpdb->get_var(
+				"SELECT AVG(CAST(meta_value AS UNSIGNED)) FROM {$wpdb->postmeta} WHERE meta_key = '_swps_aeo_score'"
+			);
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$above = (int) $wpdb->get_var( $wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_swps_aeo_score' AND CAST(meta_value AS UNSIGNED) >= %d",
+				$threshold
+			) );
+
+			return array(
+				'avg_score'           => (int) round( $avg ),
+				'above_threshold_pct' => (int) round( ( $above / $total ) * 100 ),
+				'total_scored'        => $total,
+				'threshold'           => $threshold,
+			);
+		} catch ( \Throwable $e ) {
+			return array(
+				'avg_score'           => 0,
+				'above_threshold_pct' => 0,
+				'total_scored'        => 0,
+				'threshold'           => 70,
 			);
 		}
 	}

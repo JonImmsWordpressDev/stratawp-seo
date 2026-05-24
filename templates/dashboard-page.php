@@ -35,6 +35,12 @@ $bl_stats       = (array) ( $backlinks_data['stats'] ?? array() );
 $bl_recent      = (array) ( $backlinks_data['recent'] ?? array() );
 $modules        = $data['modules'] ?? array();
 
+$aeo_health     = $data['aeo_health'] ?? array(
+	'avg_score'           => 0,
+	'above_threshold_pct' => 0,
+	'total_scored'        => 0,
+	'threshold'           => 70,
+);
 $score          = (int) ( $health['score'] ?? 0 );
 $health_label   = $health['label'] ?? '—';
 $score_deg      = (int) round( ( $score / 100 ) * 360 );
@@ -162,6 +168,27 @@ $welcome_msg = sprintf(
 				?>
 			</div>
 		</div>
+
+		<a class="swps-tile swps-tile-aeo" href="<?php echo esc_url( admin_url( 'admin.php?page=swps-aeo-optimize' ) ); ?>" style="text-decoration:none;color:inherit;display:block">
+			<div class="swps-tile-h"><?php esc_html_e( 'AEO health (avg)', 'stratawp-seo' ); ?></div>
+			<div class="swps-tile-stat">
+				<?php echo $aeo_health['total_scored'] > 0 ? esc_html( (string) $aeo_health['avg_score'] ) : '—'; ?>
+			</div>
+			<div class="swps-tile-trend" style="color:var(--swps-text-muted)">
+				<?php
+				if ( $aeo_health['total_scored'] > 0 ) {
+					printf(
+						/* translators: 1: percent above threshold, 2: total scored. */
+						esc_html__( '%1$d%% above threshold · %2$d posts', 'stratawp-seo' ),
+						(int) $aeo_health['above_threshold_pct'],
+						(int) $aeo_health['total_scored']
+					);
+				} else {
+					esc_html_e( 'Not yet scored', 'stratawp-seo' );
+				}
+				?>
+			</div>
+		</a>
 
 	</div>
 

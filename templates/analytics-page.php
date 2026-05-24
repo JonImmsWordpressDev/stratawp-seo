@@ -269,16 +269,31 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<tr>
 					<th><?php esc_html_e( 'Post', 'stratawp-seo' ); ?></th>
 					<th><?php esc_html_e( 'Published', 'stratawp-seo' ); ?></th>
+					<th><?php esc_html_e( 'Actions', 'stratawp-seo' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
 				<?php foreach ( $gaps as $gap ) : ?>
+					<?php
+					$aeo_gap_url = add_query_arg(
+						array(
+							'page'       => 'swps-aeo-optimize',
+							'focus_post' => (int) $gap['post_id'],
+						),
+						admin_url( 'admin.php' )
+					);
+					?>
 					<tr>
 						<td>
 							<a href="<?php echo esc_url( get_edit_post_link( $gap['post_id'] ) ); ?>"><?php echo esc_html( $gap['title'] ); ?></a>
 							&nbsp;<a href="<?php echo esc_url( $gap['url'] ); ?>" target="_blank" rel="noopener" style="color:var(--swps-text-muted);font-size:11px">↗</a>
 						</td>
 						<td style="color:var(--swps-text-muted)"><?php echo esc_html( mysql2date( get_option( 'date_format' ), $gap['post_date'] ) ); ?></td>
+						<td>
+							<a class="button button-small" href="<?php echo esc_url( $aeo_gap_url ); ?>">
+								<?php esc_html_e( 'Optimize for AEO →', 'stratawp-seo' ); ?>
+							</a>
+						</td>
 					</tr>
 				<?php endforeach; ?>
 			</tbody>
