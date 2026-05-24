@@ -36,7 +36,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<button type="button" class="button button-primary" id="swps-aeo-rescan">
 				<?php esc_html_e( 'Re-scan all posts', 'stratawp-seo' ); ?>
 			</button>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=stratawp-seo-settings#aeo' ) ); ?>" class="button">
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=swps-settings#aeo' ) ); ?>" class="button">
 				<?php esc_html_e( 'Settings', 'stratawp-seo' ); ?>
 			</a>
 		</div>
