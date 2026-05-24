@@ -96,4 +96,54 @@ final class AeoSchemaGeneratorTest extends TestCase {
 		$this->assertNull( $r['json'] );
 		$this->assertStringContainsString( 'AI provider error', (string) $r['error'] );
 	}
+
+	public function test_qapage_prompt_includes_main_entity_shape_guidance(): void {
+		$provider = new FakeAIProvider();
+		$provider->next_response = array(
+			'@context'   => 'https://schema.org',
+			'@type'      => 'QAPage',
+			'mainEntity' => array(
+				'@type'          => 'Question',
+				'name'           => 'How long does sourdough need to ferment?',
+				'text'           => 'How long does sourdough need to ferment?',
+				'acceptedAnswer' => array(
+					'@type' => 'Answer',
+					'text'  => '4-6 hours at room temperature.',
+				),
+			),
+		);
+		$gen = new SWPS_AEO_Schema_Generator( $provider, $this->fields_path() );
+		$r   = $gen->generate( 'qapage', 'How long does sourdough ferment?', '<p>4-6 hours.</p>' );
+
+		// The prompt must teach the AI the Question shape so mainEntity isn't empty.
+		$this->assertStringContainsString( 'mainEntity should be a Question object', $provider->last_user );
+		$this->assertStringContainsString( 'acceptedAnswer', $provider->last_user );
+
+		// Required-vs-recommended distinction must be explicit (regression for the
+		// "Use empty arrays for fields you cannot derive" instruction that conflicted
+		// with the validator's reject-empty-required-fields behavior).
+		$this->assertStringContainsString( 'REQUIRED fields', $provider->last_user );
+		$this->assertStringContainsString( 'never empty', $provider->last_user );
+
+		// And a well-formed QAPage passes validation end-to-end.
+		$this->assertSame( 'QAPage', $r['json']['@type'] );
+		$this->assertNull( $r['error'] );
+	}
+
+	public function test_qapage_with_empty_main_entity_still_rejected(): void {
+		// Regression for the live bug: AI returned mainEntity:[] for a QAPage,
+		// the validator (correctly) flagged it as "empty required field: mainEntity".
+		// The prompt fix reduces the likelihood; the validator still has the final say.
+		$provider = new FakeAIProvider();
+		$provider->next_response = array(
+			'@context'   => 'https://schema.org',
+			'@type'      => 'QAPage',
+			'mainEntity' => array(),
+		);
+		$gen = new SWPS_AEO_Schema_Generator( $provider, $this->fields_path() );
+		$r   = $gen->generate( 'qapage', 'X', '<p>Y</p>' );
+
+		$this->assertNull( $r['json'] );
+		$this->assertStringContainsString( 'mainEntity', (string) $r['error'] );
+	}
 }

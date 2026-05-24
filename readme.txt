@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.6.3
+Stable tag: 4.6.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -252,6 +252,9 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.6.4 — 2026-05-24 =
+* Fix: Schema Generator prompt no longer tells the AI to "use empty arrays / null for fields you cannot derive" — that instruction conflicted with the validator's "required fields must be populated" rule, so QAPage posts (and other nested-shape types) frequently failed with `Schema generation failed validation: empty required field: mainEntity`. The prompt now explicitly distinguishes REQUIRED (must populate, never empty) from RECOMMENDED (omit if not derivable), and includes per-type shape guidance (e.g. `mainEntity should be a Question object with fields: name, text, acceptedAnswer, …`) so the AI knows how to construct nested objects.
 
 = 4.6.3 — 2026-05-24 =
 * Developer: AEO asset enqueues (aeo.css, aeo-optimizer.js, aeo-editor-panel.js) now version via `filemtime()` instead of the global `SWPS_VERSION` constant. This means any edit to those files automatically busts browser caches without needing a plugin-wide version bump. Falls back to `SWPS_VERSION` if the file isn't readable.

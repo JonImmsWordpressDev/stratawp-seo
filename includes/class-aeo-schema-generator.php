@@ -71,18 +71,27 @@ class SWPS_AEO_Schema_Generator {
 		$required      = (array) ( $spec['required']    ?? array() );
 		$recommended   = (array) ( $spec['recommended'] ?? array() );
 		$expected_type = (string) ( $spec['type'] ?? '' );
+		$shape_notes   = $this->format_shape_notes( $spec );
 
 		$system = 'You generate schema.org JSON-LD from blog post content. ' .
-			'Only return fields you can derive from the post — do NOT invent.';
-		$user   = sprintf(
-			"Type: %s\nTitle: %s\n\nRequired fields: %s\nRecommended fields: %s\n\n" .
+			'Required fields MUST be populated by synthesizing from the post title and body ' .
+			'(do not leave them empty). Recommended fields should only be included when ' .
+			'derivable from the post. Do not invent facts not in the post.';
+
+		$user = sprintf(
+			"Type: %s\nTitle: %s\n\n" .
+			"REQUIRED fields (must be populated, never empty): %s\n" .
+			"RECOMMENDED fields (include when derivable, omit otherwise): %s\n" .
+			"%s\n" .
 			"Post HTML (truncated):\n%s\n\n" .
 			'Return a single JSON object: {"@context": "https://schema.org", "@type": "%s", ...fields...}. ' .
-			'Use empty arrays / null for fields you cannot derive.',
+			'For recommended fields you cannot derive, omit the key entirely (do NOT use null or empty arrays). ' .
+			'For required fields, always populate — synthesize from the title and body if necessary.',
 			$expected_type,
 			$title,
 			implode( ', ', $required ),
-			implode( ', ', $recommended ),
+			empty( $recommended ) ? '(none)' : implode( ', ', $recommended ),
+			'' === $shape_notes ? '' : "\nField shape guidance:\n" . $shape_notes,
 			mb_substr( wp_strip_all_tags( $html ), 0, 8000 ),
 			$expected_type
 		);
@@ -120,6 +129,59 @@ class SWPS_AEO_Schema_Generator {
 			'json'  => (array) $json,
 			'error' => null,
 		);
+	}
+
+	/**
+	 * Build human-readable shape guidance from the spec's *_shape entries.
+	 *
+	 * The schema-fields manifest defines nested-object shapes (e.g.
+	 * QAPage's main_entity_shape → Question, HowTo's step_shape →
+	 * HowToStep). Without telling the AI these shapes, it tends to
+	 * return empty arrays or null for the parent required field — which
+	 * the validator rejects. This method turns each *_shape entry into
+	 * a one-line prompt fragment the AI can use as a template.
+	 *
+	 * @param array<string, mixed> $spec One type's entry from the manifest.
+	 */
+	private function format_shape_notes( array $spec ): string {
+		$lines = array();
+		foreach ( $spec as $key => $value ) {
+			if ( ! is_array( $value ) || ! str_ends_with( (string) $key, '_shape' ) ) {
+				continue;
+			}
+
+			// Shape keys in the manifest are snake_case (e.g. main_entity_shape)
+			// but schema.org field names are camelCase (e.g. mainEntity). Convert
+			// here so the AI sees the actual schema field name. A shape entry can
+			// override with an explicit "field" key when the parent field name
+			// doesn't derive cleanly from the shape key (e.g. instruction_shape
+			// describes the items inside the recipeInstructions array).
+			$shape_key    = substr( (string) $key, 0, -strlen( '_shape' ) );
+			$parent_field = isset( $value['field'] ) && is_string( $value['field'] )
+				? $value['field']
+				: $this->snake_to_camel( $shape_key );
+
+			$type   = (string) ( $value['@type'] ?? '' );
+			$fields = (array)  ( $value['fields'] ?? array() );
+			if ( '' === $type || empty( $fields ) ) {
+				continue;
+			}
+			$lines[] = sprintf(
+				'  - %s should be a %s object with fields: %s',
+				$parent_field,
+				$type,
+				implode( ', ', $fields )
+			);
+		}
+		return implode( "\n", $lines );
+	}
+
+	/** Convert "snake_case_name" → "snakeCaseName". */
+	private function snake_to_camel( string $snake ): string {
+		if ( false === strpos( $snake, '_' ) ) {
+			return $snake;
+		}
+		return lcfirst( str_replace( ' ', '', ucwords( str_replace( '_', ' ', $snake ) ) ) );
 	}
 
 	/**
