@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.5.1
+ * Version: 4.6.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.5.1' );
+define( 'SWPS_VERSION', '4.6.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -93,6 +93,16 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-meta-editor.php';
 
 // Auto-Optimize (v4.1).
 require_once SWPS_PLUGIN_DIR . 'includes/class-auto-optimize.php';
+
+// AEO Optimize (v4.6) — heuristic + AI scoring, dynamic schema generator.
+require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-extractability-scorer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-markup-scorer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-authority-scorer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-coverage-scorer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-scorer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-schema-generator.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-optimizer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-editor-panel.php';
 
 // Competitors (v4.1).
 require_once SWPS_PLUGIN_DIR . 'includes/class-competitors.php';
@@ -208,6 +218,12 @@ final class StrataWP_SEO {
 	public SWPS_Crawl_Files $crawl_files;
 	public SWPS_Backlinks $backlinks;
 
+	// AEO Optimize (v4.6).
+	public SWPS_AEO_Scorer            $aeo_scorer;
+	public SWPS_AEO_Schema_Generator  $aeo_schema_gen;
+	public SWPS_AEO_Optimizer         $aeo_optimizer;
+	public SWPS_AEO_Editor_Panel      $aeo_editor_panel;
+
 	// v4.0 admin shell.
 	public SWPS_User_Prefs $user_prefs;
 	public SWPS_Modules $modules;
@@ -265,6 +281,26 @@ final class StrataWP_SEO {
 		$this->internal_links_admin = new SWPS_Internal_Links_Admin( $this->internal_links );
 		$this->ai_bots              = new SWPS_AI_Bots();
 		$this->auto_optimize        = new SWPS_Auto_Optimize( $this->content_scorer );
+
+		// AEO Optimize (v4.6).
+		$aeo_extractability      = new SWPS_AEO_Extractability_Scorer();
+		$aeo_markup              = new SWPS_AEO_Markup_Scorer();
+		$aeo_authority           = new SWPS_AEO_Authority_Scorer();
+		$aeo_coverage            = new SWPS_AEO_Coverage_Scorer( $this->api );
+		$this->aeo_scorer        = new SWPS_AEO_Scorer( $aeo_extractability, $aeo_markup, $aeo_authority, $aeo_coverage );
+		$this->aeo_schema_gen    = new SWPS_AEO_Schema_Generator(
+			$this->api,
+			SWPS_PLUGIN_DIR . 'includes/data/aeo-schema-fields.json'
+		);
+		$this->aeo_optimizer     = new SWPS_AEO_Optimizer(
+			$this->aeo_scorer,
+			$this->aeo_schema_gen,
+			$this->api,
+			$this->cost_tracker,
+			$this->rate_limiter
+		);
+		$this->aeo_editor_panel  = new SWPS_AEO_Editor_Panel( $this->aeo_scorer );
+
 		$this->competitors          = new SWPS_Competitors();
 		$this->local_seo            = new SWPS_Local_SEO();
 		$this->image_seo            = new SWPS_Image_SEO();
@@ -1185,6 +1221,7 @@ function swps_deactivate(): void {
 	SWPS_Keyword_Tracker::unschedule_cron();
 	SWPS_Competitors::unschedule_cron();
 	SWPS_Backlinks::unschedule_cron();
+	wp_clear_scheduled_hook( 'swps_aeo_sweep_proposals' );
 	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'swps_deactivate' );

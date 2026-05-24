@@ -23,3 +23,6 @@ AGENTS.md
 /dashboard-*.png
 /debug-page-*.png
 /page-*.png
+
+# PHPUnit cache
+.phpunit.cache/

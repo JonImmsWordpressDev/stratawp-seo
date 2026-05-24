@@ -116,6 +116,21 @@ parameters:
 			path: includes/class-github-updater.php
 
 		-
+			message: "#^Property SWPS_AEO_Scorer\\:\\:\\$coverage is never read, only written\\.$#"
+			count: 1
+			path: includes/class-aeo-scorer.php
+
+		-
+			message: "#^Property SWPS_AEO_Optimizer\\:\\:\\$cost is never read, only written\\.$#"
+			count: 1
+			path: includes/class-aeo-optimizer.php
+
+		-
+			message: "#^Property SWPS_AEO_Optimizer\\:\\:\\$rate is never read, only written\\.$#"
+			count: 1
+			path: includes/class-aeo-optimizer.php
+
+		-
 			message: "#^Property SWPS_GitHub_Updater\\:\\:\\$plugin_file is never read, only written\\.$#"
 			count: 1
 			path: includes/class-github-updater.php

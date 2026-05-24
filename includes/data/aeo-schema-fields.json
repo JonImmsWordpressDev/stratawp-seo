@@ -1,0 +1,51 @@
+{
+    "howto": {
+        "type": "HowTo",
+        "required": ["name", "step"],
+        "recommended": ["description", "image", "totalTime", "supply", "tool", "estimatedCost"],
+        "step_shape": {
+            "@type": "HowToStep",
+            "fields": ["name", "text", "image", "url"]
+        }
+    },
+    "recipe": {
+        "type": "Recipe",
+        "required": ["name", "recipeIngredient", "recipeInstructions"],
+        "recommended": ["image", "author", "datePublished", "description", "prepTime", "cookTime", "totalTime", "recipeYield", "recipeCategory", "recipeCuisine", "nutrition", "keywords"],
+        "instruction_shape": {
+            "@type": "HowToStep",
+            "fields": ["name", "text"]
+        }
+    },
+    "product": {
+        "type": "Product",
+        "required": ["name"],
+        "recommended": ["image", "description", "brand", "sku", "gtin", "offers", "aggregateRating", "review"],
+        "offer_shape": {
+            "@type": "Offer",
+            "fields": ["price", "priceCurrency", "availability", "url"]
+        }
+    },
+    "review": {
+        "type": "Review",
+        "required": ["itemReviewed", "reviewRating", "author"],
+        "recommended": ["datePublished", "reviewBody", "publisher"],
+        "rating_shape": {
+            "@type": "Rating",
+            "fields": ["ratingValue", "bestRating", "worstRating"]
+        }
+    },
+    "qapage": {
+        "type": "QAPage",
+        "required": ["mainEntity"],
+        "recommended": [],
+        "main_entity_shape": {
+            "@type": "Question",
+            "fields": ["name", "text", "answerCount", "acceptedAnswer", "upvoteCount", "dateCreated", "author"]
+        },
+        "answer_shape": {
+            "@type": "Answer",
+            "fields": ["text", "dateCreated", "upvoteCount", "author"]
+        }
+    }
+}

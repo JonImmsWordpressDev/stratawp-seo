@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.5.1
+Stable tag: 4.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -252,6 +252,16 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.6.0 — 2026-05-24 =
+* New: AEO Optimize — score posts across 4 AI-citeability dimensions (Extractability, Markup, Authority, Coverage), generate AI proposals, review diffs, apply with one click. Mirrors Auto-Optimize UX.
+* New: Live AEO Score panel in the post editor (Gutenberg sidebar + classic metabox).
+* New: Dynamic JSON-LD schema generation for HowTo, Recipe, Product, Review, and QAPage. Coexists with Yoast / RankMath / AIOSEO (defers automatically; per-site override via swps_schema_override option).
+* New: 6 REST endpoints under /swps/v1/aeo/* for external/programmatic access.
+* New: 5 filter hooks for extensibility (swps_aeo_score, swps_aeo_subscores, swps_aeo_proposal, swps_aeo_schema_json, swps_aeo_dimensions).
+* Improvement: Dashboard "AEO health (avg)" tile shows average score and % above threshold.
+* Improvement: AI Bot Analytics gap-report rows now deep-link into the AEO Optimizer for one-click optimization.
+* Developer: Minimal PHPUnit setup for unit-testable pure-PHP scorers. Run `composer test`.
 
 = 4.5.1 =
 * Security/Fix: Hardened encryption of stored API keys and Google Search Console OAuth secrets. New values now use authenticated AES-256-GCM (tampering is detected) instead of AES-256-CBC.
