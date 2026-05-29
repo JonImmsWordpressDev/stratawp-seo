@@ -311,7 +311,6 @@ final class StrataWP_SEO {
 		$this->generator            = new SWPS_Generator(
 			$this->api,
 			$this->analyzer,
-			$this->images,
 			$this->duplicate_checker,
 			$this->rate_limiter,
 			$this->cost_tracker
