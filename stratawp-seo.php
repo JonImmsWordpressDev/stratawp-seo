@@ -351,10 +351,16 @@ final class StrataWP_SEO {
 		// Frontend assets.
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_assets' ) );
 
+		// Admin notices.
+		add_action( 'admin_notices', array( $this, 'model_alert_notice' ) );
+
 		// AJAX handlers — original.
 		add_action( 'wp_ajax_swps_generate_post', array( $this, 'ajax_generate_post' ) );
 		add_action( 'wp_ajax_swps_analyze_site', array( $this, 'ajax_analyze_site' ) );
 		add_action( 'wp_ajax_swps_get_models', array( $this, 'ajax_get_models' ) );
+
+		// AJAX handlers — model alert dismiss.
+		add_action( 'wp_ajax_swps_dismiss_model_alert', array( $this, 'ajax_dismiss_model_alert' ) );
 
 		// AJAX handlers — v2.0.
 		add_action( 'wp_ajax_swps_bulk_generate', array( $this, 'ajax_bulk_generate' ) );
@@ -1079,6 +1085,57 @@ final class StrataWP_SEO {
 				'results' => $this->seo_audit->get_cached_results(),
 			)
 		);
+	}
+
+	/**
+	 * Admin notice: show a dismissible alert when new AI models are discovered.
+	 *
+	 * Renders a `.notice.notice-info.is-dismissible.swps-model-alert` listing the
+	 * newly discovered model names with a link to the settings page.
+	 *
+	 * @return void
+	 */
+	public function model_alert_notice(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$new = ( new SWPS_Model_Discovery() )->new_models();
+		if ( empty( $new ) ) {
+			return;
+		}
+
+		$names = implode( ', ', array_map( 'esc_html', array_values( $new ) ) );
+		$url   = esc_url( admin_url( 'admin.php?page=swps-settings' ) );
+
+		/* translators: %s = comma-separated list of new AI model names */
+		$message = sprintf( esc_html__( 'StrataWP SEO: new AI model(s) available — %s.', 'stratawp-seo' ), $names );
+
+		printf(
+			'<div class="notice notice-info is-dismissible swps-model-alert"><p>%s <a href="%s">%s</a></p></div>',
+			$message, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- sprintf(esc_html__()) with pre-escaped $names.
+			$url, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- value is esc_url() output.
+			esc_html__( 'Choose in Settings', 'stratawp-seo' )
+		);
+	}
+
+	/**
+	 * AJAX handler: dismiss the new-model admin notice.
+	 *
+	 * Clears the `swps_new_models_available` option so the notice no longer shows.
+	 *
+	 * @return void
+	 */
+	public function ajax_dismiss_model_alert(): void {
+		check_ajax_referer( 'swps_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error();
+		}
+
+		( new SWPS_Model_Discovery() )->dismiss_alert();
+
+		wp_send_json_success();
 	}
 }
 

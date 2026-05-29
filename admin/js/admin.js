@@ -763,4 +763,15 @@
         });
     });
 
+    // =====================================================================
+    // Admin notice: dismiss new-model alert via AJAX
+    // =====================================================================
+
+    $(document).on('click', '.swps-model-alert .notice-dismiss', function() {
+        $.post(swpsAdmin.ajax_url, {
+            action: 'swps_dismiss_model_alert',
+            nonce: swpsAdmin.nonce,
+        });
+    });
+
 })(jQuery);
