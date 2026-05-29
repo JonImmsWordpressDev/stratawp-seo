@@ -27,12 +27,12 @@ class SWPS_OpenAI_Provider extends SWPS_AI_Provider {
 
 	public function get_available_models(): array {
 		return array(
-			'gpt-4.1'      => 'GPT-4.1 (Most capable)',
-			'gpt-4.1-mini' => 'GPT-4.1 Mini (Fast & affordable)',
-			'gpt-4.1-nano' => 'GPT-4.1 Nano (Fastest, lowest cost)',
-			'gpt-4o'       => 'GPT-4o (Previous generation)',
-			'gpt-4o-mini'  => 'GPT-4o Mini (Previous generation)',
-			'o3-mini'      => 'o3-mini (Reasoning model)',
+			'gpt-4.1'      => 'GPT-4.1',
+			'gpt-4.1-mini' => 'GPT-4.1 Mini',
+			'gpt-4.1-nano' => 'GPT-4.1 Nano',
+			'gpt-4o'       => 'GPT-4o',
+			'gpt-4o-mini'  => 'GPT-4o Mini',
+			'o3-mini'      => 'o3-mini',
 		);
 	}
 

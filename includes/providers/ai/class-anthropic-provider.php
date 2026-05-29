@@ -27,11 +27,11 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
 
 	public function get_available_models(): array {
 		return array(
-			'claude-opus-4-7'            => 'Claude Opus 4.7 (Most powerful, higher cost)',
-			'claude-opus-4-6'            => 'Claude Opus 4.6 (Previous generation)',
-			'claude-sonnet-4-6'          => 'Claude Sonnet 4.6 (Great balance of quality & cost)',
-			'claude-sonnet-4-5-20250929' => 'Claude Sonnet 4.5 (Previous generation)',
-			'claude-haiku-4-5-20251001'  => 'Claude Haiku 4.5 (Fastest, lowest cost)',
+			'claude-opus-4-7'            => 'Claude Opus 4.7',
+			'claude-opus-4-6'            => 'Claude Opus 4.6',
+			'claude-sonnet-4-6'          => 'Claude Sonnet 4.6',
+			'claude-sonnet-4-5-20250929' => 'Claude Sonnet 4.5',
+			'claude-haiku-4-5-20251001'  => 'Claude Haiku 4.5',
 		);
 	}
 

@@ -14,89 +14,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SWPS_Cost_Tracker {
 
 	/**
-	 * Pricing per 1M tokens [model => [input, output]].
-	 * Prices in USD.
-	 */
-	private const PRICING = array(
-		// Anthropic
-		'claude-opus-4-7'            => array(
-			'input'  => 15.00,
-			'output' => 75.00,
-		),
-		'claude-opus-4-6'            => array(
-			'input'  => 15.00,
-			'output' => 75.00,
-		),
-		'claude-sonnet-4-6'          => array(
-			'input'  => 3.00,
-			'output' => 15.00,
-		),
-		'claude-sonnet-4-5-20250929' => array(
-			'input'  => 3.00,
-			'output' => 15.00,
-		),
-		'claude-haiku-4-5-20251001'  => array(
-			'input'  => 0.80,
-			'output' => 4.00,
-		),
-		// OpenAI
-		'gpt-4.1'                    => array(
-			'input'  => 2.00,
-			'output' => 8.00,
-		),
-		'gpt-4.1-mini'               => array(
-			'input'  => 0.40,
-			'output' => 1.60,
-		),
-		'gpt-4.1-nano'               => array(
-			'input'  => 0.10,
-			'output' => 0.40,
-		),
-		'gpt-4o'                     => array(
-			'input'  => 2.50,
-			'output' => 10.00,
-		),
-		'gpt-4o-mini'                => array(
-			'input'  => 0.15,
-			'output' => 0.60,
-		),
-		'o3-mini'                    => array(
-			'input'  => 1.10,
-			'output' => 4.40,
-		),
-		// Google
-		'gemini-2.5-pro'             => array(
-			'input'  => 1.25,
-			'output' => 10.00,
-		),
-		'gemini-2.5-flash'           => array(
-			'input'  => 0.15,
-			'output' => 0.60,
-		),
-		'gemini-2.0-flash'           => array(
-			'input'  => 0.10,
-			'output' => 0.40,
-		),
-		'gemini-2.0-flash-lite'      => array(
-			'input'  => 0.075,
-			'output' => 0.30,
-		),
-		// xAI
-		'grok-3'                     => array(
-			'input'  => 3.00,
-			'output' => 15.00,
-		),
-		'grok-3-mini'                => array(
-			'input'  => 0.30,
-			'output' => 0.50,
-		),
-		'grok-3-fast'                => array(
-			'input'  => 5.00,
-			'output' => 25.00,
-		),
-	);
-
-	/**
 	 * Track token usage for a generation.
 	 *
 	 * @param string $model         Model identifier.
@@ -154,10 +71,7 @@ class SWPS_Cost_Tracker {
 	 * @return float Cost in USD.
 	 */
 	public function calculate_cost( string $model, int $input_tokens, int $output_tokens ): float {
-		$pricing = self::PRICING[ $model ] ?? array(
-			'input'  => 3.00,
-			'output' => 15.00,
-		);
+		$pricing = SWPS_Model_Catalog::price_for( $model );
 
 		$input_cost  = ( $input_tokens / 1_000_000 ) * $pricing['input'];
 		$output_cost = ( $output_tokens / 1_000_000 ) * $pricing['output'];

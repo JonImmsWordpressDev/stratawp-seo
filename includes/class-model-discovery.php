@@ -32,15 +32,54 @@ class SWPS_Model_Discovery {
 	private const OPTION_NEW = 'swps_new_models_available';
 
 	/**
-	 * Get the curated ∪ discovered text models for a provider.
+	 * Get the decorated text models for a provider (discovered, else fallback).
+	 *
+	 * @param string $provider_slug AI provider slug.
+	 * @return array<string, string> model ID => decorated display label.
+	 */
+	public function get_text_models( string $provider_slug ): array {
+		return SWPS_Model_Catalog::decorate_labels( $this->resolve_models( $provider_slug ) );
+	}
+
+	/**
+	 * Valid model IDs for a provider (discovered, else fallback) — used to
+	 * validate the saved model selection.
+	 *
+	 * @param string $provider_slug AI provider slug.
+	 * @return array<int, string>
+	 */
+	public function available_model_ids( string $provider_slug ): array {
+		return array_keys( $this->resolve_models( $provider_slug ) );
+	}
+
+	/**
+	 * Resolve the raw model map: discovered (filtered) if present, else the
+	 * provider's curated fallback list.
 	 *
 	 * @param string $provider_slug AI provider slug.
 	 * @return array<string, string> model ID => display name.
 	 */
-	public function get_text_models( string $provider_slug ): array {
-		$curated    = SWPS_Provider_Factory::curated_models_for_provider( $provider_slug );
-		$discovered = ( get_option( self::OPTION_DISCOVERED, array() )[ $provider_slug ] ?? array() );
-		return self::merge_models( $curated, (array) $discovered );
+	private function resolve_models( string $provider_slug ): array {
+		$discovered = (array) ( get_option( self::OPTION_DISCOVERED, array() )[ $provider_slug ] ?? array() );
+		if ( ! empty( $discovered ) ) {
+			return $discovered;
+		}
+		return SWPS_Provider_Factory::curated_models_for_provider( $provider_slug );
+	}
+
+	/**
+	 * Validate a stored model selection against the list of valid IDs, falling
+	 * back to the first available ID. Pure — no WordPress calls.
+	 *
+	 * @param string             $stored Stored model ID.
+	 * @param array<int, string> $ids    Valid model IDs.
+	 * @return string
+	 */
+	public static function validate_selection( string $stored, array $ids ): string {
+		if ( '' !== $stored && in_array( $stored, $ids, true ) ) {
+			return $stored;
+		}
+		return $ids[0] ?? '';
 	}
 
 	/**
