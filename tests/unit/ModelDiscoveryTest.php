@@ -25,4 +25,19 @@ final class ModelDiscoveryTest extends TestCase {
 	public function test_diff_empty_known_returns_all(): void {
 		$this->assertSame( array( 'a' ), SWPS_Model_Discovery::diff_new_ids( array(), array( 'a' ) ) );
 	}
+
+	public function test_validate_selection_keeps_valid_stored_model(): void {
+		$ids = array( 'claude-opus-4-8', 'claude-opus-4-7' );
+		$this->assertSame( 'claude-opus-4-8', SWPS_Model_Discovery::validate_selection( 'claude-opus-4-8', $ids ) );
+	}
+
+	public function test_validate_selection_falls_back_to_first_when_invalid(): void {
+		$ids = array( 'claude-opus-4-8', 'claude-opus-4-7' );
+		$this->assertSame( 'claude-opus-4-8', SWPS_Model_Discovery::validate_selection( 'gone-model', $ids ) );
+		$this->assertSame( 'claude-opus-4-8', SWPS_Model_Discovery::validate_selection( '', $ids ) );
+	}
+
+	public function test_validate_selection_empty_ids_returns_empty_string(): void {
+		$this->assertSame( '', SWPS_Model_Discovery::validate_selection( 'anything', array() ) );
+	}
 }
