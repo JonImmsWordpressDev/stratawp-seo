@@ -15,7 +15,6 @@ class SWPS_Generator {
 
 	private SWPS_AI_Provider $api;
 	private SWPS_Analyzer $analyzer;
-	private SWPS_Image_Provider $images;
 	private SWPS_Duplicate_Checker $duplicate_checker;
 	private SWPS_Rate_Limiter $rate_limiter;
 	private SWPS_Cost_Tracker $cost_tracker;
@@ -23,14 +22,12 @@ class SWPS_Generator {
 	public function __construct(
 		SWPS_AI_Provider $api,
 		SWPS_Analyzer $analyzer,
-		SWPS_Image_Provider $images,
 		SWPS_Duplicate_Checker $duplicate_checker,
 		SWPS_Rate_Limiter $rate_limiter,
 		SWPS_Cost_Tracker $cost_tracker
 	) {
 		$this->api               = $api;
 		$this->analyzer          = $analyzer;
-		$this->images            = $images;
 		$this->duplicate_checker = $duplicate_checker;
 		$this->rate_limiter      = $rate_limiter;
 		$this->cost_tracker      = $cost_tracker;
@@ -481,37 +478,6 @@ PROMPT;
 			$cost = $this->cost_tracker->calculate_cost( $model, $input_tokens, $output_tokens );
 		}
 
-		// Set featured image.
-		if ( get_option( 'swps_featured_images', 1 ) ) {
-			$image_query = $focus_keyword ?: $ai_result['title'];
-			$image_query = SWPS_Hooks::filter_image_query( $image_query, $post_id );
-
-			$image_result = $this->images->set_featured_image( $post_id, $image_query );
-
-			if ( is_wp_error( $image_result ) ) {
-				$this->log( 'Featured image failed: ' . $image_result->get_error_message() );
-			} else {
-				$attachment_id = $image_result;
-
-				// Update alt text to include the focus keyword for SEO.
-				if ( ! empty( $focus_keyword ) ) {
-					$existing_alt = get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
-					if ( empty( $existing_alt ) || false === mb_stripos( $existing_alt, $focus_keyword ) ) {
-						$seo_alt = ! empty( $existing_alt )
-							? $existing_alt . ' - ' . $focus_keyword
-							: ucfirst( $focus_keyword );
-						update_post_meta( $attachment_id, '_wp_attachment_image_alt', sanitize_text_field( $seo_alt ) );
-					}
-				}
-
-				// Set OG image from featured image so the social_image check passes.
-				$image_url = wp_get_attachment_url( $attachment_id );
-				if ( $image_url ) {
-					update_post_meta( $post_id, '_swps_social_image', esc_url_raw( $image_url ) );
-				}
-			}
-		}
-
 		// Fire post_created action.
 		SWPS_Hooks::do_post_created( $post_id, $ai_result, $post_data );
 
@@ -716,9 +682,13 @@ PROMPT;
 	}
 
 	/**
-	 * Log a message.
+	 * Append a message to the generation log (shown in Recent Activity).
+	 *
+	 * Static so background image jobs can surface their outcomes here too.
+	 *
+	 * @param string $message Message to record.
 	 */
-	private function log( string $message ): void {
+	public static function append_log( string $message ): void {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( '[StrataWP SEO] ' . $message );
 		}
@@ -731,5 +701,14 @@ PROMPT;
 
 		$log = array_slice( $log, -50 );
 		update_option( 'swps_generation_log', $log );
+	}
+
+	/**
+	 * Log a message.
+	 *
+	 * @param string $message Message to record.
+	 */
+	private function log( string $message ): void {
+		self::append_log( $message );
 	}
 }

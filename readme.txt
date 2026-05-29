@@ -257,6 +257,13 @@ No. GSC integration is optional. The on-site analytics works entirely without an
 * Feature: AI models are now auto-discovered from each configured provider's API (Anthropic, OpenAI, Google, xAI) once a day and added to the model dropdown automatically, with a dismissible alert when a new model appears.
 * Feature: the Gemini image model is now selectable in Settings (auto-discovered), replacing the hardcoded model so image generation no longer breaks when Google renames the image model.
 
+= 4.7.0 — 2026-05-29 =
+* Fix: Scheduled (WP-Cron) posts now reliably get their featured and in-content images. Image generation was running synchronously inside the generation request — the AI text call plus multiple Gemini image calls stacked past the host's request timeout, killing the worker mid-download (and PHP dying inside the HTTP call meant nothing was logged). Each image now runs as its own short background job (Action Scheduler, falling back to WP-Cron), and image failures are surfaced in the Recent Activity log.
+* Improvement: The Google API key is now editable from the Featured Images flow whenever the Gemini image provider is selected, even if your text provider isn't Google.
+
+= 4.6.6 — 2026-05-24 =
+* Fix: Applying an AEO proposal failed with "Apply failed: invalid_proposal" because `update_post_meta()` internally calls `wp_unslash()` on stored values, which stripped the JSON's `\"` escapes and corrupted the cached proposal. Same bug affected the snapshot (undo) and the rendered JSON-LD schema. All three storage sites now `wp_slash()` before storing so the round-trip preserves valid JSON. Pre-4.6.6 corrupted proposals are auto-cleared on next apply with a friendly "please re-generate" message.
+
 = 4.6.5 — 2026-05-24 =
 * Fix: AEO Optimize "Request failed." alerts now show the actual error message. The JS `.fail()` handler previously displayed the generic fallback regardless of what the server returned — so AI-provider errors (rate limits, invalid API key, JSON parse failures, etc.) were being swallowed. A new `extractErrorMessage()` helper digs into `jqXHR.responseJSON.data.message`, falls back to the HTTP status, and appends a "Check StrataWP SEO → Debug" hint for AI-side failures.
 
