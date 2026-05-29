@@ -17,5 +17,8 @@
         <testsuite name="aeo-unit">
             <directory>tests/aeo</directory>
         </testsuite>
+        <testsuite name="unit">
+            <directory>tests/unit</directory>
+        </testsuite>
     </testsuites>
 </phpunit>
