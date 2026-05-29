@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.6.6
+ * Version: 4.7.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.6.6' );
+define( 'SWPS_VERSION', '4.7.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -311,7 +311,6 @@ final class StrataWP_SEO {
 		$this->generator            = new SWPS_Generator(
 			$this->api,
 			$this->analyzer,
-			$this->images,
 			$this->duplicate_checker,
 			$this->rate_limiter,
 			$this->cost_tracker
@@ -369,7 +368,7 @@ final class StrataWP_SEO {
 		add_action( 'wp_ajax_swps_delete_voice_profile', array( $this, 'ajax_delete_voice_profile' ) );
 
 		// In-content image insertion on post creation.
-		add_action( 'swps_post_created', array( $this, 'insert_content_images' ), 20, 3 );
+		add_action( 'swps_post_created', array( $this, 'schedule_image_jobs' ), 20, 3 );
 
 		// SEO Audit frontend hooks.
 		add_action( 'wp_head', array( SWPS_Canonical_Module::class, 'output_canonical' ), 1 );
@@ -846,14 +845,27 @@ final class StrataWP_SEO {
 	}
 
 	/**
-	 * Insert contextual images into generated post content.
+	 * Enqueue background image-generation jobs for a freshly generated post.
+	 *
+	 * Featured + in-content images run as separate short requests so a slow
+	 * provider (Gemini) can't blow the cron request's execution limit and
+	 * leave the post imageless.
 	 *
 	 * @param int   $post_id   The new post ID.
 	 * @param array $ai_result The AI response data.
 	 * @param array $post_data The WordPress post data.
 	 */
-	public function insert_content_images( int $post_id, array $ai_result, array $post_data ): void {
-		$this->image_inserter->insert_images( $post_id, $ai_result );
+	public function schedule_image_jobs( int $post_id, array $ai_result, array $post_data ): void {
+		if ( get_option( 'swps_featured_images', 1 ) ) {
+			$focus = (string) get_post_meta( $post_id, '_swps_focus_keyword', true );
+			$query = '' !== $focus ? $focus : (string) ( $ai_result['title'] ?? '' );
+			$query = SWPS_Hooks::filter_image_query( $query, $post_id );
+			$this->background_processor->schedule_featured_image( $post_id, $query );
+		}
+
+		if ( get_option( 'swps_insert_content_images', 0 ) ) {
+			$this->background_processor->schedule_content_image( $post_id );
+		}
 	}
 
 	/**

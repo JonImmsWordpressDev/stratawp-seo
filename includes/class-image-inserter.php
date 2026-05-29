@@ -31,125 +31,125 @@ class SWPS_Image_Inserter {
 			return;
 		}
 
-		$content       = get_post_field( 'post_content', $post_id );
-		$max_images    = (int) get_option( 'swps_content_images_count', 2 );
-		$max_width     = (int) get_option( 'swps_image_max_width', 1200 );
-		$focus_keyword = get_post_meta( $post_id, '_swps_focus_keyword', true );
+		$eligible = $this->eligible_section_count( $post_id );
+		$target   = min( (int) get_option( 'swps_content_images_count', 2 ), $eligible );
 
-		if ( empty( $content ) || $max_images < 1 ) {
-			return;
+		for ( $i = 0; $i < $target; $i++ ) {
+			$this->insert_single_image( $post_id, $i, $target );
 		}
+	}
 
-		// Split content into sections by H2.
+	/**
+	 * Number of eligible (post-intro) H2 sections available for in-content images.
+	 *
+	 * @param int $post_id The post ID.
+	 * @return int Count of eligible sections (0 if fewer than 2 sections).
+	 */
+	public function eligible_section_count( int $post_id ): int {
+		$content  = get_post_field( 'post_content', $post_id );
+		$sections = $this->split_by_headings( $content );
+		return count( $sections ) >= 2 ? count( $sections ) - 1 : 0;
+	}
+
+	/**
+	 * Generate and inject ONE in-content image at the given position.
+	 *
+	 * Re-reads the post content on each call, so sequential invocations
+	 * (one per background job) stay race-free.
+	 *
+	 * @param int $post_id  Target post.
+	 * @param int $position 0-based image position.
+	 * @param int $target   Total images planned (for even spacing).
+	 * @return true|WP_Error True on insert, WP_Error otherwise.
+	 */
+	public function insert_single_image( int $post_id, int $position, int $target ): bool|WP_Error {
+		$content  = get_post_field( 'post_content', $post_id );
 		$sections = $this->split_by_headings( $content );
 
 		if ( count( $sections ) < 2 ) {
-			return; // Not enough sections for in-content images.
+			return new WP_Error( 'swps_no_sections', __( 'Not enough sections for in-content images.', 'stratawp-seo' ) );
 		}
 
-		// Skip the first section (intro — featured image covers it).
-		$target_sections = array_slice( $sections, 1 );
+		$eligible = array_slice( $sections, 1 ); // Skip intro (section 0).
+		$idx      = self::target_section_index( count( $eligible ), $position, $target );
 
-		// Pick evenly spaced sections for images.
-		$total    = count( $target_sections );
-		$to_fill  = min( $max_images, $total );
-		$interval = max( 1, (int) floor( $total / $to_fill ) );
-		$indices  = array();
-		for ( $i = 0; $i < $to_fill; $i++ ) {
-			$indices[] = $i * $interval;
+		if ( ! isset( $eligible[ $idx ] ) ) {
+			return new WP_Error( 'swps_no_section', __( 'Target section not found.', 'stratawp-seo' ) );
 		}
 
-		// Extract visual concepts for each target section.
-		$queries = array();
-		foreach ( $indices as $idx ) {
-			$section         = $target_sections[ $idx ];
-			$queries[ $idx ] = $this->extract_visual_concept( $section );
+		$section = $eligible[ $idx ];
+		$query   = $this->extract_visual_concept( $section );
+		$queries = apply_filters( 'swps_content_images_queries', array( $idx => $query ), $post_id );
+		$query   = $queries[ $idx ] ?? $query;
+
+		if ( empty( $query ) ) {
+			return new WP_Error( 'swps_empty_query', __( 'Could not derive an image query.', 'stratawp-seo' ) );
 		}
 
-		$queries = apply_filters( 'swps_content_images_queries', $queries, $post_id );
-
-		// Search and insert images.
-		$inserted = 0;
-		foreach ( $queries as $idx => $query ) {
-			if ( empty( $query ) ) {
-				continue;
-			}
-
-			$image_url = $this->search_image( $query );
-			if ( empty( $image_url ) ) {
-				continue;
-			}
-
-			// Apply image selection filter.
-			$section_heading = $this->extract_heading( $target_sections[ $idx ] );
-			$image_data      = apply_filters(
-				'swps_image_selection',
-				array(
-					'url'     => $image_url,
-					'query'   => $query,
-					'alt'     => $section_heading ?: $query,
-					'post_id' => $post_id,
-				),
-				$post_id,
-				$section_heading
-			);
-
-			if ( empty( $image_data ) || empty( $image_data['url'] ) ) {
-				continue;
-			}
-
-			// Download and attach.
-			$attachment_id = $this->download_image( $image_data['url'], $post_id, $query, $max_width );
-			if ( is_wp_error( $attachment_id ) ) {
-				error_log( '[StrataWP SEO] Content images: Download failed for post ' . $post_id . ' — ' . $attachment_id->get_error_message() );
-				continue;
-			}
-
-			// Set alt text — ensure focus keyword is included for SEO.
-			$alt_text = sanitize_text_field( $image_data['alt'] ?? $query );
-			if ( ! empty( $focus_keyword ) && false === mb_stripos( $alt_text, $focus_keyword ) ) {
-				$alt_text = $alt_text . ' - ' . $focus_keyword;
-			}
-			update_post_meta( $attachment_id, '_wp_attachment_image_alt', $alt_text );
-
-			// Build the figure HTML.
-			$img_src  = wp_get_attachment_url( $attachment_id );
-			$metadata = wp_get_attachment_metadata( $attachment_id );
-			$width    = $metadata['width'] ?? '';
-			$height   = $metadata['height'] ?? '';
-
-			$figure_html = sprintf(
-				'<figure class="swps-content-image"><img src="%s" alt="%s" loading="lazy"%s%s /><figcaption>%s</figcaption></figure>',
-				esc_url( $img_src ),
-				esc_attr( $alt_text ),
-				$width ? ' width="' . esc_attr( $width ) . '"' : '',
-				$height ? ' height="' . esc_attr( $height ) . '"' : '',
-				esc_html( $alt_text )
-			);
-
-			// Inject into the section (after first paragraph).
-			// The actual index in the full content is $idx + 1 (because we skipped section 0).
-			$section_index = $idx + 1;
-			$content       = $this->inject_into_section( $content, $section_index, $figure_html );
-
-			++$inserted;
-
-			do_action( 'swps_image_inserted', $attachment_id, $post_id, $alt_text, $section_index );
-
-			if ( $inserted >= $max_images ) {
-				break;
-			}
+		$image_url = $this->search_image( $query );
+		if ( empty( $image_url ) ) {
+			return new WP_Error( 'swps_no_image', __( 'No image returned for the query.', 'stratawp-seo' ) );
 		}
 
-		// Update the post content if images were inserted.
-		if ( $inserted > 0 ) {
-			wp_update_post(
-				array(
-					'ID'           => $post_id,
-					'post_content' => $content,
-				)
-			);
+		$section_heading = $this->extract_heading( $section );
+		$image_data      = apply_filters(
+			'swps_image_selection',
+			array(
+				'url'     => $image_url,
+				'query'   => $query,
+				'alt'     => ! empty( $section_heading ) ? $section_heading : $query,
+				'post_id' => $post_id,
+			),
+			$post_id,
+			$section_heading
+		);
+
+		if ( empty( $image_data['url'] ) ) {
+			return new WP_Error( 'swps_image_filtered_out', __( 'Image selection was filtered out.', 'stratawp-seo' ) );
 		}
+
+		$max_width     = (int) get_option( 'swps_image_max_width', 1200 );
+		$attachment_id = $this->download_image( $image_data['url'], $post_id, $query, $max_width );
+		if ( is_wp_error( $attachment_id ) ) {
+			return $attachment_id;
+		}
+
+		$focus_keyword = get_post_meta( $post_id, '_swps_focus_keyword', true );
+		$alt_text      = sanitize_text_field( $image_data['alt'] ?? $query );
+		if ( ! empty( $focus_keyword ) && false === mb_stripos( $alt_text, $focus_keyword ) ) {
+			$alt_text .= ' - ' . $focus_keyword;
+		}
+		update_post_meta( $attachment_id, '_wp_attachment_image_alt', $alt_text );
+
+		$img_src  = wp_get_attachment_url( $attachment_id );
+		$metadata = wp_get_attachment_metadata( $attachment_id );
+		$width    = $metadata['width'] ?? '';
+		$height   = $metadata['height'] ?? '';
+
+		$figure_html = sprintf(
+			'<figure class="swps-content-image"><img src="%s" alt="%s" loading="lazy"%s%s /><figcaption>%s</figcaption></figure>',
+			esc_url( $img_src ),
+			esc_attr( $alt_text ),
+			$width ? ' width="' . esc_attr( $width ) . '"' : '',
+			$height ? ' height="' . esc_attr( $height ) . '"' : '',
+			esc_html( $alt_text )
+		);
+
+		// Full-content section index is idx + 1 (section 0 is the intro).
+		$updated = $this->inject_into_section( $content, $idx + 1, $figure_html );
+		if ( $updated === $content ) {
+			return new WP_Error( 'swps_inject_failed', __( 'Could not inject the image into the content.', 'stratawp-seo' ) );
+		}
+
+		wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_content' => $updated,
+			)
+		);
+		do_action( 'swps_image_inserted', $attachment_id, $post_id, $alt_text, $idx + 1 );
+
+		return true;
 	}
 
 	/**
@@ -163,6 +163,20 @@ class SWPS_Image_Inserter {
 	private function split_by_headings( string $content ): array {
 		$parts = preg_split( '/(?=<h2[\s>])/i', $content );
 		return array_values( array_filter( $parts, fn( $p ) => trim( $p ) !== '' ) );
+	}
+
+	/**
+	 * Even-spacing slot for the Nth in-content image, mirroring the original loop
+	 * (interval = floor(eligible / target); index = position * interval).
+	 *
+	 * @param int $eligible Number of eligible (post-intro) H2 sections.
+	 * @param int $position 0-based image position.
+	 * @param int $target   Total images to place.
+	 * @return int 0-based index into the eligible-sections list.
+	 */
+	public static function target_section_index( int $eligible, int $position, int $target ): int {
+		$interval = max( 1, intdiv( $eligible, max( 1, $target ) ) );
+		return $position * $interval;
 	}
 
 	/**

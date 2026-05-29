@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.6.6
+Stable tag: 4.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -252,6 +252,10 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.7.0 — 2026-05-29 =
+* Fix: Scheduled (WP-Cron) posts now reliably get their featured and in-content images. Image generation was running synchronously inside the generation request — the AI text call plus multiple Gemini image calls stacked past the host's request timeout, killing the worker mid-download (and PHP dying inside the HTTP call meant nothing was logged). Each image now runs as its own short background job (Action Scheduler, falling back to WP-Cron), and image failures are surfaced in the Recent Activity log.
+* Improvement: The Google API key is now editable from the Featured Images flow whenever the Gemini image provider is selected, even if your text provider isn't Google.
 
 = 4.6.6 — 2026-05-24 =
 * Fix: Applying an AEO proposal failed with "Apply failed: invalid_proposal" because `update_post_meta()` internally calls `wp_unslash()` on stored values, which stripped the JSON's `\"` escapes and corrupted the cached proposal. Same bug affected the snapshot (undo) and the rendered JSON-LD schema. All three storage sites now `wp_slash()` before storing so the round-trip preserves valid JSON. Pre-4.6.6 corrupted proposals are auto-cleared on next apply with a friendly "please re-generate" message.
