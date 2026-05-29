@@ -716,9 +716,13 @@ PROMPT;
 	}
 
 	/**
-	 * Log a message.
+	 * Append a message to the generation log (shown in Recent Activity).
+	 *
+	 * Static so background image jobs can surface their outcomes here too.
+	 *
+	 * @param string $message Message to record.
 	 */
-	private function log( string $message ): void {
+	public static function append_log( string $message ): void {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( '[StrataWP SEO] ' . $message );
 		}
@@ -731,5 +735,14 @@ PROMPT;
 
 		$log = array_slice( $log, -50 );
 		update_option( 'swps_generation_log', $log );
+	}
+
+	/**
+	 * Log a message.
+	 *
+	 * @param string $message Message to record.
+	 */
+	private function log( string $message ): void {
+		self::append_log( $message );
 	}
 }
