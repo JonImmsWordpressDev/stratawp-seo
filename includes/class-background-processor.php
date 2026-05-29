@@ -151,31 +151,37 @@ class SWPS_Background_Processor {
 			return; // Too few sections — nothing to do.
 		}
 
-		$done = (int) get_post_meta( $post_id, '_swps_content_images_inserted', true );
-		if ( $done >= $target ) {
-			return; // Finished.
+		// Single-chain assumption: swps_post_created fires exactly once per
+		// freshly-created post, so only one chain advances this position. A
+		// future "regenerate images" path would need a dedup guard here.
+		$position = (int) get_post_meta( $post_id, '_swps_content_images_position', true );
+		if ( $position >= $target ) {
+			return; // All positions processed.
 		}
 
-		$result = $inserter->insert_single_image( $post_id, $done, $target );
+		$result = $inserter->insert_single_image( $post_id, $position, $target );
+
+		// Retry a transient failure once before giving up on this position.
+		if ( is_wp_error( $result ) && $attempt < 1 ) {
+			$this->schedule_content_image( $post_id, $attempt + 1, 30 );
+			return;
+		}
 
 		if ( is_wp_error( $result ) ) {
-			if ( $attempt < 1 ) {
-				$this->schedule_content_image( $post_id, $attempt + 1, 30 );
-				return;
-			}
 			SWPS_Generator::append_log(
-				sprintf( 'In-content image %d/%d failed for #%d: %s', $done + 1, $target, $post_id, $result->get_error_message() )
+				sprintf( 'In-content image %d/%d skipped for #%d: %s', $position + 1, $target, $post_id, $result->get_error_message() )
 			);
-			return; // Stop the chain on permanent failure (visible in the log).
 		}
 
-		++$done;
-		update_post_meta( $post_id, '_swps_content_images_inserted', $done );
+		// Advance whether this position succeeded or was skipped, so one weak
+		// section can't block the remaining images.
+		++$position;
+		update_post_meta( $post_id, '_swps_content_images_position', $position );
 
-		if ( $done < $target ) {
-			$this->schedule_content_image( $post_id, 0, 5 ); // Next image, fresh attempt count.
+		if ( $position < $target ) {
+			$this->schedule_content_image( $post_id, 0, 5 ); // Next position, fresh attempt count.
 		} else {
-			SWPS_Generator::append_log( sprintf( '%d in-content image(s) added to #%d.', $done, $post_id ) );
+			SWPS_Generator::append_log( sprintf( 'In-content images complete for #%d.', $post_id ) );
 		}
 	}
 
