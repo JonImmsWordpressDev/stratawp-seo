@@ -12,6 +12,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Heuristic model-metadata catalog: provider, power rank, and default pricing.
+ *
+ * @package StrataWP_SEO
+ */
 class SWPS_Model_Catalog {
 
 	/**
@@ -24,38 +29,130 @@ class SWPS_Model_Catalog {
 		'anthropic' => array(
 			'id'       => '/^claude-/',
 			'families' => array(
-				array( 'match' => '/opus/',   'rank' => 30, 'in' => 15.00, 'out' => 75.00 ),
-				array( 'match' => '/sonnet/', 'rank' => 20, 'in' => 3.00,  'out' => 15.00 ),
-				array( 'match' => '/haiku/',  'rank' => 10, 'in' => 0.80,  'out' => 4.00 ),
-				array( 'match' => '/claude/', 'rank' => 20, 'in' => 3.00,  'out' => 15.00 ),
+				array(
+					'match' => '/opus/',
+					'rank'  => 30,
+					'in'    => 15.00,
+					'out'   => 75.00,
+				),
+				array(
+					'match' => '/sonnet/',
+					'rank'  => 20,
+					'in'    => 3.00,
+					'out'   => 15.00,
+				),
+				array(
+					'match' => '/haiku/',
+					'rank'  => 10,
+					'in'    => 0.80,
+					'out'   => 4.00,
+				),
+				array(
+					'match' => '/claude/',
+					'rank'  => 20,
+					'in'    => 3.00,
+					'out'   => 15.00,
+				),
 			),
 		),
 		'openai'    => array(
 			'id'       => '/^(gpt-|o\d|chatgpt-)/',
 			'families' => array(
-				array( 'match' => '/nano/',   'rank' => 10, 'in' => 0.10, 'out' => 0.40 ),
-				array( 'match' => '/mini/',   'rank' => 15, 'in' => 0.40, 'out' => 1.60 ),
-				array( 'match' => '/^o\d/',   'rank' => 30, 'in' => 1.10, 'out' => 4.40 ),
-				array( 'match' => '/gpt-4o/', 'rank' => 22, 'in' => 2.50, 'out' => 10.00 ),
-				array( 'match' => '/gpt-/',   'rank' => 25, 'in' => 2.00, 'out' => 8.00 ),
+				// nano/mini are budget tiers — matched first regardless of base model.
+				array(
+					'match' => '/nano/',
+					'rank'  => 10,
+					'in'    => 0.10,
+					'out'   => 0.40,
+				),
+				array(
+					'match' => '/mini/',
+					'rank'  => 15,
+					'in'    => 0.40,
+					'out'   => 1.60,
+				),
+				array(
+					'match' => '/^o\d/',
+					'rank'  => 30,
+					'in'    => 1.10,
+					'out'   => 4.40,
+				),
+				array(
+					'match' => '/gpt-4\.1/',
+					'rank'  => 26,
+					'in'    => 2.00,
+					'out'   => 8.00,
+				),
+				array(
+					'match' => '/gpt-4o/',
+					'rank'  => 24,
+					'in'    => 2.50,
+					'out'   => 10.00,
+				),
+				array(
+					'match' => '/gpt-/',
+					'rank'  => 22,
+					'in'    => 2.00,
+					'out'   => 8.00,
+				),
 			),
 		),
 		'google'    => array(
 			'id'       => '/^(gemini|gemma)/',
 			'families' => array(
-				array( 'match' => '/flash-lite/', 'rank' => 10, 'in' => 0.075, 'out' => 0.30 ),
-				array( 'match' => '/flash/',      'rank' => 20, 'in' => 0.15,  'out' => 0.60 ),
-				array( 'match' => '/pro/',        'rank' => 30, 'in' => 1.25,  'out' => 10.00 ),
-				array( 'match' => '/gemma/',      'rank' => 5,  'in' => 0.00,  'out' => 0.00 ),
-				array( 'match' => '/gemini/',     'rank' => 20, 'in' => 0.15,  'out' => 0.60 ),
+				array(
+					'match' => '/flash-lite/',
+					'rank'  => 10,
+					'in'    => 0.075,
+					'out'   => 0.30,
+				),
+				array(
+					'match' => '/flash/',
+					'rank'  => 20,
+					'in'    => 0.15,
+					'out'   => 0.60,
+				),
+				array(
+					'match' => '/pro/',
+					'rank'  => 30,
+					'in'    => 1.25,
+					'out'   => 10.00,
+				),
+				array(
+					'match' => '/gemma/',
+					'rank'  => 5,
+					'in'    => 0.00,
+					'out'   => 0.00,
+				),
+				array(
+					'match' => '/gemini/',
+					'rank'  => 20,
+					'in'    => 0.15,
+					'out'   => 0.60,
+				),
 			),
 		),
 		'xai'       => array(
 			'id'       => '/^grok/',
 			'families' => array(
-				array( 'match' => '/mini/', 'rank' => 10, 'in' => 0.30, 'out' => 0.50 ),
-				array( 'match' => '/fast/', 'rank' => 20, 'in' => 5.00, 'out' => 25.00 ),
-				array( 'match' => '/grok/', 'rank' => 20, 'in' => 3.00, 'out' => 15.00 ),
+				array(
+					'match' => '/mini/',
+					'rank'  => 10,
+					'in'    => 0.30,
+					'out'   => 0.50,
+				),
+				array(
+					'match' => '/fast/',
+					'rank'  => 20,
+					'in'    => 5.00,
+					'out'   => 25.00,
+				),
+				array(
+					'match' => '/grok/',
+					'rank'  => 20,
+					'in'    => 3.00,
+					'out'   => 15.00,
+				),
 			),
 		),
 	);
@@ -63,7 +160,10 @@ class SWPS_Model_Catalog {
 	/**
 	 * Default price (USD per 1M input/output) for models with no family match.
 	 */
-	private const DEFAULT_PRICE = array( 'input' => 3.00, 'output' => 15.00 );
+	private const DEFAULT_PRICE = array(
+		'input'  => 3.00,
+		'output' => 15.00,
+	);
 
 	/**
 	 * Derive heuristic metadata for a model ID.
@@ -161,6 +261,7 @@ class SWPS_Model_Catalog {
 			$max_out = max( $priced );
 			$min_out = min( $priced );
 			if ( $max_out > $min_out ) {
+				// First key wins on a price tie — intentional, input order decides.
 				$costliest = array_search( $max_out, $priced, true );
 				$cheapest  = array_search( $min_out, $priced, true );
 				if ( false !== $costliest ) {

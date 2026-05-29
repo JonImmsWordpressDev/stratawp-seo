@@ -37,6 +37,13 @@ final class ModelCatalogTest extends TestCase {
 		$this->assertNull( $m['price_out'] );
 	}
 
+	public function test_metadata_openai_o_series_and_gpt_ordering(): void {
+		$score = fn( string $id ) => SWPS_Model_Catalog::metadata( $id )['power_score'];
+		$this->assertSame( 30030, $score( 'o3' ) );
+		$this->assertGreaterThan( $score( 'gpt-4o' ), $score( 'gpt-4.1' ) );
+		$this->assertGreaterThan( $score( 'gpt-4-turbo' ), $score( 'gpt-4o' ) );
+	}
+
 	public function test_price_for_known_model(): void {
 		$this->assertSame( array( 'input' => 15.0, 'output' => 75.0 ), SWPS_Model_Catalog::price_for( 'claude-opus-4-8' ) );
 		$this->assertSame( array( 'input' => 0.8, 'output' => 4.0 ), SWPS_Model_Catalog::price_for( 'claude-haiku-4-5-20251001' ) );
