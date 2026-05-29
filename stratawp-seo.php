@@ -1100,6 +1100,13 @@ final class StrataWP_SEO {
 			return;
 		}
 
+		// Only render on StrataWP-SEO admin pages — that's where the dismiss
+		// handler JS is enqueued, so dismissals always persist.
+		$screen = get_current_screen();
+		if ( ! $screen || false === strpos( $screen->id, 'stratawp-seo' ) ) {
+			return;
+		}
+
 		$new = ( new SWPS_Model_Discovery() )->new_models();
 		if ( empty( $new ) ) {
 			return;
