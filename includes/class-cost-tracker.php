@@ -13,7 +13,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class SWPS_Cost_Tracker {
 
-
 	/**
 	 * Track token usage for a generation.
 	 *

@@ -56,8 +56,9 @@ Tier ranks and default prices (USD per 1M input/output). Higher tier_rank = more
 | anthropic | `sonnet` | 20 | 3.00 | 15.00 |
 | anthropic | `haiku` | 10 | 0.80 | 4.00 |
 | openai | `^o\d` (o-series) | 30 | 1.10 | 4.40 |
-| openai | `gpt-4.1` (non-mini/nano) | 25 | 2.00 | 8.00 |
-| openai | `gpt-4o` (non-mini) | 22 | 2.50 | 10.00 |
+| openai | `gpt-4.1` (non-mini/nano) | 26 | 2.00 | 8.00 |
+| openai | `gpt-4o` (non-mini) | 24 | 2.50 | 10.00 |
+| openai | `gpt-` catch-all | 22 | 2.00 | 8.00 |
 | openai | `*-mini` | 15 | 0.40 | 1.60 |
 | openai | `*-nano` | 10 | 0.10 | 0.40 |
 | google | `pro` | 30 | 1.25 | 10.00 |
