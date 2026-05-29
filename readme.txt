@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.6.5
+Stable tag: 4.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -252,6 +252,10 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.7.0 — 2026-05-29 =
+* Fix: Scheduled (WP-Cron) posts now reliably get their featured and in-content images. Image generation was running synchronously inside the generation request — the AI text call plus multiple Gemini image calls stacked past the host's request timeout, killing the worker mid-download (and PHP dying inside the HTTP call meant nothing was logged). Each image now runs as its own short background job (Action Scheduler, falling back to WP-Cron), and image failures are surfaced in the Recent Activity log.
+* Improvement: The Google API key is now editable from the Featured Images flow whenever the Gemini image provider is selected, even if your text provider isn't Google.
 
 = 4.6.5 — 2026-05-24 =
 * Fix: AEO Optimize "Request failed." alerts now show the actual error message. The JS `.fail()` handler previously displayed the generic fallback regardless of what the server returned — so AI-provider errors (rate limits, invalid API key, JSON parse failures, etc.) were being swallowed. A new `extractErrorMessage()` helper digs into `jqXHR.responseJSON.data.message`, falls back to the HTTP status, and appends a "Check StrataWP SEO → Debug" hint for AI-side failures.
