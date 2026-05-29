@@ -1279,6 +1279,9 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 - **Fix — Scheduled posts now get their images reliably:** image generation moved off the synchronous generation request into per-image background jobs (Action Scheduler → WP-Cron fallback), so a slow Gemini pipeline can no longer be killed by the host's request timeout. Image-job outcomes (success and failure) now appear in the Recent Activity log instead of vanishing.
 - **Improvement — Editable Gemini key:** the Google API key is now visible/editable when the image provider is Gemini, regardless of the selected text provider.
 
+### v4.6.6 — May 2026
+- Fix: "Apply selected" on an AEO proposal failed with `invalid_proposal` (and the rendered front-end JSON-LD schema silently broke) because WordPress's `update_post_meta()` runs `wp_unslash()` internally — which stripped the `\"` escapes inside JSON strings, corrupting them on write. All three storage sites (`META_PROPOSAL`, `META_SNAPSHOT`, `META_SCHEMA_JSON` — including the undo restore) now call `wp_slash()` before `update_post_meta()` so the round-trip preserves valid JSON. Pre-v4.6.6 corrupted proposals are auto-cleared on the next apply with a friendly "please re-generate" message. The undo handler likewise auto-clears corrupted snapshots.
+
 ### v4.6.5 — May 2026
 - Fix: AEO Optimize "Request failed." alerts now surface the actual server error. The JS `.fail()` handlers were displaying the generic fallback message regardless of what the response body said — so AI-provider errors (rate limit, invalid API key, JSON parse failure) were being swallowed. New `extractErrorMessage()` helper digs into `jqXHR.responseJSON.data.message`, falls back to the HTTP status, and appends a "Check StrataWP SEO → Debug for the raw AI response" hint for likely AI-side failures. Applies to scan / proposal / apply.
 
