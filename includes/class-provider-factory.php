@@ -80,11 +80,12 @@ class SWPS_Provider_Factory {
 	}
 
 	/**
-	 * Get available models for a specific AI provider slug.
+	 * Get the curated (hardcoded) models for a provider — the canonical labels/order.
 	 *
+	 * @param string $slug AI provider slug.
 	 * @return array<string, string> model ID => display name.
 	 */
-	public static function get_models_for_provider( string $slug ): array {
+	public static function curated_models_for_provider( string $slug ): array {
 		$class = self::AI_PROVIDERS[ $slug ] ?? null;
 
 		if ( ! $class ) {
@@ -93,5 +94,28 @@ class SWPS_Provider_Factory {
 
 		$instance = new $class();
 		return $instance->get_available_models();
+	}
+
+	/**
+	 * Instantiate every AI provider, keyed by slug.
+	 *
+	 * @return array<string, SWPS_AI_Provider> slug => provider instance.
+	 */
+	public static function all_ai_providers(): array {
+		$out = array();
+		foreach ( self::AI_PROVIDERS as $slug => $class ) {
+			$out[ $slug ] = new $class();
+		}
+		return $out;
+	}
+
+	/**
+	 * Get available models for a specific AI provider slug (curated ∪ discovered).
+	 *
+	 * @param string $slug AI provider slug.
+	 * @return array<string, string> model ID => display name.
+	 */
+	public static function get_models_for_provider( string $slug ): array {
+		return ( new SWPS_Model_Discovery() )->get_text_models( $slug );
 	}
 }

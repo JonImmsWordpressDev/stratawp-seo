@@ -40,6 +40,66 @@ class SWPS_Gemini_Image_Provider extends SWPS_Image_Provider {
 	}
 
 	/**
+	 * Get the curated Gemini image models — MODEL is the default/fallback.
+	 *
+	 * @return array<string, string> model ID => display name.
+	 */
+	public static function curated_models(): array {
+		return array(
+			self::MODEL => 'Gemini Image (default)',
+		);
+	}
+
+	/**
+	 * Get the configured image model, falling back to the constant.
+	 *
+	 * @return string The model ID to use for image generation.
+	 */
+	private function image_model(): string {
+		$model = (string) get_option( 'swps_gemini_image_model', '' );
+		return '' !== $model ? $model : self::MODEL;
+	}
+
+	/**
+	 * Fetch live image-capable models from the Google /v1beta/models endpoint.
+	 *
+	 * @return array<string, string> Model ID => display name (empty on error).
+	 */
+	public function fetch_remote_models(): array {
+		$api_key = $this->get_api_key();
+		if ( empty( $api_key ) ) {
+			return array();
+		}
+		$response = wp_remote_get(
+			'https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' . rawurlencode( $api_key ),
+			array( 'timeout' => 15 )
+		);
+		if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+			return array();
+		}
+		return self::parse_models_response( (array) json_decode( wp_remote_retrieve_body( $response ), true ) );
+	}
+
+	/**
+	 * Keep image-generation-capable Gemini models.
+	 *
+	 * @param array $body Decoded /v1beta/models body.
+	 * @return array<string, string> Model ID => display name.
+	 */
+	public static function parse_models_response( array $body ): array {
+		$models = array();
+		foreach ( $body['models'] ?? array() as $m ) {
+			$name = (string) ( $m['name'] ?? '' );
+			if ( '' === $name || false === strpos( $name, 'image' ) ) {
+				continue;
+			}
+			$id            = preg_replace( '#^models/#', '', $name );
+			$models[ $id ] = (string) ( $m['displayName'] ?? $id );
+		}
+		return $models;
+	}
+
+	/**
 	 * Gemini benefits from descriptive prompts, so we don't strip words.
 	 */
 	protected function simplify_query( string $query ): string {
@@ -88,7 +148,7 @@ class SWPS_Gemini_Image_Provider extends SWPS_Image_Provider {
 	 * @return string|WP_Error Temp file path on success.
 	 */
 	public function generate_image( string $prompt, string $api_key, string $aspect = '1:1' ): string|WP_Error {
-		$url = self::API_BASE . self::MODEL . ':generateContent?key=' . $api_key;
+		$url = self::API_BASE . $this->image_model() . ':generateContent?key=' . $api_key;
 
 		$response = wp_remote_post(
 			$url,

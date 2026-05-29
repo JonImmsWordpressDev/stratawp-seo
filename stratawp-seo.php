@@ -47,6 +47,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/providers/images/class-gemini-provider.
 
 // Factory.
 require_once SWPS_PLUGIN_DIR . 'includes/class-provider-factory.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-model-discovery.php';
 
 // Legacy aliases (must load after concrete providers they extend).
 require_once SWPS_PLUGIN_DIR . 'includes/class-api.php';
