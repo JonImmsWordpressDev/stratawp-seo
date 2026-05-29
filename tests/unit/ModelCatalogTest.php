@@ -36,4 +36,13 @@ final class ModelCatalogTest extends TestCase {
 		$this->assertNull( $m['power_score'] );
 		$this->assertNull( $m['price_out'] );
 	}
+
+	public function test_price_for_known_model(): void {
+		$this->assertSame( array( 'input' => 15.0, 'output' => 75.0 ), SWPS_Model_Catalog::price_for( 'claude-opus-4-8' ) );
+		$this->assertSame( array( 'input' => 0.8, 'output' => 4.0 ), SWPS_Model_Catalog::price_for( 'claude-haiku-4-5-20251001' ) );
+	}
+
+	public function test_price_for_unknown_model_uses_default(): void {
+		$this->assertSame( array( 'input' => 3.0, 'output' => 15.0 ), SWPS_Model_Catalog::price_for( 'who-knows-9000' ) );
+	}
 }
