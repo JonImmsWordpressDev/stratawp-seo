@@ -65,4 +65,24 @@ final class RemoteModelsParserTest extends TestCase {
 		$this->assertSame( array(), SWPS_Anthropic_Provider::parse_models_response( array() ) );
 		$this->assertSame( array(), SWPS_OpenAI_Provider::parse_models_response( array( 'nope' => 1 ) ) );
 	}
+
+	public function test_google_excludes_nontext_models_reporting_generatecontent(): void {
+		$body = array( 'models' => array(
+			array( 'name' => 'models/gemini-3-pro', 'displayName' => 'Gemini 3 Pro', 'supportedGenerationMethods' => array( 'generateContent' ) ),
+			array( 'name' => 'models/gemma-4-31b-it', 'displayName' => 'Gemma 4 31B', 'supportedGenerationMethods' => array( 'generateContent' ) ),
+			array( 'name' => 'models/gemini-2.5-flash-image', 'displayName' => 'Nano Banana', 'supportedGenerationMethods' => array( 'generateContent' ) ),
+			array( 'name' => 'models/gemini-2.5-flash-preview-tts', 'displayName' => 'TTS', 'supportedGenerationMethods' => array( 'generateContent' ) ),
+			array( 'name' => 'models/lyria-3-pro-preview', 'displayName' => 'Lyria', 'supportedGenerationMethods' => array( 'generateContent' ) ),
+			array( 'name' => 'models/gemini-robotics-er-1.5-preview', 'displayName' => 'Robotics', 'supportedGenerationMethods' => array( 'generateContent' ) ),
+			array( 'name' => 'models/nano-banana-pro-preview', 'displayName' => 'Nano Banana Pro', 'supportedGenerationMethods' => array( 'generateContent' ) ),
+		) );
+		$out = SWPS_Google_Provider::parse_models_response( $body );
+		$this->assertArrayHasKey( 'gemini-3-pro', $out );
+		$this->assertArrayHasKey( 'gemma-4-31b-it', $out );
+		$this->assertArrayNotHasKey( 'gemini-2.5-flash-image', $out );
+		$this->assertArrayNotHasKey( 'gemini-2.5-flash-preview-tts', $out );
+		$this->assertArrayNotHasKey( 'lyria-3-pro-preview', $out );
+		$this->assertArrayNotHasKey( 'gemini-robotics-er-1.5-preview', $out );
+		$this->assertArrayNotHasKey( 'nano-banana-pro-preview', $out );
+	}
 }

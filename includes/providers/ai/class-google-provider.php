@@ -147,7 +147,12 @@ class SWPS_Google_Provider extends SWPS_AI_Provider {
 			if ( '' === $name || ! in_array( 'generateContent', $methods, true ) ) {
 				continue;
 			}
-			$id            = preg_replace( '#^models/#', '', $name );
+			$id = preg_replace( '#^models/#', '', $name );
+			// Drop non-text-generation models that still report generateContent
+			// (image, TTS, music, robotics, agents, etc.).
+			if ( preg_match( '/(image|tts|lyria|veo|imagen|robotics|computer-use|deep-research|antigravity|nano-banana|aqa)/i', $id ) ) {
+				continue;
+			}
 			$models[ $id ] = (string) ( $m['displayName'] ?? $id );
 		}
 		return $models;
