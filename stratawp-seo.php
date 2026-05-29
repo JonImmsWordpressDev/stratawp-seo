@@ -149,6 +149,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-cron.php';
 // v2.0 classes that depend on core.
 require_once SWPS_PLUGIN_DIR . 'includes/class-calendar.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-background-processor.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-model-cron.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rest-api.php';
 
 // GitHub-based plugin updater.
@@ -322,6 +323,8 @@ final class StrataWP_SEO {
 		// Initialize v2.0 subsystems.
 		$this->calendar             = new SWPS_Calendar( $this->topic_queue );
 		$this->background_processor = new SWPS_Background_Processor();
+		$discovery                  = new SWPS_Model_Discovery();
+		new SWPS_Model_Cron( $discovery );
 		$this->rest_api             = new SWPS_REST_API();
 
 		// v4.0 admin shell — only relevant in admin, but instantiate always so REST routes register.
@@ -1216,6 +1219,7 @@ register_activation_hook( __FILE__, 'swps_activate' );
  */
 function swps_deactivate(): void {
 	SWPS_Cron::unschedule();
+	SWPS_Model_Cron::unschedule();
 	SWPS_SEO_Audit::unschedule_cron();
 	SWPS_Analytics_Tracker::unschedule_cron();
 	SWPS_Bot_Analytics_Tracker::unschedule_cron();
