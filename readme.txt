@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.6.5
+Stable tag: 4.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -252,6 +252,10 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.8.0 — 2026-05-29 =
+* Feature: AI models are now auto-discovered from each configured provider's API (Anthropic, OpenAI, Google, xAI) once a day and added to the model dropdown automatically, with a dismissible alert when a new model appears.
+* Feature: the Gemini image model is now selectable in Settings (auto-discovered), replacing the hardcoded model so image generation no longer breaks when Google renames the image model.
 
 = 4.6.5 — 2026-05-24 =
 * Fix: AEO Optimize "Request failed." alerts now show the actual error message. The JS `.fail()` handler previously displayed the generic fallback regardless of what the server returned — so AI-provider errors (rate limits, invalid API key, JSON parse failures, etc.) were being swallowed. A new `extractErrorMessage()` helper digs into `jqXHR.responseJSON.data.message`, falls back to the HTTP status, and appends a "Check StrataWP SEO → Debug" hint for AI-side failures.
