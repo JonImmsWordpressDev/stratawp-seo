@@ -148,3 +148,11 @@ The curated-merge-as-primary is dropped. The existing hardcoded `get_available_m
 ## Open items for user review
 
 None outstanding — best-value rule and no-price label format confirmed during design.
+
+## Addendum — corrections after codebase exploration (2026-05-29)
+
+Two refinements found while preparing the implementation plan:
+
+1. **Provider filtering already largely exists.** Each provider's `parse_models_response()` already filters: OpenAI (`gpt-*`/`o\d`/`chatgpt-` minus embeddings/audio/image/etc.) and xAI (`grok-*` minus image) are complete; Anthropic needs none. Google already filters on `supportedGenerationMethods` containing `generateContent`, but **lacks name-based exclusion**, so image/TTS/Lyria/robotics models (which report `generateContent`) still leak through. **The filtering work shrinks to tightening only Google's parser.**
+
+2. **New required fix — the selected model must actually stick.** `SWPS_AI_Provider::get_validated_model()` validates the saved `swps_model` against the hardcoded `get_available_models()` only. A *discovered* model (e.g. `claude-opus-4-8`) therefore fails validation and silently falls back to the curated default at generation time — so listing 4.8 is useless until this is fixed. The validator must check the dynamic list (discovered ∪ fallback). Implemented as a pure, unit-tested `SWPS_Model_Discovery::validate_selection()` + `available_model_ids()`, called from `get_validated_model()`.
