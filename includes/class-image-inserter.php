@@ -166,6 +166,20 @@ class SWPS_Image_Inserter {
 	}
 
 	/**
+	 * Even-spacing slot for the Nth in-content image, mirroring the original loop
+	 * (interval = floor(eligible / target); index = position * interval).
+	 *
+	 * @param int $eligible Number of eligible (post-intro) H2 sections.
+	 * @param int $position 0-based image position.
+	 * @param int $target   Total images to place.
+	 * @return int 0-based index into the eligible-sections list.
+	 */
+	public static function target_section_index( int $eligible, int $position, int $target ): int {
+		$interval = max( 1, intdiv( $eligible, max( 1, $target ) ) );
+		return $position * $interval;
+	}
+
+	/**
 	 * Extract a visual concept from a section.
 	 *
 	 * For AI image generators (Gemini), returns the full heading + first sentence
