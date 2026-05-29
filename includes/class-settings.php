@@ -303,6 +303,17 @@ class SWPS_Settings {
 		);
 
 		$this->add_field(
+			'gemini_image_model',
+			__( 'Gemini Image Model', 'stratawp-seo' ),
+			'select',
+			'swps_images_section',
+			array(
+				'options'   => ( new SWPS_Model_Discovery() )->get_image_models(),
+				'row_class' => 'swps-image-key-row swps-image-provider-gemini',
+			)
+		);
+
+		$this->add_field(
 			'insert_content_images',
 			__( 'In-Content Images', 'stratawp-seo' ),
 			'checkbox',

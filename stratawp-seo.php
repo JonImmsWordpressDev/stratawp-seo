@@ -1094,6 +1094,7 @@ function swps_activate(): void {
 		'pexels_api_key'              => '',
 		'pixabay_api_key'             => '',
 		// Gemini image provider reuses google_api_key — no separate key needed.
+		'gemini_image_model'          => '',
 		'model'                       => 'claude-sonnet-4-6',
 		'featured_images'             => 1,
 		'site_niche'                  => '',
