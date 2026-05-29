@@ -45,4 +45,38 @@ final class ModelCatalogTest extends TestCase {
 	public function test_price_for_unknown_model_uses_default(): void {
 		$this->assertSame( array( 'input' => 3.0, 'output' => 15.0 ), SWPS_Model_Catalog::price_for( 'who-knows-9000' ) );
 	}
+
+	public function test_decorate_labels_tags_superlatives(): void {
+		$models = array(
+			'claude-opus-4-8'           => 'Claude Opus 4.8',
+			'claude-opus-4-7'           => 'Claude Opus 4.7',
+			'claude-sonnet-4-6'         => 'Claude Sonnet 4.6',
+			'claude-haiku-4-5-20251001' => 'Claude Haiku 4.5',
+		);
+		$out = SWPS_Model_Catalog::decorate_labels( $models );
+		$this->assertSame( 'Claude Opus 4.8 — Most powerful · Costs most', $out['claude-opus-4-8'] );
+		$this->assertSame( 'Claude Sonnet 4.6 — Best value', $out['claude-sonnet-4-6'] );
+		$this->assertSame( 'Claude Haiku 4.5 — Cheapest', $out['claude-haiku-4-5-20251001'] );
+		$this->assertSame( 'Claude Opus 4.7', $out['claude-opus-4-7'] );
+	}
+
+	public function test_decorate_labels_noop_for_single_model(): void {
+		$models = array( 'claude-opus-4-8' => 'Claude Opus 4.8' );
+		$this->assertSame( $models, SWPS_Model_Catalog::decorate_labels( $models ) );
+	}
+
+	public function test_decorate_labels_no_price_tags_when_all_same_price(): void {
+		$models = array(
+			'claude-opus-4-8' => 'Claude Opus 4.8',
+			'claude-opus-4-7' => 'Claude Opus 4.7',
+		);
+		$out = SWPS_Model_Catalog::decorate_labels( $models );
+		$this->assertSame( 'Claude Opus 4.8 — Most powerful', $out['claude-opus-4-8'] );
+		$this->assertSame( 'Claude Opus 4.7', $out['claude-opus-4-7'] );
+	}
+
+	public function test_decorate_labels_leaves_unknown_models_untagged(): void {
+		$models = array( 'mystery-a' => 'Mystery A', 'mystery-b' => 'Mystery B' );
+		$this->assertSame( $models, SWPS_Model_Catalog::decorate_labels( $models ) );
+	}
 }
