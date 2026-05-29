@@ -56,6 +56,19 @@ abstract class SWPS_AI_Provider {
 	abstract public function get_available_models(): array;
 
 	/**
+	 * Fetch the live model list from the provider's API.
+	 *
+	 * Providers override this to query their /models endpoint. The default
+	 * returns an empty list, so discovery is a no-op for providers that
+	 * don't implement it.
+	 *
+	 * @return array<string, string> Model ID => display name (empty on error/unsupported).
+	 */
+	public function fetch_remote_models(): array {
+		return array();
+	}
+
+	/**
 	 * Get the provider slug (e.g., 'anthropic', 'openai').
 	 */
 	abstract public function get_slug(): string;

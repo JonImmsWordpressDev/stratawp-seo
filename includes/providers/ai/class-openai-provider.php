@@ -112,6 +112,52 @@ class SWPS_OpenAI_Provider extends SWPS_AI_Provider {
 		return $body['choices'][0]['message']['content'];
 	}
 
+	/**
+	 * Fetch live models from the OpenAI /v1/models endpoint.
+	 *
+	 * @return array<string, string> Model ID => display name (empty on error).
+	 */
+	public function fetch_remote_models(): array {
+		$api_key = $this->get_api_key();
+		if ( empty( $api_key ) ) {
+			return array();
+		}
+		$response = wp_remote_get(
+			'https://api.openai.com/v1/models',
+			array(
+				'timeout' => 15,
+				'headers' => array( 'Authorization' => 'Bearer ' . $api_key ),
+			)
+		);
+		if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+			return array();
+		}
+		return self::parse_models_response( (array) json_decode( wp_remote_retrieve_body( $response ), true ) );
+	}
+
+	/**
+	 * Keep chat-capable models only (gpt-* / o-series), excluding embeddings,
+	 * audio, image, realtime, and moderation models.
+	 *
+	 * @param array $body Decoded response body.
+	 * @return array<string, string>
+	 */
+	public static function parse_models_response( array $body ): array {
+		$models = array();
+		foreach ( $body['data'] ?? array() as $m ) {
+			$id = (string) ( $m['id'] ?? '' );
+			if ( '' === $id ) {
+				continue;
+			}
+			$is_chat = (bool) preg_match( '/^(gpt-|o\d|chatgpt-)/', $id );
+			$exclude = (bool) preg_match( '/(embedding|whisper|tts|dall-e|realtime|moderation|audio|image|transcribe|search|sora)/', $id );
+			if ( $is_chat && ! $exclude ) {
+				$models[ $id ] = $id;
+			}
+		}
+		return $models;
+	}
+
 	public function test_key( string $api_key ): bool|WP_Error {
 		$response = wp_remote_post(
 			self::API_URL,

@@ -112,6 +112,47 @@ class SWPS_Google_Provider extends SWPS_AI_Provider {
 		return $body['candidates'][0]['content']['parts'][0]['text'];
 	}
 
+	/**
+	 * Fetch live models from the Google /v1beta/models endpoint.
+	 *
+	 * @return array<string, string> Model ID => display name (empty on error).
+	 */
+	public function fetch_remote_models(): array {
+		$api_key = $this->get_api_key();
+		if ( empty( $api_key ) ) {
+			return array();
+		}
+		$response = wp_remote_get(
+			'https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' . rawurlencode( $api_key ),
+			array( 'timeout' => 15 )
+		);
+		if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+			return array();
+		}
+		return self::parse_models_response( (array) json_decode( wp_remote_retrieve_body( $response ), true ) );
+	}
+
+	/**
+	 * Keep text-generation models (supportedGenerationMethods contains
+	 * generateContent), excluding embedding/image-only models.
+	 *
+	 * @param array $body Decoded response body.
+	 * @return array<string, string>
+	 */
+	public static function parse_models_response( array $body ): array {
+		$models = array();
+		foreach ( $body['models'] ?? array() as $m ) {
+			$name    = (string) ( $m['name'] ?? '' );
+			$methods = (array) ( $m['supportedGenerationMethods'] ?? array() );
+			if ( '' === $name || ! in_array( 'generateContent', $methods, true ) ) {
+				continue;
+			}
+			$id            = preg_replace( '#^models/#', '', $name );
+			$models[ $id ] = (string) ( $m['displayName'] ?? $id );
+		}
+		return $models;
+	}
+
 	public function test_key( string $api_key ): bool|WP_Error {
 		$model = $this->get_validated_model();
 		$url   = self::API_BASE . $model . ':generateContent?key=' . $api_key;
