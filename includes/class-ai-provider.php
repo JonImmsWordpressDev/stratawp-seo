@@ -410,17 +410,12 @@ abstract class SWPS_AI_Provider {
 
 	/**
 	 * Get the validated model — falls back to the first available model
-	 * if the stored model is not valid for this provider.
+	 * (discovered, else curated fallback) if the stored model is not valid
+	 * for this provider. Validating against the dynamic list ensures a
+	 * discovered model the user selected is honoured at generation time.
 	 */
 	public function get_validated_model(): string {
-		$stored = get_option( 'swps_model', '' );
-		$models = $this->get_available_models();
-
-		if ( ! empty( $stored ) && array_key_exists( $stored, $models ) ) {
-			return $stored;
-		}
-
-		// Fall back to the first model for this provider.
-		return array_key_first( $models );
+		$ids = ( new SWPS_Model_Discovery() )->available_model_ids( $this->get_slug() );
+		return SWPS_Model_Discovery::validate_selection( (string) get_option( 'swps_model', '' ), $ids );
 	}
 }
