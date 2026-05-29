@@ -56,9 +56,15 @@
 
         const slug = $aiProvider.val();
 
-        // Hide all AI key rows, then show the active one.
+        // Hide all AI key rows, then show the active text provider's row.
         $('.swps-ai-key-row').closest('tr').hide();
         $('.swps-provider-' + slug).closest('tr').show();
+
+        // Gemini image generation reuses the Google key — keep it visible even
+        // when the text provider isn't Google, so the image key stays editable.
+        if ($imageProvider.length && $imageProvider.val() === 'gemini') {
+            $('.swps-provider-google').closest('tr').show();
+        }
     }
 
     function loadModelsForProvider(slug) {
@@ -124,6 +130,9 @@
         if (imagesEnabled) {
             $('.swps-image-provider-' + slug).closest('tr').show();
         }
+
+        // The Google key row lives in the AI section; Gemini images depend on it.
+        updateAIKeyVisibility();
     }
 
     if ($imageProvider.length) {
