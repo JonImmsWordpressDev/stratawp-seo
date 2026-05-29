@@ -21,7 +21,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, a per-post meta editor, **Local SEO** (LocalBusiness schema with NAP and opening hours), **Image SEO** (auto-alt + filename sanitization + lazy-load), **Crawlers & Files** (in-admin editor for /llms.txt and /robots.txt), and **Backlinks** (manual/CSV-import tracker with daily health monitoring) — on autopilot or on demand.
 
-[![Version](https://img.shields.io/badge/version-4.8.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.9.0-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -62,7 +62,7 @@ It's designed to **replace** Yoast/RankMath/AIOSEO if you want to, or **coexist*
 ## Features
 
 ### AI Content Generation
-- **Multi-provider AI** — Anthropic (Claude Opus 4.7, Opus 4.6, Sonnet 4.6/4.5, Haiku 4.5), OpenAI (GPT), Google (Gemini), xAI (Grok)
+- **Multi-provider AI** — Anthropic (Claude), OpenAI (GPT), Google (Gemini), xAI (Grok) — model lists are discovered live from each provider's API and refreshed daily
 - **Site-aware generation** — analyzes existing posts, categories, and internal links before writing
 - **7 content templates** — Auto, Listicle, How-To Guide, Comparison, Case Study, News Analysis, Tutorial
 - **Voice profiles** — reusable writing personas (tone, formality 1-10, sentence length, vocabulary, person, avoid/preferred phrases, sample text)
@@ -1274,6 +1274,13 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 ---
 
 ## Changelog
+
+### v4.9.0 — May 2026
+- **Feature — fully dynamic model lists:** AI model dropdowns are now pulled live from each provider's API and refreshed daily, so new models appear automatically without a plugin update.
+- **Feature — dynamic superlative labels:** Most powerful, Cheapest, Costs most, and Best value tags are now computed dynamically across each provider's discovered model set, always reflecting the current lineup.
+- **Feature — tighter Google filtering:** image output, TTS, music (Lyria), and robotics models are excluded from the Gemini text-model picker.
+- **Feature — auto-priced new models:** cost tracking now prices newly discovered models via family heuristics; new model IDs no longer fall through to a $0 default.
+- **Fix — selected model now sticks:** a discovered model selected in Settings was silently falling back to the hardcoded default at generation time due to a validation gap. Fixed.
 
 ### v4.8.0 — May 2026
 - **Feature — model auto-discovery:** AI models are discovered daily from each configured provider's API and merged into the model dropdown automatically, with a dismissible new-model alert. Curated lists remain the labeled fallback; nothing auto-switches.

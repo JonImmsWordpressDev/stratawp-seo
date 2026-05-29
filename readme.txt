@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.8.0
+Stable tag: 4.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -252,6 +252,13 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.9.0 — 2026-05-29 =
+* Feature: AI model lists are now fully dynamic — fetched live from each provider's API and refreshed daily, so new models appear automatically without a plugin update.
+* Feature: Superlative labels (Most powerful, Cheapest, Costs most, Best value) are now computed dynamically across each provider's full discovered model set, so the correct models are always highlighted even as new models are released.
+* Feature: Google model list is now filtered more tightly — image output, TTS, music (Lyria), and robotics models are excluded, leaving only text-generation models in the picker.
+* Feature: Cost tracking now prices newly discovered models automatically via family heuristics — new model IDs no longer fall through to a $0 default.
+* Fix: Selecting a discovered model in Settings now sticks at generation time. Previously, any model not in the original hardcoded list failed validation silently and the plugin fell back to the default, so discovery was effectively inoperative.
 
 = 4.8.0 — 2026-05-29 =
 * Feature: AI models are now auto-discovered from each configured provider's API (Anthropic, OpenAI, Google, xAI) once a day and added to the model dropdown automatically, with a dismissible alert when a new model appears.
