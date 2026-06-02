@@ -358,7 +358,7 @@ class SWPS_AEO_Optimizer {
 			'Return JSON with exactly these keys: ' .
 			'{"edits":[{"find":"...","replace":"...","reason":"..."}], ' .
 			'"inserts":[{"kind":"qa|tldr|list|defn","anchor":"<h2 text> or top","html":"<...>","reason":"..."}], ' .
-			'"schema":{"type":"howto|recipe|product|review|qapage|null","reason":"..."}, ' .
+			'"schema":{"type":"howto|recipe|product|review|faqpage|null","reason":"..."}, ' .
 			'"projected_score":<int 0-100>}.',
 			$post->post_title,
 			$expected_type ?? 'none',

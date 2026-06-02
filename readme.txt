@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.9.0
+Stable tag: 4.9.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -252,6 +252,11 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.9.1 — 2026-06-02 =
+* Fix: AEO Optimize now emits FAQPage structured data for Q&A sections instead of QAPage, resolving the "Q&A structured data issues" Google Search Console flags (issue #44). QAPage is Google's type for community pages with user-submitted answers; using it for site-authored FAQ content was invalid. Existing pages are auto-converted on update (or run `wp swps migrate-qapage`); then use Search Console's "Validate fix" on the Q&A report.
+* Fix: The schema validator now requires every FAQ question to carry a real answer (acceptedAnswer text) before the JSON-LD is emitted, so incomplete markup can no longer reach Search Console.
+* Note: Google retired FAQ rich results (the expandable Q&A in search) for most sites in 2023, so FAQPage markup no longer shows that rich snippet — but it is valid, error-free, and still helps AI answer engines parse your content.
 
 = 4.9.0 — 2026-05-29 =
 * Feature: AI model lists are now fully dynamic — fetched live from each provider's API and refreshed daily, so new models appear automatically without a plugin update.

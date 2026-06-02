@@ -355,4 +355,34 @@ class SWPS_CLI {
 			);
 		}
 	}
+
+	/**
+	 * Convert legacy QAPage AEO schema to FAQPage (issue #44).
+	 *
+	 * Rewrites the _swps_aeo_schema_json / _swps_aeo_schema_type post meta on
+	 * pages optimized before the QAPage→FAQPage fix. Runs automatically once
+	 * after updating the plugin; this command re-runs it on demand (e.g. if
+	 * the auto-migration was skipped or you restored an old database).
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp swps migrate-qapage
+	 *
+	 * @param array $args       Positional arguments.
+	 * @param array $assoc_args Named arguments.
+	 */
+	public function migrate_qapage( array $args, array $assoc_args ): void {
+		WP_CLI::log( 'Converting legacy QAPage schema to FAQPage...' );
+
+		$result = SWPS_AEO_Schema_Migrator::migrate_all();
+		update_option( 'swps_qapage_faqpage_migrated', 1 );
+
+		WP_CLI::success(
+			sprintf(
+				'%d post(s) converted to FAQPage, %d cleared (re-run AEO optimize to regenerate those).',
+				$result['converted'],
+				$result['cleared']
+			)
+		);
+	}
 }
