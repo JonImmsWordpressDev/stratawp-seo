@@ -29,7 +29,7 @@ class SWPS_AEO_Markup_Scorer {
 	 * patterns. A type is considered a match when at least 2 of its signals
 	 * fire (avoids false positives from a single weak signal).
 	 *
-	 * Note: 'qapage' has no patterns here — it's inferred separately from
+	 * Note: 'faqpage' has no patterns here — it's inferred separately from
 	 * the title (ends in '?') or H2 question density (>=80% question H2s).
 	 */
 	private const TYPE_SIGNALS = array(
@@ -55,7 +55,7 @@ class SWPS_AEO_Markup_Scorer {
 			'/\b\d(?:\.\d)?\s*\/\s*5\b/',
 			'/★{3,5}/u',
 		),
-		'qapage' => array(),
+		'faqpage' => array(),
 	);
 
 	/**
@@ -147,15 +147,15 @@ class SWPS_AEO_Markup_Scorer {
 	 *
 	 * @param string $html  Raw post HTML.
 	 * @param string $title Post title.
-	 * @return string|null  One of: 'howto', 'recipe', 'product', 'review', 'qapage', or null.
+	 * @return string|null  One of: 'howto', 'recipe', 'product', 'review', 'faqpage', or null.
 	 */
 	public function infer_schema_type( string $html, string $title ): ?string {
 		$title    = strtolower( $title );
 		$haystack = $title . ' ' . $html;
 
-		// QAPage: title ends in '?' OR >=80% of H2s are questions.
+		// FAQPage: title ends in '?' OR >=80% of H2s are questions.
 		if ( str_ends_with( trim( $title ), '?' ) ) {
-			return 'qapage';
+			return 'faqpage';
 		}
 		if ( preg_match_all( '#<h2[^>]*>([^<]+)</h2>#i', $html, $h2s ) ) {
 			$total_h2 = count( $h2s[1] );
@@ -167,7 +167,7 @@ class SWPS_AEO_Markup_Scorer {
 					}
 				}
 				if ( $q_h2 / $total_h2 >= 0.8 ) {
-					return 'qapage';
+					return 'faqpage';
 				}
 			}
 		}
@@ -175,7 +175,7 @@ class SWPS_AEO_Markup_Scorer {
 		// Score remaining types by signal hits; require >=2 for a match.
 		$scores = array();
 		foreach ( self::TYPE_SIGNALS as $slug => $patterns ) {
-			if ( 'qapage' === $slug ) {
+			if ( 'faqpage' === $slug ) {
 				continue;
 			}
 			$hits = 0;

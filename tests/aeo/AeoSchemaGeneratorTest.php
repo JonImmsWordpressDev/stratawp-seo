@@ -97,26 +97,28 @@ final class AeoSchemaGeneratorTest extends TestCase {
 		$this->assertStringContainsString( 'AI provider error', (string) $r['error'] );
 	}
 
-	public function test_qapage_prompt_includes_main_entity_shape_guidance(): void {
+	public function test_faqpage_prompt_includes_array_shape_guidance(): void {
 		$provider = new FakeAIProvider();
 		$provider->next_response = array(
 			'@context'   => 'https://schema.org',
-			'@type'      => 'QAPage',
+			'@type'      => 'FAQPage',
 			'mainEntity' => array(
-				'@type'          => 'Question',
-				'name'           => 'How long does sourdough need to ferment?',
-				'text'           => 'How long does sourdough need to ferment?',
-				'acceptedAnswer' => array(
-					'@type' => 'Answer',
-					'text'  => '4-6 hours at room temperature.',
+				array(
+					'@type'          => 'Question',
+					'name'           => 'How long does sourdough need to ferment?',
+					'acceptedAnswer' => array(
+						'@type' => 'Answer',
+						'text'  => '4-6 hours at room temperature.',
+					),
 				),
 			),
 		);
 		$gen = new SWPS_AEO_Schema_Generator( $provider, $this->fields_path() );
-		$r   = $gen->generate( 'qapage', 'How long does sourdough ferment?', '<p>4-6 hours.</p>' );
+		$r   = $gen->generate( 'faqpage', 'How long does sourdough ferment?', '<p>4-6 hours.</p>' );
 
-		// The prompt must teach the AI the Question shape so mainEntity isn't empty.
-		$this->assertStringContainsString( 'mainEntity should be a Question object', $provider->last_user );
+		// The prompt must teach the AI that mainEntity is an ARRAY of Questions
+		// (issue #44: site-authored Q&A is FAQPage, not QAPage).
+		$this->assertStringContainsString( 'mainEntity should be an ARRAY of Question objects', $provider->last_user );
 		$this->assertStringContainsString( 'acceptedAnswer', $provider->last_user );
 
 		// Required-vs-recommended distinction must be explicit (regression for the
@@ -125,25 +127,76 @@ final class AeoSchemaGeneratorTest extends TestCase {
 		$this->assertStringContainsString( 'REQUIRED fields', $provider->last_user );
 		$this->assertStringContainsString( 'never empty', $provider->last_user );
 
-		// And a well-formed QAPage passes validation end-to-end.
-		$this->assertSame( 'QAPage', $r['json']['@type'] );
+		// And a well-formed FAQPage passes validation end-to-end.
+		$this->assertSame( 'FAQPage', $r['json']['@type'] );
 		$this->assertNull( $r['error'] );
 	}
 
-	public function test_qapage_with_empty_main_entity_still_rejected(): void {
-		// Regression for the live bug: AI returned mainEntity:[] for a QAPage,
-		// the validator (correctly) flagged it as "empty required field: mainEntity".
-		// The prompt fix reduces the likelihood; the validator still has the final say.
+	public function test_faqpage_wraps_single_question_into_array(): void {
+		// The AI sometimes returns mainEntity as a single Question object for a
+		// one-question post. Google's FAQPage shape is a list; the generator
+		// must normalize before output.
 		$provider = new FakeAIProvider();
 		$provider->next_response = array(
 			'@context'   => 'https://schema.org',
-			'@type'      => 'QAPage',
+			'@type'      => 'FAQPage',
+			'mainEntity' => array(
+				'@type'          => 'Question',
+				'name'           => 'Is it vegan?',
+				'acceptedAnswer' => array( '@type' => 'Answer', 'text' => 'Yes.' ),
+			),
+		);
+		$gen = new SWPS_AEO_Schema_Generator( $provider, $this->fields_path() );
+		$r   = $gen->generate( 'faqpage', 'FAQ', '<p>...</p>' );
+
+		$this->assertNull( $r['error'] );
+		$this->assertArrayHasKey( 0, $r['json']['mainEntity'] );
+		$this->assertSame( 'Question', $r['json']['mainEntity'][0]['@type'] );
+	}
+
+	public function test_faqpage_with_empty_main_entity_rejected(): void {
+		$provider = new FakeAIProvider();
+		$provider->next_response = array(
+			'@context'   => 'https://schema.org',
+			'@type'      => 'FAQPage',
 			'mainEntity' => array(),
 		);
 		$gen = new SWPS_AEO_Schema_Generator( $provider, $this->fields_path() );
-		$r   = $gen->generate( 'qapage', 'X', '<p>Y</p>' );
+		$r   = $gen->generate( 'faqpage', 'X', '<p>Y</p>' );
 
 		$this->assertNull( $r['json'] );
 		$this->assertStringContainsString( 'mainEntity', (string) $r['error'] );
+	}
+
+	public function test_faqpage_question_missing_answer_rejected(): void {
+		// The pre-fix validator only checked mainEntity was non-empty, so a
+		// Question with no acceptedAnswer.text slipped through and tripped
+		// Search Console (issue #44). It must now be rejected.
+		$provider = new FakeAIProvider();
+		$provider->next_response = array(
+			'@context'   => 'https://schema.org',
+			'@type'      => 'FAQPage',
+			'mainEntity' => array(
+				array(
+					'@type' => 'Question',
+					'name'  => 'What time does it open?',
+					// No acceptedAnswer.
+				),
+			),
+		);
+		$gen = new SWPS_AEO_Schema_Generator( $provider, $this->fields_path() );
+		$r   = $gen->generate( 'faqpage', 'X', '<p>Y</p>' );
+
+		$this->assertNull( $r['json'] );
+		$this->assertStringContainsString( 'acceptedAnswer', (string) $r['error'] );
+	}
+
+	public function test_qapage_is_no_longer_a_supported_type(): void {
+		$provider = new FakeAIProvider();
+		$gen      = new SWPS_AEO_Schema_Generator( $provider, $this->fields_path() );
+		$r        = $gen->generate( 'qapage', 'X', '<p>Y</p>' );
+
+		$this->assertNull( $r['json'] );
+		$this->assertSame( 'unsupported_type', $r['error'] );
 	}
 }

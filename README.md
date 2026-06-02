@@ -21,7 +21,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, a per-post meta editor, **Local SEO** (LocalBusiness schema with NAP and opening hours), **Image SEO** (auto-alt + filename sanitization + lazy-load), **Crawlers & Files** (in-admin editor for /llms.txt and /robots.txt), and **Backlinks** (manual/CSV-import tracker with daily health monitoring) — on autopilot or on demand.
 
-[![Version](https://img.shields.io/badge/version-4.9.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.9.1-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -1274,6 +1274,11 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 ---
 
 ## Changelog
+
+### v4.9.1 — June 2026
+- **Fix — FAQPage instead of QAPage:** AEO Optimize now marks up Q&A sections as `FAQPage` rather than `QAPage`, clearing the "Q&A structured data issues" Google Search Console reports (issue #44). `QAPage` is for community pages with user-submitted answers and was the wrong type for site-authored FAQ content. Pages optimized before the fix are auto-converted on update (or run `wp swps migrate-qapage`), after which you can hit "Validate fix" in Search Console.
+- **Fix — stricter schema validation:** every FAQ question must now carry a real answer before JSON-LD is emitted, so incomplete Q&A markup can't reach Search Console.
+- **Note:** Google retired FAQ rich results for most sites in 2023, so FAQPage no longer renders the expandable Q&A snippet — but the markup is valid, error-free, and still helps AI answer engines parse your content.
 
 ### v4.9.0 — May 2026
 - **Feature — fully dynamic model lists:** AI model dropdowns are now pulled live from each provider's API and refreshed daily, so new models appear automatically without a plugin update.

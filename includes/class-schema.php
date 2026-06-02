@@ -7,7 +7,7 @@
  *     Hooked at wp_head priority 1. Bails entirely if Yoast / RankMath /
  *     AIOSEO is active.
  *   - AEO (v4.6+): dynamic per-post HowTo / Recipe / Product / Review /
- *     QAPage from _swps_aeo_schema_json post meta. Hooked at wp_head
+ *     FAQPage from _swps_aeo_schema_json post meta. Hooked at wp_head
  *     priority 10. Defers to other SEO plugins by default; respects the
  *     swps_schema_override option for per-type re-enable.
  *
@@ -117,7 +117,7 @@ class SWPS_Schema {
 
 		$enabled = (array) get_option(
 			'swps_aeo_enabled_schema_types',
-			array( 'howto', 'recipe', 'product', 'review', 'qapage' )
+			array( 'howto', 'recipe', 'product', 'review', 'faqpage' )
 		);
 		if ( ! in_array( $type, $enabled, true ) ) {
 			return;
