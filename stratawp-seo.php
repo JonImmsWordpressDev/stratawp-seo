@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.9.0
+ * Version: 4.9.1
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.9.0' );
+define( 'SWPS_VERSION', '4.9.1' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -103,6 +103,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-authority-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-coverage-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-schema-generator.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-schema-migrator.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-optimizer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-editor-panel.php';
 
@@ -243,6 +244,7 @@ final class StrataWP_SEO {
 
 	private function __construct() {
 		$this->maybe_migrate_legacy_options();
+		$this->maybe_migrate_qapage_to_faqpage();
 
 		// Initialize foundation subsystems.
 		$this->cache_manager     = new SWPS_Cache_Manager();
@@ -433,6 +435,29 @@ final class StrataWP_SEO {
 		}
 
 		update_option( 'swps_provider_migrated', 1 );
+	}
+
+	/**
+	 * One-time migration: rewrite legacy QAPage AEO schema as FAQPage (issue #44).
+	 *
+	 * QAPage emitted for site-authored Q&A content trips Google Search Console.
+	 * The generator now emits FAQPage; this fixes pages optimized before the
+	 * change, whose QAPage is frozen into post meta. Idempotent and gated on a
+	 * flag so it runs once after the update. Can be re-run manually via
+	 * `wp swps migrate-qapage`.
+	 */
+	private function maybe_migrate_qapage_to_faqpage(): void {
+		if ( get_option( 'swps_qapage_faqpage_migrated' ) ) {
+			return;
+		}
+		// Frontend page loads shouldn't pay for a full-table scan; defer to
+		// admin/CLI where the update is actually triggered.
+		if ( ! is_admin() && ! ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+			return;
+		}
+
+		SWPS_AEO_Schema_Migrator::migrate_all();
+		update_option( 'swps_qapage_faqpage_migrated', 1 );
 	}
 
 	/**

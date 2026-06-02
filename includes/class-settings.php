@@ -1043,9 +1043,9 @@ class SWPS_Settings {
 					'recipe'  => 'Recipe',
 					'product' => 'Product',
 					'review'  => 'Review',
-					'qapage'  => 'QAPage',
+					'faqpage' => 'FAQPage',
 				),
-				'default'     => array( 'howto', 'recipe', 'product', 'review', 'qapage' ),
+				'default'     => array( 'howto', 'recipe', 'product', 'review', 'faqpage' ),
 				'description' => __( 'Which dynamic schema types the renderer emits. Defers automatically when Yoast / RankMath / AIOSEO is active.', 'stratawp-seo' ),
 			)
 		);

@@ -1,7 +1,13 @@
 <?php
 /**
  * AEO Schema Generator — AI-driven dynamic JSON-LD for 5 schema types:
- * HowTo, Recipe, Product, Review, QAPage.
+ * HowTo, Recipe, Product, Review, FAQPage.
+ *
+ * Q&A content uses FAQPage (a list of questions each with one authoritative
+ * answer the site provides), NOT QAPage. QAPage is Google's type for pages
+ * built around a single user-submitted question with community answers
+ * (forum / Stack Overflow style); applying it to site-authored Q&A trips
+ * Search Console's QAPage validators. See issue #44.
  *
  * Workflow:
  *   1. Caller picks a type (typically from SWPS_AEO_Markup_Scorer::infer_schema_type()).
@@ -25,7 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class SWPS_AEO_Schema_Generator {
 
-	private const SUPPORTED_TYPES = array( 'howto', 'recipe', 'product', 'review', 'qapage' );
+	private const SUPPORTED_TYPES = array( 'howto', 'recipe', 'product', 'review', 'faqpage' );
 
 	/** @var object */
 	private $provider;
@@ -47,7 +53,7 @@ class SWPS_AEO_Schema_Generator {
 	/**
 	 * Generate JSON-LD for the given type.
 	 *
-	 * @param string $type  One of: howto, recipe, product, review, qapage.
+	 * @param string $type  One of: howto, recipe, product, review, faqpage.
 	 * @param string $title Post title.
 	 * @param string $html  Raw post HTML.
 	 * @return array{json: ?array<string, mixed>, error: ?string}
@@ -117,6 +123,13 @@ class SWPS_AEO_Schema_Generator {
 			$json = (array) apply_filters( 'swps_aeo_schema_json', $json, $type, null );
 		}
 
+		// FAQPage's mainEntity must be a list of Questions. The AI sometimes
+		// returns a single Question object for a one-question post; wrap it so
+		// the output matches Google's expected shape.
+		if ( 'FAQPage' === $expected_type ) {
+			$json = $this->normalize_faqpage( (array) $json );
+		}
+
 		$err = $this->validate( (array) $json, $expected_type, $required );
 		if ( null !== $err ) {
 			return array(
@@ -135,7 +148,7 @@ class SWPS_AEO_Schema_Generator {
 	 * Build human-readable shape guidance from the spec's *_shape entries.
 	 *
 	 * The schema-fields manifest defines nested-object shapes (e.g.
-	 * QAPage's main_entity_shape → Question, HowTo's step_shape →
+	 * FAQPage's main_entity_shape → Question, HowTo's step_shape →
 	 * HowToStep). Without telling the AI these shapes, it tends to
 	 * return empty arrays or null for the parent required field — which
 	 * the validator rejects. This method turns each *_shape entry into
@@ -166,12 +179,20 @@ class SWPS_AEO_Schema_Generator {
 			if ( '' === $type || empty( $fields ) ) {
 				continue;
 			}
-			$lines[] = sprintf(
-				'  - %s should be a %s object with fields: %s',
-				$parent_field,
-				$type,
-				implode( ', ', $fields )
-			);
+			$is_array = ! empty( $value['is_array'] );
+			$lines[]  = $is_array
+				? sprintf(
+					'  - %s should be an ARRAY of %s objects, each with fields: %s',
+					$parent_field,
+					$type,
+					implode( ', ', $fields )
+				)
+				: sprintf(
+					'  - %s should be a %s object with fields: %s',
+					$parent_field,
+					$type,
+					implode( ', ', $fields )
+				);
 		}
 		return implode( "\n", $lines );
 	}
@@ -198,6 +219,15 @@ class SWPS_AEO_Schema_Generator {
 		if ( ( $json['@type'] ?? '' ) !== $expected_type ) {
 			return 'invalid @type (expected ' . $expected_type . ')';
 		}
+
+		// FAQPage needs structural validation Google enforces but a flat
+		// required-fields check can't express: every Question must carry a
+		// non-empty name and an acceptedAnswer with non-empty text. Emitting
+		// markup that misses these is what trips Search Console (issue #44).
+		if ( 'FAQPage' === $expected_type ) {
+			return $this->validate_faqpage( $json );
+		}
+
 		foreach ( $required as $field ) {
 			if ( ! array_key_exists( $field, $json ) ) {
 				return "missing required field: {$field}";
@@ -205,6 +235,56 @@ class SWPS_AEO_Schema_Generator {
 			$v = $json[ $field ];
 			if ( null === $v || '' === $v || ( is_array( $v ) && empty( $v ) ) ) {
 				return "empty required field: {$field}";
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Coerce a FAQPage's mainEntity into a list of Question objects.
+	 *
+	 * The AI may return mainEntity as a single Question object (one-question
+	 * post). Google accepts a single item but its examples and validators
+	 * favour an array; we always emit a list for consistency.
+	 *
+	 * @param array<string, mixed> $json
+	 * @return array<string, mixed>
+	 */
+	private function normalize_faqpage( array $json ): array {
+		$entity = $json['mainEntity'] ?? null;
+		if ( is_array( $entity ) && isset( $entity['@type'] ) ) {
+			$json['mainEntity'] = array( $entity );
+		}
+		return $json;
+	}
+
+	/**
+	 * Validate a FAQPage's mainEntity question/answer structure.
+	 *
+	 * Requires a non-empty list of Question objects, each with a non-empty
+	 * name and an acceptedAnswer carrying non-empty text — the minimum Google
+	 * accepts for FAQPage.
+	 *
+	 * @param array<string, mixed> $json
+	 */
+	private function validate_faqpage( array $json ): ?string {
+		$entities = $json['mainEntity'] ?? null;
+		if ( ! is_array( $entities ) || empty( $entities ) ) {
+			return 'empty required field: mainEntity';
+		}
+
+		foreach ( $entities as $q ) {
+			if ( ! is_array( $q ) || ( $q['@type'] ?? '' ) !== 'Question' ) {
+				return 'mainEntity must be a list of Question objects';
+			}
+			$name = $q['name'] ?? '';
+			if ( ! is_string( $name ) || '' === trim( $name ) ) {
+				return 'Question missing name';
+			}
+			$answer = $q['acceptedAnswer'] ?? null;
+			$text   = is_array( $answer ) ? ( $answer['text'] ?? '' ) : '';
+			if ( ! is_string( $text ) || '' === trim( $text ) ) {
+				return 'Question missing acceptedAnswer text';
 			}
 		}
 		return null;

@@ -67,12 +67,12 @@ parameters:
 
 		-
 			message: "#^Call to static method log\\(\\) on an unknown class WP_CLI\\.$#"
-			count: 28
+			count: 29
 			path: includes/class-cli.php
 
 		-
 			message: "#^Call to static method success\\(\\) on an unknown class WP_CLI\\.$#"
-			count: 4
+			count: 5
 			path: includes/class-cli.php
 
 		-

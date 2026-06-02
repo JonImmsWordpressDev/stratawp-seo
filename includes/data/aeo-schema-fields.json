@@ -35,17 +35,18 @@
             "fields": ["ratingValue", "bestRating", "worstRating"]
         }
     },
-    "qapage": {
-        "type": "QAPage",
+    "faqpage": {
+        "type": "FAQPage",
         "required": ["mainEntity"],
         "recommended": [],
         "main_entity_shape": {
             "@type": "Question",
-            "fields": ["name", "text", "answerCount", "acceptedAnswer", "upvoteCount", "dateCreated", "author"]
+            "is_array": true,
+            "fields": ["name", "acceptedAnswer"]
         },
         "answer_shape": {
             "@type": "Answer",
-            "fields": ["text", "dateCreated", "upvoteCount", "author"]
+            "fields": ["text"]
         }
     }
 }
