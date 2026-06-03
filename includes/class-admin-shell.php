@@ -189,10 +189,13 @@ class SWPS_Admin_Shell {
 	private function render_top_bar( string $current_page ): void {
 		$crumb       = $this->breadcrumb_for( $current_page );
 		$theme       = $this->prefs->get_theme();
-		$toggle_icon = ( self::THEME_DARK_NAME === $theme ) ? 'dashicons-sun' : 'dashicons-moon';
-		$toggle_lbl  = ( self::THEME_DARK_NAME === $theme )
+		$is_dark     = ( self::THEME_DARK_NAME === $theme );
+		$toggle_icon = $is_dark ? 'dashicons-sun' : 'dashicons-moon';
+		$toggle_lbl  = $is_dark
 			? __( 'Switch to light mode', 'stratawp-seo' )
 			: __( 'Switch to dark mode', 'stratawp-seo' );
+		// Visible label names the target mode (what a click switches to).
+		$toggle_word = $is_dark ? __( 'Light', 'stratawp-seo' ) : __( 'Dark', 'stratawp-seo' );
 		$dashboard   = admin_url( 'admin.php?page=stratawp-seo' );
 		?>
 		<div class="swps-shell-top">
@@ -216,7 +219,7 @@ class SWPS_Admin_Shell {
 				aria-label="<?php echo esc_attr( $toggle_lbl ); ?>"
 				title="<?php echo esc_attr( $toggle_lbl ); ?>"
 			>
-				<span class="dashicons <?php echo esc_attr( $toggle_icon ); ?>"></span>
+				<span class="dashicons <?php echo esc_attr( $toggle_icon ); ?>"></span><span class="swps-shell-themebtn-label" data-swps-theme-label><?php echo esc_html( $toggle_word ); ?></span>
 			</button>
 			<a class="swps-shell-iconbtn"
 				href="https://github.com/jonimms/stratawp-seo"

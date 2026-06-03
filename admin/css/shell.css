@@ -288,6 +288,36 @@ body.swps-has-shell #screen-meta-links {
     line-height: 1;
 }
 
+/* Theme toggle: labeled accent pill so it reads as a control, not a stray icon.
+   Targeted via its data attribute so it stands apart from the muted Help icon. */
+.swps-shell-iconbtn[data-swps-theme-toggle] {
+    width: auto;
+    padding: 0 12px 0 10px;
+    gap: 7px;
+    color: var(--swps-text-primary);
+    border-color: var(--swps-accent-1);
+    background: var(--swps-accent-light);
+    font-weight: 600;
+}
+.swps-shell-iconbtn[data-swps-theme-toggle]:hover,
+.swps-shell-iconbtn[data-swps-theme-toggle]:focus {
+    background: var(--swps-accent-grad);
+    border-color: var(--swps-accent-1);
+    color: #fff;
+}
+.swps-shell-iconbtn[data-swps-theme-toggle] .dashicons {
+    color: var(--swps-accent-1);
+}
+.swps-shell-iconbtn[data-swps-theme-toggle]:hover .dashicons,
+.swps-shell-iconbtn[data-swps-theme-toggle]:focus .dashicons {
+    color: #fff;
+}
+.swps-shell-themebtn-label {
+    font-size: 12px;
+    letter-spacing: 0.01em;
+    line-height: 1;
+}
+
 /* ==========================================================================
    Horizontal nav (replaces the old left sidebar in v4.0.2)
    ========================================================================== */
