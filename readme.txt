@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.9.1
+Stable tag: 4.9.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -252,6 +252,9 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.9.2 — 2026-06-02 =
+* Improvement: The dark/light mode toggle in the admin top bar is now a labeled accent pill (showing "Light" or "Dark" next to the sun/moon icon) instead of a plain icon button that looked identical to the Help button beside it. Users reported being unable to find the toggle; it now reads clearly as an interactive control.
 
 = 4.9.1 — 2026-06-02 =
 * Fix: AEO Optimize now emits FAQPage structured data for Q&A sections instead of QAPage, resolving the "Q&A structured data issues" Google Search Console flags (issue #44). QAPage is Google's type for community pages with user-submitted answers; using it for site-authored FAQ content was invalid. Existing pages are auto-converted on update (or run `wp swps migrate-qapage`); then use Search Console's "Validate fix" on the Q&A report.

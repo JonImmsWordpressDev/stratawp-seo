@@ -1275,6 +1275,9 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 
 ## Changelog
 
+### v4.9.2 — June 2026
+- **Improvement — discoverable theme toggle:** the dark/light mode toggle in the admin top bar is now a labeled accent pill (sun/moon icon plus a "Light"/"Dark" label naming the mode it switches to) instead of a muted icon button that was visually identical to the Help button beside it. Several users reported being unable to find the toggle; it now reads clearly as an interactive control and stands out from the surrounding icons.
+
 ### v4.9.1 — June 2026
 - **Fix — FAQPage instead of QAPage:** AEO Optimize now marks up Q&A sections as `FAQPage` rather than `QAPage`, clearing the "Q&A structured data issues" Google Search Console reports (issue #44). `QAPage` is for community pages with user-submitted answers and was the wrong type for site-authored FAQ content. Pages optimized before the fix are auto-converted on update (or run `wp swps migrate-qapage`), after which you can hit "Validate fix" in Search Console.
 - **Fix — stricter schema validation:** every FAQ question must now carry a real answer before JSON-LD is emitted, so incomplete Q&A markup can't reach Search Console.
