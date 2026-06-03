@@ -26,6 +26,11 @@
             if (icon) {
                 icon.className = 'dashicons ' + (theme === 'dark' ? 'dashicons-sun' : 'dashicons-moon');
             }
+            // Visible label names the target mode (what a click switches to).
+            var label = btn.querySelector('[data-swps-theme-label]');
+            if (label) {
+                label.textContent = theme === 'dark' ? 'Light' : 'Dark';
+            }
             btn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
             btn.title = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
         }
