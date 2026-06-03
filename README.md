@@ -21,7 +21,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, a per-post meta editor, **Local SEO** (LocalBusiness schema with NAP and opening hours), **Image SEO** (auto-alt + filename sanitization + lazy-load), **Crawlers & Files** (in-admin editor for /llms.txt and /robots.txt), and **Backlinks** (manual/CSV-import tracker with daily health monitoring) — on autopilot or on demand.
 
-[![Version](https://img.shields.io/badge/version-4.9.1-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.9.3-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -1274,6 +1274,9 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 ---
 
 ## Changelog
+
+### v4.9.3 — June 2026
+- **Fix — robots.txt points at the real sitemap:** the virtual robots.txt now advertises the canonical sitemap index at `/sitemap_index.xml` instead of the legacy `/swps-sitemap.xml` URL (issue #48). When the sitemap engine was upgraded to a full index, `/swps-sitemap.xml` became a 301 redirect, but the robots.txt `Sitemap:` directive was never updated — so crawlers such as Ubersuggest reported the sitemap as not found. The advertised URL is now a single source of truth shared with the `/llms.txt` generator and stays correct when Yoast, Rank Math, or All in One SEO is handling sitemaps.
 
 ### v4.9.2 — June 2026
 - **Improvement — discoverable theme toggle:** the dark/light mode toggle in the admin top bar is now a labeled accent pill (sun/moon icon plus a "Light"/"Dark" label naming the mode it switches to) instead of a muted icon button that was visually identical to the Help button beside it. Several users reported being unable to find the toggle; it now reads clearly as an interactive control and stands out from the surrounding icons.
