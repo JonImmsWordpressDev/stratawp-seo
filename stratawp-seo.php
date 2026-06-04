@@ -390,10 +390,7 @@ final class StrataWP_SEO {
 		if ( get_option( 'swps_meta_editor_enabled', 1 ) && ! defined( 'WPSEO_VERSION' ) && ! defined( 'RANK_MATH_VERSION' ) && ! defined( 'AIOSEO_VERSION' ) ) {
 			remove_action( 'wp_head', array( SWPS_OpenGraph_Module::class, 'output_meta_tags' ), 5 );
 		}
-		// Sitemap generation/serving/pinging now handled by SWPS_Sitemap_Manager.
-		// add_action( 'init', [ SWPS_Sitemap_Module::class, 'register_rewrite_rules' ] );
-		// add_action( 'template_redirect', [ SWPS_Sitemap_Module::class, 'serve_sitemap' ] );
-		// add_action( 'publish_post', [ SWPS_Sitemap_Module::class, 'ping_search_engines' ] );
+		// Sitemap generation, serving, and pinging are handled by SWPS_Sitemap_Manager.
 		add_filter( 'robots_txt', array( SWPS_Robots_Module::class, 'filter_robots_txt' ), 10, 2 );
 
 		// SEO Audit AJAX handlers.

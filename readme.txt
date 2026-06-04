@@ -255,6 +255,7 @@ No. GSC integration is optional. The on-site analytics works entirely without an
 
 = 4.9.3 — 2026-06-03 =
 * Fix: robots.txt now advertises the canonical sitemap at /sitemap_index.xml instead of the legacy /swps-sitemap.xml redirect (issue #48). The sitemap engine was upgraded to a full index in 4.7, but the robots.txt Sitemap directive still pointed at the old single-file URL — which is now only a 301 redirect — so crawlers such as Ubersuggest reported the sitemap as missing. The advertised URL is now a single source of truth shared with the llms.txt generator, and stays correct when Yoast, Rank Math, or All in One SEO is handling sitemaps.
+* Maintenance: Removed ~130 lines of superseded sitemap-serving code from the audit module (generation is handled entirely by the sitemap engine now) and corrected the audit panel's "sitemap enabled" message to name the canonical /sitemap_index.xml URL.
 
 = 4.9.2 — 2026-06-02 =
 * Improvement: The dark/light mode toggle in the admin top bar is now a labeled accent pill (showing "Light" or "Dark" next to the sun/moon icon) instead of a plain icon button that looked identical to the Help button beside it. Users reported being unable to find the toggle; it now reads clearly as an interactive control.

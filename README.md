@@ -1277,6 +1277,7 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 
 ### v4.9.3 — June 2026
 - **Fix — robots.txt points at the real sitemap:** the virtual robots.txt now advertises the canonical sitemap index at `/sitemap_index.xml` instead of the legacy `/swps-sitemap.xml` URL (issue #48). When the sitemap engine was upgraded to a full index, `/swps-sitemap.xml` became a 301 redirect, but the robots.txt `Sitemap:` directive was never updated — so crawlers such as Ubersuggest reported the sitemap as not found. The advertised URL is now a single source of truth shared with the `/llms.txt` generator and stays correct when Yoast, Rank Math, or All in One SEO is handling sitemaps.
+- **Maintenance — removed dead sitemap code:** deleted ~130 lines of superseded sitemap serving/rewrite/ping code from the audit module (now handled entirely by `SWPS_Sitemap_Manager`) and fixed the audit panel's "sitemap enabled" message to name the canonical `/sitemap_index.xml` URL.
 
 ### v4.9.2 — June 2026
 - **Improvement — discoverable theme toggle:** the dark/light mode toggle in the admin top bar is now a labeled accent pill (sun/moon icon plus a "Light"/"Dark" label naming the mode it switches to) instead of a muted icon button that was visually identical to the Help button beside it. Several users reported being unable to find the toggle; it now reads clearly as an interactive control and stands out from the surrounding icons.
