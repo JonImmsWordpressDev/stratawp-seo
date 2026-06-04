@@ -292,20 +292,10 @@ class SWPS_AI_Bots {
 	}
 
 	/**
-	 * Detect the canonical sitemap URL from common providers.
+	 * The canonical, provider-aware sitemap URL. Delegates to
+	 * SWPS_Sitemap_Manager so robots.txt and llms.txt stay in lock-step (#48).
 	 */
 	private function detect_sitemap_url(): ?string {
-		if ( defined( 'WPSEO_VERSION' ) ) {
-			return home_url( '/sitemap_index.xml' );
-		}
-		if ( class_exists( 'RankMath' ) ) {
-			return home_url( '/sitemap_index.xml' );
-		}
-		if ( defined( 'AIOSEO_VERSION' ) ) {
-			return home_url( '/sitemap.xml' );
-		}
-
-		// StrataWP SEO disables the WP core sitemap and serves its own index.
-		return home_url( '/sitemap_index.xml' );
+		return SWPS_Sitemap_Manager::get_sitemap_url();
 	}
 }

@@ -89,16 +89,11 @@ class SWPS_Robots_Module extends SWPS_Audit_Module {
 			return $output;
 		}
 
-		// Add sitemap URL if not already present.
+		// Add sitemap URL if not already present. Use the manager's canonical,
+		// provider-aware URL so robots.txt always points at the sitemap we
+		// actually serve (/sitemap_index.xml), not the legacy redirect (#48).
 		if ( false === stripos( $output, 'sitemap:' ) ) {
-			// Prefer our sitemap if active, otherwise WP core.
-			if ( get_option( 'swps_audit_auto_sitemap', 1 ) ) {
-				$sitemap_url = home_url( '/swps-sitemap.xml' );
-			} else {
-				$sitemap_url = home_url( '/wp-sitemap.xml' );
-			}
-
-			$output .= "\nSitemap: " . esc_url( $sitemap_url ) . "\n";
+			$output .= "\nSitemap: " . esc_url( SWPS_Sitemap_Manager::get_sitemap_url() ) . "\n";
 		}
 
 		return $output;

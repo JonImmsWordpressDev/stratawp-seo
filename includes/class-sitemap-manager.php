@@ -29,6 +29,28 @@ class SWPS_Sitemap_Manager {
 			|| (bool) get_option( "swps_noindex_{$taxonomy}", 0 );
 	}
 
+	/**
+	 * The canonical, provider-aware sitemap URL to advertise in robots.txt and
+	 * llms.txt. Single source of truth so the advertised location can never
+	 * drift from what is actually served (see issue #48).
+	 *
+	 * StrataWP SEO serves its own index at /sitemap_index.xml (see
+	 * register_rewrite_rules() and serve_sitemap()). When a major third-party
+	 * SEO plugin is active we defer to its well-known sitemap location instead.
+	 */
+	public static function get_sitemap_url(): string {
+		// Yoast SEO and Rank Math both serve their index at /sitemap_index.xml.
+		if ( defined( 'WPSEO_VERSION' ) || class_exists( 'RankMath' ) ) {
+			return home_url( '/sitemap_index.xml' );
+		}
+		// All in One SEO serves its index at /sitemap.xml.
+		if ( defined( 'AIOSEO_VERSION' ) ) {
+			return home_url( '/sitemap.xml' );
+		}
+		// StrataWP SEO disables WP core sitemaps and serves its own index.
+		return home_url( '/sitemap_index.xml' );
+	}
+
 	public function __construct() {
 		// Disable WP core sitemaps to prevent conflict detection from blocking us.
 		add_filter( 'wp_sitemaps_enabled', '__return_false' );

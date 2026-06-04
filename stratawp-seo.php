@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.9.2
+ * Version: 4.9.3
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.9.2' );
+define( 'SWPS_VERSION', '4.9.3' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -390,10 +390,7 @@ final class StrataWP_SEO {
 		if ( get_option( 'swps_meta_editor_enabled', 1 ) && ! defined( 'WPSEO_VERSION' ) && ! defined( 'RANK_MATH_VERSION' ) && ! defined( 'AIOSEO_VERSION' ) ) {
 			remove_action( 'wp_head', array( SWPS_OpenGraph_Module::class, 'output_meta_tags' ), 5 );
 		}
-		// Sitemap generation/serving/pinging now handled by SWPS_Sitemap_Manager.
-		// add_action( 'init', [ SWPS_Sitemap_Module::class, 'register_rewrite_rules' ] );
-		// add_action( 'template_redirect', [ SWPS_Sitemap_Module::class, 'serve_sitemap' ] );
-		// add_action( 'publish_post', [ SWPS_Sitemap_Module::class, 'ping_search_engines' ] );
+		// Sitemap generation, serving, and pinging are handled by SWPS_Sitemap_Manager.
 		add_filter( 'robots_txt', array( SWPS_Robots_Module::class, 'filter_robots_txt' ), 10, 2 );
 
 		// SEO Audit AJAX handlers.
