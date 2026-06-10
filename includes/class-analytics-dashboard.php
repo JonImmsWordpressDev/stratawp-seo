@@ -26,6 +26,7 @@ class SWPS_Analytics_Dashboard {
 		add_action( 'wp_ajax_swps_analytics_top_pages', array( $this, 'ajax_top_pages' ) );
 		add_action( 'wp_ajax_swps_analytics_top_queries', array( $this, 'ajax_top_queries' ) );
 		add_action( 'wp_ajax_swps_analytics_post_stats', array( $this, 'ajax_post_stats' ) );
+		add_action( 'wp_ajax_swps_analytics_ai_referrals', array( $this, 'ajax_ai_referrals' ) );
 		add_action( 'wp_ajax_swps_gsc_disconnect', array( $this, 'ajax_disconnect_gsc' ) );
 		add_action( 'wp_ajax_swps_gsc_refresh', array( $this, 'ajax_refresh_gsc' ) );
 		add_action( 'wp_ajax_swps_gsc_save_property', array( $this, 'ajax_save_property' ) );
@@ -281,6 +282,58 @@ class SWPS_Analytics_Dashboard {
 		}
 
 		wp_send_json_success( $result );
+	}
+
+	/**
+	 * AJAX: AI referral attribution data (summary, landing posts,
+	 * engagement vs organic, crawl-to-visit funnel).
+	 */
+	public function ajax_ai_referrals(): void {
+		check_ajax_referer( 'swps_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
+		}
+
+		$days = absint( $_POST['days'] ?? 30 );
+		$days = in_array( $days, array( 7, 30, 90 ), true ) ? $days : 30;
+
+		$summary       = SWPS_AI_Referrals_Report::get_summary( $days );
+		$landing_posts = SWPS_AI_Referrals_Report::get_landing_posts( $days );
+		$engagement    = SWPS_AI_Referrals_Report::get_engagement_vs_organic( $days );
+		$funnel        = SWPS_AI_Referrals_Report::get_funnel( $days );
+
+		// Enrich post rows with titles and links (same pattern as ajax_top_pages).
+		foreach ( $landing_posts as &$row ) {
+			$post             = get_post( $row['post_id'] );
+			$row['title']     = $post ? $post->post_title : __( '(Unknown)', 'stratawp-seo' );
+			$row['url']       = $post ? get_permalink( $post ) : '';
+			$row['edit_link'] = get_edit_post_link( $row['post_id'], 'raw' ) ?? '';
+		}
+		unset( $row );
+
+		foreach ( $funnel['rows'] as &$row ) {
+			$post             = get_post( $row['post_id'] );
+			$row['title']     = $post ? $post->post_title : __( '(Unknown)', 'stratawp-seo' );
+			$row['edit_link'] = get_edit_post_link( $row['post_id'], 'raw' ) ?? '';
+		}
+		unset( $row );
+
+		foreach ( $funnel['crawled_no_visits'] as &$row ) {
+			$post             = get_post( $row['post_id'] );
+			$row['title']     = $post ? $post->post_title : __( '(Unknown)', 'stratawp-seo' );
+			$row['edit_link'] = get_edit_post_link( $row['post_id'], 'raw' ) ?? '';
+		}
+		unset( $row );
+
+		wp_send_json_success(
+			array(
+				'summary'       => $summary,
+				'landing_posts' => $landing_posts,
+				'engagement'    => $engagement,
+				'funnel'        => $funnel,
+			)
+		);
 	}
 
 	/**
