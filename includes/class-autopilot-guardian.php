@@ -87,4 +87,33 @@ class SWPS_Autopilot_Guardian {
 		$attempt = max( 1, $attempt );
 		return 900 * ( 2 ** ( $attempt - 1 ) );
 	}
+
+	/**
+	 * Gate a generation on the monthly budget.
+	 *
+	 * @return true|WP_Error True to proceed; WP_Error 'swps_budget_exceeded' to block.
+	 */
+	public static function check_budget() {
+		$budget = (float) get_option( self::OPTION_BUDGET, 0 );
+		if ( $budget <= 0 ) {
+			return true;
+		}
+
+		$tracker = new SWPS_Cost_Tracker();
+		$spent   = (float) ( $tracker->get_monthly_stats()['total_cost'] ?? 0 );
+
+		if ( 'exceeded' === self::budget_state( $spent, $budget ) ) {
+			return new WP_Error(
+				'swps_budget_exceeded',
+				sprintf(
+					/* translators: 1: amount spent, 2: budget */
+					__( 'Monthly AI budget reached ($%1$s of $%2$s). Generation is paused until next month or until you raise the budget in Settings.', 'stratawp-seo' ),
+					number_format_i18n( $spent, 2 ),
+					number_format_i18n( $budget, 2 )
+				)
+			);
+		}
+
+		return true;
+	}
 }

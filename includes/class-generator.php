@@ -52,6 +52,13 @@ class SWPS_Generator {
 		}
 		ignore_user_abort( true );
 
+		// Budget gate — cheapest check, runs before anything spends money.
+		$budget_check = SWPS_Autopilot_Guardian::check_budget();
+		if ( is_wp_error( $budget_check ) ) {
+			SWPS_Hooks::do_generation_failed( $budget_check, $topic, $template );
+			return $budget_check;
+		}
+
 		// Fire before_generate action.
 		SWPS_Hooks::do_before_generate( $topic, $template );
 
