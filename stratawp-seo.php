@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.17.0
+ * Version: 4.18.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.17.0' );
+define( 'SWPS_VERSION', '4.18.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -116,6 +116,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-question-coverage.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-metric-history.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-decay-watchdog.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-refresh-queue-admin.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-schema-generator.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-schema-migrator.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-optimizer.php';
@@ -279,6 +280,7 @@ final class StrataWP_SEO {
 	 * @var SWPS_Decay_Watchdog
 	 */
 	public SWPS_Decay_Watchdog $decay_watchdog;
+	public SWPS_Refresh_Queue_Admin $refresh_queue_admin;
 
 	// v4.0 admin shell.
 	public SWPS_User_Prefs $user_prefs;
@@ -369,6 +371,7 @@ final class StrataWP_SEO {
 		SWPS_Metric_History::maybe_upgrade();
 		$this->metric_history  = new SWPS_Metric_History();
 		$this->decay_watchdog  = new SWPS_Decay_Watchdog( $this->search_console, $this->metric_history );
+		$this->refresh_queue_admin   = new SWPS_Refresh_Queue_Admin( $this->metric_history );
 
 		$this->competitors          = new SWPS_Competitors();
 		$this->local_seo            = new SWPS_Local_SEO();

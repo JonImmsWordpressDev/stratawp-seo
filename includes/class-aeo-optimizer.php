@@ -408,6 +408,14 @@ class SWPS_AEO_Optimizer {
 			}
 		}
 
+		// Refresh-queue context: when the decay watchdog staged a refresh for
+		// this post (15-min transient), steer the proposal toward freshness.
+		$refresh_key = 'swps_refresh_ctx_' . $post_id;
+		if ( get_transient( $refresh_key ) ) {
+			delete_transient( $refresh_key );
+			$user .= "\n\n" . __( 'This post is losing search traffic. Prioritize a freshness refresh: update outdated facts and year references cautiously - never invent statistics or data; add a brief updated note near the top; refresh the TL;DR/summary if present.', 'stratawp-seo' );
+		}
+
 		$result = $this->ai_provider->chat_json( $system, $user, 4096 );
 		if ( is_wp_error( $result ) ) {
 			return array( 'error' => $result->get_error_message(), 'http_status' => 500 );
