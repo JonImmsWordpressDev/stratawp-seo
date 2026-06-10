@@ -97,6 +97,7 @@ class SWPS_Dashboard {
 			'aeo_health'          => $this->safe_get_aeo_health(),
 			'recent_generations'  => $this->safe_get_recent_generations(),
 			'ai_cost_30d'         => $this->safe_get_ai_cost(),
+			'autopilot'           => $this->safe_get_autopilot(),
 			'posts_30d'           => $this->safe_get_post_views(),
 			'top_issues'          => $this->safe_get_top_issues(),
 			'top_queries'         => $this->safe_get_top_gsc_queries(),
@@ -249,6 +250,22 @@ class SWPS_Dashboard {
 				'usd'  => 0.0,
 				'gens' => 0,
 			);
+		}
+	}
+
+	/**
+	 * Retrieve merged autopilot schedule and guardian status for the dashboard.
+	 *
+	 * @return array
+	 */
+	private function safe_get_autopilot(): array {
+		try {
+			return array_merge(
+				SWPS_Cron::get_schedule_info(),
+				SWPS_Autopilot_Guardian::get_status()
+			);
+		} catch ( \Throwable $e ) {
+			return array();
 		}
 	}
 

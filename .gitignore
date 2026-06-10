@@ -29,3 +29,8 @@ AGENTS.md
 
 .claude-flow/
 CLAUDE.local.md
+
+# Claude-Flow session databases
+agentdb.rvf
+agentdb.rvf.lock
+ruvector.db

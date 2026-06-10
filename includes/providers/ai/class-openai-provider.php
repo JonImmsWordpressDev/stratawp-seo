@@ -88,7 +88,8 @@ class SWPS_OpenAI_Provider extends SWPS_AI_Provider {
 			$error_message = $body['error']['message'] ?? __( 'Unknown API error.', 'stratawp-seo' );
 			return new WP_Error(
 				'swps_api_error',
-				sprintf( __( 'OpenAI API error (%1$d): %2$s', 'stratawp-seo' ), $status_code, $error_message )
+				sprintf( __( 'OpenAI API error (%1$d): %2$s', 'stratawp-seo' ), $status_code, $error_message ),
+				array( 'status' => (int) $status_code )
 			);
 		}
 

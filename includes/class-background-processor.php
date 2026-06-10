@@ -207,10 +207,16 @@ class SWPS_Background_Processor {
 		$result = $plugin->generator->generate_post( $topic->post_title, $template );
 
 		if ( is_wp_error( $result ) ) {
-			$queue->update_status( $topic_id, 'failed', $result->get_error_message() );
+			if ( 'swps_budget_exceeded' === $result->get_error_code() ) {
+				// Not the topic's fault — return it to the queue untouched.
+				$queue->update_status( $topic_id, 'queued' );
+				return;
+			}
+			SWPS_Autopilot_Guardian::handle_topic_failure( $topic_id, $result, $queue );
 			return;
 		}
 
+		delete_post_meta( $topic_id, '_swps_attempt_count' );
 		$queue->update_status( $topic_id, 'published', '', $result['post_id'] );
 	}
 

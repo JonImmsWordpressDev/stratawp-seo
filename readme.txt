@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.10.0
+Stable tag: 4.11.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -293,6 +293,10 @@ No. GSC integration is optional. The on-site analytics works entirely without an
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.11.0 =
+* New: Autopilot Guardian — monthly AI budget cap with 80% warning, automatic retry with backoff for transient API errors, failed-topic requeue (max 3 attempts), and a dashboard autopilot status tile.
+* Fix: a single failed generation no longer abandons the rest of a scheduled batch.
 
 = 4.10.0 — 2026-06-09 =
 * New: "Remove Data on Uninstall" toggle (Settings → Advanced, off by default). Deleting the plugin now keeps your settings, custom tables (analytics, keywords, redirects, links, backlinks), topics, and voice profiles unless you explicitly opt in to a full wipe — so a delete + reinstall no longer destroys your data. Scheduled tasks, Action Scheduler entries, and transient caches are always cleaned up on uninstall regardless of the setting.

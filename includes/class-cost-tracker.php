@@ -22,7 +22,10 @@ class SWPS_Cost_Tracker {
 	 * @param int    $post_id       Optional post ID to store per-post data.
 	 */
 	public function track( string $model, int $input_tokens, int $output_tokens, int $post_id = 0 ): void {
-		if ( ! get_option( 'swps_cost_tracking', false ) ) {
+		// A budget cap is meaningless without spend data, so a set budget
+		// force-enables tracking regardless of the opt-in.
+		$budget_set = (float) get_option( 'swps_monthly_budget', 0 ) > 0;
+		if ( ! get_option( 'swps_cost_tracking', false ) && ! $budget_set ) {
 			return;
 		}
 

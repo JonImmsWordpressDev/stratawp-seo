@@ -77,6 +77,7 @@
 
 .swps-legend-queued { background: var(--swps-warning); }
 .swps-legend-generating { background: var(--swps-secondary); }
+.swps-legend-retrying { background: #f59e0b; }
 .swps-legend-published { background: var(--swps-success); }
 .swps-legend-failed { background: var(--swps-error); }
 .swps-legend-existing { background: var(--swps-text-light); }

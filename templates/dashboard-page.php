@@ -169,6 +169,63 @@ $welcome_msg = sprintf(
 			</div>
 		</div>
 
+		<?php $autopilot = $data['autopilot'] ?? array(); ?>
+		<?php if ( ! empty( $autopilot ) ) : ?>
+			<div class="swps-tile">
+				<div class="swps-tile-h"><?php esc_html_e( 'Autopilot', 'stratawp-seo' ); ?></div>
+				<?php if ( empty( $autopilot['enabled'] ) ) : ?>
+					<div class="swps-tile-stat"><?php esc_html_e( 'Off', 'stratawp-seo' ); ?></div>
+				<?php else : ?>
+					<?php
+					$last     = is_array( $autopilot['last_run'] ?? null ) ? $autopilot['last_run'] : array();
+					$healthy  = empty( $last ) || empty( $last['failed'] );
+					$exceeded = ( $autopilot['budget_state'] ?? 'ok' ) === 'exceeded';
+					?>
+					<div class="swps-tile-stat">
+						<?php
+						if ( $exceeded ) {
+							esc_html_e( 'Paused — budget', 'stratawp-seo' );
+						} elseif ( $healthy ) {
+							esc_html_e( 'Healthy', 'stratawp-seo' );
+						} else {
+							printf(
+								/* translators: number of failed generations in the last run */
+								esc_html__( '%d failed last run', 'stratawp-seo' ),
+								(int) $last['failed']
+							);
+						}
+						?>
+					</div>
+					<div class="swps-tile-trend" style="color:var(--swps-text-faint)">
+						<?php
+						if ( ! empty( $last['timestamp'] ) ) {
+							printf(
+								/* translators: 1: human time diff, 2: succeeded count, 3: failed count */
+								esc_html__( 'Last run %1$s ago — %2$d ok, %3$d failed', 'stratawp-seo' ),
+								esc_html( human_time_diff( (int) $last['timestamp'], time() ) ),
+								(int) ( $last['succeeded'] ?? 0 ),
+								(int) ( $last['failed'] ?? 0 )
+							);
+						}
+						if ( ( $autopilot['budget'] ?? 0 ) > 0 ) {
+							printf(
+								' · %s',
+								esc_html(
+									sprintf(
+										/* translators: 1: spent, 2: budget */
+										__( '$%1$s of $%2$s budget', 'stratawp-seo' ),
+										number_format_i18n( (float) $autopilot['spent'], 2 ),
+										number_format_i18n( (float) $autopilot['budget'], 2 )
+									)
+								)
+							);
+						}
+						?>
+					</div>
+				<?php endif; ?>
+			</div>
+		<?php endif; ?>
+
 		<a class="swps-tile swps-tile-aeo" href="<?php echo esc_url( admin_url( 'admin.php?page=swps-aeo-optimize' ) ); ?>" style="text-decoration:none;color:inherit;display:block">
 			<div class="swps-tile-h"><?php esc_html_e( 'AEO health (avg)', 'stratawp-seo' ); ?></div>
 			<div class="swps-tile-stat">
