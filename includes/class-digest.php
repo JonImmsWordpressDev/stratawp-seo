@@ -37,11 +37,20 @@ class SWPS_Digest {
 
 	/**
 	 * Register action hooks: generation-failure listener and cron send.
-	 * Settings and test-send hooks are added in Task 3.
+	 * Settings and test-send hooks live in SWPS_Digest_Settings.
 	 */
 	public function __construct() {
 		add_action( 'swps_generation_failed', array( $this, 'record_failure' ), 10, 3 );
-		add_action( self::CRON_HOOK, array( $this, 'send' ) );
+		add_action( self::CRON_HOOK, array( $this, 'cron_send' ) );
+	}
+
+	/**
+	 * Void cron callback wrapper around send().
+	 *
+	 * @return void
+	 */
+	public function cron_send(): void {
+		$this->send();
 	}
 
 	// ---- Failure listener ----
@@ -272,7 +281,7 @@ class SWPS_Digest {
 	 * AI-bot summary from the singleton.
 	 *
 	 * @param int $days Number of days to include.
-	 * @return array<string, mixed>|null
+	 * @return array<int, array<string, mixed>>|null
 	 */
 	private function get_bots( int $days ): ?array {
 		try {
