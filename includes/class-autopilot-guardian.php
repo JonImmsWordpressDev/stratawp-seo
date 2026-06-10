@@ -10,6 +10,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Safety layer for unattended (autopilot) content generation.
+ */
 class SWPS_Autopilot_Guardian {
 
 	public const OPTION_BUDGET   = 'swps_monthly_budget';
@@ -17,10 +20,30 @@ class SWPS_Autopilot_Guardian {
 
 	public const MAX_ATTEMPTS = 3;
 
+	/**
+	 * Hook the settings field and admin notices.
+	 */
 	public function __construct() {
+		add_action( 'admin_init', array( $this, 'maybe_dismiss_budget_notice' ), 5 );
 		// Priority 20: SWPS_Settings registers the schedule section at default 10.
 		add_action( 'admin_init', array( $this, 'register_settings' ), 20 );
 		add_action( 'admin_notices', array( $this, 'maybe_warn_budget' ) );
+	}
+
+	/**
+	 * Handle the budget-notice dismiss link before output, then strip the
+	 * query args so the nonce doesn't linger in the URL.
+	 */
+	public function maybe_dismiss_budget_notice(): void {
+		if ( ! isset( $_GET['swps_dismiss_budget_notice'] ) || ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		check_admin_referer( 'swps_dismiss_budget_notice' );
+
+		update_option( 'swps_budget_notice_dismissed_' . gmdate( 'Y_m' ), 1, false );
+
+		wp_safe_redirect( remove_query_arg( array( 'swps_dismiss_budget_notice', '_wpnonce' ) ) );
+		exit;
 	}
 
 	/**
@@ -47,12 +70,17 @@ class SWPS_Autopilot_Guardian {
 	}
 
 	/**
+	 * Sanitize the submitted budget to a non-negative two-decimal float.
+	 *
 	 * @param mixed $value Raw submitted value.
 	 */
 	public function sanitize_budget( $value ): float {
 		return max( 0, round( (float) $value, 2 ) );
 	}
 
+	/**
+	 * Render the budget input on the settings page.
+	 */
 	public function render_budget_field(): void {
 		$budget = (float) get_option( self::OPTION_BUDGET, 0 );
 		printf(
@@ -87,10 +115,6 @@ class SWPS_Autopilot_Guardian {
 
 		$dismiss_key = 'swps_budget_notice_dismissed_' . gmdate( 'Y_m' );
 
-		if ( 'warning' === $state && isset( $_GET['swps_dismiss_budget_notice'] ) && check_admin_referer( 'swps_dismiss_budget_notice' ) ) {
-			update_option( $dismiss_key, 1, false );
-			return;
-		}
 		if ( 'warning' === $state && get_option( $dismiss_key ) ) {
 			return;
 		}
@@ -172,6 +196,8 @@ class SWPS_Autopilot_Guardian {
 	 *
 	 * Providers attach the HTTP status as error data ('status'); a 4xx other
 	 * than 429 means the request itself is bad, so retrying is pointless.
+	 *
+	 * @param WP_Error $error The generation error to classify.
 	 */
 	public static function is_transient_error( WP_Error $error ): bool {
 		$code = $error->get_error_code();
@@ -237,6 +263,9 @@ class SWPS_Autopilot_Guardian {
 
 	/**
 	 * Record a per-run summary for the dashboard status strip.
+	 *
+	 * @param int $succeeded Posts generated successfully this run.
+	 * @param int $failed    Generation failures this run.
 	 */
 	public static function record_run( int $succeeded, int $failed ): void {
 		update_option(
