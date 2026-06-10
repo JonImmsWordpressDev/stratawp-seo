@@ -356,6 +356,13 @@ class SWPS_Digest {
 			$items[] = sprintf( '%d broken backlink%s', $data['backlinks']['broken'], 1 === $data['backlinks']['broken'] ? '' : 's' );
 		}
 
+		// Autopilot last-run failures.
+		if ( isset( $data['spend']['guardian']['last_run']['failed'] ) && (int) $data['spend']['guardian']['last_run']['failed'] > 0 ) {
+			$count = (int) $data['spend']['guardian']['last_run']['failed'];
+			/* translators: %d: failed count */
+			$items[] = sprintf( _n( 'Autopilot: %d post failed to generate in the last run', 'Autopilot: %d posts failed to generate in the last run', $count, 'stratawp-seo' ), $count );
+		}
+
 		// Budget warnings from autopilot guardian.
 		if ( isset( $data['spend']['guardian']['budget_state'] ) ) {
 			$state = $data['spend']['guardian']['budget_state'];
