@@ -2,8 +2,10 @@
 /**
  * Uninstall StrataWP SEO.
  *
- * Removes all plugin data: options, post meta, CPT posts, cron events, transients,
- * custom tables, term meta, and user meta.
+ * Always cleans up scheduled tasks and transient caches. Full data removal
+ * (options, post meta, CPT posts, custom tables, term meta, user meta) only
+ * runs when "Remove Data on Uninstall" is enabled in Settings → Advanced,
+ * so a delete + reinstall keeps your data by default.
  *
  * @package StrataWP_SEO
  */
@@ -14,29 +16,9 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 global $wpdb;
 
-// 1. Remove all swps_* options.
-$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'swps\_%'" );
-
-// 2. Remove all _swps_* post meta.
-$wpdb->query( "DELETE FROM {$wpdb->postmeta} WHERE meta_key LIKE '\_swps\_%'" );
-
-// 3. Delete all plugin CPT posts.
-foreach ( array( 'swps_topic', 'swps_voice_profile' ) as $swps_post_type ) {
-	$swps_posts = get_posts(
-		array(
-			'post_type'      => $swps_post_type,
-			'post_status'    => 'any',
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-		)
-	);
-
-	foreach ( $swps_posts as $swps_post_id ) {
-		wp_delete_post( $swps_post_id, true );
-	}
-}
-
-// 4. Remove cron events (recurring and single) for every plugin hook.
+// 1. Remove cron events (recurring and single) for every plugin hook.
+// Always runs: orphaned cron entries serve no purpose without the plugin,
+// and reactivation reschedules them.
 $swps_cron_hooks = array(
 	'swps_generate_scheduled_post',
 	'swps_process_topic',
@@ -59,17 +41,44 @@ foreach ( $swps_cron_hooks as $swps_cron_hook ) {
 	wp_unschedule_hook( $swps_cron_hook );
 }
 
-// 5. Remove transients.
-$wpdb->query(
-	"DELETE FROM {$wpdb->options} WHERE option_name LIKE '%\_transient\_swps\_%' OR option_name LIKE '%\_transient\_timeout\_swps\_%'"
-);
-
-// 6. Clear any Action Scheduler entries if available.
+// 2. Clear any Action Scheduler entries if available. Always runs.
 if ( function_exists( 'as_unschedule_all_actions' ) ) {
 	as_unschedule_all_actions( 'swps_process_topic' );
 	as_unschedule_all_actions( 'swps_generate_scheduled_post' );
 	as_unschedule_all_actions( 'swps_generate_featured_image' );
 	as_unschedule_all_actions( 'swps_generate_content_image' );
+}
+
+// 3. Remove transients. Always runs: pure cache, rebuilt on demand.
+$wpdb->query(
+	"DELETE FROM {$wpdb->options} WHERE option_name LIKE '%\_transient\_swps\_%' OR option_name LIKE '%\_transient\_timeout\_swps\_%'"
+);
+
+// Everything below permanently destroys data — only with explicit opt-in.
+if ( ! get_option( 'swps_remove_data_on_uninstall' ) ) {
+	return;
+}
+
+// 4. Remove all swps_* options.
+$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'swps\_%'" );
+
+// 5. Remove all _swps_* post meta.
+$wpdb->query( "DELETE FROM {$wpdb->postmeta} WHERE meta_key LIKE '\_swps\_%'" );
+
+// 6. Delete all plugin CPT posts.
+foreach ( array( 'swps_topic', 'swps_voice_profile' ) as $swps_post_type ) {
+	$swps_posts = get_posts(
+		array(
+			'post_type'      => $swps_post_type,
+			'post_status'    => 'any',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		)
+	);
+
+	foreach ( $swps_posts as $swps_post_id ) {
+		wp_delete_post( $swps_post_id, true );
+	}
 }
 
 // 7. Drop all custom tables.

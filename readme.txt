@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.9.5
+Stable tag: 4.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -288,7 +288,14 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
+= What happens to my data if I delete the plugin? =
+
+By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
+
 == Changelog ==
+
+= 4.10.0 — 2026-06-09 =
+* New: "Remove Data on Uninstall" toggle (Settings → Advanced, off by default). Deleting the plugin now keeps your settings, custom tables (analytics, keywords, redirects, links, backlinks), topics, and voice profiles unless you explicitly opt in to a full wipe — so a delete + reinstall no longer destroys your data. Scheduled tasks, Action Scheduler entries, and transient caches are always cleaned up on uninstall regardless of the setting.
 
 = 4.9.5 — 2026-06-09 =
 * Documentation: full README and how-to guide refresh. Every feature through 4.9.4 is now documented (AEO Optimize, Migration tool, automatic AI model discovery, background image jobs, AI Bot Analytics, and more), the page-by-page how-to guide covers all 21 admin pages with their real menu paths in actual menu order, feature sections follow the same canonical order in both readmes, and stale instructions (Search Console connection flow, internal-link rebuild behavior, migration version tags) were corrected against the current code. No functional changes.

@@ -21,7 +21,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, a per-post meta editor, **Local SEO** (LocalBusiness schema with NAP and opening hours), **Image SEO** (auto-alt + filename sanitization + lazy-load), **Crawlers & Files** (in-admin editor for /llms.txt and /robots.txt), and **Backlinks** (manual/CSV-import tracker with daily health monitoring) — on autopilot or on demand.
 
-[![Version](https://img.shields.io/badge/version-4.9.5-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.10.0-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -269,7 +269,7 @@ It's designed to **replace** Yoast/RankMath/AIOSEO if you want to, or **coexist*
 - **REST API** — programmatic access to generation, voice profiles, audit, analytics
 - **Encrypted secret storage** — sensitive options (GSC client secret, GSC OAuth access/refresh tokens, remote endpoint secret) encrypted at rest with authenticated AES-256-GCM; legacy AES-256-CBC values are decrypted transparently and upgraded on next save
 - **Debug page** — last failed AI response saved to a transient and viewable from the admin
-- **Clean uninstall** — deleting the plugin drops all 10 custom tables, clears every plugin cron hook (including image-job Action Scheduler entries), deletes Topic and Voice Profile posts, and removes per-user theme preferences — no data left behind
+- **Clean uninstall, your choice** — deleting the plugin always clears every plugin cron hook (including image-job Action Scheduler entries) and transient caches; with **Remove Data on Uninstall** enabled (Settings → Advanced, off by default) it also drops all 10 custom tables, deletes Topic and Voice Profile posts, and removes every option and per-user preference — no data left behind
 
 ---
 
@@ -280,7 +280,7 @@ It's designed to **replace** Yoast/RankMath/AIOSEO if you want to, or **coexist*
 ```
 stratawp-seo/
 ├── stratawp-seo.php              Plugin bootstrap, autoloader, main StrataWP_SEO singleton
-├── uninstall.php                 Clean removal on plugin delete
+├── uninstall.php                 Cron/cache cleanup on delete; full data wipe when opted in
 ├── readme.txt                    WordPress.org plugin readme
 ├── README.md                     This file
 │
@@ -1084,6 +1084,7 @@ The plugin handles model-specific quirks automatically — for example, Claude 4
 | **Duplicate Detection** | Block posts too similar to existing content |
 | **Cost Tracking** | Track tokens + estimated USD per generation |
 | **Min Content Score** | Posts scoring below are forced to draft (0 disables) |
+| **Remove Data on Uninstall** | Off by default: deleting the plugin keeps your settings, tables, topics, and analytics so a reinstall picks up where you left off. Enable for a full wipe on uninstall |
 
 ---
 
@@ -1370,6 +1371,10 @@ add_action( 'swps_audit_complete', function( array $results, int $overall_score 
 
 ## Frequently Asked Questions
 
+### What happens to my data if I delete the plugin?
+
+By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, custom tables (analytics, keywords, redirects, links, backlinks), topics, and voice profiles all survive a delete + reinstall. If you want a true clean removal, enable **Remove Data on Uninstall** under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
+
 ### Which AI provider should I use?
 
 Anthropic (Claude) is recommended for the best content quality, but OpenAI, Google, and xAI are excellent alternatives. Since v4.9.0 the model dropdown is fetched live from each provider's API and refreshed daily, with dynamically computed labels (Most powerful, Cheapest, Costs most, Best value) — pick "Best value" for everyday generation and "Most powerful" for cornerstone content.
@@ -1441,6 +1446,9 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 ---
 
 ## Changelog
+
+### v4.10.0 — June 2026
+- **New — "Remove Data on Uninstall" toggle:** deleting the plugin now keeps your data by default. A new checkbox under Settings → Advanced (off by default) controls whether uninstalling performs a full wipe — all options, the 10 custom tables, Topic and Voice Profile posts, and per-user preferences — or preserves everything for a future reinstall. Cron hooks, Action Scheduler entries, and transient caches are always cleaned up either way. This protects the common "delete + reinstall to troubleshoot" flow from silently destroying analytics history, keyword tracking, redirects, and backlinks.
 
 ### v4.9.5 — June 2026
 - **Documentation — full README and how-to guide refresh:** every feature through 4.9.4 is now documented (AEO Optimize, the Migration tool, automatic AI model discovery, background image jobs, AI Bot Analytics, and more); the page-by-page how-to guide covers all 21 admin pages with their real menu paths in actual menu order; feature sections follow the same canonical order in both README.md and readme.txt; the architecture file map and developer reference were brought up to date; and stale instructions (Search Console connection flow, internal-link rebuild behavior, migration version tags) were corrected against the current code. No functional changes.

@@ -977,6 +977,17 @@ class SWPS_Settings {
 			)
 		);
 
+		$this->add_field(
+			'remove_data_on_uninstall',
+			__( 'Remove Data on Uninstall', 'stratawp-seo' ),
+			'checkbox',
+			'swps_advanced_section',
+			array(
+				'label'       => __( 'Delete all plugin data when the plugin is uninstalled', 'stratawp-seo' ),
+				'description' => __( 'When enabled, deleting the plugin permanently removes all settings, custom tables (analytics, keywords, redirects, links, backlinks), topics, and voice profiles. Leave unchecked to keep your data through a delete + reinstall; scheduled tasks and caches are always cleaned up.', 'stratawp-seo' ),
+			)
+		);
+
 		// --- Head Cleanup Section ---
 		add_settings_section( 'swps_cleanup_section', __( 'Head Cleanup', 'stratawp-seo' ), array( $this, 'render_cleanup_section' ), 'stratawp-seo' );
 
