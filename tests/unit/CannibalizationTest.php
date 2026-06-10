@@ -253,4 +253,25 @@ class CannibalizationTest extends TestCase {
 		// Not the same as position 3.
 		$this->assertNotEqualsWithDelta( $ctr_3, $ctr_35, 0.001 );
 	}
+
+	/**
+	 * Surviving candidates resolve only vanished findings (partial).
+	 */
+	public function test_resolve_mode_partial_when_candidates_seen(): void {
+		$this->assertSame( 'partial', SWPS_Cannibalization::resolve_mode( true, true ) );
+	}
+
+	/**
+	 * All-excluded weeks (brand/pagination only) must leave open findings untouched.
+	 */
+	public function test_resolve_mode_none_when_all_candidates_excluded(): void {
+		$this->assertSame( 'none', SWPS_Cannibalization::resolve_mode( true, false ) );
+	}
+
+	/**
+	 * Genuinely zero candidates resolves everything open.
+	 */
+	public function test_resolve_mode_all_when_no_candidates(): void {
+		$this->assertSame( 'all', SWPS_Cannibalization::resolve_mode( false, false ) );
+	}
 }

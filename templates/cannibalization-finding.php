@@ -133,7 +133,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 						);
 						?>
 						<a href="<?php echo esc_url( $edit_url ); ?>" class="button button-secondary"
-							title="<?php esc_attr_e( 'Open the loser post editor with the focus keyword pre-filled', 'stratawp-seo' ); ?>">
+							title="<?php esc_attr_e( 'Open the loser post editor with the focus keyword pre-filled (Classic editor only — in the block editor, set the focus keyword manually)', 'stratawp-seo' ); ?>">
 							<?php esc_html_e( 'Differentiate (edit loser)', 'stratawp-seo' ); ?>
 						</a>
 					<?php endif; ?>

@@ -1474,6 +1474,7 @@ function swps_deactivate(): void {
 	wp_clear_scheduled_hook( 'swps_aeo_sweep_proposals' );
 	SWPS_Question_Coverage::unschedule_cron();
 	SWPS_Decay_Watchdog::unschedule_cron();
+	wp_clear_scheduled_hook( SWPS_Cannibalization::CRON_HOOK );
 	wp_unschedule_hook( 'swps_send_digest' );
 	wp_unschedule_hook( SWPS_Site_Crawler::CRON_HOOK );
 	SWPS_Site_Crawler::unschedule_weekly_cron();

@@ -243,6 +243,12 @@ class SWPS_Cannibalization_Admin {
 			wp_send_json_error( array( 'message' => 'Missing required fields.' ) );
 		}
 
+		// Server-side double-consolidate guard: only open findings may be consolidated.
+		$finding = SWPS_Cannibalization::get_finding( $finding_id );
+		if ( ! $finding || 'open' !== $finding->status ) {
+			wp_send_json_error( array( 'message' => 'Finding is not open — it may already be consolidated or dismissed.' ) );
+		}
+
 		$loser_path  = (string) wp_parse_url( $loser_url, PHP_URL_PATH );
 		$winner_path = (string) wp_parse_url( $winner_url, PHP_URL_PATH );
 		if ( empty( $loser_path ) || empty( $winner_path ) ) {

@@ -1,9 +1,6 @@
 <?php
 /**
- * Keyword Cannibalization Detector — pure helpers, findings table, and weekly cron.
- *
- * Pure static helpers (find_candidates / classify_finding / pick_winner / expected_ctr)
- * are unit-tested with no WordPress dependency. The cron handler and DB code require WP.
+ * Keyword Cannibalization Detector — pure helpers (unit-tested, no WP), findings table, weekly cron.
  *
  * @package StrataWP_SEO
  */
@@ -44,18 +41,12 @@ class SWPS_Cannibalization {
 	 *
 	 * @var float[]
 	 */
+	// phpcs:disable WordPress.Arrays.ArrayDeclarationSpacing,WordPress.Arrays.MultipleStatementAlignment
 	private const CTR_CURVE = array(
-		1  => 0.285,
-		2  => 0.152,
-		3  => 0.108,
-		4  => 0.080,
-		5  => 0.062,
-		6  => 0.050,
-		7  => 0.042,
-		8  => 0.036,
-		9  => 0.031,
-		10 => 0.027,
+		1 => 0.285, 2 => 0.152, 3 => 0.108, 4 => 0.080, 5 => 0.062,
+		6 => 0.050, 7 => 0.042, 8 => 0.036, 9 => 0.031, 10 => 0.027,
 	);
+	// phpcs:enable WordPress.Arrays.ArrayDeclarationSpacing,WordPress.Arrays.MultipleStatementAlignment
 
 	/**
 	 * Wire cron action; schedule weekly if not already scheduled.
@@ -70,12 +61,7 @@ class SWPS_Cannibalization {
 		}
 	}
 
-	/**
-	 * Create/upgrade the cannibalization table when the stored schema version is stale.
-	 *
-	 * Runs at init so existing installs get the table on plugin update
-	 * without a deactivate/reactivate cycle.
-	 */
+	/** Create/upgrade the table when the stored schema version is stale (runs at init, no reactivation needed). */
 	public static function maybe_upgrade(): void {
 		if ( self::DB_VERSION !== get_option( self::OPT_DB_VER ) ) {
 			self::create_table();
@@ -186,11 +172,7 @@ class SWPS_Cannibalization {
 	}
 
 	/**
-	 * Classify a single candidate finding.
-	 *
-	 * Brand terms and pagination URLs produce 'excluded'.
-	 * Archive-vs-post pairs are downgraded to 'review' (not dropped).
-	 * Everything else: 'cannibal'.
+	 * Classify a finding: brand/pagination → 'excluded'; archive-vs-post pair → 'review'; else 'cannibal'.
 	 *
 	 * @param  array    $finding      {query: string, pages: array}.
 	 * @param  string[] $brand_tokens Lowercase tokens to treat as brand queries.
@@ -225,9 +207,7 @@ class SWPS_Cannibalization {
 	}
 
 	/**
-	 * Pick the winner from a set of competing pages.
-	 *
-	 * Highest clicks wins. Position (lower = better) is the tiebreaker.
+	 * Pick the winner: highest clicks wins; lower position breaks ties.
 	 *
 	 * @param  array<int, array{clicks: int, impressions: int, position: float}> $pages Competing pages.
 	 * @return int Index of the winning page.
@@ -255,22 +235,17 @@ class SWPS_Cannibalization {
 	}
 
 	/**
-	 * Expected CTR at a given position (curve or decay beyond pos 10).
-	 *
-	 * Filterable via swps_cannibal_ctr_curve / swps_cannibal_expected_ctr.
+	 * Expected CTR at a given position (curve, or decay beyond pos 10); filterable.
 	 *
 	 * @param  float $position Average position (1-based).
 	 * @return float CTR as a decimal (e.g. 0.285 for 28.5 %).
 	 */
 	public static function expected_ctr( float $position ): float {
-		if ( function_exists( 'apply_filters' ) ) {
-			$curve = (array) apply_filters( 'swps_cannibal_ctr_curve', self::CTR_CURVE );
-		} else {
-			$curve = self::CTR_CURVE;
-		}
+		$curve = function_exists( 'apply_filters' )
+			? (array) apply_filters( 'swps_cannibal_ctr_curve', self::CTR_CURVE )
+			: self::CTR_CURVE;
 
-		$pos_int = (int) round( $position );
-		$pos_int = max( 1, $pos_int );
+		$pos_int = max( 1, (int) round( $position ) );
 
 		if ( isset( $curve[ $pos_int ] ) ) {
 			$ctr = (float) $curve[ $pos_int ];
@@ -287,10 +262,20 @@ class SWPS_Cannibalization {
 	}
 
 	/**
-	 * Weekly scan: fetch GSC rows → find candidates → classify → upsert findings.
+	 * Decide how vanished open findings are resolved after a scan.
 	 *
-	 * No-ops when GSC is unconnected. Resolves vanished findings; prunes retention.
+	 * @param  bool $any_candidates Whether the scan produced any candidates (pre-exclusion).
+	 * @param  bool $any_seen       Whether any candidate survived exclusion (was upserted).
+	 * @return string 'partial' (resolve unseen), 'none' (all excluded — leave untouched), 'all'.
 	 */
+	public static function resolve_mode( bool $any_candidates, bool $any_seen ): string {
+		if ( $any_seen ) {
+			return 'partial';
+		}
+		return $any_candidates ? 'none' : 'all';
+	}
+
+	/** Weekly scan: GSC rows → candidates → classify → upsert; resolve vanished; prune retention. No-op without GSC. */
 	public function run_scan(): void {
 		$rows = $this->search_console->get_query_page_rows( self::SCAN_DAYS, self::SCAN_ROW_LIMIT );
 
@@ -302,9 +287,7 @@ class SWPS_Cannibalization {
 
 		$brand_tokens = (array) apply_filters(
 			'swps_cannibal_brand_tokens',
-			array_filter(
-				array_map( 'strtolower', explode( ' ', (string) get_bloginfo( 'name' ) ) )
-			)
+			array_filter( array_map( 'strtolower', explode( ' ', (string) get_bloginfo( 'name' ) ) ) )
 		);
 
 		$seen_hashes = array();
@@ -359,7 +342,9 @@ class SWPS_Cannibalization {
 			}
 		}
 
-		if ( ! empty( $seen_hashes ) ) {
+		// All-excluded weeks (brand/pagination only) must NOT mass-resolve open findings.
+		$mode = self::resolve_mode( ! empty( $candidates ), ! empty( $seen_hashes ) );
+		if ( 'partial' === $mode ) {
 			$placeholders = implode( ',', array_fill( 0, count( $seen_hashes ), '%s' ) );
 			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 			$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -369,10 +354,11 @@ class SWPS_Cannibalization {
 				)
 			);
 			// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
-		} else {
-			// No candidates at all — resolve everything open.
+		} elseif ( 'all' === $mode ) {
+			// Genuinely zero candidates — resolve everything open.
 			$wpdb->query( "UPDATE {$table} SET status = 'resolved' WHERE status = 'open'" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		}
+		// 'none': candidates existed but all were excluded — leave open findings untouched.
 
 		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
@@ -382,11 +368,7 @@ class SWPS_Cannibalization {
 		);
 	}
 
-	/**
-	 * Return open findings ordered by severity then detected_at desc.
-	 *
-	 * @return array<int, object>
-	 */
+	/** Return open findings (array of row objects) ordered by severity then detected_at desc. */
 	public static function get_open_findings(): array {
 		global $wpdb;
 		$table = $wpdb->prefix . self::TABLE;
@@ -394,6 +376,21 @@ class SWPS_Cannibalization {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$rows = $wpdb->get_results( "SELECT * FROM {$table} WHERE status = 'open' ORDER BY severity ASC, detected_at DESC" );
 		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
+	 * Fetch a single finding row.
+	 *
+	 * @param  int $id Row ID.
+	 * @return object|null Row object, or null if not found.
+	 */
+	public static function get_finding( int $id ): ?object {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE;
+		$row   = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d LIMIT 1", $id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		);
+		return $row ? $row : null;
 	}
 
 	/** Count open findings. */
@@ -460,11 +457,12 @@ class SWPS_Cannibalization {
 		$json = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare( "SELECT undo_json FROM {$tbl} WHERE id = %d LIMIT 1", $id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		);
-		if ( empty( $json ) ) {
+		// Sentinel: cleared undo is stored as '' (wpdb '%s' coerces null); treat '' and '{}' as empty.
+		if ( empty( $json ) || '{}' === trim( (string) $json ) ) {
 			return null;
 		}
 		$decoded = json_decode( $json, true );
-		return is_array( $decoded ) ? $decoded : null;
+		return is_array( $decoded ) && array() !== $decoded ? $decoded : null;
 	}
 
 	/**
@@ -477,7 +475,7 @@ class SWPS_Cannibalization {
 		$result = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prefix . self::TABLE,
 			array(
-				'undo_json' => null,
+				'undo_json' => '', // Sentinel for "no undo" — '%s' would coerce null to '' anyway.
 				'status'    => 'open',
 			),
 			array( 'id' => $id ),
