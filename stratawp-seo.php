@@ -1413,6 +1413,7 @@ function swps_activate(): void {
 	SWPS_Backlinks::schedule_cron();
 
 	SWPS_Crawl_Issues::create_tables();
+	SWPS_Site_Crawler::schedule_weekly_cron();
 
 	if ( ! wp_next_scheduled( 'swps_prune_404_logs' ) ) {
 		wp_schedule_event( time(), 'daily', 'swps_prune_404_logs' );
@@ -1444,6 +1445,7 @@ function swps_deactivate(): void {
 	SWPS_Decay_Watchdog::unschedule_cron();
 	wp_unschedule_hook( 'swps_send_digest' );
 	wp_unschedule_hook( SWPS_Site_Crawler::CRON_HOOK );
+	SWPS_Site_Crawler::unschedule_weekly_cron();
 	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'swps_deactivate' );

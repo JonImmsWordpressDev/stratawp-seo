@@ -43,6 +43,7 @@ $swps_cron_hooks = array(
 	'swps_crawler_rdns',
 	'swps_crawler_reconcile',
 	'swps_site_crawl_chunk',
+	'swps_site_crawl_weekly',
 );
 
 foreach ( $swps_cron_hooks as $swps_cron_hook ) {

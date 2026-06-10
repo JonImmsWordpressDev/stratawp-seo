@@ -33,6 +33,9 @@ class SWPS_Site_Crawler {
 	/** Cron hook for optional weekly re-crawl. */
 	public const CRON_HOOK = 'swps_site_crawl_chunk';
 
+	/** Cron hook that kicks off a fresh weekly run (fires once per week). */
+	public const WEEKLY_HOOK = 'swps_site_crawl_weekly';
+
 	// -------------------------------------------------------------------------
 	// Hard limits (non-negotiable per plan)
 	// -------------------------------------------------------------------------
@@ -60,10 +63,35 @@ class SWPS_Site_Crawler {
 	// -------------------------------------------------------------------------
 
 	/**
-	 * Wire up the cron hook.
+	 * Wire up cron hooks.
+	 *
+	 * The weekly trigger fires once a week (when enabled) and starts a fresh
+	 * crawl run; CRON_HOOK processes individual chunks until the queue drains.
 	 */
 	public function __construct() {
 		add_action( self::CRON_HOOK, array( $this, 'cron_process_chunk' ) );
+		add_action( self::WEEKLY_HOOK, array( $this, 'cron_weekly_trigger' ) );
+	}
+
+	/**
+	 * Schedule the optional weekly re-crawl cron event.
+	 *
+	 * No-op when the setting is disabled (default).
+	 */
+	public static function schedule_weekly_cron(): void {
+		if ( ! get_option( 'swps_crawl_weekly_enabled', 0 ) ) {
+			return;
+		}
+		if ( ! wp_next_scheduled( self::WEEKLY_HOOK ) ) {
+			wp_schedule_event( time(), 'weekly', self::WEEKLY_HOOK );
+		}
+	}
+
+	/**
+	 * Unschedule the weekly re-crawl cron event.
+	 */
+	public static function unschedule_weekly_cron(): void {
+		wp_clear_scheduled_hook( self::WEEKLY_HOOK );
 	}
 
 	// =========================================================================
@@ -911,5 +939,19 @@ class SWPS_Site_Crawler {
 		if ( ! $result['done'] ) {
 			wp_schedule_single_event( time() + 1, self::CRON_HOOK );
 		}
+	}
+
+	/**
+	 * Weekly cron handler: start a fresh crawl run and kick off the first chunk.
+	 *
+	 * The weekly setting is re-checked at fire time so toggling it off takes effect
+	 * on the next scheduled trigger without requiring a deactivate/reactivate cycle.
+	 */
+	public function cron_weekly_trigger(): void {
+		if ( ! get_option( 'swps_crawl_weekly_enabled', 0 ) ) {
+			return;
+		}
+		$this->start_run();
+		wp_schedule_single_event( time() + 1, self::CRON_HOOK );
 	}
 }
