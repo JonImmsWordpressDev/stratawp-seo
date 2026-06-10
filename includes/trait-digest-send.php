@@ -79,6 +79,9 @@ trait SWPS_Digest_Send {
 
 		if ( $sent && ! $test ) {
 			update_option( self::OPTION_LAST_SENT, time(), false );
+			if ( null !== $this->pending_aeo_snapshot ) {
+				update_option( self::OPTION_AEO_SNAP, $this->pending_aeo_snapshot, false );
+			}
 		}
 
 		return (bool) $sent;

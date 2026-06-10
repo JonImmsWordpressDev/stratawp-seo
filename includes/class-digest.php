@@ -33,6 +33,13 @@ class SWPS_Digest {
 	public const CRON_HOOK         = 'swps_send_digest';
 	private const MAX_FAILURES     = 20;
 
+	/**
+	 * AEO snapshot staged by get_aeo_movers(); persisted by send() on success.
+	 *
+	 * @var array<int, int>|null
+	 */
+	private ?array $pending_aeo_snapshot = null;
+
 	// ---- Constructor ----
 
 	/**
@@ -213,15 +220,17 @@ class SWPS_Digest {
 			global $wpdb;
 			$table      = $wpdb->prefix . 'swps_keyword_tracking';
 			$since_date = gmdate( 'Y-m-d', $since );
+			// new_pos is the latest reading regardless of window — keyword syncs may be
+			// less frequent than the digest, so constraining it to the period would
+			// silently drop every keyword on daily digests.
 			// Table name is built from $wpdb->prefix + a fixed literal — safe to interpolate.
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$rows = $wpdb->get_results(
 				$wpdb->prepare(
 					"SELECT t.keyword,
-					(SELECT position FROM {$table} WHERE keyword = t.keyword AND date > %s ORDER BY date DESC LIMIT 1) AS new_pos,
+					(SELECT position FROM {$table} WHERE keyword = t.keyword ORDER BY date DESC LIMIT 1) AS new_pos,
 					(SELECT position FROM {$table} WHERE keyword = t.keyword AND date <= %s ORDER BY date DESC LIMIT 1) AS old_pos
 					FROM (SELECT DISTINCT keyword FROM {$table}) t",
-					$since_date,
 					$since_date
 				),
 				ARRAY_A
@@ -333,7 +342,9 @@ class SWPS_Digest {
 			if ( ! is_array( $previous ) ) {
 				$previous = array();
 			}
-			update_option( self::OPTION_AEO_SNAP, $current, false );
+			// Written by send() only after a successful real send, so a bailed or
+			// failed send doesn't silently swallow this period's movers.
+			$this->pending_aeo_snapshot = $current;
 			if ( empty( $previous ) ) {
 				return null;
 			}
