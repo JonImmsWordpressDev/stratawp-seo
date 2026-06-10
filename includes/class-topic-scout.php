@@ -132,6 +132,66 @@ class SWPS_Topic_Scout {
 	}
 
 	/**
+	 * Group per-page GSC rows by query: SUM impressions, AVERAGE position.
+	 *
+	 * Pure aggregation — no WP dependencies. A query flagged 'covered' on ANY
+	 * of its rows (it already has a dedicated post) is excluded entirely. The
+	 * 8-20 striking-distance window is applied to the AVERAGED position.
+	 *
+	 * @param array<int,array<string,mixed>> $rows Per-page rows: {query, impressions, position, covered?}.
+	 * @return array<int,array<string,mixed>> Grouped rows of {query, impressions, position}.
+	 */
+	public static function group_striking_rows( array $rows ): array {
+		$by_query = array();
+
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+			$query = trim( (string) ( $row['query'] ?? '' ) );
+			if ( '' === $query ) {
+				continue;
+			}
+
+			if ( ! isset( $by_query[ $query ] ) ) {
+				$by_query[ $query ] = array(
+					'impressions'  => 0,
+					'position_sum' => 0.0,
+					'count'        => 0,
+					'covered'      => false,
+				);
+			}
+
+			if ( ! empty( $row['covered'] ) ) {
+				$by_query[ $query ]['covered'] = true;
+				continue;
+			}
+
+			$by_query[ $query ]['impressions']  += (int) ( $row['impressions'] ?? 0 );
+			$by_query[ $query ]['position_sum'] += (float) ( $row['position'] ?? 0 );
+			++$by_query[ $query ]['count'];
+		}
+
+		$out = array();
+		foreach ( $by_query as $query => $agg ) {
+			if ( $agg['covered'] || 0 === $agg['count'] ) {
+				continue;
+			}
+			$avg_position = $agg['position_sum'] / $agg['count'];
+			if ( $avg_position < 8 || $avg_position > 20 ) {
+				continue;
+			}
+			$out[] = array(
+				'query'       => (string) $query,
+				'impressions' => $agg['impressions'],
+				'position'    => $avg_position,
+			);
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Build the AI prompt payload from ranked signals and site context.
 	 *
 	 * Pure formatting — no external calls.

@@ -217,6 +217,10 @@ class SWPS_Calendar {
 			wp_send_json_error( array( 'message' => 'Invalid topic.' ), 400 );
 		}
 
+		if ( 'proposed' !== $post->post_status ) {
+			wp_send_json_error( array( 'message' => __( 'Topic is not in proposed status.', 'stratawp-seo' ) ), 400 );
+		}
+
 		wp_update_post(
 			array(
 				'ID'          => $topic_id,
@@ -245,6 +249,10 @@ class SWPS_Calendar {
 		$post = get_post( $topic_id );
 		if ( ! $post instanceof WP_Post || SWPS_Topic_Queue::POST_TYPE !== $post->post_type ) {
 			wp_send_json_error( array( 'message' => 'Invalid topic.' ), 400 );
+		}
+
+		if ( 'proposed' !== $post->post_status ) {
+			wp_send_json_error( array( 'message' => __( 'Topic is not in proposed status.', 'stratawp-seo' ) ), 400 );
 		}
 
 		wp_trash_post( $topic_id );

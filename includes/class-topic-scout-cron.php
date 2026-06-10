@@ -269,45 +269,38 @@ class SWPS_Topic_Scout_Cron {
 			return array();
 		}
 
-		// Group by query, keep best position per query.
-		$by_query = array();
+		// Flag per-page rows whose page is already a dedicated post, then let
+		// the pure static SUM impressions / AVERAGE position per query and
+		// re-apply the 8-20 window on the averaged position.
+		$rows = array();
 		foreach ( $raw as $row ) {
-			$query    = (string) ( $row['keys'][0] ?? '' );
-			$page     = (string) ( $row['keys'][1] ?? '' );
-			$position = (float) ( $row['position'] ?? 0 );
+			$query = (string) ( $row['keys'][0] ?? '' );
+			$page  = (string) ( $row['keys'][1] ?? '' );
 
 			if ( '' === $query || '' === $page ) {
 				continue;
 			}
-			if ( $position < 8 || $position > 20 ) {
-				continue;
-			}
 
-			$impressions = (int) ( $row['impressions'] ?? 0 );
-			$post_id     = url_to_postid( $page );
+			$covered = false;
+			$post_id = url_to_postid( $page );
 
-			// "No dedicated post" = not mapping to a post, OR low title-overlap.
+			// "Dedicated post" = maps to a post AND high title-overlap.
 			if ( $post_id > 0 && 'post' === get_post_type( $post_id ) ) {
 				$post = get_post( $post_id );
 				if ( $post instanceof WP_Post ) {
-					$similarity = SWPS_Question_Coverage::tokens_similar( $query, $post->post_title );
-					if ( $similarity >= 0.6 ) {
-						// Query already has a dedicated post — skip.
-						continue;
-					}
+					$covered = SWPS_Question_Coverage::tokens_similar( $query, $post->post_title ) >= 0.6;
 				}
 			}
 
-			if ( ! isset( $by_query[ $query ] ) || $impressions > $by_query[ $query ]['impressions'] ) {
-				$by_query[ $query ] = array(
-					'query'       => $query,
-					'impressions' => $impressions,
-					'position'    => $position,
-				);
-			}
+			$rows[] = array(
+				'query'       => $query,
+				'impressions' => (int) ( $row['impressions'] ?? 0 ),
+				'position'    => (float) ( $row['position'] ?? 0 ),
+				'covered'     => $covered,
+			);
 		}
 
-		return array_values( $by_query );
+		return SWPS_Topic_Scout::group_striking_rows( $rows );
 	}
 
 	/**

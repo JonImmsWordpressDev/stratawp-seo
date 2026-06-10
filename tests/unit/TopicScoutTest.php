@@ -220,4 +220,77 @@ class TopicScoutTest extends TestCase {
 		$this->assertNotNull( $result );
 		$this->assertSame( 'auto', $result['template'] );
 	}
+
+	// -------------------------------------------------------------------------
+	// group_striking_rows — sum impressions, average position per query
+	// -------------------------------------------------------------------------
+
+	public function test_group_striking_rows_multi_page_query_sums_and_averages(): void {
+		$rows = array(
+			array( 'query' => 'sourdough starter', 'impressions' => 100, 'position' => 9.0 ),
+			array( 'query' => 'sourdough starter', 'impressions' => 50, 'position' => 15.0 ),
+		);
+
+		$result = SWPS_Topic_Scout::group_striking_rows( $rows );
+
+		$this->assertCount( 1, $result );
+		$this->assertSame( 'sourdough starter', $result[0]['query'] );
+		$this->assertSame( 150, $result[0]['impressions'] );
+		$this->assertSame( 12.0, $result[0]['position'] );
+	}
+
+	public function test_group_striking_rows_filters_on_averaged_position(): void {
+		// Per-row positions 5 and 25 are both outside 8-20, but average = 15 is in.
+		$in_by_average = array(
+			array( 'query' => 'avg in window', 'impressions' => 10, 'position' => 5.0 ),
+			array( 'query' => 'avg in window', 'impressions' => 10, 'position' => 25.0 ),
+		);
+		// Per-row positions 9 and 40 → average = 24.5, outside the window.
+		$out_by_average = array(
+			array( 'query' => 'avg out of window', 'impressions' => 10, 'position' => 9.0 ),
+			array( 'query' => 'avg out of window', 'impressions' => 10, 'position' => 40.0 ),
+		);
+
+		$result_in  = SWPS_Topic_Scout::group_striking_rows( $in_by_average );
+		$result_out = SWPS_Topic_Scout::group_striking_rows( $out_by_average );
+
+		$this->assertCount( 1, $result_in );
+		$this->assertSame( 15.0, $result_in[0]['position'] );
+		$this->assertCount( 0, $result_out );
+	}
+
+	public function test_group_striking_rows_covered_row_excludes_whole_query(): void {
+		$rows = array(
+			array( 'query' => 'covered topic', 'impressions' => 999, 'position' => 10.0, 'covered' => true ),
+			array( 'query' => 'covered topic', 'impressions' => 100, 'position' => 12.0 ),
+			array( 'query' => 'open topic', 'impressions' => 80, 'position' => 11.0 ),
+		);
+
+		$result = SWPS_Topic_Scout::group_striking_rows( $rows );
+
+		$this->assertCount( 1, $result );
+		$this->assertSame( 'open topic', $result[0]['query'] );
+	}
+
+	public function test_group_striking_rows_covered_flag_sticks_when_set_late(): void {
+		$rows = array(
+			array( 'query' => 'late covered', 'impressions' => 100, 'position' => 12.0 ),
+			array( 'query' => 'late covered', 'impressions' => 50, 'position' => 14.0, 'covered' => true ),
+		);
+
+		$this->assertCount( 0, SWPS_Topic_Scout::group_striking_rows( $rows ) );
+	}
+
+	public function test_group_striking_rows_skips_empty_query_and_junk(): void {
+		$rows = array(
+			array( 'query' => '', 'impressions' => 100, 'position' => 12.0 ),
+			'not-an-array',
+			array( 'query' => 'valid', 'impressions' => 100, 'position' => 12.0 ),
+		);
+
+		$result = SWPS_Topic_Scout::group_striking_rows( $rows );
+
+		$this->assertCount( 1, $result );
+		$this->assertSame( 'valid', $result[0]['query'] );
+	}
 }

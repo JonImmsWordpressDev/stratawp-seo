@@ -232,15 +232,22 @@ class SWPS_Cron {
 			return null;
 		}
 
-		$proposal  = $proposals[0];
-		$one_min_ago = gmdate( 'Y-m-d H:i:s', time() - 60 );
+		$proposal = $proposals[0];
+
+		// Invariant: SWPS_Topic_Queue::get_next_topic() filters on a date_query
+		// of before 'now', which WP_Date_Query resolves in the SITE timezone and
+		// compares against post_date (local time). post_date must therefore be a
+		// LOCAL timestamp — a UTC value would sit in the local future on sites
+		// west of UTC and the promoted topic would be skipped.
+		$gmt   = gmdate( 'Y-m-d H:i:s', time() - MINUTE_IN_SECONDS );
+		$local = get_date_from_gmt( $gmt );
 
 		wp_update_post(
 			array(
 				'ID'            => $proposal->ID,
 				'post_status'   => 'queued',
-				'post_date'     => $one_min_ago,
-				'post_date_gmt' => $one_min_ago,
+				'post_date'     => $local,
+				'post_date_gmt' => $gmt,
 			)
 		);
 
