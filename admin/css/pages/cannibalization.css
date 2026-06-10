@@ -1,0 +1,57 @@
+/**
+ * StrataWP SEO — Keyword Cannibalization page (v4.19).
+ */
+
+.swps-cannibalization-wrap {
+	max-width: 1200px;
+}
+
+.swps-cannibal-finding {
+	background: var(--swps-surface-0, #fff);
+	border: 1px solid var(--swps-border, #e5e5e5);
+	border-radius: 6px;
+	margin-bottom: 16px;
+	overflow: hidden;
+}
+
+.swps-cannibal-finding-header {
+	display: flex;
+	align-items: baseline;
+	gap: 12px;
+	padding: 12px 16px;
+	background: var(--swps-surface-1, #f9f9f9);
+	border-bottom: 1px solid var(--swps-border, #e5e5e5);
+}
+
+.swps-cannibal-query {
+	font-size: 15px;
+	color: var(--swps-text, #1d2327);
+}
+
+.swps-cannibal-page-count {
+	font-size: 12px;
+	color: var(--swps-text-muted, #6b7280);
+}
+
+.swps-cannibal-finding-body {
+	padding: 16px;
+}
+
+.swps-cannibal-pages {
+	margin-bottom: 12px !important;
+}
+
+.swps-cannibal-winner {
+	background: #f0fdf4 !important;
+}
+
+.swps-cannibal-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.swps-cannibal-canon-details summary::-webkit-details-marker {
+	display: none;
+}

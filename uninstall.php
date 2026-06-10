@@ -44,6 +44,7 @@ $swps_cron_hooks = array(
 	'swps_crawler_reconcile',
 	'swps_site_crawl_chunk',
 	'swps_site_crawl_weekly',
+	'swps_cannibal_scan',
 );
 
 foreach ( $swps_cron_hooks as $swps_cron_hook ) {
@@ -107,6 +108,7 @@ $swps_tables = array(
 	'swps_metric_history',
 	'swps_crawl_queue',
 	'swps_crawl_issues',
+	'swps_cannibalization',
 );
 
 foreach ( $swps_tables as $swps_table ) {

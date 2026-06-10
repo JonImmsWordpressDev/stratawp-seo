@@ -148,6 +148,10 @@ require_once SWPS_PLUGIN_DIR . 'includes/audit/class-site-crawl-module.php';
 // Backlinks (v4.2.2) — manual/CSV-import backlink tracker with health monitor.
 require_once SWPS_PLUGIN_DIR . 'includes/class-backlinks.php';
 
+// Keyword cannibalization detector (v4.19).
+require_once SWPS_PLUGIN_DIR . 'includes/class-cannibalization.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-cannibalization-admin.php';
+
 // v3.0 classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-head-cleanup.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rss-optimizer.php';
@@ -298,6 +302,20 @@ final class StrataWP_SEO {
 	public SWPS_Decay_Watchdog $decay_watchdog;
 	public SWPS_Refresh_Queue_Admin $refresh_queue_admin;
 
+	/**
+	 * Keyword cannibalization detector (v4.19).
+	 *
+	 * @var SWPS_Cannibalization
+	 */
+	public SWPS_Cannibalization $cannibalization;
+
+	/**
+	 * Cannibalization admin page + AJAX (v4.19).
+	 *
+	 * @var SWPS_Cannibalization_Admin
+	 */
+	public SWPS_Cannibalization_Admin $cannibalization_admin;
+
 	// v4.0 admin shell.
 	public SWPS_User_Prefs $user_prefs;
 	public SWPS_Modules $modules;
@@ -388,6 +406,11 @@ final class StrataWP_SEO {
 		$this->metric_history  = new SWPS_Metric_History();
 		$this->decay_watchdog  = new SWPS_Decay_Watchdog( $this->search_console, $this->metric_history );
 		$this->refresh_queue_admin   = new SWPS_Refresh_Queue_Admin( $this->metric_history );
+
+		// Keyword cannibalization detector (v4.19).
+		SWPS_Cannibalization::maybe_upgrade();
+		$this->cannibalization       = new SWPS_Cannibalization( $this->search_console );
+		$this->cannibalization_admin = new SWPS_Cannibalization_Admin( $this->cannibalization );
 
 		$this->competitors          = new SWPS_Competitors();
 		$this->local_seo            = new SWPS_Local_SEO();
