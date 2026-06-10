@@ -379,3 +379,61 @@
     top: 12px;
     right: 12px;
 }
+
+/* ------------------------------------------------------------------
+ * Onboarding setup checklist card (shown until complete or dismissed)
+ * ------------------------------------------------------------------ */
+.swps-ob-checklist {
+    margin-bottom: 16px;
+}
+
+.swps-ob-checklist-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.swps-ob-checklist-dismiss {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--swps-text-muted);
+    padding: 2px 6px;
+}
+.swps-ob-checklist-dismiss:hover {
+    color: var(--swps-text-primary);
+}
+
+.swps-ob-checklist-steps {
+    margin: 10px 0 14px;
+    padding: 0;
+    list-style: none;
+}
+.swps-ob-checklist-steps li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+}
+.swps-ob-checklist-steps li.is-done a {
+    text-decoration: line-through;
+    color: var(--swps-text-muted);
+}
+.swps-ob-checklist-steps a {
+    text-decoration: none;
+    color: var(--swps-text-primary);
+}
+.swps-ob-checklist-steps a:hover {
+    color: var(--swps-accent-1);
+}
+
+.swps-ob-checklist-mark {
+    color: var(--swps-success);
+    width: 16px;
+    text-align: center;
+}
+.swps-ob-checklist-steps li:not(.is-done) .swps-ob-checklist-mark {
+    color: var(--swps-text-muted);
+}

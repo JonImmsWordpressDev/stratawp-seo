@@ -65,6 +65,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-cost-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-autopilot-guardian.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-digest.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-digest-settings.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-onboarding.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-topic-queue.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-content-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-voice-profile.php';
@@ -227,6 +228,7 @@ final class StrataWP_SEO {
 	public SWPS_Autopilot_Guardian $autopilot_guardian;
 	public SWPS_Digest $digest;
 	public SWPS_Digest_Settings $digest_settings;
+	public SWPS_Onboarding $onboarding;
 
 	// AEO Optimize (v4.6).
 	public SWPS_AEO_Scorer            $aeo_scorer;
@@ -330,6 +332,7 @@ final class StrataWP_SEO {
 		$this->autopilot_guardian   = new SWPS_Autopilot_Guardian();
 		$this->digest               = new SWPS_Digest();
 		$this->digest_settings      = new SWPS_Digest_Settings( $this->digest );
+		$this->onboarding           = new SWPS_Onboarding();
 
 		// Initialize v2.0 subsystems.
 		$this->calendar             = new SWPS_Calendar( $this->topic_queue );

@@ -81,6 +81,56 @@ $welcome_msg = sprintf(
 	require SWPS_PLUGIN_DIR . 'templates/partials/page-header.php';
 	?>
 
+	<?php
+	// Setup checklist — shown until the onboarding wizard is complete or dismissed.
+	$swps_ob          = $data['onboarding'] ?? array();
+	$swps_ob_state    = $swps_ob['state'] ?? array(
+		'steps'     => array(),
+		'dismissed' => true,
+	);
+	$swps_ob_progress = $swps_ob['progress'] ?? array(
+		'done'     => 0,
+		'total'    => 0,
+		'complete' => true,
+		'next'     => null,
+	);
+	$swps_ob_labels   = array(
+		'migrate'   => __( 'Migrate from your old SEO plugin', 'stratawp-seo' ),
+		'api_key'   => __( 'Connect your AI provider', 'stratawp-seo' ),
+		'site_info' => __( 'Describe your site', 'stratawp-seo' ),
+		'audit'     => __( 'Run your first SEO audit', 'stratawp-seo' ),
+		'preview'   => __( 'Generate a preview post', 'stratawp-seo' ),
+	);
+	$swps_ob_url      = admin_url( 'admin.php?page=swps-onboarding' );
+	if ( ! $swps_ob_progress['complete'] && empty( $swps_ob_state['dismissed'] ) ) :
+		?>
+	<div class="swps-tile swps-ob-checklist" id="swps-ob-checklist"
+		data-nonce="<?php echo esc_attr( wp_create_nonce( 'swps_onboarding' ) ); ?>">
+		<div class="swps-ob-checklist-head">
+			<div class="swps-tile-h">
+				<?php
+				printf(
+					/* translators: 1: completed steps, 2: total steps */
+					esc_html__( 'Setup %1$d/%2$d complete', 'stratawp-seo' ),
+					(int) $swps_ob_progress['done'],
+					(int) $swps_ob_progress['total']
+				);
+				?>
+			</div>
+			<button type="button" class="swps-ob-checklist-dismiss" aria-label="<?php esc_attr_e( 'Dismiss setup checklist', 'stratawp-seo' ); ?>">&times;</button>
+		</div>
+		<ul class="swps-ob-checklist-steps">
+			<?php foreach ( $swps_ob_labels as $swps_ob_step => $swps_ob_label ) : ?>
+				<li class="<?php echo ! empty( $swps_ob_state['steps'][ $swps_ob_step ] ) ? 'is-done' : ''; ?>">
+					<span class="swps-ob-checklist-mark" aria-hidden="true"><?php echo ! empty( $swps_ob_state['steps'][ $swps_ob_step ] ) ? '&#10003;' : '&#9675;'; ?></span>
+					<a href="<?php echo esc_url( $swps_ob_url ); ?>"><?php echo esc_html( $swps_ob_label ); ?></a>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+		<a class="swps-btn swps-btn-grad" href="<?php echo esc_url( $swps_ob_url ); ?>"><?php esc_html_e( 'Continue setup', 'stratawp-seo' ); ?></a>
+	</div>
+	<?php endif; ?>
+
 	<!-- Row 1 — KPI tiles -->
 	<div class="swps-dash-row swps-dash-row-1">
 

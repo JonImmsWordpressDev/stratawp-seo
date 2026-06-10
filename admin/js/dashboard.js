@@ -122,9 +122,46 @@
         });
     }
 
+    /* ------------------------------------------------------------------
+     * Onboarding checklist dismiss — POST swps_onboarding_dismiss
+     * ------------------------------------------------------------------ */
+    function bindOnboardingDismiss() {
+        var card = document.getElementById('swps-ob-checklist');
+        if (!card) return;
+        var btn = card.querySelector('.swps-ob-checklist-dismiss');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            btn.disabled = true;
+            var body = new URLSearchParams({
+                action: 'swps_onboarding_dismiss',
+                nonce: card.getAttribute('data-nonce') || ''
+            });
+            fetch(window.ajaxurl || '/wp-admin/admin-ajax.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data && data.success) {
+                        card.remove();
+                    } else {
+                        btn.disabled = false;
+                        showFlash('Could not dismiss the checklist.', 'err');
+                    }
+                })
+                .catch(function () {
+                    btn.disabled = false;
+                    showFlash('Could not dismiss the checklist.', 'err');
+                });
+        });
+    }
+
     function init() {
         bindRunAudit();
         bindModuleToggles();
+        bindOnboardingDismiss();
     }
 
     if (document.readyState === 'loading') {
