@@ -168,6 +168,112 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
 		return $models;
 	}
 
+	/**
+	 * Run a search-grounded query via the Anthropic web_search_20250305 tool.
+	 *
+	 * API: POST /v1/messages with tools[{type:"web_search_20250305",name:"web_search"}].
+	 * Citations surface on text content blocks as citations[]{type:"web_search_result_location",url:string}.
+	 * Ref: https://platform.claude.com/docs/en/api/cli/beta/messages
+	 *
+	 * @param string $query      The search query / prompt.
+	 * @param int    $max_tokens Maximum tokens in the response.
+	 * @return array{text: string, citations: string[]}|WP_Error
+	 */
+	public function search_grounded( string $query, int $max_tokens = 1024 ): array|WP_Error {
+		$api_key = $this->get_api_key();
+
+		if ( empty( $api_key ) ) {
+			return new WP_Error( 'swps_no_api_key', __( 'Please enter your Anthropic API key in StrataWP SEO settings.', 'stratawp-seo' ) );
+		}
+
+		$body = array(
+			'model'      => $this->get_validated_model(),
+			'max_tokens' => $max_tokens,
+			'messages'   => array(
+				array(
+					'role'    => 'user',
+					'content' => $query,
+				),
+			),
+			'tools'      => array(
+				array(
+					'type'     => 'web_search_20250305',
+					'name'     => 'web_search',
+					'max_uses' => 3,
+				),
+			),
+		);
+
+		$response = wp_remote_post(
+			self::API_URL,
+			array(
+				'timeout' => 180,
+				'headers' => array(
+					'Content-Type'      => 'application/json',
+					'x-api-key'         => $api_key,
+					'anthropic-version' => '2023-06-01',
+				),
+				'body'    => wp_json_encode( $body ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return new WP_Error(
+				'swps_api_request_failed',
+				/* translators: %s: error message */
+				sprintf( __( 'API request failed: %s', 'stratawp-seo' ), $response->get_error_message() )
+			);
+		}
+
+		$status_code   = wp_remote_retrieve_response_code( $response );
+		$response_body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $status_code ) {
+			$error_message = $response_body['error']['message'] ?? __( 'Unknown API error.', 'stratawp-seo' );
+			$error_type    = $response_body['error']['type'] ?? '';
+			// 4xx indicating tool/search unsupported for this model.
+			if ( $status_code >= 400 && $status_code < 500 &&
+				( false !== strpos( $error_message, 'web_search' ) || false !== strpos( $error_type, 'invalid_request' ) ) ) {
+				return new WP_Error(
+					'swps_search_unsupported',
+					/* translators: 1: HTTP status code, 2: error message */
+					sprintf( __( 'Claude API error (%1$d): %2$s', 'stratawp-seo' ), $status_code, $error_message ),
+					array( 'status' => (int) $status_code )
+				);
+			}
+			return new WP_Error(
+				'swps_api_error',
+				/* translators: 1: HTTP status code, 2: error message */
+				sprintf( __( 'Claude API error (%1$d): %2$s', 'stratawp-seo' ), $status_code, $error_message ),
+				array( 'status' => (int) $status_code )
+			);
+		}
+
+		// Collect text from all text content blocks; gather citation URLs.
+		$text_parts = array();
+		$urls       = array();
+		foreach ( $response_body['content'] ?? array() as $block ) {
+			if ( 'text' === ( $block['type'] ?? '' ) ) {
+				$text_parts[] = (string) ( $block['text'] ?? '' );
+				foreach ( $block['citations'] ?? array() as $citation ) {
+					if ( 'web_search_result_location' === ( $citation['type'] ?? '' ) && ! empty( $citation['url'] ) ) {
+						$urls[] = (string) $citation['url'];
+					}
+				}
+			}
+		}
+
+		$text = implode( '', $text_parts );
+		if ( '' === $text ) {
+			return new WP_Error( 'swps_empty_response', __( 'Received empty response from Claude.', 'stratawp-seo' ) );
+		}
+
+		return array(
+			'text'      => $text,
+			'citations' => array_values( array_unique( $urls ) ),
+		);
+	}
+
 	public function test_key( string $api_key ): bool|WP_Error {
 		$response = wp_remote_post(
 			self::API_URL,

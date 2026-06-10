@@ -395,6 +395,27 @@ abstract class SWPS_AI_Provider {
 	}
 
 	/**
+	 * Run a search-grounded query and return the response text with citation URLs.
+	 *
+	 * The default implementation returns an unsupported error. Providers that
+	 * support real-time web search override this method.
+	 *
+	 * @param string $query      The search query / prompt to run.
+	 * @param int    $max_tokens Maximum tokens in the response.
+	 * @return array{text: string, citations: string[]}|WP_Error
+	 */
+	public function search_grounded( string $query, int $max_tokens = 1024 ): array|WP_Error { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		return new WP_Error(
+			'swps_search_unsupported',
+			sprintf(
+				/* translators: %s: provider display name */
+				__( '%s does not support search-grounded queries.', 'stratawp-seo' ),
+				$this->get_name()
+			)
+		);
+	}
+
+	/**
 	 * Get the stored API key for this provider.
 	 */
 	public function get_api_key(): string {
