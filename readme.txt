@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.17.0
+Stable tag: 4.18.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -293,6 +293,9 @@ No. GSC integration is optional. The on-site analytics works entirely without an
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.18.0 =
+* New: Content decay watchdog — weekly Search Console scan flags posts losing clicks (28-day windows, configurable threshold), classifies the likely cause, tracks metric + AEO-score history with sparklines, emails you when a top post decays, and queues one-click AI refresh proposals through the reviewed AEO apply/undo pipeline.
 
 = 4.17.0 =
 * New: Question coverage engine — the AEO Coverage dimension is now live (query fan-out sub-question checklist per post), and Search Console question mining surfaces real searcher questions your posts don't answer, feeding Q&A inserts into AEO proposals and topic suggestions into the queue.
