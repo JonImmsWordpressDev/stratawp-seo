@@ -109,6 +109,7 @@ $swps_tables = array(
 	'swps_crawl_queue',
 	'swps_crawl_issues',
 	'swps_cannibalization',
+	'swps_ability_log',
 );
 
 foreach ( $swps_tables as $swps_table ) {

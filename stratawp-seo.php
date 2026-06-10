@@ -192,6 +192,10 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-calendar.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-background-processor.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-model-cron.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rest-api.php';
+require_once SWPS_PLUGIN_DIR . 'includes/trait-ability-defs.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-abilities.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-abilities-rest.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-abilities-settings.php';
 
 // GitHub-based plugin updater.
 require_once SWPS_PLUGIN_DIR . 'includes/class-github-updater.php';
@@ -317,6 +321,13 @@ final class StrataWP_SEO {
 	 */
 	public SWPS_Decay_Watchdog $decay_watchdog;
 	public SWPS_Refresh_Queue_Admin $refresh_queue_admin;
+
+	/**
+	 * Machine-callable abilities registry (v4.19).
+	 *
+	 * @var SWPS_Abilities
+	 */
+	public SWPS_Abilities $abilities;
 
 	/**
 	 * Keyword cannibalization detector (v4.19).
@@ -470,6 +481,12 @@ final class StrataWP_SEO {
 		$discovery                  = new SWPS_Model_Discovery();
 		new SWPS_Model_Cron( $discovery );
 		$this->rest_api             = new SWPS_REST_API();
+
+		// Abilities API — machine-callable SEO operations (v4.19).
+		SWPS_Abilities::maybe_upgrade();
+		$this->abilities = new SWPS_Abilities();
+		new SWPS_Abilities_Rest( $this->abilities );
+		new SWPS_Abilities_Settings( $this->abilities );
 
 		// Author E-E-A-T profile fields (v4.19).
 		( new SWPS_Author_Profile() )->register_hooks();
@@ -1425,6 +1442,9 @@ function swps_activate(): void {
 	SWPS_Crawl_Issues::create_tables();
 	update_option( SWPS_Crawl_Issues::OPT_DB_VER, SWPS_Crawl_Issues::DB_VERSION );
 	SWPS_Site_Crawler::schedule_weekly_cron();
+
+	SWPS_Abilities::create_log_table();
+	update_option( SWPS_Abilities::OPT_DB_VER, SWPS_Abilities::DB_VERSION );
 
 	if ( ! wp_next_scheduled( 'swps_prune_404_logs' ) ) {
 		wp_schedule_event( time(), 'daily', 'swps_prune_404_logs' );
