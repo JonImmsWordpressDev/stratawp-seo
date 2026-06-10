@@ -222,6 +222,7 @@ final class StrataWP_SEO {
 	public SWPS_Image_SEO $image_seo;
 	public SWPS_Crawl_Files $crawl_files;
 	public SWPS_Backlinks $backlinks;
+	public SWPS_Autopilot_Guardian $autopilot_guardian;
 
 	// AEO Optimize (v4.6).
 	public SWPS_AEO_Scorer            $aeo_scorer;
@@ -322,6 +323,7 @@ final class StrataWP_SEO {
 			$this->cost_tracker
 		);
 		$this->cron                 = new SWPS_Cron( $this->generator, $this->topic_queue );
+		$this->autopilot_guardian   = new SWPS_Autopilot_Guardian();
 
 		// Initialize v2.0 subsystems.
 		$this->calendar             = new SWPS_Calendar( $this->topic_queue );
@@ -1217,6 +1219,7 @@ function swps_activate(): void {
 		'include_takeaways'           => 0,
 		'takeaways_count'             => 5,
 		'takeaways_schema'            => 1,
+		'monthly_budget'              => 0,
 		'cron_enabled'                => 0,
 		'cron_frequency'              => 'weekly',
 		'cron_day'                    => 'monday',

@@ -17,6 +17,120 @@ class SWPS_Autopilot_Guardian {
 
 	public const MAX_ATTEMPTS = 3;
 
+	public function __construct() {
+		// Priority 20: SWPS_Settings registers the schedule section at default 10.
+		add_action( 'admin_init', array( $this, 'register_settings' ), 20 );
+		add_action( 'admin_notices', array( $this, 'maybe_warn_budget' ) );
+	}
+
+	/**
+	 * Register the budget field inside the existing Auto-Publishing Schedule section.
+	 */
+	public function register_settings(): void {
+		register_setting(
+			'stratawp-seo',
+			self::OPTION_BUDGET,
+			array(
+				'type'              => 'number',
+				'sanitize_callback' => array( $this, 'sanitize_budget' ),
+				'default'           => 0,
+			)
+		);
+
+		add_settings_field(
+			self::OPTION_BUDGET,
+			__( 'Monthly AI budget (USD)', 'stratawp-seo' ),
+			array( $this, 'render_budget_field' ),
+			'stratawp-seo',
+			'swps_schedule_section'
+		);
+	}
+
+	/**
+	 * @param mixed $value Raw submitted value.
+	 */
+	public function sanitize_budget( $value ): float {
+		return max( 0, round( (float) $value, 2 ) );
+	}
+
+	public function render_budget_field(): void {
+		$budget = (float) get_option( self::OPTION_BUDGET, 0 );
+		printf(
+			'<input type="number" name="%1$s" value="%2$s" min="0" step="0.01" class="small-text" /> ' .
+			'<p class="description">%3$s</p>',
+			esc_attr( self::OPTION_BUDGET ),
+			esc_attr( $budget > 0 ? (string) $budget : '' ),
+			esc_html__( 'Hard stop for AI generation this calendar month. 0 or empty disables the cap. Setting a budget automatically enables cost tracking. Costs are estimates from the model price catalog — the provider bill may differ slightly.', 'stratawp-seo' )
+		);
+	}
+
+	/**
+	 * One dismissible warning per month once spend crosses 80% of budget.
+	 */
+	public function maybe_warn_budget(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$budget = (float) get_option( self::OPTION_BUDGET, 0 );
+		if ( $budget <= 0 ) {
+			return;
+		}
+
+		$tracker = new SWPS_Cost_Tracker();
+		$spent   = (float) ( $tracker->get_monthly_stats()['total_cost'] ?? 0 );
+		$state   = self::budget_state( $spent, $budget );
+
+		if ( 'ok' === $state ) {
+			return;
+		}
+
+		$dismiss_key = 'swps_budget_notice_dismissed_' . gmdate( 'Y_m' );
+
+		if ( 'warning' === $state && isset( $_GET['swps_dismiss_budget_notice'] ) && check_admin_referer( 'swps_dismiss_budget_notice' ) ) {
+			update_option( $dismiss_key, 1, false );
+			return;
+		}
+		if ( 'warning' === $state && get_option( $dismiss_key ) ) {
+			return;
+		}
+
+		if ( 'exceeded' === $state ) {
+			printf(
+				'<div class="notice notice-error"><p><strong>%s</strong> %s</p></div>',
+				esc_html__( 'StrataWP SEO: monthly AI budget reached.', 'stratawp-seo' ),
+				esc_html(
+					sprintf(
+						/* translators: 1: spent, 2: budget */
+						__( '$%1$s of $%2$s spent — AI generation is paused until next month or a higher budget.', 'stratawp-seo' ),
+						number_format_i18n( $spent, 2 ),
+						number_format_i18n( $budget, 2 )
+					)
+				)
+			);
+			return;
+		}
+
+		$dismiss_url = wp_nonce_url(
+			add_query_arg( 'swps_dismiss_budget_notice', 1 ),
+			'swps_dismiss_budget_notice'
+		);
+		printf(
+			'<div class="notice notice-warning"><p><strong>%s</strong> %s <a href="%s">%s</a></p></div>',
+			esc_html__( 'StrataWP SEO: approaching monthly AI budget.', 'stratawp-seo' ),
+			esc_html(
+				sprintf(
+					/* translators: 1: spent, 2: budget */
+					__( '$%1$s of $%2$s spent this month.', 'stratawp-seo' ),
+					number_format_i18n( $spent, 2 ),
+					number_format_i18n( $budget, 2 )
+				)
+			),
+			esc_url( $dismiss_url ),
+			esc_html__( 'Dismiss for this month', 'stratawp-seo' )
+		);
+	}
+
 	/**
 	 * Fraction of budget at which the warning notice fires.
 	 */
