@@ -360,10 +360,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<?php endif; ?>
 
 		<?php if ( ! empty( $gaps ) ) : ?>
+		<?php
+		$gap_current_sort = isset( $_GET['gap_sort'] ) && 'score' === $_GET['gap_sort'] ? 'score' : 'date'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$gap_sort_score_url = esc_url( add_query_arg( 'gap_sort', 'score' ) );
+		$gap_sort_date_url  = esc_url( add_query_arg( 'gap_sort', 'date' ) );
+		?>
 		<div class="swps-section-h" style="margin-top:24px">
 			<h3><?php esc_html_e( 'AEO Gap — Posts Never Crawled (30d)', 'stratawp-seo' ); ?></h3>
 			<p style="color:var(--swps-text-muted);font-size:12px;margin:4px 0 0">
 				<?php esc_html_e( 'Published content that no AI crawler has fetched. Candidates for sitemap re-submission, internal linking, or refresh.', 'stratawp-seo' ); ?>
+				&nbsp;
+				<?php esc_html_e( 'Sort:', 'stratawp-seo' ); ?>
+				<?php if ( 'score' === $gap_current_sort ) : ?>
+					<a href="<?php echo $gap_sort_date_url; ?>"><?php esc_html_e( 'By date', 'stratawp-seo' ); ?></a>
+					&middot; <strong><?php esc_html_e( 'By AEO score ↓', 'stratawp-seo' ); ?></strong>
+				<?php else : ?>
+					<strong><?php esc_html_e( 'By date', 'stratawp-seo' ); ?></strong>
+					&middot; <a href="<?php echo $gap_sort_score_url; ?>"><?php esc_html_e( 'By AEO score ↓', 'stratawp-seo' ); ?></a>
+				<?php endif; ?>
 			</p>
 		</div>
 		<table class="widefat striped">
@@ -371,6 +385,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<tr>
 					<th><?php esc_html_e( 'Post', 'stratawp-seo' ); ?></th>
 					<th><?php esc_html_e( 'Published', 'stratawp-seo' ); ?></th>
+					<th style="text-align:right"><?php esc_html_e( 'AEO Score', 'stratawp-seo' ); ?></th>
 					<th><?php esc_html_e( 'Actions', 'stratawp-seo' ); ?></th>
 				</tr>
 			</thead>
@@ -391,6 +406,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 							&nbsp;<a href="<?php echo esc_url( $gap['url'] ); ?>" target="_blank" rel="noopener" style="color:var(--swps-text-muted);font-size:11px">↗</a>
 						</td>
 						<td style="color:var(--swps-text-muted)"><?php echo esc_html( mysql2date( get_option( 'date_format' ), $gap['post_date'] ) ); ?></td>
+						<td style="text-align:right">
+							<?php echo null !== $gap['aeo_score'] ? esc_html( (string) $gap['aeo_score'] ) : '<span style="color:var(--swps-text-faint)">—</span>'; ?>
+						</td>
 						<td>
 							<a class="button button-small" href="<?php echo esc_url( $aeo_gap_url ); ?>">
 								<?php esc_html_e( 'Optimize for AEO →', 'stratawp-seo' ); ?>

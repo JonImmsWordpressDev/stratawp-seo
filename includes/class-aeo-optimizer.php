@@ -214,7 +214,7 @@ class SWPS_AEO_Optimizer {
 			if ( get_post_meta( $post_id, self::META_DISMISSED, true ) ) {
 				continue;
 			}
-			$coverage = get_post_meta( $post_id, SWPS_AEO_Scorer::META_SUBSCORE_PREFIX . 'coverage', true );
+			$coverage  = get_post_meta( $post_id, SWPS_AEO_Scorer::META_SUBSCORE_PREFIX . 'coverage', true );
 			$results[] = array(
 				'post_id'      => $post_id,
 				'title'        => (string) $row->post_title,
@@ -231,6 +231,25 @@ class SWPS_AEO_Optimizer {
 				'has_proposal' => '' !== get_post_meta( $post_id, self::META_PROPOSAL, true ),
 			);
 		}
+
+		// Enrich with crawl recency and AI-visit counts — two batched queries.
+		$post_ids    = array_column( $results, 'post_id' );
+		$crawl_map   = SWPS_Visibility_Funnel::crawl_stats_for_posts( $post_ids, 30 );
+		$visit_map   = SWPS_Visibility_Funnel::ai_visits_for_posts( $post_ids, 30 );
+
+		foreach ( $results as &$r ) {
+			$pid   = $r['post_id'];
+			$crawl = $crawl_map[ $pid ] ?? null;
+
+			$r['last_crawl_at']  = $crawl ? (string) $crawl['last_crawl_at'] : null;
+			$r['last_crawl_ago'] = $crawl && $crawl['last_crawl_at']
+				? human_time_diff( strtotime( (string) $crawl['last_crawl_at'] ), time() ) . ' ago'
+				: null;
+			$r['last_bot']       = $crawl ? (string) $crawl['last_bot'] : null;
+			$r['ai_visits_30d']  = isset( $visit_map[ $pid ] ) ? (int) $visit_map[ $pid ]['ai_visits'] : 0;
+		}
+		unset( $r );
+
 		return $results;
 	}
 

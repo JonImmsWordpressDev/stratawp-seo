@@ -76,11 +76,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<th><?php esc_html_e( 'Score', 'stratawp-seo' ); ?></th>
 				<th><?php esc_html_e( 'Title', 'stratawp-seo' ); ?></th>
 				<th><?php esc_html_e( 'Sub-scores', 'stratawp-seo' ); ?></th>
+				<th><?php esc_html_e( 'Last crawl', 'stratawp-seo' ); ?></th>
+				<th style="text-align:right"><?php esc_html_e( 'AI visits (30d)', 'stratawp-seo' ); ?></th>
 				<th><?php esc_html_e( 'Actions', 'stratawp-seo' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
-			<tr class="swps-aeo-empty"><td colspan="4"><?php esc_html_e( 'No posts scored yet. Click "Re-scan all posts" to start.', 'stratawp-seo' ); ?></td></tr>
+			<tr class="swps-aeo-empty"><td colspan="6"><?php esc_html_e( 'No posts scored yet. Click "Re-scan all posts" to start.', 'stratawp-seo' ); ?></td></tr>
 		</tbody>
 	</table>
 </div>

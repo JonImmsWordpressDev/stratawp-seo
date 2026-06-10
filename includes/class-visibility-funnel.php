@@ -104,7 +104,7 @@ class SWPS_Visibility_Funnel {
 		$ids_int      = array_map( 'intval', $post_ids );
 		$placeholders = implode( ', ', array_fill( 0, count( $ids_int ), '%d' ) );
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT post_id,
@@ -132,13 +132,13 @@ class SWPS_Visibility_Funnel {
 		// phpcs:enable
 
 		$out = array();
-		foreach ( (array) $rows ?: array() as $row ) {
+		foreach ( ( $rows ? $rows : array() ) as $row ) {
 			$pid         = (int) $row['post_id'];
 			$out[ $pid ] = array(
-				'post_id'      => $pid,
-				'hits'         => (int) $row['hits'],
-				'last_crawl_at' => $row['last_crawl_at'] ?: null,
-				'last_bot'     => $row['last_bot'] ?: null,
+				'post_id'       => $pid,
+				'hits'          => (int) $row['hits'],
+				'last_crawl_at' => $row['last_crawl_at'] ? (string) $row['last_crawl_at'] : null,
+				'last_bot'      => $row['last_bot'] ? (string) $row['last_bot'] : null,
 			);
 		}
 
@@ -173,7 +173,7 @@ class SWPS_Visibility_Funnel {
 		$ids_int      = array_map( 'intval', $post_ids );
 		$placeholders = implode( ', ', array_fill( 0, count( $ids_int ), '%d' ) );
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT post_id, SUM(views) AS ai_visits
@@ -197,7 +197,7 @@ class SWPS_Visibility_Funnel {
 		// phpcs:enable
 
 		$out = array();
-		foreach ( (array) $rows ?: array() as $row ) {
+		foreach ( ( $rows ? $rows : array() ) as $row ) {
 			$pid         = (int) $row['post_id'];
 			$out[ $pid ] = array(
 				'post_id'   => $pid,
@@ -235,13 +235,14 @@ class SWPS_Visibility_Funnel {
 		$since     = gmdate( 'Y-m-d', strtotime( "-{$days} days" ) );
 
 		// Count published posts (posts + pages).
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- post count has no caching requirement; $wpdb->posts is safe.
 		$published = (int) $wpdb->get_var(
 			"SELECT COUNT(*) FROM {$wpdb->posts}
 			 WHERE post_status = 'publish'
 			   AND post_type IN ('post', 'page')"
 		);
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$crawled = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(DISTINCT post_id)

@@ -94,6 +94,40 @@ class SWPS_AEO_Editor_Panel {
 				}
 				?>
 			</p>
+			<?php
+			// AI Visibility funnel line — single batched lookup.
+			$crawl_map   = SWPS_Visibility_Funnel::crawl_stats_for_posts( array( $post->ID ), 30 );
+			$visit_map   = SWPS_Visibility_Funnel::ai_visits_for_posts( array( $post->ID ), 30 );
+			$crawl_entry = $crawl_map[ $post->ID ] ?? null;
+			$ai_visits   = isset( $visit_map[ $post->ID ] ) ? (int) $visit_map[ $post->ID ]['ai_visits'] : 0;
+
+			if ( $crawl_entry || $ai_visits > 0 ) :
+				$crawl_ago = $crawl_entry && $crawl_entry['last_crawl_at']
+					? human_time_diff( strtotime( (string) $crawl_entry['last_crawl_at'] ), time() ) . ' ago'
+					: null;
+				$crawl_bot = $crawl_entry ? (string) ( $crawl_entry['last_bot'] ?? '' ) : '';
+				?>
+				<p class="description swps-aeo-funnel-line" style="margin-top:6px;font-size:11px;color:var(--swps-text-muted);">
+					<?php if ( $crawl_ago ) : ?>
+						<?php
+						printf(
+							/* translators: 1: time since last crawl, 2: bot name. */
+							esc_html__( 'Crawled %1$s by %2$s', 'stratawp-seo' ),
+							esc_html( $crawl_ago ),
+							'<code>' . esc_html( '' !== $crawl_bot ? $crawl_bot : 'AI bot' ) . '</code>'
+						);
+						?>
+						&nbsp;&middot;&nbsp;
+					<?php endif; ?>
+					<?php
+					printf(
+						/* translators: %d: number of AI visits in 30 days. */
+						esc_html( _n( '%d AI visit (30d)', '%d AI visits (30d)', $ai_visits, 'stratawp-seo' ) ),
+						(int) $ai_visits
+					);
+					?>
+				</p>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

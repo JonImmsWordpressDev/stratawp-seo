@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.14.0
+Stable tag: 4.15.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -293,6 +293,9 @@ No. GSC integration is optional. The on-site analytics works entirely without an
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.15.0 =
+* New: AI visibility funnel — AEO-score sorting on the crawl-gap report, crawl recency and AI-visit columns on the AEO queue, a per-post funnel line in the AEO editor panel, and a dashboard funnel tile (crawled → AI-visited).
 
 = 4.14.0 =
 * New: AI referral attribution — visits from ChatGPT, Perplexity, Claude, Gemini, Copilot and others are classified at capture, with an AI Referrals analytics tab (engine trends, landing posts, engagement vs organic), a per-post crawl-to-visit funnel joined to AI-bot crawl data, and a dashboard KPI tile.

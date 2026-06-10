@@ -21,7 +21,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, a per-post meta editor, **Local SEO** (LocalBusiness schema with NAP and opening hours), **Image SEO** (auto-alt + filename sanitization + lazy-load), **Crawlers & Files** (in-admin editor for /llms.txt and /robots.txt), and **Backlinks** (manual/CSV-import tracker with daily health monitoring) — on autopilot or on demand.
 
-[![Version](https://img.shields.io/badge/version-4.14.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.15.0-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -1446,6 +1446,9 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 ---
 
 ## Changelog
+
+### v4.15.0 — June 2026
+- **New — AI visibility funnel:** AEO-score sorting on the crawl-gap report (sort by high-score-but-uncrawled first), crawl recency and AI-visit columns on the AEO queue, a per-post funnel line in the AEO editor panel, and a dashboard funnel tile showing posts crawled → posts receiving AI visits (30d, with stage conversion rates).
 
 ### v4.14.0 — June 2026
 - **New — AI referral attribution:** visits from ChatGPT, Perplexity, Claude, Gemini, Copilot and others are classified at capture, with an AI Referrals analytics tab (engine trends, landing posts, engagement vs organic), a per-post crawl-to-visit funnel joined to AI-bot crawl data, and a dashboard KPI tile.

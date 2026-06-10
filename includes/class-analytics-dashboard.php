@@ -76,7 +76,7 @@ class SWPS_Analytics_Dashboard {
 				'totals'    => $bot_tracker->get_totals( 30 ),
 				'bots'      => $bot_tracker->get_bot_summary( 30 ),
 				'top_pages' => $bot_tracker->get_top_pages( 30, 15 ),
-				'gaps'      => $bot_tracker->get_gap_posts( 30, 10 ),
+				'gaps'      => $bot_tracker->get_gap_posts( 30, 10, isset( $_GET['gap_sort'] ) && 'score' === $_GET['gap_sort'] ? 'score' : 'date' ), // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				'top_404s'  => $bot_tracker->get_top_404s( 30, 10 ),
 			);
 		}
@@ -259,6 +259,17 @@ class SWPS_Analytics_Dashboard {
 				? human_time_diff( strtotime( $bot_stats['last_seen'] ), time() ) . ' ago'
 				: null;
 		}
+
+		// AI visibility funnel fields — one batched call each.
+		$crawl_map = SWPS_Visibility_Funnel::crawl_stats_for_posts( array( $post_id ), 30 );
+		$visit_map = SWPS_Visibility_Funnel::ai_visits_for_posts( array( $post_id ), 30 );
+
+		$crawl_entry                     = $crawl_map[ $post_id ] ?? null;
+		$result['funnel_last_crawl_ago'] = $crawl_entry && $crawl_entry['last_crawl_at']
+			? human_time_diff( strtotime( (string) $crawl_entry['last_crawl_at'] ), time() ) . ' ago'
+			: null;
+		$result['funnel_last_bot']       = $crawl_entry ? (string) ( $crawl_entry['last_bot'] ?? '' ) : null;
+		$result['funnel_ai_visits_30d']  = isset( $visit_map[ $post_id ] ) ? (int) $visit_map[ $post_id ]['ai_visits'] : 0;
 
 		// GSC queries for this post.
 		if ( $this->search_console->is_connected() ) {
