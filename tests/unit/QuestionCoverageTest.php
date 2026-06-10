@@ -1,8 +1,9 @@
 <?php
 /**
- * Tests for SWPS_Question_Coverage::format_gap_instruction().
+ * Tests for SWPS_Question_Coverage pure static helpers: format_gap_instruction,
+ * tokens_similar, questions_unanswered, format_unanswered_instruction.
  *
- * Pure-PHP, no WordPress. The formatter is the only public surface tested here.
+ * Pure-PHP, no WordPress.
  *
  * @package StrataWP_SEO
  */
@@ -12,7 +13,7 @@ use PHPUnit\Framework\TestCase;
 require_once __DIR__ . '/../../includes/class-question-coverage.php';
 
 /**
- * @covers SWPS_Question_Coverage::format_gap_instruction
+ * @covers SWPS_Question_Coverage
  */
 class QuestionCoverageTest extends TestCase {
 
@@ -112,5 +113,131 @@ class QuestionCoverageTest extends TestCase {
 		$result = SWPS_Question_Coverage::format_gap_instruction( $sub_queries );
 		// The instruction should direct the AI towards qa inserts.
 		$this->assertStringContainsStringIgnoringCase( 'qa', $result );
+	}
+
+	// -------------------------------------------------------------------------
+	// tokens_similar
+	// -------------------------------------------------------------------------
+
+	public function test_tokens_similar_exact_match_is_one(): void {
+		$score = SWPS_Question_Coverage::tokens_similar(
+			'How long does sourdough last?',
+			'How long does sourdough last'
+		);
+		$this->assertSame( 1.0, $score );
+	}
+
+	public function test_tokens_similar_paraphrase_above_threshold(): void {
+		$score = SWPS_Question_Coverage::tokens_similar(
+			'how to store sourdough bread',
+			'Storing sourdough bread'
+		);
+		$this->assertGreaterThanOrEqual( 0.6, $score );
+	}
+
+	public function test_tokens_similar_unrelated_below_threshold(): void {
+		$score = SWPS_Question_Coverage::tokens_similar(
+			'best running shoes for marathons',
+			'sourdough starter feeding schedule'
+		);
+		$this->assertLessThan( 0.6, $score );
+	}
+
+	public function test_tokens_similar_empty_inputs_return_zero(): void {
+		$this->assertSame( 0.0, SWPS_Question_Coverage::tokens_similar( '', 'anything here' ) );
+		$this->assertSame( 0.0, SWPS_Question_Coverage::tokens_similar( 'anything here', '' ) );
+		$this->assertSame( 0.0, SWPS_Question_Coverage::tokens_similar( '', '' ) );
+	}
+
+	public function test_tokens_similar_stopword_robustness(): void {
+		// Stopwords ("what is the ... for") must not dilute the overlap.
+		$score = SWPS_Question_Coverage::tokens_similar(
+			'what is the best flour for sourdough',
+			'Best flour for sourdough'
+		);
+		$this->assertGreaterThanOrEqual( 0.6, $score );
+	}
+
+	public function test_tokens_similar_only_stopwords_returns_zero(): void {
+		$this->assertSame( 0.0, SWPS_Question_Coverage::tokens_similar( 'what is the', 'how do I' ) );
+	}
+
+	// -------------------------------------------------------------------------
+	// questions_unanswered
+	// -------------------------------------------------------------------------
+
+	public function test_questions_unanswered_excludes_matched_heading(): void {
+		$questions = array( 'how long does sourdough last' );
+		$headings  = array( 'How long does sourdough last?' );
+		$this->assertSame( array(), SWPS_Question_Coverage::questions_unanswered( $questions, $headings ) );
+	}
+
+	public function test_questions_unanswered_includes_unmatched_question(): void {
+		$questions = array( 'can you freeze sourdough starter' );
+		$headings  = array( 'Choosing the right flour', 'Bulk fermentation timing' );
+		$result    = SWPS_Question_Coverage::questions_unanswered( $questions, $headings );
+		$this->assertSame( $questions, $result );
+	}
+
+	public function test_questions_unanswered_empty_headings_returns_all(): void {
+		$questions = array( 'q one here', 'q two here' );
+		$this->assertSame( $questions, SWPS_Question_Coverage::questions_unanswered( $questions, array() ) );
+	}
+
+	public function test_questions_unanswered_empty_questions_returns_empty(): void {
+		$this->assertSame( array(), SWPS_Question_Coverage::questions_unanswered( array(), array( 'A heading' ) ) );
+	}
+
+	public function test_questions_unanswered_mixed(): void {
+		$questions = array(
+			'how long does sourdough last',
+			'can you freeze sourdough starter',
+		);
+		$headings = array( 'How long does sourdough last?' );
+		$result   = SWPS_Question_Coverage::questions_unanswered( $questions, $headings );
+		$this->assertSame( array( 'can you freeze sourdough starter' ), $result );
+	}
+
+	// -------------------------------------------------------------------------
+	// format_unanswered_instruction
+	// -------------------------------------------------------------------------
+
+	public function test_format_unanswered_empty_returns_empty_string(): void {
+		$this->assertSame( '', SWPS_Question_Coverage::format_unanswered_instruction( array() ) );
+	}
+
+	public function test_format_unanswered_contains_question_and_impressions(): void {
+		$result = SWPS_Question_Coverage::format_unanswered_instruction( array(
+			array(
+				'q'           => 'how long does sourdough last',
+				'impressions' => 420,
+			),
+		) );
+		$this->assertStringContainsString( 'how long does sourdough last', $result );
+		$this->assertStringContainsString( '420', $result );
+		$this->assertStringContainsStringIgnoringCase( 'qa', $result );
+	}
+
+	public function test_format_unanswered_cap_respected(): void {
+		$questions = array();
+		for ( $i = 1; $i <= 5; $i++ ) {
+			$questions[] = array(
+				'q'           => "question number {$i}",
+				'impressions' => 100 - $i,
+			);
+		}
+		$result = SWPS_Question_Coverage::format_unanswered_instruction( $questions, 3 );
+		$this->assertStringContainsString( 'question number 3', $result );
+		$this->assertStringNotContainsString( 'question number 4', $result );
+	}
+
+	public function test_format_unanswered_mentions_search_console_source(): void {
+		$result = SWPS_Question_Coverage::format_unanswered_instruction( array(
+			array(
+				'q'           => 'real searcher question',
+				'impressions' => 10,
+			),
+		) );
+		$this->assertStringContainsStringIgnoringCase( 'search console', $result );
 	}
 }

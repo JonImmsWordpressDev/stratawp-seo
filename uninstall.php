@@ -37,6 +37,7 @@ $swps_cron_hooks = array(
 	'swps_aeo_sweep_proposals',
 	'swps_send_digest',
 	'swps_citation_check',
+	'swps_question_mine',
 );
 
 foreach ( $swps_cron_hooks as $swps_cron_hook ) {

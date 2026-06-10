@@ -257,6 +257,13 @@ final class StrataWP_SEO {
 	public SWPS_AEO_Optimizer         $aeo_optimizer;
 	public SWPS_AEO_Editor_Panel      $aeo_editor_panel;
 
+	/**
+	 * Question coverage engine (v4.17) — GSC question demand mining.
+	 *
+	 * @var SWPS_Question_Coverage
+	 */
+	public SWPS_Question_Coverage $question_coverage;
+
 	// v4.0 admin shell.
 	public SWPS_User_Prefs $user_prefs;
 	public SWPS_Modules $modules;
@@ -338,6 +345,9 @@ final class StrataWP_SEO {
 			$this->rate_limiter
 		);
 		$this->aeo_editor_panel  = new SWPS_AEO_Editor_Panel( $this->aeo_scorer );
+
+		// Question coverage engine (v4.17) — weekly GSC question demand mining.
+		$this->question_coverage = new SWPS_Question_Coverage( $this->search_console, $this->topic_queue );
 
 		$this->competitors          = new SWPS_Competitors();
 		$this->local_seo            = new SWPS_Local_SEO();
@@ -1381,6 +1391,7 @@ function swps_deactivate(): void {
 	SWPS_Competitors::unschedule_cron();
 	SWPS_Backlinks::unschedule_cron();
 	wp_clear_scheduled_hook( 'swps_aeo_sweep_proposals' );
+	SWPS_Question_Coverage::unschedule_cron();
 	wp_unschedule_hook( 'swps_send_digest' );
 	flush_rewrite_rules();
 }
