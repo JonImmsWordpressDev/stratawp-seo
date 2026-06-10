@@ -1,0 +1,215 @@
+/* Onboarding wizard page. */
+
+.swps-onboarding-wrap {
+    max-width: 860px;
+}
+
+/* Vertical stepper. */
+.swps-ob-stepper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.swps-ob-step {
+    position: relative;
+    background: var(--swps-surface, #fff);
+    border: 1px solid var(--swps-border, #e2e4e9);
+    border-radius: var(--swps-radius-lg, 12px);
+    padding: 20px 24px;
+    transition: var(--swps-transition, all .15s ease);
+}
+
+.swps-ob-step.is-done {
+    border-color: var(--swps-success, #00a32a);
+    opacity: 0.75;
+}
+
+.swps-ob-step-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.swps-ob-step-head h2 {
+    margin: 0;
+    font-size: 16px;
+    flex: 1;
+}
+
+.swps-ob-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--swps-accent-grad, var(--swps-accent, #6c5ce7));
+    color: var(--swps-text-on-grad, #fff);
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.swps-ob-step.is-done .swps-ob-step-num {
+    background: var(--swps-success, #00a32a);
+}
+
+.swps-ob-step-check {
+    display: none;
+    color: var(--swps-success, #00a32a);
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.swps-ob-step.is-done .swps-ob-step-check {
+    display: inline;
+}
+
+.swps-ob-step-body {
+    margin-top: 10px;
+    color: var(--swps-text-body, var(--swps-text, #1f2933));
+}
+
+/* Inline field rows. */
+.swps-ob-field-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.swps-ob-field-row select,
+.swps-ob-field-row input[type="text"],
+.swps-ob-field-row input[type="password"] {
+    background: var(--swps-bg-input, #fff);
+    border: 1px solid var(--swps-border, #e2e4e9);
+    border-radius: var(--swps-radius-sm, 6px);
+    color: var(--swps-text-primary, #1f2933);
+    padding: 6px 10px;
+    min-height: 36px;
+}
+
+.swps-ob-field-row input[type="text"],
+.swps-ob-field-row input[type="password"] {
+    flex: 1;
+    min-width: 220px;
+}
+
+#swps-ob-description {
+    width: 100%;
+    background: var(--swps-bg-input, #fff);
+    border: 1px solid var(--swps-border, #e2e4e9);
+    border-radius: var(--swps-radius-sm, 6px);
+    color: var(--swps-text-primary, #1f2933);
+    padding: 8px 10px;
+}
+
+/* Sources list. */
+.swps-ob-sources {
+    margin: 8px 0 12px;
+    padding-left: 18px;
+    list-style: disc;
+}
+
+/* Status messages. */
+.swps-ob-msg {
+    min-height: 1.4em;
+    margin: 8px 0 0;
+    font-size: 13px;
+}
+
+.swps-ob-msg.is-ok {
+    color: var(--swps-success, #00a32a);
+}
+
+.swps-ob-msg.is-err {
+    color: var(--swps-crit, #d63638);
+}
+
+.swps-ob-note.is-ok {
+    color: var(--swps-success, #00a32a);
+}
+
+.swps-ob-cost-note {
+    font-size: 12px;
+    color: var(--swps-text-muted, #6b7280);
+    margin: 6px 0 0;
+}
+
+/* Skip link. */
+.swps-ob-skip {
+    position: absolute;
+    top: 22px;
+    right: 24px;
+    font-size: 12px;
+    color: var(--swps-text-muted, #6b7280);
+    text-decoration: none;
+}
+
+.swps-ob-skip:hover {
+    color: var(--swps-text-primary, #1f2933);
+    text-decoration: underline;
+}
+
+.swps-ob-step.is-done .swps-ob-skip {
+    display: none;
+}
+
+/* Spinner. */
+.swps-ob-spinner {
+    display: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--swps-border, #e2e4e9);
+    border-top-color: var(--swps-accent, #6c5ce7);
+    border-radius: 50%;
+    animation: swps-ob-spin .7s linear infinite;
+}
+
+.swps-ob-spinner.is-active {
+    display: inline-block;
+}
+
+@keyframes swps-ob-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Preview result card. */
+.swps-ob-preview-card {
+    margin-top: 14px;
+    border: 1px solid var(--swps-border, #e2e4e9);
+    border-radius: var(--swps-radius, 8px);
+    padding: 16px 18px;
+    background: var(--swps-bg-surface, #fafbfc);
+}
+
+.swps-ob-preview-card h3 {
+    margin: 0 0 6px;
+}
+
+.swps-ob-preview-meta {
+    color: var(--swps-text-muted, #6b7280);
+    font-size: 13px;
+    margin: 0 0 10px;
+}
+
+/* Win panel. */
+.swps-ob-win {
+    background: var(--swps-surface, #fff);
+    border: 1px solid var(--swps-success, #00a32a);
+    border-radius: var(--swps-radius-lg, 12px);
+    padding: 24px 28px;
+    margin-top: 16px;
+}
+
+.swps-ob-win h2 {
+    margin-top: 0;
+}
+
+.swps-ob-win-pointers {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--swps-text-muted, #6b7280);
+}

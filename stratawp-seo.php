@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.12.0
+ * Version: 4.13.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.12.0' );
+define( 'SWPS_VERSION', '4.13.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -65,6 +65,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-cost-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-autopilot-guardian.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-digest.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-digest-settings.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-onboarding.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-topic-queue.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-content-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-voice-profile.php';
@@ -227,6 +228,7 @@ final class StrataWP_SEO {
 	public SWPS_Autopilot_Guardian $autopilot_guardian;
 	public SWPS_Digest $digest;
 	public SWPS_Digest_Settings $digest_settings;
+	public SWPS_Onboarding $onboarding;
 
 	// AEO Optimize (v4.6).
 	public SWPS_AEO_Scorer            $aeo_scorer;
@@ -330,6 +332,7 @@ final class StrataWP_SEO {
 		$this->autopilot_guardian   = new SWPS_Autopilot_Guardian();
 		$this->digest               = new SWPS_Digest();
 		$this->digest_settings      = new SWPS_Digest_Settings( $this->digest );
+		$this->onboarding           = new SWPS_Onboarding();
 
 		// Initialize v2.0 subsystems.
 		$this->calendar             = new SWPS_Calendar( $this->topic_queue );
@@ -1294,6 +1297,11 @@ function swps_activate(): void {
 		if ( false === get_option( "swps_{$key}" ) ) {
 			update_option( "swps_{$key}", $value );
 		}
+	}
+
+	// On a fresh install (option absent = never activated before), trigger the onboarding wizard.
+	if ( false === get_option( 'swps_onboarding_state' ) ) {
+		set_transient( 'swps_onboarding_redirect', 1, 60 );
 	}
 
 	// Register CPTs for flush_rewrite_rules.

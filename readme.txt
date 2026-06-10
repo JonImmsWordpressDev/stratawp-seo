@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.12.0
+Stable tag: 4.13.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -293,6 +293,10 @@ No. GSC integration is optional. The on-site analytics works entirely without an
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.13.0 =
+* New: 5-minute onboarding wizard — migrate from Yoast/Rank Math, validate your AI key, AI-suggest your site description, run the audit, and generate a preview post; setup checklist on the dashboard until complete.
+* New: AI provider keys can now be validated from the UI (Test & Save).
 
 = 4.12.0 =
 * New: White-label email digest — weekly/daily/monthly report of generations, failures, keyword movers, backlinks, competitors, AI-bot trends, and AI spend, led by a needs-attention triage section; agency branding, multiple recipients, test-send, optional AI executive summary.

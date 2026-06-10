@@ -104,6 +104,7 @@ class SWPS_Dashboard {
 			'auto_optimize_queue' => array(), // Phase 7 fills in.
 			'competitors'         => $this->safe_get_competitor_summary(),
 			'backlinks'           => $this->safe_get_backlinks_summary(),
+			'onboarding'          => $this->safe_get_onboarding(),
 			'modules'             => $this->get_modules_for_grid(),
 		);
 	}
@@ -368,6 +369,34 @@ class SWPS_Dashboard {
 					'unique_domains' => 0,
 				),
 				'recent' => array(),
+			);
+		}
+	}
+
+	/**
+	 * Onboarding wizard state + progress for the setup checklist card.
+	 *
+	 * @return array{state: array, progress: array}
+	 */
+	private function safe_get_onboarding(): array {
+		try {
+			$state = SWPS_Onboarding::normalize_state( get_option( SWPS_Onboarding::OPTION_STATE ) );
+			return array(
+				'state'    => $state,
+				'progress' => SWPS_Onboarding::progress( $state ),
+			);
+		} catch ( \Throwable $e ) {
+			return array(
+				'state'    => array(
+					'steps'     => array(),
+					'dismissed' => true,
+				),
+				'progress' => array(
+					'done'     => 0,
+					'total'    => 0,
+					'complete' => true,
+					'next'     => null,
+				),
 			);
 		}
 	}
