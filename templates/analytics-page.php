@@ -146,6 +146,108 @@ if ( ! defined( 'ABSPATH' ) ) {
 	</table>
 	<?php endif; ?>
 
+	<div class="swps-section-h" style="margin-top:40px">
+		<h3><?php esc_html_e( 'AI Referrals', 'stratawp-seo' ); ?></h3>
+		<p style="color:var(--swps-text-muted);font-size:12px;margin:4px 0 0">
+			<?php esc_html_e( 'Visits referred from AI assistants (ChatGPT, Perplexity, Claude, Gemini, Copilot, and others), classified at capture time.', 'stratawp-seo' ); ?>
+		</p>
+	</div>
+
+	<div class="swps-summary-tiles" style="margin-bottom:16px">
+		<div class="swps-summary-tile">
+			<div class="swps-summary-tile-h"><?php esc_html_e( 'AI-Referred Views', 'stratawp-seo' ); ?></div>
+			<div class="swps-summary-tile-num is-grad" id="swps-ai-ref-views">—</div>
+			<div class="swps-summary-tile-foot" id="swps-ai-ref-change"></div>
+		</div>
+		<div class="swps-summary-tile">
+			<div class="swps-summary-tile-h"><?php esc_html_e( 'Top Engine', 'stratawp-seo' ); ?></div>
+			<div class="swps-summary-tile-num is-grad" id="swps-ai-ref-top-engine">—</div>
+		</div>
+	</div>
+
+	<div class="swps-tile" style="margin-bottom:16px">
+		<div class="swps-tile-h"><?php esc_html_e( 'Views by Engine', 'stratawp-seo' ); ?></div>
+		<table class="widefat striped" id="swps-ai-ref-engines-table" style="margin-top:8px">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'Engine', 'stratawp-seo' ); ?></th>
+					<th style="text-align:right"><?php esc_html_e( 'Views', 'stratawp-seo' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr><td colspan="2" class="swps-loading" style="color:var(--swps-text-muted)"><?php esc_html_e( 'Loading...', 'stratawp-seo' ); ?></td></tr>
+			</tbody>
+		</table>
+	</div>
+
+	<div class="swps-section-h" style="margin-top:24px">
+		<h3><?php esc_html_e( 'AI Landing Posts', 'stratawp-seo' ); ?></h3>
+		<p style="color:var(--swps-text-muted);font-size:12px;margin:4px 0 0">
+			<?php esc_html_e( 'Posts receiving the most AI-referred visits.', 'stratawp-seo' ); ?>
+		</p>
+	</div>
+	<table class="widefat striped" id="swps-ai-ref-landing-table">
+		<thead>
+			<tr>
+				<th><?php esc_html_e( 'Post', 'stratawp-seo' ); ?></th>
+				<th style="text-align:right"><?php esc_html_e( 'Views', 'stratawp-seo' ); ?></th>
+				<th style="text-align:right"><?php esc_html_e( 'Avg Time', 'stratawp-seo' ); ?></th>
+				<th style="text-align:right"><?php esc_html_e( 'Scroll', 'stratawp-seo' ); ?></th>
+				<th style="text-align:right"><?php esc_html_e( 'Bounce', 'stratawp-seo' ); ?></th>
+				<th><?php esc_html_e( 'Engines', 'stratawp-seo' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr><td colspan="6" class="swps-loading" style="color:var(--swps-text-muted)"><?php esc_html_e( 'Loading...', 'stratawp-seo' ); ?></td></tr>
+		</tbody>
+	</table>
+
+	<div class="swps-section-h" style="margin-top:24px">
+		<h3><?php esc_html_e( 'Engagement: AI vs Organic', 'stratawp-seo' ); ?></h3>
+	</div>
+	<div class="swps-tile" id="swps-ai-ref-engagement">
+		<p class="swps-loading" style="margin:0;color:var(--swps-text-muted)"><?php esc_html_e( 'Loading...', 'stratawp-seo' ); ?></p>
+	</div>
+
+	<div class="swps-section-h" style="margin-top:24px">
+		<h3><?php esc_html_e( 'Crawl-to-Visit Funnel', 'stratawp-seo' ); ?></h3>
+		<p style="color:var(--swps-text-muted);font-size:12px;margin:4px 0 0">
+			<?php esc_html_e( 'AI bot crawls of a post next to AI-referred visits to it. Crawls vs visits are correlational, not causal.', 'stratawp-seo' ); ?>
+		</p>
+	</div>
+	<table class="widefat striped" id="swps-ai-ref-funnel-table">
+		<thead>
+			<tr>
+				<th><?php esc_html_e( 'Post', 'stratawp-seo' ); ?></th>
+				<th><?php esc_html_e( 'Engine', 'stratawp-seo' ); ?></th>
+				<th style="text-align:right"><?php esc_html_e( 'Crawls', 'stratawp-seo' ); ?></th>
+				<th style="text-align:right"><?php esc_html_e( 'Visits', 'stratawp-seo' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr><td colspan="4" class="swps-loading" style="color:var(--swps-text-muted)"><?php esc_html_e( 'Loading...', 'stratawp-seo' ); ?></td></tr>
+		</tbody>
+	</table>
+
+	<div class="swps-section-h" style="margin-top:24px">
+		<h3><?php esc_html_e( 'Crawled but No AI Visits', 'stratawp-seo' ); ?></h3>
+		<p style="color:var(--swps-text-muted);font-size:12px;margin:4px 0 0">
+			<?php esc_html_e( 'Posts AI bots crawl that have not yet received AI-referred visits — candidates for AEO optimization.', 'stratawp-seo' ); ?>
+		</p>
+	</div>
+	<table class="widefat striped" id="swps-ai-ref-novisits-table">
+		<thead>
+			<tr>
+				<th><?php esc_html_e( 'Post', 'stratawp-seo' ); ?></th>
+				<th><?php esc_html_e( 'Engine', 'stratawp-seo' ); ?></th>
+				<th style="text-align:right"><?php esc_html_e( 'Crawls', 'stratawp-seo' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr><td colspan="3" class="swps-loading" style="color:var(--swps-text-muted)"><?php esc_html_e( 'Loading...', 'stratawp-seo' ); ?></td></tr>
+		</tbody>
+	</table>
+
 	<?php
 	if ( ! empty( $bot_data ) ) :
 		$totals    = $bot_data['totals'];

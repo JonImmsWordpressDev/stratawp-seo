@@ -99,6 +99,7 @@ class SWPS_Dashboard {
 			'ai_cost_30d'         => $this->safe_get_ai_cost(),
 			'autopilot'           => $this->safe_get_autopilot(),
 			'posts_30d'           => $this->safe_get_post_views(),
+			'ai_referrals'        => $this->safe_get_ai_referrals(),
 			'top_issues'          => $this->safe_get_top_issues(),
 			'top_queries'         => $this->safe_get_top_gsc_queries(),
 			'auto_optimize_queue' => array(), // Phase 7 fills in.
@@ -290,6 +291,27 @@ class SWPS_Dashboard {
 			return array(
 				'views'     => $views_30,
 				'delta_pct' => $delta,
+			);
+		} catch ( \Throwable $e ) {
+			return array(
+				'views'     => 0,
+				'delta_pct' => null,
+			);
+		}
+	}
+
+	/**
+	 * AI-referred views over the last 30 days with a previous-period delta.
+	 *
+	 * @return array{views: int, delta_pct: float|null}
+	 */
+	private function safe_get_ai_referrals(): array {
+		try {
+			$summary = SWPS_AI_Referrals_Report::get_summary( 30 );
+
+			return array(
+				'views'     => (int) $summary['total_views'],
+				'delta_pct' => $summary['delta_pct'],
 			);
 		} catch ( \Throwable $e ) {
 			return array(

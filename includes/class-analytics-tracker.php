@@ -48,10 +48,12 @@ class SWPS_Analytics_Tracker {
             time_on_page SMALLINT UNSIGNED NOT NULL DEFAULT 0,
             scroll_depth TINYINT UNSIGNED NOT NULL DEFAULT 0,
             is_bounce TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
+            ai_source VARCHAR(32) NOT NULL DEFAULT '',
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY idx_created_at (created_at),
-            KEY idx_post_id (post_id)
+            KEY idx_post_id (post_id),
+            KEY idx_ai_source (ai_source)
         ) {$charset};";
 
 		$sql_daily = "CREATE TABLE {$daily} (
@@ -146,6 +148,7 @@ class SWPS_Analytics_Tracker {
 		$time_on_page = min( absint( $_POST['time_on_page'] ?? 0 ), 3600 );
 		$scroll_depth = min( absint( $_POST['scroll_depth'] ?? 0 ), 100 );
 		$is_bounce    = absint( $_POST['is_bounce'] ?? 1 ) ? 1 : 0;
+		$ai_source    = SWPS_AI_Referrals::classify_visit( $referrer, $page_url );
 
 		$data = array(
 			'post_id'      => $post_id,
@@ -154,6 +157,7 @@ class SWPS_Analytics_Tracker {
 			'time_on_page' => $time_on_page,
 			'scroll_depth' => $scroll_depth,
 			'is_bounce'    => $is_bounce,
+			'ai_source'    => $ai_source,
 		);
 
 		/**
@@ -183,6 +187,7 @@ class SWPS_Analytics_Tracker {
 				'%d',
 				'%d',
 				'%d',
+				'%s',
 			)
 		);
 
@@ -217,6 +222,9 @@ class SWPS_Analytics_Tracker {
 				$cutoff
 			)
 		);
+
+		// Roll up AI referral data BEFORE deleting raw rows.
+		SWPS_AI_Referrals::aggregate( $cutoff );
 
 		// Delete aggregated raw rows.
 		$wpdb->query(
