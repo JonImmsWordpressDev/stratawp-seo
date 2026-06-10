@@ -143,6 +143,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-budget-report.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-issues.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawler.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawl-admin.php';
+require_once SWPS_PLUGIN_DIR . 'includes/audit/class-site-crawl-module.php';
 
 // Backlinks (v4.2.2) — manual/CSV-import backlink tracker with health monitor.
 require_once SWPS_PLUGIN_DIR . 'includes/class-backlinks.php';
@@ -398,6 +399,7 @@ final class StrataWP_SEO {
 		$this->crawl_budget_report  = new SWPS_Crawl_Budget_Report();
 		$this->site_crawler         = new SWPS_Site_Crawler();
 		$this->site_crawl_admin     = new SWPS_Site_Crawl_Admin( $this->site_crawler );
+		add_filter( 'swps_audit_modules', array( 'SWPS_Site_Crawl_Module', 'register' ) );
 		$this->backlinks            = new SWPS_Backlinks();
 		$this->settings             = new SWPS_Settings();
 		$this->analyzer             = new SWPS_Analyzer( $this->cache_manager );
