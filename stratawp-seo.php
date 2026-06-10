@@ -82,6 +82,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/audit/class-robots-module.php';
 require_once SWPS_PLUGIN_DIR . 'includes/audit/class-meta-robots-module.php';
 require_once SWPS_PLUGIN_DIR . 'includes/audit/class-image-seo-module.php';
 require_once SWPS_PLUGIN_DIR . 'includes/audit/class-pagespeed-module.php';
+require_once SWPS_PLUGIN_DIR . 'includes/audit/class-schema-audit-module.php';
 
 // Schema structured data.
 require_once SWPS_PLUGIN_DIR . 'includes/class-schema-validator.php';
@@ -425,6 +426,7 @@ final class StrataWP_SEO {
 		$this->site_crawler         = new SWPS_Site_Crawler();
 		$this->site_crawl_admin     = new SWPS_Site_Crawl_Admin( $this->site_crawler );
 		add_filter( 'swps_audit_modules', array( 'SWPS_Site_Crawl_Module', 'register' ) );
+		add_filter( 'swps_audit_modules', array( 'SWPS_Schema_Audit_Module', 'register' ) );
 		$this->backlinks            = new SWPS_Backlinks();
 		$this->settings             = new SWPS_Settings();
 		$this->analyzer             = new SWPS_Analyzer( $this->cache_manager );
