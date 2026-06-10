@@ -442,6 +442,8 @@ class SWPS_Question_Coverage {
 	 */
 	private function store_candidates( array $candidates ): void {
 		if ( empty( $candidates ) ) {
+			// A successful run that found nothing must clear last week's list.
+			update_option( self::OPTION_CANDIDATES, array(), false );
 			return;
 		}
 		arsort( $candidates );
