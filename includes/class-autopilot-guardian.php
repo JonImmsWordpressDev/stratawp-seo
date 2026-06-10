@@ -93,7 +93,7 @@ class SWPS_Autopilot_Guardian {
 	 *
 	 * @return true|WP_Error True to proceed; WP_Error 'swps_budget_exceeded' to block.
 	 */
-	public static function check_budget() {
+	public static function check_budget(): bool|WP_Error {
 		$budget = (float) get_option( self::OPTION_BUDGET, 0 );
 		if ( $budget <= 0 ) {
 			return true;

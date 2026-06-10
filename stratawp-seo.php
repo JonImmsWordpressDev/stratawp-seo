@@ -62,6 +62,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-templates.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-duplicate-checker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rate-limiter.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-cost-tracker.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-autopilot-guardian.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-topic-queue.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-content-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-voice-profile.php';
