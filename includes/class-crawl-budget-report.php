@@ -417,7 +417,8 @@ class SWPS_Crawl_Budget_Report {
 			// Default: all known AI bots allowed.
 			return array_keys( SWPS_AI_Bots::KNOWN_BOTS );
 		}
-		return array_keys( array_filter( (array) $stored ) );
+		// Stored as a flat list of allowed bot keys (see the multi_checkbox sanitizer).
+		return array_values( array_filter( (array) $stored, 'is_string' ) );
 	}
 
 	/**
@@ -431,7 +432,7 @@ class SWPS_Crawl_Budget_Report {
 			return array();
 		}
 		$all     = array_keys( SWPS_AI_Bots::KNOWN_BOTS );
-		$allowed = array_keys( array_filter( (array) $stored ) );
+		$allowed = array_values( array_filter( (array) $stored, 'is_string' ) );
 		return array_values( array_diff( $all, $allowed ) );
 	}
 }

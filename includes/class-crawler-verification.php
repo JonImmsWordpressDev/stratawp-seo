@@ -591,7 +591,7 @@ class SWPS_Crawler_Verification {
 		$blocked_keys = array();
 		if ( is_array( $allowed_raw ) ) {
 			$all_known    = array_keys( SWPS_AI_Bots::KNOWN_BOTS );
-			$allowed_keys = array_keys( array_filter( $allowed_raw ) );
+			$allowed_keys = array_values( array_filter( (array) $allowed_raw, 'is_string' ) );
 			$blocked_keys = array_values( array_diff( $all_known, $allowed_keys ) );
 		}
 

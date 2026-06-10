@@ -45,6 +45,11 @@ class SWPS_Crawler_Enforcement {
 			return;
 		}
 
+		// Never block a logged-in admin testing with a bot-like user agent.
+		if ( is_user_logged_in() && current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- UA is used only for substring matching (stripos), never output.
 		$ua = isset( $_SERVER['HTTP_USER_AGENT'] ) ? (string) wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) : '';
 		if ( '' === $ua ) {

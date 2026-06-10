@@ -22,8 +22,8 @@ class SWPS_AI_Bots {
 	 * The value is the substring matched in the User-Agent header.
 	 */
 	public const SEARCH_BOTS = array(
-		'googlebot'       => 'Googlebot',
 		'googlebot_image' => 'Googlebot-Image',
+		'googlebot'       => 'Googlebot',
 		'bingbot'         => 'bingbot',
 		'applebot'        => 'Applebot',
 		'yandexbot'       => 'YandexBot',
