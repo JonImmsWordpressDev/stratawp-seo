@@ -198,4 +198,41 @@ class CrawlerVerificationTest extends TestCase {
 		$server = array( 'REMOTE_ADDR' => '1.2.3.4' );
 		$this->assertSame( '1.2.3.4', SWPS_Crawler_Verification::client_ip( $server, 'xff' ) );
 	}
+
+	// -------------------------------------------------------------------------
+	// should_block — pure enforcement decision
+	// -------------------------------------------------------------------------
+
+	public function test_should_block_returns_false_when_master_off(): void {
+		$this->assertFalse( SWPS_Crawler_Verification::should_block( 'spoofed', false, true, false ) );
+	}
+
+	public function test_should_block_returns_false_when_bot_not_enabled(): void {
+		$this->assertFalse( SWPS_Crawler_Verification::should_block( 'spoofed', true, false, false ) );
+	}
+
+	public function test_should_block_returns_false_for_unverifiable(): void {
+		$this->assertFalse( SWPS_Crawler_Verification::should_block( 'unverifiable', true, true, false ) );
+	}
+
+	public function test_should_block_returns_false_for_empty_verdict(): void {
+		$this->assertFalse( SWPS_Crawler_Verification::should_block( '', true, true, false ) );
+	}
+
+	public function test_should_block_returns_true_for_spoofed_when_enabled(): void {
+		$this->assertTrue( SWPS_Crawler_Verification::should_block( 'spoofed', true, true, false ) );
+	}
+
+	public function test_should_block_returns_true_for_verified_user_blocked(): void {
+		$this->assertTrue( SWPS_Crawler_Verification::should_block( 'verified', true, true, true ) );
+	}
+
+	public function test_should_block_returns_false_for_verified_not_user_blocked(): void {
+		$this->assertFalse( SWPS_Crawler_Verification::should_block( 'verified', true, true, false ) );
+	}
+
+	public function test_should_block_master_off_overrides_spoofed_user_blocked(): void {
+		// Even with spoofed + user_blocked, master off = no block.
+		$this->assertFalse( SWPS_Crawler_Verification::should_block( 'spoofed', false, true, true ) );
+	}
 }

@@ -519,6 +519,52 @@ class SWPS_Crawler_Verification {
 
 
 	// -------------------------------------------------------------------------
+	// Pure enforcement decision
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Decide whether to issue a 403 for a request.
+	 *
+	 * Fail-open contract:
+	 *  - 'unverifiable' → NEVER blocks (no ranges available / proxy misconfig).
+	 *  - '' (empty)     → NEVER blocks (capture hasn't run yet).
+	 *  - master toggle OFF → NEVER blocks.
+	 *  - bot not in per-bot block list → NEVER blocks.
+	 *  - 'verified' + user explicitly blocked bot → blocks.
+	 *  - 'spoofed'  + master + bot enabled → blocks.
+	 *
+	 * @param string $verdict    'verified' | 'spoofed' | 'unverifiable' | ''.
+	 * @param bool   $master     True when the master enforcement toggle is on.
+	 * @param bool   $bot_enabled True when this specific bot is opted-in to blocking.
+	 * @param bool   $user_blocked True when the user has disallowed this bot in robots.txt settings.
+	 * @return bool True → issue 403; false → allow through (fail-open default).
+	 */
+	public static function should_block(
+		string $verdict,
+		bool $master,
+		bool $bot_enabled,
+		bool $user_blocked = false
+	): bool {
+		if ( ! $master ) {
+			return false;
+		}
+		if ( '' === $verdict || 'unverifiable' === $verdict ) {
+			return false; // Fail-open.
+		}
+		if ( ! $bot_enabled ) {
+			return false;
+		}
+		if ( 'verified' === $verdict && $user_blocked ) {
+			return true; // Verified disallowed bot — block.
+		}
+		if ( 'spoofed' === $verdict ) {
+			return true; // Spoofed identity — block.
+		}
+		return false;
+	}
+
+
+	// -------------------------------------------------------------------------
 	// Daily reconciliation
 	// -------------------------------------------------------------------------
 
