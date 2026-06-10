@@ -2,13 +2,6 @@
 /**
  * Onboarding wizard: state helpers, admin page, activation redirect, AJAX endpoints.
  *
- * Registers a "Setup Wizard" submenu page under the StrataWP SEO top-level menu,
- * sets an activation-redirect transient on fresh installs, and handles all eight
- * AJAX endpoints that drive the onboarding flow.
- *
- * Constructor hooks fire only when the class is instantiated — see Task 4 in the
- * plan for the require_once + instantiation in stratawp-seo.php.
- *
  * @package StrataWP_SEO
  * @since   4.13.0
  */
@@ -86,9 +79,7 @@ class SWPS_Onboarding {
 		}
 	}
 
-	// =========================================================================
-	// Pure static helpers (no WordPress required — unit-testable)
-	// =========================================================================
+	// -- Pure static helpers (no WordPress required — unit-testable) --
 
 	/**
 	 * Normalise a raw option value into a well-typed state array.
@@ -139,15 +130,10 @@ class SWPS_Onboarding {
 		);
 	}
 
-	// =========================================================================
-	// Admin page registration
-	// =========================================================================
+	// -- Admin page registration --
 
 	/**
-	 * Register the Setup Wizard submenu page under the StrataWP SEO parent menu.
-	 *
-	 * Visible as "Setup Wizard" — no hidden-page pattern exists in the plugin,
-	 * so a visible entry is simpler and matches existing conventions.
+	 * Register the Setup Wizard submenu page (visible — no hidden-page pattern exists).
 	 *
 	 * @since 4.13.0
 	 */
@@ -163,10 +149,7 @@ class SWPS_Onboarding {
 	}
 
 	/**
-	 * Render the wizard page.
-	 *
-	 * Includes the template if it exists; outputs a placeholder during Task 2
-	 * (before the template is built in Task 3).
+	 * Render the wizard page (includes template or shows placeholder).
 	 *
 	 * @since 4.13.0
 	 */
@@ -184,15 +167,10 @@ class SWPS_Onboarding {
 		}
 	}
 
-	// =========================================================================
-	// Activation redirect
-	// =========================================================================
+	// -- Activation redirect --
 
 	/**
-	 * Redirect to the wizard on first activation if the transient is present.
-	 *
-	 * Bails early when called from an AJAX request, the network admin,
-	 * a bulk-activate action, WP-CLI, or by a user without manage_options.
+	 * Redirect to the wizard on first activation (bails on AJAX/network/CLI/bulk).
 	 *
 	 * @since 4.13.0
 	 */
@@ -224,14 +202,10 @@ class SWPS_Onboarding {
 		exit;
 	}
 
-	// =========================================================================
-	// AJAX — shared security guard
-	// =========================================================================
+	// -- AJAX shared security guard --
 
 	/**
-	 * Verify the request nonce and capability; die on failure.
-	 *
-	 * Call at the top of every AJAX handler.
+	 * Verify nonce and manage_options capability; die on failure.
 	 *
 	 * @since 4.13.0
 	 */
@@ -243,9 +217,7 @@ class SWPS_Onboarding {
 		}
 	}
 
-	// =========================================================================
-	// AJAX — private state helper
-	// =========================================================================
+	// -- AJAX private state helper --
 
 	/**
 	 * Mark a single wizard step as complete and persist the state option.
@@ -259,9 +231,7 @@ class SWPS_Onboarding {
 		update_option( self::OPTION_STATE, $state, false );
 	}
 
-	// =========================================================================
-	// AJAX handlers
-	// =========================================================================
+	// -- AJAX handlers --
 
 	/**
 	 * Return current wizard status: normalised state, progress, and migration detection.
@@ -287,8 +257,7 @@ class SWPS_Onboarding {
 	}
 
 	/**
-	 * Test an API key for the specified provider and, on success, save both
-	 * the provider choice and key through the same paths that Settings uses.
+	 * Test an API key then save provider + key through the same Settings path.
 	 *
 	 * POST: provider (string), api_key (string).
 	 *
@@ -344,10 +313,7 @@ class SWPS_Onboarding {
 	}
 
 	/**
-	 * Use the active AI provider to suggest a 1-2 sentence site description.
-	 *
-	 * Fails soft: returns an empty suggestion rather than a hard error so the
-	 * wizard step remains completable without a working key.
+	 * AI-suggest a 1-2 sentence site description (fails soft — returns '' on error).
 	 *
 	 * @since 4.13.0
 	 */
@@ -478,10 +444,9 @@ class SWPS_Onboarding {
 	}
 
 	/**
-	 * Mark a whitelisted step as done — used by the migration "I'm done" button
-	 * and per-step skip controls.
+	 * Mark a step done — used by the migration "I'm done" and skip buttons.
 	 *
-	 * POST: step (string — must be a member of STEPS).
+	 * POST: step (string — must be in STEPS).
 	 *
 	 * @since 4.13.0
 	 */

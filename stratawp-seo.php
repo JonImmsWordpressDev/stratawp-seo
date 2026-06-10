@@ -1296,6 +1296,11 @@ function swps_activate(): void {
 		}
 	}
 
+	// On a fresh install (option absent = never activated before), trigger the onboarding wizard.
+	if ( false === get_option( 'swps_onboarding_state' ) ) {
+		set_transient( 'swps_onboarding_redirect', 1, 60 );
+	}
+
 	// Register CPTs for flush_rewrite_rules.
 	SWPS_Topic_Queue::register_post_type();
 	SWPS_Voice_Profile::register_post_type();
