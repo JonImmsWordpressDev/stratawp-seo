@@ -39,6 +39,11 @@ $swps_cron_hooks = array(
 	'swps_citation_check',
 	'swps_question_mine',
 	'swps_decay_scan',
+	'swps_crawler_ranges_fetch',
+	'swps_crawler_rdns',
+	'swps_crawler_reconcile',
+	'swps_site_crawl_chunk',
+	'swps_site_crawl_weekly',
 );
 
 foreach ( $swps_cron_hooks as $swps_cron_hook ) {
@@ -100,6 +105,8 @@ $swps_tables = array(
 	'swps_backlinks',
 	'swps_citation_checks',
 	'swps_metric_history',
+	'swps_crawl_queue',
+	'swps_crawl_issues',
 );
 
 foreach ( $swps_tables as $swps_table ) {

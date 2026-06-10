@@ -24,6 +24,13 @@ class SWPS_Bot_Analytics_Tracker {
 	private const CRON_HOOK   = 'swps_bot_analytics_aggregate';
 
 	/**
+	 * DB schema version — bump when table structure changes.
+	 * v2 adds ip/verified to raw table and verified_hits to daily table.
+	 */
+	public const DB_VERSION  = '2';
+	public const OPT_DB_VER  = 'swps_bot_hits_db_version';
+
+	/**
 	 * Max URI length stored — anything longer is truncated.
 	 */
 	private const URI_MAX_LEN = 500;
@@ -37,7 +44,8 @@ class SWPS_Bot_Analytics_Tracker {
 	}
 
 	/**
-	 * Create custom tables. Called on activation.
+	 * Create or upgrade custom tables.  Called on activation and maybe_upgrade().
+	 * dbDelta handles both fresh installs and ALTER-equivalent column additions.
 	 */
 	public static function create_tables(): void {
 		global $wpdb;
@@ -46,6 +54,7 @@ class SWPS_Bot_Analytics_Tracker {
 		$raw     = $wpdb->prefix . self::RAW_TABLE;
 		$daily   = $wpdb->prefix . self::DAILY_TABLE;
 
+		// v2: added ip VARCHAR(45) and verified VARCHAR(12).
 		$sql_raw = "CREATE TABLE {$raw} (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             bot_key VARCHAR(32) NOT NULL,
@@ -53,13 +62,17 @@ class SWPS_Bot_Analytics_Tracker {
             request_uri VARCHAR(500) NOT NULL DEFAULT '',
             status_code SMALLINT UNSIGNED NOT NULL DEFAULT 200,
             user_agent VARCHAR(255) NOT NULL DEFAULT '',
+            ip VARCHAR(45) NOT NULL DEFAULT '',
+            verified VARCHAR(12) NOT NULL DEFAULT '',
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY idx_bot_created (bot_key, created_at),
             KEY idx_post (post_id),
-            KEY idx_status (status_code)
+            KEY idx_status (status_code),
+            KEY idx_verified (verified)
         ) {$charset};";
 
+		// v2: added verified_hits INT UNSIGNED.
 		$sql_daily = "CREATE TABLE {$daily} (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             bot_key VARCHAR(32) NOT NULL,
@@ -68,6 +81,7 @@ class SWPS_Bot_Analytics_Tracker {
             hits INT UNSIGNED NOT NULL DEFAULT 0,
             errors_404 INT UNSIGNED NOT NULL DEFAULT 0,
             errors_5xx INT UNSIGNED NOT NULL DEFAULT 0,
+            verified_hits INT UNSIGNED NOT NULL DEFAULT 0,
             PRIMARY KEY (id),
             UNIQUE KEY idx_bot_post_date (bot_key, post_id, date),
             KEY idx_date (date)
@@ -76,6 +90,16 @@ class SWPS_Bot_Analytics_Tracker {
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql_raw );
 		dbDelta( $sql_daily );
+	}
+
+	/**
+	 * Run DB upgrade when schema version changes.  Called on plugins_loaded.
+	 */
+	public static function maybe_upgrade(): void {
+		if ( self::DB_VERSION !== get_option( self::OPT_DB_VER ) ) {
+			self::create_tables();
+			update_option( self::OPT_DB_VER, self::DB_VERSION );
+		}
 	}
 
 	/**
@@ -184,9 +208,21 @@ class SWPS_Bot_Analytics_Tracker {
 	}
 
 	/**
-	 * Look up the UA against the canonical bot list.
+	 * Look up the UA against the AI bot list and the search-bot list.
+	 *
+	 * SEARCH_BOTS are checked first (more specific tokens like 'Googlebot-Image'
+	 * before 'Googlebot') so that the most-specific key wins.  Googlebot-Image
+	 * contains the string 'Googlebot', so order matters here — the SEARCH_BOTS
+	 * constant places 'googlebot_image' before 'googlebot'.
 	 */
 	private function match_bot( string $ua ): ?string {
+		// Check search bots first (tracked for analytics, never in robots.txt).
+		foreach ( SWPS_AI_Bots::get_search_bots() as $key => $token ) {
+			if ( stripos( $ua, $token ) !== false ) {
+				return $key;
+			}
+		}
+		// Then AI bots.
 		foreach ( SWPS_AI_Bots::get_bots() as $key => $token ) {
 			if ( stripos( $ua, $token ) !== false ) {
 				return $key;
@@ -257,10 +293,19 @@ class SWPS_Bot_Analytics_Tracker {
 
 	/**
 	 * Single-row insert. One bot request → one row.
+	 * Stamps client IP and CIDR-based verdict from the cached ranges option (zero network).
 	 */
 	private function insert_hit( string $bot_key, int $post_id, string $uri, int $status, string $ua ): void {
 		global $wpdb;
 		$table = $wpdb->prefix . self::RAW_TABLE;
+
+		// Resolve client IP using the proxy-mode setting (no network calls).
+		$proxy_mode = (string) get_option( 'swps_trusted_proxy_header', 'none' );
+		$client_ip  = SWPS_Crawler_Verification::client_ip( $_SERVER, $proxy_mode ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+
+		// Classify from the cached CIDR option — zero network at capture time.
+		$ranges  = SWPS_Crawler_Verification::get_cached_ranges();
+		$verdict = SWPS_Crawler_Verification::classify_hit( $bot_key, $client_ip, $ranges );
 
 		$wpdb->insert(
 			$table,
@@ -270,8 +315,10 @@ class SWPS_Bot_Analytics_Tracker {
 				'request_uri' => $uri,
 				'status_code' => $status,
 				'user_agent'  => substr( $ua, 0, 255 ),
+				'ip'          => substr( $client_ip, 0, 45 ),
+				'verified'    => $verdict,
 			),
-			array( '%s', '%d', '%s', '%d', '%s' )
+			array( '%s', '%d', '%s', '%d', '%s', '%s', '%s' )
 		);
 	}
 
@@ -289,20 +336,22 @@ class SWPS_Bot_Analytics_Tracker {
         // phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$wpdb->query(
 			$wpdb->prepare(
-				"INSERT INTO {$daily} (bot_key, post_id, date, hits, errors_404, errors_5xx)
+				"INSERT INTO {$daily} (bot_key, post_id, date, hits, errors_404, errors_5xx, verified_hits)
                  SELECT bot_key,
                         post_id,
                         DATE(created_at) AS date,
                         COUNT(*) AS hits,
                         SUM(CASE WHEN status_code = 404 THEN 1 ELSE 0 END) AS errors_404,
-                        SUM(CASE WHEN status_code BETWEEN 500 AND 599 THEN 1 ELSE 0 END) AS errors_5xx
+                        SUM(CASE WHEN status_code BETWEEN 500 AND 599 THEN 1 ELSE 0 END) AS errors_5xx,
+                        SUM(CASE WHEN verified = 'verified' THEN 1 ELSE 0 END) AS verified_hits
                  FROM {$raw}
                  WHERE created_at < %s
                  GROUP BY bot_key, post_id, DATE(created_at)
                  ON DUPLICATE KEY UPDATE
                     hits = hits + VALUES(hits),
                     errors_404 = errors_404 + VALUES(errors_404),
-                    errors_5xx = errors_5xx + VALUES(errors_5xx)",
+                    errors_5xx = errors_5xx + VALUES(errors_5xx),
+                    verified_hits = verified_hits + VALUES(verified_hits)",
 				$cutoff
 			)
 		);

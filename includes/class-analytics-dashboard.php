@@ -72,12 +72,23 @@ class SWPS_Analytics_Dashboard {
 		$bot_tracker = stratawp_seo()->bot_analytics_tracker ?? null;
 		$bot_data    = array();
 		if ( $bot_tracker instanceof SWPS_Bot_Analytics_Tracker ) {
+			$budget_report = stratawp_seo()->crawl_budget_report ?? null;
+			$compliance    = ( $budget_report instanceof SWPS_Crawl_Budget_Report ) ? $budget_report->get_compliance_summary( 30 ) : array();
+			$budget_by_pt  = ( $budget_report instanceof SWPS_Crawl_Budget_Report ) ? $budget_report->get_budget_by_post_type( 30 ) : array();
+			$not_crawled   = ( $budget_report instanceof SWPS_Crawl_Budget_Report ) ? $budget_report->get_sitemap_not_crawled_by_googlebot( 20 ) : array(
+				'rows'   => array(),
+				'reason' => '',
+			);
+
 			$bot_data = array(
-				'totals'    => $bot_tracker->get_totals( 30 ),
-				'bots'      => $bot_tracker->get_bot_summary( 30 ),
-				'top_pages' => $bot_tracker->get_top_pages( 30, 15 ),
-				'gaps'      => $bot_tracker->get_gap_posts( 30, 10, isset( $_GET['gap_sort'] ) && 'score' === $_GET['gap_sort'] ? 'score' : 'date' ), // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-				'top_404s'  => $bot_tracker->get_top_404s( 30, 10 ),
+				'totals'       => $bot_tracker->get_totals( 30 ),
+				'bots'         => $bot_tracker->get_bot_summary( 30 ),
+				'top_pages'    => $bot_tracker->get_top_pages( 30, 15 ),
+				'gaps'         => $bot_tracker->get_gap_posts( 30, 10, isset( $_GET['gap_sort'] ) && 'score' === $_GET['gap_sort'] ? 'score' : 'date' ), // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				'top_404s'     => $bot_tracker->get_top_404s( 30, 10 ),
+				'compliance'   => $compliance,
+				'budget_by_pt' => $budget_by_pt,
+				'not_crawled'  => $not_crawled,
 			);
 		}
 

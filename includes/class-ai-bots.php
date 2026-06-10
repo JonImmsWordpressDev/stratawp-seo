@@ -12,6 +12,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SWPS_AI_Bots {
 
 	/**
+	 * Search-engine crawler user agents.  Tracked for analytics ONLY.
+	 *
+	 * IMPORTANT: SEARCH_BOTS must NEVER appear in robots.txt or llms.txt output.
+	 * get_blocked_bots(), get_allowed_bots(), and filter_robots_txt() only iterate
+	 * KNOWN_BOTS — this const is intentionally separate to enforce that invariant.
+	 *
+	 * The key is the bot_key stored in analytics tables.
+	 * The value is the substring matched in the User-Agent header.
+	 */
+	public const SEARCH_BOTS = array(
+		'googlebot_image' => 'Googlebot-Image',
+		'googlebot'       => 'Googlebot',
+		'bingbot'         => 'bingbot',
+		'applebot'        => 'Applebot',
+		'yandexbot'       => 'YandexBot',
+		'duckduckbot'     => 'DuckDuckBot',
+	);
+
+	/**
 	 * Known AI crawler user agents. The key is what gets stored in the option;
 	 * the value is the User-agent token written to robots.txt.
 	 */
@@ -39,13 +58,25 @@ class SWPS_AI_Bots {
 	}
 
 	/**
-	 * Return the canonical bot list. Filter `swps_ai_bots_known` lets third
+	 * Return the canonical AI bot list. Filter `swps_ai_bots_known` lets third
 	 * parties add custom AI crawlers (custom keys → UA tokens).
+	 *
+	 * NOTE: Does NOT include SEARCH_BOTS — robots.txt/llms.txt paths only call
+	 * this method, so search-engine bots are never written to those files.
 	 *
 	 * @return array<string, string> Map of bot key → User-agent token.
 	 */
 	public static function get_bots(): array {
 		return (array) apply_filters( 'swps_ai_bots_known', self::KNOWN_BOTS );
+	}
+
+	/**
+	 * Return the search-bot list (analytics-only, never written to robots.txt).
+	 *
+	 * @return array<string, string> Map of bot key → User-agent substring.
+	 */
+	public static function get_search_bots(): array {
+		return self::SEARCH_BOTS;
 	}
 
 	/**

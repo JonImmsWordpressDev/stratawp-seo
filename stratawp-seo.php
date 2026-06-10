@@ -134,6 +134,17 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-image-seo.php';
 // Crawlers & Files (v4.2) — edit /llms.txt and /robots.txt.
 require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-files.php';
 
+// Crawler verification (v4.19) — CIDR/rDNS-based search-bot hit verification.
+require_once SWPS_PLUGIN_DIR . 'includes/class-crawler-verification.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-crawler-enforcement.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-budget-report.php';
+
+// Site crawler (v4.19) — background broken-link / issues audit.
+require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-issues.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawler.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawl-admin.php';
+require_once SWPS_PLUGIN_DIR . 'includes/audit/class-site-crawl-module.php';
+
 // Backlinks (v4.2.2) — manual/CSV-import backlink tracker with health monitor.
 require_once SWPS_PLUGIN_DIR . 'includes/class-backlinks.php';
 
@@ -248,6 +259,11 @@ final class StrataWP_SEO {
 	public SWPS_Local_SEO $local_seo;
 	public SWPS_Image_SEO $image_seo;
 	public SWPS_Crawl_Files $crawl_files;
+	public SWPS_Crawler_Verification $crawler_verification;
+	public SWPS_Crawler_Enforcement  $crawler_enforcement;
+	public SWPS_Crawl_Budget_Report  $crawl_budget_report;
+	public SWPS_Site_Crawler $site_crawler;
+	public SWPS_Site_Crawl_Admin $site_crawl_admin;
 	public SWPS_Backlinks $backlinks;
 	public SWPS_Autopilot_Guardian $autopilot_guardian;
 	public SWPS_Digest $digest;
@@ -376,7 +392,15 @@ final class StrataWP_SEO {
 		$this->competitors          = new SWPS_Competitors();
 		$this->local_seo            = new SWPS_Local_SEO();
 		$this->image_seo            = new SWPS_Image_SEO();
-		$this->crawl_files          = new SWPS_Crawl_Files();
+		$this->crawl_files            = new SWPS_Crawl_Files();
+		SWPS_Bot_Analytics_Tracker::maybe_upgrade();
+		$this->crawler_verification = new SWPS_Crawler_Verification();
+		$this->crawler_enforcement  = new SWPS_Crawler_Enforcement();
+		$this->crawl_budget_report  = new SWPS_Crawl_Budget_Report();
+		SWPS_Crawl_Issues::maybe_upgrade();
+		$this->site_crawler         = new SWPS_Site_Crawler();
+		$this->site_crawl_admin     = new SWPS_Site_Crawl_Admin( $this->site_crawler );
+		add_filter( 'swps_audit_modules', array( 'SWPS_Site_Crawl_Module', 'register' ) );
 		$this->backlinks            = new SWPS_Backlinks();
 		$this->settings             = new SWPS_Settings();
 		$this->analyzer             = new SWPS_Analyzer( $this->cache_manager );
@@ -1372,7 +1396,9 @@ function swps_activate(): void {
 	SWPS_Analytics_Tracker::create_tables();
 	SWPS_Analytics_Tracker::schedule_cron();
 	SWPS_Bot_Analytics_Tracker::create_tables();
+	update_option( SWPS_Bot_Analytics_Tracker::OPT_DB_VER, SWPS_Bot_Analytics_Tracker::DB_VERSION );
 	SWPS_Bot_Analytics_Tracker::schedule_cron();
+	SWPS_Crawler_Verification::schedule_cron();
 	SWPS_AI_Referrals::create_table();
 	update_option( SWPS_AI_Referrals::OPT_DB_VER, SWPS_AI_Referrals::DB_VERSION );
 	SWPS_Search_Console::schedule_cron();
@@ -1393,6 +1419,10 @@ function swps_activate(): void {
 	SWPS_Backlinks::create_tables();
 	SWPS_Backlinks::schedule_cron();
 
+	SWPS_Crawl_Issues::create_tables();
+	update_option( SWPS_Crawl_Issues::OPT_DB_VER, SWPS_Crawl_Issues::DB_VERSION );
+	SWPS_Site_Crawler::schedule_weekly_cron();
+
 	if ( ! wp_next_scheduled( 'swps_prune_404_logs' ) ) {
 		wp_schedule_event( time(), 'daily', 'swps_prune_404_logs' );
 	}
@@ -1412,6 +1442,7 @@ function swps_deactivate(): void {
 	SWPS_SEO_Audit::unschedule_cron();
 	SWPS_Analytics_Tracker::unschedule_cron();
 	SWPS_Bot_Analytics_Tracker::unschedule_cron();
+	SWPS_Crawler_Verification::unschedule_cron();
 	SWPS_Search_Console::unschedule_cron();
 	SWPS_Keyword_Tracker::unschedule_cron();
 	SWPS_Citation_Tracker::unschedule_cron();
@@ -1421,6 +1452,8 @@ function swps_deactivate(): void {
 	SWPS_Question_Coverage::unschedule_cron();
 	SWPS_Decay_Watchdog::unschedule_cron();
 	wp_unschedule_hook( 'swps_send_digest' );
+	wp_unschedule_hook( SWPS_Site_Crawler::CRON_HOOK );
+	SWPS_Site_Crawler::unschedule_weekly_cron();
 	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'swps_deactivate' );

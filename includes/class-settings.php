@@ -409,6 +409,56 @@ class SWPS_Settings {
 			)
 		);
 
+		// --- Crawler Verification Section (Dispatch 1) ---
+		add_settings_section( 'swps_crawler_verification_section', __( 'Crawler Verification', 'stratawp-seo' ), array( $this, 'render_crawler_verification_section' ), 'stratawp-seo' );
+
+		$this->add_field(
+			'trusted_proxy_header',
+			__( 'Trusted Proxy Header', 'stratawp-seo' ),
+			'select',
+			'swps_crawler_verification_section',
+			array(
+				'options'     => array(
+					'none' => __( 'None (use REMOTE_ADDR)', 'stratawp-seo' ),
+					'cf'   => __( 'Cloudflare (CF-Connecting-IP)', 'stratawp-seo' ),
+					'xff'  => __( 'X-Forwarded-For (first IP)', 'stratawp-seo' ),
+				),
+				'default'     => 'none',
+				'description' => __( 'Set only when your server sits behind a trusted reverse proxy. Wrong setting allows IP spoofing.', 'stratawp-seo' ),
+			)
+		);
+
+		$block_options = array();
+		foreach ( SWPS_AI_Bots::SEARCH_BOTS as $key => $token ) {
+			$block_options[ $key ] = $token;
+		}
+		foreach ( SWPS_AI_Bots::KNOWN_BOTS as $key => $token ) {
+			$block_options[ $key ] = $token;
+		}
+		$this->add_field(
+			'crawler_block_bots',
+			__( 'Block at Server (opt-in)', 'stratawp-seo' ),
+			'multi_checkbox',
+			'swps_crawler_verification_section',
+			array(
+				'options'     => $block_options,
+				'default'     => array(),
+				'description' => __( 'Bots checked here will receive a 403 when both the master toggle is on AND they are verified-spoofed or verified-but-disallowed. Requires <strong>Block Spoofed Crawlers</strong> to be enabled. Default: none.', 'stratawp-seo' ),
+			)
+		);
+
+		$this->add_field(
+			'crawler_block_enabled',
+			__( 'Block Spoofed Crawlers', 'stratawp-seo' ),
+			'checkbox',
+			'swps_crawler_verification_section',
+			array(
+				'default'     => 0,
+				'label'       => __( 'Enable 403 enforcement for spoofed or disallowed bots (master toggle, default off)', 'stratawp-seo' ),
+				'description' => __( 'When enabled, bots in the list above that fail CIDR verification will receive a 403 at template_redirect. Unverifiable hits always pass through (fail-open).', 'stratawp-seo' ),
+			)
+		);
+
 		// --- Writing Preferences Section ---
 		add_settings_section( 'swps_writing_section', __( 'Writing Preferences', 'stratawp-seo' ), array( $this, 'render_writing_section' ), 'stratawp-seo' );
 
@@ -1425,6 +1475,10 @@ class SWPS_Settings {
 		echo '<p>' . esc_html__( 'Control which AI crawlers can access your site and serve a dynamic llms.txt index at /llms.txt.', 'stratawp-seo' ) . '</p>';
 	}
 
+	public function render_crawler_verification_section(): void {
+		echo '<p>' . esc_html__( 'Verify search-bot and AI-crawler hits against published IP ranges. The CIDR list is refreshed weekly; rDNS confirmation runs hourly for unverifiable hits.', 'stratawp-seo' ) . '</p>';
+	}
+
 	public function render_writing_section(): void {
 		echo '<p>' . esc_html__( 'Configure how the AI writes content for your site.', 'stratawp-seo' ) . '</p>';
 	}
@@ -1626,6 +1680,7 @@ class SWPS_Settings {
 				'label'    => __( 'AI Crawlers', 'stratawp-seo' ),
 				'sections' => array(
 					'swps_ai_crawlers_section',
+					'swps_crawler_verification_section',
 					'swps_citations_section',
 				),
 			),
