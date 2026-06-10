@@ -1,0 +1,46 @@
+{
+    "Article": {
+        "required": ["headline", "datePublished", "dateModified", "author"],
+        "recommended": ["description", "image", "publisher", "mainEntityOfPage", "wordCount"]
+    },
+    "NewsArticle": {
+        "required": ["headline", "datePublished", "dateModified", "author"],
+        "recommended": ["description", "image", "publisher", "mainEntityOfPage"]
+    },
+    "BlogPosting": {
+        "required": ["headline", "datePublished", "dateModified", "author"],
+        "recommended": ["description", "image", "publisher", "mainEntityOfPage", "wordCount"]
+    },
+    "Organization": {
+        "required": ["name"],
+        "recommended": ["url", "logo", "sameAs"]
+    },
+    "WebSite": {
+        "required": ["name", "url"],
+        "recommended": ["potentialAction"]
+    },
+    "WebPage": {
+        "required": ["name"],
+        "recommended": ["url", "description", "breadcrumb"]
+    },
+    "Person": {
+        "required": ["name"],
+        "recommended": ["url", "sameAs", "jobTitle", "description"]
+    },
+    "ProfilePage": {
+        "required": ["mainEntity"],
+        "recommended": ["name", "url"]
+    },
+    "BreadcrumbList": {
+        "required": ["itemListElement"],
+        "recommended": []
+    },
+    "FAQPage": {
+        "required": ["mainEntity"],
+        "recommended": ["name"]
+    },
+    "ItemList": {
+        "required": ["itemListElement"],
+        "recommended": ["name", "numberOfItems"]
+    }
+}

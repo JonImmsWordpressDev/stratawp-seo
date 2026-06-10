@@ -84,6 +84,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/audit/class-image-seo-module.php';
 require_once SWPS_PLUGIN_DIR . 'includes/audit/class-pagespeed-module.php';
 
 // Schema structured data.
+require_once SWPS_PLUGIN_DIR . 'includes/class-schema-validator.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-schema.php';
 
 // Analytics.
