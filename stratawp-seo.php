@@ -100,6 +100,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-keyword-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-citation-store.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-citation-prompts.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-citation-tracker.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-citation-admin.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-keywords-page.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-meta-editor.php';
 
@@ -217,6 +218,13 @@ final class StrataWP_SEO {
 	 * @var SWPS_Citation_Tracker
 	 */
 	public SWPS_Citation_Tracker $citation_tracker;
+
+	/**
+	 * AI citation tracker admin (AJAX + settings).
+	 *
+	 * @var SWPS_Citation_Admin
+	 */
+	public SWPS_Citation_Admin $citation_admin;
 	public SWPS_Keywords_Page $keywords_page;
 	public SWPS_Meta_Editor $meta_editor;
 	public SWPS_Head_Cleanup $head_cleanup;
@@ -289,6 +297,7 @@ final class StrataWP_SEO {
 		$this->analytics_dashboard   = new SWPS_Analytics_Dashboard( $this->analytics_tracker, $this->search_console );
 		$this->keyword_tracker       = new SWPS_Keyword_Tracker( $this->search_console );
 		$this->citation_tracker      = new SWPS_Citation_Tracker( new SWPS_Citation_Prompts( $this->keyword_tracker, $this->search_console ) );
+		$this->citation_admin        = new SWPS_Citation_Admin( $this->citation_tracker );
 		$this->keywords_page         = new SWPS_Keywords_Page( $this->keyword_tracker );
 		$this->meta_editor           = new SWPS_Meta_Editor();
 		$this->head_cleanup          = new SWPS_Head_Cleanup();

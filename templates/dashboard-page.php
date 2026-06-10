@@ -319,6 +319,21 @@ $welcome_msg = sprintf(
 		</div>
 		<?php endif; ?>
 
+		<?php
+		$swps_ai_citations = $data['ai_citations'] ?? array();
+		if ( ! empty( $swps_ai_citations ) && $swps_ai_citations['total'] > 0 ) :
+			?>
+		<a class="swps-tile swps-tile-citations" href="<?php echo esc_url( admin_url( 'admin.php?page=swps-keywords#swps-citations-card' ) ); ?>" style="text-decoration:none;color:inherit;display:block">
+			<div class="swps-tile-h"><?php esc_html_e( 'AI citations', 'stratawp-seo' ); ?></div>
+			<div class="swps-tile-stat">
+				<?php echo esc_html( $swps_ai_citations['cited'] . ' / ' . $swps_ai_citations['total'] ); ?>
+			</div>
+			<div class="swps-tile-trend" style="color:var(--swps-text-muted)">
+				<?php esc_html_e( 'prompts cited by AI engines', 'stratawp-seo' ); ?>
+			</div>
+		</a>
+		<?php endif; ?>
+
 		<a class="swps-tile swps-tile-aeo" href="<?php echo esc_url( admin_url( 'admin.php?page=swps-aeo-optimize' ) ); ?>" style="text-decoration:none;color:inherit;display:block">
 			<div class="swps-tile-h"><?php esc_html_e( 'AEO health (avg)', 'stratawp-seo' ); ?></div>
 			<div class="swps-tile-stat">

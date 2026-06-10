@@ -101,6 +101,7 @@ class SWPS_Dashboard {
 			'posts_30d'           => $this->safe_get_post_views(),
 			'ai_referrals'        => $this->safe_get_ai_referrals(),
 			'ai_funnel'           => $this->safe_get_funnel(),
+			'ai_citations'        => $this->safe_get_citations(),
 			'top_issues'          => $this->safe_get_top_issues(),
 			'top_queries'         => $this->safe_get_top_gsc_queries(),
 			'auto_optimize_queue' => array(), // Phase 7 fills in.
@@ -330,6 +331,35 @@ class SWPS_Dashboard {
 	private function safe_get_funnel(): array {
 		try {
 			return SWPS_Visibility_Funnel::site_funnel( 30 );
+		} catch ( \Throwable $e ) {
+			return array();
+		}
+	}
+
+	/**
+	 * AI citations tile: X of Y prompts currently cited (any enabled engine).
+	 *
+	 * @return array{cited: int, total: int}|array{}
+	 */
+	private function safe_get_citations(): array {
+		try {
+			$states = stratawp_seo()->citation_tracker->prompt_states();
+			if ( empty( $states ) ) {
+				return array();
+			}
+			$cited = 0;
+			foreach ( $states as $row ) {
+				foreach ( $row['states'] as $info ) {
+					if ( 'cited' === $info['state'] ) {
+						++$cited;
+						break;
+					}
+				}
+			}
+			return array(
+				'cited' => $cited,
+				'total' => count( $states ),
+			);
 		} catch ( \Throwable $e ) {
 			return array();
 		}

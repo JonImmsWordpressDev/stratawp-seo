@@ -128,6 +128,22 @@ class SWPS_AEO_Editor_Panel {
 					?>
 				</p>
 			<?php endif; ?>
+			<?php
+			// Lost-citation context line (set by SWPS_Citation_Tracker::detect_losses()).
+			$citation_loss = get_post_meta( $post->ID, SWPS_Citation_Tracker::META_LOSS, true );
+			if ( is_array( $citation_loss ) && ! empty( $citation_loss['prompt'] ) ) :
+				?>
+				<p class="description swps-aeo-citation-loss" style="margin-top:6px;font-size:11px;color:#b32d2e;">
+					<?php
+					printf(
+						/* translators: 1: prompt text, 2: engine list. */
+						esc_html__( 'AI engines (%2$s) stopped citing this post for "%1$s" — consider re-optimizing.', 'stratawp-seo' ),
+						esc_html( (string) $citation_loss['prompt'] ),
+						esc_html( implode( ', ', (array) ( $citation_loss['engines'] ?? array() ) ) )
+					);
+					?>
+				</p>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

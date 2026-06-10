@@ -1626,6 +1626,7 @@ class SWPS_Settings {
 				'label'    => __( 'AI Crawlers', 'stratawp-seo' ),
 				'sections' => array(
 					'swps_ai_crawlers_section',
+					'swps_citations_section',
 				),
 			),
 			'analytics'       => array(
