@@ -13,6 +13,20 @@ if ( ! defined( 'ABSPATH' ) ) {
     define( 'ABSPATH', '/tmp/wp-fake/' );
 }
 
+// WordPress time constants.
+if ( ! defined( 'MINUTE_IN_SECONDS' ) ) {
+    define( 'MINUTE_IN_SECONDS', 60 );
+}
+if ( ! defined( 'HOUR_IN_SECONDS' ) ) {
+    define( 'HOUR_IN_SECONDS', 3600 );
+}
+if ( ! defined( 'DAY_IN_SECONDS' ) ) {
+    define( 'DAY_IN_SECONDS', 86400 );
+}
+if ( ! defined( 'WEEK_IN_SECONDS' ) ) {
+    define( 'WEEK_IN_SECONDS', 604800 );
+}
+
 if ( ! function_exists( 'wp_strip_all_tags' ) ) {
     function wp_strip_all_tags( $string, $remove_breaks = false ) {
         $string = preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', (string) $string );

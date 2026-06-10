@@ -1634,6 +1634,7 @@ class SWPS_Settings {
 				'sections' => array(
 					'swps_analytics_section',
 					'swps_digest_section',
+					'swps_decay_section',
 				),
 			),
 			'aeo'             => array(

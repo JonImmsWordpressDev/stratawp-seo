@@ -21,7 +21,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, a per-post meta editor, **Local SEO** (LocalBusiness schema with NAP and opening hours), **Image SEO** (auto-alt + filename sanitization + lazy-load), **Crawlers & Files** (in-admin editor for /llms.txt and /robots.txt), and **Backlinks** (manual/CSV-import tracker with daily health monitoring) — on autopilot or on demand.
 
-[![Version](https://img.shields.io/badge/version-4.17.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.18.0-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -1446,6 +1446,10 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 ---
 
 ## Changelog
+
+### v4.18.0 — June 2026
+- **Content decay watchdog** — weekly GSC scan compares rolling 28-day windows per post, flags decays past your threshold with a heuristic cause (position drop / demand drop / CTR drop / staleness), with cooldowns, a minimum-impressions floor, and a one-email summary alert for top posts
+- **Refresh Queue** — flagged posts ranked by traffic at risk, with clicks/AEO-score sparklines and one-click AI refresh proposals that always go through the reviewed AEO apply/undo flow
 
 ### v4.17.0 — June 2026
 - **Question coverage engine** — the AEO Coverage dimension is now live: one AI call per scored post builds a query fan-out checklist (the 5–10 sub-questions an answer engine would decompose your topic into, marked answered / partial / missing) with content-hash caching

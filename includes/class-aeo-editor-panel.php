@@ -145,6 +145,22 @@ class SWPS_AEO_Editor_Panel {
 				</p>
 			<?php endif; ?>
 			<?php
+			// Decay watchdog line (set by the weekly swps_decay_scan cron).
+			$decay = get_post_meta( $post->ID, '_swps_decay', true );
+			if ( is_array( $decay ) && ! empty( $decay['reason'] ) ) :
+				?>
+				<p class="description swps-aeo-decay-line" style="margin-top:6px;font-size:11px;color:#b32d2e;">
+					<?php
+					printf(
+						/* translators: 1: heuristic cause label, 2: date flagged. */
+						esc_html__( 'Traffic decay flagged %2$s (likely cause, heuristic: %1$s) — see the Refresh Queue.', 'stratawp-seo' ),
+						esc_html( SWPS_Refresh_Queue_Admin::reason_label( (string) $decay['reason'] ) ),
+						esc_html( wp_date( get_option( 'date_format' ), (int) ( $decay['flagged_at'] ?? time() ) ) )
+					);
+					?>
+				</p>
+			<?php endif; ?>
+			<?php
 			// Question coverage checklist — rendered from cached meta only (zero AI on render).
 			$coverage_payload = get_post_meta( $post->ID, SWPS_AEO_Scorer::META_COVERAGE_PAYLOAD, true );
 			if ( is_array( $coverage_payload ) && ! empty( $coverage_payload['sub_queries'] ) ) :
