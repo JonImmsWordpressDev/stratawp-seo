@@ -182,6 +182,39 @@ class SWPS_AEO_Editor_Panel {
 					</ul>
 				</div>
 			<?php endif; ?>
+			<?php
+			// GSC-mined unanswered searcher questions — rendered from meta only
+			// (set by SWPS_Question_Coverage::mine(), zero AI/GSC on render).
+			$unanswered = get_post_meta( $post->ID, SWPS_Question_Coverage::META_UNANSWERED, true );
+			if ( is_array( $unanswered ) && ! empty( $unanswered ) ) :
+				?>
+				<div class="swps-aeo-unanswered" style="margin-top:10px;">
+					<p style="margin:0 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#666;font-weight:600;">
+						<?php esc_html_e( 'Questions searchers ask that this post doesn\'t answer', 'stratawp-seo' ); ?>
+					</p>
+					<ul style="list-style:none;padding:0;margin:0;font-size:11px;">
+						<?php foreach ( $unanswered as $swps_uq ) : ?>
+							<?php
+							if ( ! is_array( $swps_uq ) || empty( $swps_uq['q'] ) ) {
+								continue;
+							}
+							?>
+							<li style="display:flex;justify-content:space-between;gap:6px;padding:3px 0;border-bottom:1px solid #f0f0f0;">
+								<span><?php echo esc_html( (string) $swps_uq['q'] ); ?></span>
+								<span style="color:#666;flex-shrink:0;">
+									<?php
+									printf(
+										/* translators: %s: impression count from Search Console. */
+										esc_html__( '%s impr.', 'stratawp-seo' ),
+										esc_html( number_format_i18n( (int) ( $swps_uq['impressions'] ?? 0 ) ) )
+									);
+									?>
+								</span>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+				</div>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

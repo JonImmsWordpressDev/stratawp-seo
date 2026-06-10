@@ -70,6 +70,46 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</label>
 	</div>
 
+	<?php if ( ! empty( $question_candidates ) ) : ?>
+		<div class="swps-aeo-question-opportunities" id="swps-aeo-question-opportunities"
+			data-nonce="<?php echo esc_attr( wp_create_nonce( 'swps_question_coverage' ) ); ?>"
+			style="background:#fff;border:1px solid #c3c4c7;border-radius:4px;padding:12px 16px;margin:16px 0;">
+			<h2 style="margin:0 0 4px;font-size:14px;"><?php esc_html_e( 'Question opportunities', 'stratawp-seo' ); ?></h2>
+			<p class="description" style="margin:0 0 8px;">
+				<?php esc_html_e( 'Question searches from Google Search Console with no post answering them. Queue one to draft it.', 'stratawp-seo' ); ?>
+			</p>
+			<table class="widefat striped" style="border:0;">
+				<tbody>
+					<?php foreach ( $question_candidates as $swps_candidate ) : ?>
+						<?php
+						if ( ! is_array( $swps_candidate ) || empty( $swps_candidate['q'] ) ) {
+							continue;
+						}
+						?>
+						<tr>
+							<td><?php echo esc_html( (string) $swps_candidate['q'] ); ?></td>
+							<td style="text-align:right;color:#646970;width:120px;">
+								<?php
+								printf(
+									/* translators: %s: impression count from Search Console. */
+									esc_html__( '%s impressions', 'stratawp-seo' ),
+									esc_html( number_format_i18n( (int) ( $swps_candidate['impressions'] ?? 0 ) ) )
+								);
+								?>
+							</td>
+							<td style="text-align:right;width:110px;">
+								<button type="button" class="button button-small swps-queue-question-topic"
+									data-question="<?php echo esc_attr( (string) $swps_candidate['q'] ); ?>">
+									<?php esc_html_e( 'Queue topic', 'stratawp-seo' ); ?>
+								</button>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		</div>
+	<?php endif; ?>
+
 	<table class="wp-list-table widefat striped swps-aeo-queue" id="swps-aeo-queue">
 		<thead>
 			<tr>
