@@ -25,10 +25,12 @@
     var TYPE_LABELS = {
         broken_link:        'Broken links',
         redirect_chain:     'Redirect chains',
+        redirect_loop:      'Redirect loops',
         canonical_mismatch: 'Canonical mismatches',
         missing_h1:         'Missing H1',
         duplicate_h1:       'Duplicate H1',
-        mixed_content:      'Mixed content'
+        mixed_content:      'Mixed content',
+        noindex_in_sitemap: 'Noindexed URLs in sitemap'
     };
 
     function ajax(action, data) {
@@ -170,7 +172,7 @@
         if (row.edit_url) {
             html += '<a class="swps-btn swps-btn-secondary" href="' + escapeHtml(row.edit_url) + '" target="_blank" rel="noopener" style="padding:6px 10px;font-size:11px">' + escapeHtml(i18n.editPost || 'Edit post') + '</a>';
         }
-        if ((type === 'canonical_mismatch' || type === 'missing_h1' || type === 'duplicate_h1') && row.post_id > 0) {
+        if ((type === 'canonical_mismatch' || type === 'missing_h1' || type === 'duplicate_h1' || type === 'noindex_in_sitemap') && row.post_id > 0) {
             html += '<button class="swps-btn swps-btn-secondary swps-crawl-fix-exclude" data-post-id="' + (row.post_id | 0) + '" style="padding:6px 10px;font-size:11px">' + escapeHtml(i18n.excludeSitemap || 'Exclude from sitemap') + '</button>';
         }
         html += '</div>';

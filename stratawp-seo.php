@@ -397,6 +397,7 @@ final class StrataWP_SEO {
 		$this->crawler_verification = new SWPS_Crawler_Verification();
 		$this->crawler_enforcement  = new SWPS_Crawler_Enforcement();
 		$this->crawl_budget_report  = new SWPS_Crawl_Budget_Report();
+		SWPS_Crawl_Issues::maybe_upgrade();
 		$this->site_crawler         = new SWPS_Site_Crawler();
 		$this->site_crawl_admin     = new SWPS_Site_Crawl_Admin( $this->site_crawler );
 		add_filter( 'swps_audit_modules', array( 'SWPS_Site_Crawl_Module', 'register' ) );
@@ -1419,6 +1420,7 @@ function swps_activate(): void {
 	SWPS_Backlinks::schedule_cron();
 
 	SWPS_Crawl_Issues::create_tables();
+	update_option( SWPS_Crawl_Issues::OPT_DB_VER, SWPS_Crawl_Issues::DB_VERSION );
 	SWPS_Site_Crawler::schedule_weekly_cron();
 
 	if ( ! wp_next_scheduled( 'swps_prune_404_logs' ) ) {

@@ -95,10 +95,12 @@ class SWPS_Site_Crawl_Module extends SWPS_Audit_Module {
 		$labels = array(
 			'broken_link'        => __( 'broken links', 'stratawp-seo' ),
 			'redirect_chain'     => __( 'redirect chains', 'stratawp-seo' ),
+			'redirect_loop'      => __( 'redirect loops', 'stratawp-seo' ),
 			'canonical_mismatch' => __( 'canonical mismatches', 'stratawp-seo' ),
 			'missing_h1'         => __( 'pages missing an H1', 'stratawp-seo' ),
 			'duplicate_h1'       => __( 'pages with duplicate H1s', 'stratawp-seo' ),
 			'mixed_content'      => __( 'mixed-content assets', 'stratawp-seo' ),
+			'noindex_in_sitemap' => __( 'noindexed URLs still in the sitemap', 'stratawp-seo' ),
 		);
 
 		foreach ( $counts as $row ) {
@@ -106,7 +108,7 @@ class SWPS_Site_Crawl_Module extends SWPS_Audit_Module {
 			$cnt    = (int) ( $row['cnt'] ?? 0 );
 			$total += $cnt;
 
-			if ( 'broken_link' === $type ) {
+			if ( in_array( $type, array( 'broken_link', 'redirect_loop' ), true ) ) {
 				$errors += $cnt;
 			}
 

@@ -23,12 +23,32 @@ class SWPS_Crawl_Issues {
 	public const TABLE_ISSUES = 'swps_crawl_issues';
 	public const TABLE_QUEUE  = 'swps_crawl_queue';
 
+	/** Current schema version; bump whenever the DDL changes. */
+	public const DB_VERSION = '1';
+
+	/** Option key holding the installed schema version. */
+	public const OPT_DB_VER = 'swps_crawl_db_version';
+
 	/** Number of completed runs to retain before pruning. */
 	private const RUNS_TO_KEEP = 5;
 
 	// =========================================================================
 	// DB SCHEMA
 	// =========================================================================
+
+	/**
+	 * Create/upgrade the crawl tables when the stored schema version is stale.
+	 *
+	 * Runs at init so existing installs get the tables on plugin update
+	 * without a deactivate/reactivate cycle (SWPS_Bot_Analytics_Tracker
+	 * precedent).
+	 */
+	public static function maybe_upgrade(): void {
+		if ( self::DB_VERSION !== get_option( self::OPT_DB_VER ) ) {
+			self::create_tables();
+			update_option( self::OPT_DB_VER, self::DB_VERSION );
+		}
+	}
 
 	/**
 	 * Create or upgrade crawl tables via dbDelta.

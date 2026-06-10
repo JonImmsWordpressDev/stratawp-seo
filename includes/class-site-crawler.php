@@ -342,8 +342,11 @@ class SWPS_Site_Crawler {
 	/**
 	 * Classify a fetched URL result into issue rows.
 	 *
-	 * @param array  $fetch     Fetch result: keys url (string), status (int), found_on (string), hops (array).
-	 * @param array  $page      Result of parse_html() on the response body.
+	 * @param array  $fetch     Fetch result: keys url (string), status (int), found_on (string),
+	 *                          hops (array of 3xx responses), loop (bool, MAX_HOPS exceeded).
+	 * @param array  $page      Result of parse_html() on the response body. The caller may
+	 *                          enrich it with post_id (int) and sitemap_excluded (bool) for
+	 *                          the noindex-in-sitemap check (pure callers pass fixtures).
 	 * @param string $home_host Registrable home hostname, lower-case, no www.
 	 * @return array[] Issue rows; each has keys: type, url, detail (array), severity.
 	 */
@@ -353,6 +356,21 @@ class SWPS_Site_Crawler {
 		$status   = (int) ( $fetch['status'] ?? 0 );
 		$found_on = $fetch['found_on'] ?? '';
 		$hops     = $fetch['hops'] ?? array();
+
+		// Redirect loop: MAX_HOPS exceeded without reaching a final response.
+		if ( ! empty( $fetch['loop'] ) ) {
+			$issues[] = array(
+				'type'     => 'redirect_loop',
+				'url'      => $url,
+				'detail'   => array(
+					'hops'     => $hops,
+					'found_on' => $found_on,
+				),
+				'severity' => 'error',
+			);
+			// A looping URL has no final response to evaluate further.
+			return $issues;
+		}
 
 		// Broken link: 4xx / 5xx / connection error.
 		if ( $status >= 400 || 0 === $status ) {
@@ -433,6 +451,22 @@ class SWPS_Site_Crawler {
 				),
 				'severity' => 'warning',
 			);
+		}
+
+		// Noindexed URL that is presumably still in the sitemap: the page
+		// declares meta-robots noindex, maps to a post, and that post does
+		// NOT carry the _swps_sitemap_exclude meta. The caller injects
+		// post_id + sitemap_excluded (WP lookups) into $page before calling.
+		if ( ! empty( $page['has_noindex'] ) ) {
+			$post_id = (int) ( $page['post_id'] ?? 0 );
+			if ( $post_id > 0 && empty( $page['sitemap_excluded'] ) ) {
+				$issues[] = array(
+					'type'     => 'noindex_in_sitemap',
+					'url'      => $url,
+					'detail'   => array( 'post_id' => $post_id ),
+					'severity' => 'warning',
+				);
+			}
 		}
 
 		return $issues;
@@ -546,8 +580,17 @@ class SWPS_Site_Crawler {
 
 		$run_id       = (int) $state['run_id'];
 		$home_host    = self::get_home_host();
-		$delay_us     = max( 0, (int) ( $state['delay_us'] ?? self::DEFAULT_DELAY_US ) );
 		$internal_cap = (int) ( $state['internal_cap'] ?? self::DEFAULT_INTERNAL_CAP );
+
+		/**
+		 * Filter the politeness delay (µs) between crawler fetches.
+		 *
+		 * The stored option/state value is the base; e.g. a local smoke test
+		 * can lower it without touching settings.
+		 *
+		 * @param int $delay_us Microseconds to sleep between fetches.
+		 */
+		$delay_us = max( 0, (int) apply_filters( 'swps_crawl_delay_us', (int) ( $state['delay_us'] ?? self::DEFAULT_DELAY_US ) ) );
 		$queue_table  = $wpdb->prefix . SWPS_Crawl_Issues::TABLE_QUEUE;
 
 		// Fetch next $n pending items.
@@ -579,17 +622,6 @@ class SWPS_Site_Crawler {
 			$url   = (string) $row->url;
 			$depth = (int) $row->depth;
 
-			// Mark as done.
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->update(
-				$queue_table,
-				array( 'status' => 'done' ),
-				array( 'id' => (int) $row->id ),
-				array( '%s' ),
-				array( '%d' )
-			);
-			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-
 			// Politeness delay (skip on the first fetch in the chunk).
 			if ( $crawled_count > 0 && $delay_us > 0 ) {
 				usleep( (int) $delay_us );
@@ -608,6 +640,15 @@ class SWPS_Site_Crawler {
 
 			if ( ! empty( $fetch['body'] ) && $fetch['status'] < 400 ) {
 				$page = self::parse_html( $fetch['body'], $url );
+			}
+
+			// Enrich with WP lookups for the noindex-in-sitemap check
+			// (classify() itself stays pure).
+			if ( ! empty( $page['has_noindex'] ) ) {
+				$page_post_id             = url_to_postid( $url );
+				$page['post_id']          = $page_post_id;
+				$page['sitemap_excluded'] = $page_post_id > 0
+					&& (bool) get_post_meta( $page_post_id, '_swps_sitemap_exclude', true );
 			}
 
 			// Classify and store issues.
@@ -665,6 +706,19 @@ class SWPS_Site_Crawler {
 				}
 			}
 
+			// Mark the row done only AFTER fetch + classify + enqueue, so a
+			// crash mid-chunk re-processes at most this one URL on the next
+			// chunk instead of silently skipping the whole batch.
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->update(
+				$queue_table,
+				array( 'status' => 'done' ),
+				array( 'id' => (int) $row->id ),
+				array( '%s' ),
+				array( '%d' )
+			);
+			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+
 			++$crawled_count;
 		}
 
@@ -685,8 +739,13 @@ class SWPS_Site_Crawler {
 	/**
 	 * Fetch a URL following 3xx redirects manually up to MAX_HOPS.
 	 *
+	 * The returned 'hops' array contains every 3xx response observed (one
+	 * entry per redirect, {url, status}); the final non-3xx response is NOT
+	 * included. 'loop' is true when MAX_HOPS was exceeded without reaching a
+	 * non-3xx response.
+	 *
 	 * @param string $url Starting URL.
-	 * @return array{url:string,status:int,body:string,found_on:string,hops:array}
+	 * @return array{url:string,status:int,body:string,found_on:string,hops:array,loop:bool}
 	 */
 	private function fetch_url( string $url ): array {
 		$hops    = array();
@@ -710,6 +769,7 @@ class SWPS_Site_Crawler {
 					'body'     => '',
 					'found_on' => '',
 					'hops'     => $hops,
+					'loop'     => false,
 				);
 			}
 
@@ -718,6 +778,7 @@ class SWPS_Site_Crawler {
 			if ( $status >= 300 && $status < 400 ) {
 				$location = wp_remote_retrieve_header( $response, 'location' );
 				if ( empty( $location ) ) {
+					// Redirect with no Location header — dead end.
 					break;
 				}
 				$hops[]  = array(
@@ -733,27 +794,24 @@ class SWPS_Site_Crawler {
 				$body = wp_remote_retrieve_body( $response );
 			}
 
-			$hops[] = array(
-				'url'    => $current,
-				'status' => $status,
-			);
-
 			return array(
 				'url'      => $url,
 				'status'   => $status,
 				'body'     => $body,
 				'found_on' => '',
-				'hops'     => array_slice( $hops, 0, -1 ), // Exclude the final (success) hop.
+				'hops'     => $hops,
+				'loop'     => false,
 			);
 		}
 
-		// Exceeded MAX_HOPS — redirect loop.
+		// Exceeded MAX_HOPS (or 3xx without Location) — redirect loop.
 		return array(
 			'url'      => $url,
 			'status'   => 0,
 			'body'     => '',
 			'found_on' => '',
 			'hops'     => $hops,
+			'loop'     => true,
 		);
 	}
 
@@ -767,7 +825,9 @@ class SWPS_Site_Crawler {
 	private function check_external_links( array &$state ): void {
 		$run_id       = (int) $state['run_id'];
 		$external_cap = (int) ( $state['external_cap'] ?? self::DEFAULT_EXTERNAL_CAP );
-		$delay_us     = max( 0, (int) ( $state['delay_us'] ?? self::DEFAULT_DELAY_US ) );
+
+		/** This filter is documented in process_chunk(). */
+		$delay_us = max( 0, (int) apply_filters( 'swps_crawl_delay_us', (int) ( $state['delay_us'] ?? self::DEFAULT_DELAY_US ) ) );
 
 		$ignore_raw  = (string) ( $state['ignore_hosts'] ?? '' );
 		$ignore_list = array_filter( array_map( 'trim', explode( ',', $ignore_raw ) ) );

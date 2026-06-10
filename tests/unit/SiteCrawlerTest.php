@@ -181,21 +181,62 @@ class SiteCrawlerTest extends TestCase {
 		$this->assertContains( 'broken_link', $types );
 	}
 
-	public function test_classify_redirect_chain(): void {
+	public function test_classify_single_redirect_is_not_a_chain(): void {
+		// fetch_url() hops contain ONLY the 3xx responses; a single redirect
+		// (A answers 301, B answers 200) yields exactly one hop — no issue.
 		$fetch = array(
 			'url'      => 'https://example.com/old',
 			'status'   => 200,
 			'found_on' => 'https://example.com/',
 			'hops'     => array(
-				array( 'url' => 'https://example.com/mid', 'status' => 301 ),
-				array( 'url' => 'https://example.com/new', 'status' => 301 ),
-				array( 'url' => 'https://example.com/final', 'status' => 200 ),
+				array( 'url' => 'https://example.com/old', 'status' => 301 ),
 			),
+			'loop'     => false,
+		);
+		$page  = array( 'links' => array(), 'images' => array(), 'canonical' => null, 'h1_count' => 1, 'has_noindex' => false, 'mixed' => array() );
+		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
+		$types = array_column( $rows, 'type' );
+		$this->assertNotContains( 'redirect_chain', $types );
+		$this->assertNotContains( 'redirect_loop', $types );
+	}
+
+	public function test_classify_redirect_chain_at_two_hops(): void {
+		// A -> B -> C (two 301 responses before the final 200): chain fires.
+		$fetch = array(
+			'url'      => 'https://example.com/old',
+			'status'   => 200,
+			'found_on' => 'https://example.com/',
+			'hops'     => array(
+				array( 'url' => 'https://example.com/old', 'status' => 301 ),
+				array( 'url' => 'https://example.com/mid', 'status' => 301 ),
+			),
+			'loop'     => false,
 		);
 		$page  = array( 'links' => array(), 'images' => array(), 'canonical' => null, 'h1_count' => 1, 'has_noindex' => false, 'mixed' => array() );
 		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
 		$types = array_column( $rows, 'type' );
 		$this->assertContains( 'redirect_chain', $types );
+	}
+
+	public function test_classify_redirect_loop_is_distinct_from_broken_link(): void {
+		// MAX_HOPS (5) exceeded: six 3xx hops, no final response, loop=true.
+		$hops = array();
+		for ( $i = 0; $i < 6; $i++ ) {
+			$hops[] = array( 'url' => 'https://example.com/loop' . $i, 'status' => 302 );
+		}
+		$fetch = array(
+			'url'      => 'https://example.com/loop0',
+			'status'   => 0,
+			'found_on' => 'https://example.com/',
+			'hops'     => $hops,
+			'loop'     => true,
+		);
+		$page  = array( 'links' => array(), 'images' => array(), 'canonical' => null, 'h1_count' => 0, 'has_noindex' => false, 'mixed' => array() );
+		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
+		$types = array_column( $rows, 'type' );
+		$this->assertContains( 'redirect_loop', $types );
+		$this->assertNotContains( 'broken_link', $types );
+		$this->assertSame( 'error', $rows[0]['severity'] );
 	}
 
 	public function test_classify_canonical_mismatch(): void {
@@ -235,5 +276,66 @@ class SiteCrawlerTest extends TestCase {
 		$page  = array( 'links' => array(), 'images' => array(), 'canonical' => 'https://example.com/page', 'h1_count' => 1, 'has_noindex' => false, 'mixed' => array() );
 		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
 		$this->assertEmpty( $rows );
+	}
+
+	// -------------------------------------------------------------------------
+	// classify — noindex_in_sitemap (caller injects post_id + sitemap_excluded)
+	// -------------------------------------------------------------------------
+
+	public function test_classify_noindex_in_sitemap(): void {
+		$fetch = array( 'url' => 'https://example.com/page', 'status' => 200, 'found_on' => 'https://example.com/', 'hops' => array() );
+		$page  = array(
+			'links'            => array(),
+			'images'           => array(),
+			'canonical'        => 'https://example.com/page',
+			'h1_count'         => 1,
+			'has_noindex'      => true,
+			'mixed'            => array(),
+			'post_id'          => 42,
+			'sitemap_excluded' => false,
+		);
+		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
+		$types = array_column( $rows, 'type' );
+		$this->assertContains( 'noindex_in_sitemap', $types );
+
+		$idx = array_search( 'noindex_in_sitemap', $types, true );
+		$this->assertSame( 'warning', $rows[ $idx ]['severity'] );
+		$this->assertSame( 42, $rows[ $idx ]['detail']['post_id'] );
+	}
+
+	public function test_classify_noindex_excluded_post_is_fine(): void {
+		// Post is already excluded from the sitemap — noindex is consistent.
+		$fetch = array( 'url' => 'https://example.com/page', 'status' => 200, 'found_on' => 'https://example.com/', 'hops' => array() );
+		$page  = array(
+			'links'            => array(),
+			'images'           => array(),
+			'canonical'        => 'https://example.com/page',
+			'h1_count'         => 1,
+			'has_noindex'      => true,
+			'mixed'            => array(),
+			'post_id'          => 42,
+			'sitemap_excluded' => true,
+		);
+		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
+		$types = array_column( $rows, 'type' );
+		$this->assertNotContains( 'noindex_in_sitemap', $types );
+	}
+
+	public function test_classify_noindex_non_post_url_is_skipped(): void {
+		// Archive/term pages (url_to_postid == 0) are not flagged.
+		$fetch = array( 'url' => 'https://example.com/category/news', 'status' => 200, 'found_on' => 'https://example.com/', 'hops' => array() );
+		$page  = array(
+			'links'            => array(),
+			'images'           => array(),
+			'canonical'        => 'https://example.com/category/news',
+			'h1_count'         => 1,
+			'has_noindex'      => true,
+			'mixed'            => array(),
+			'post_id'          => 0,
+			'sitemap_excluded' => false,
+		);
+		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
+		$types = array_column( $rows, 'type' );
+		$this->assertNotContains( 'noindex_in_sitemap', $types );
 	}
 }
