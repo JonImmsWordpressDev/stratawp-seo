@@ -9,10 +9,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once __DIR__ . '/trait-digest-send.php';
+
 /**
  * Handles the weekly digest email: failure tracking, data assembly, send pipeline.
  */
 class SWPS_Digest {
+
+	use SWPS_Digest_Send;
 
 	// ---- Option / hook name constants ----
 
