@@ -85,49 +85,19 @@ class SWPS_Digest {
 		$frequency = get_option( self::OPTION_FREQUENCY, 'weekly' );
 		$days      = 'daily' === $frequency ? 1 : ( 'monthly' === $frequency ? 30 : 7 );
 
-		$data = array();
+		$sections = array(
+			'generated'   => $this->get_generated( $since ),
+			'failures'    => $this->get_failures( $since ),
+			'keywords'    => $this->get_keywords( $since ),
+			'backlinks'   => $this->get_backlinks(),
+			'competitors' => $this->get_competitors(),
+			'bots'        => $this->get_bots( $days ),
+			'spend'       => $this->get_spend(),
+			'aeo_movers'  => $this->get_aeo_movers(),
+		);
 
-		$generated = $this->get_generated( $since );
-		if ( null !== $generated ) {
-			$data['generated'] = $generated;
-		}
-
-		$failures = $this->get_failures( $since );
-		if ( null !== $failures ) {
-			$data['failures'] = $failures;
-		}
-
-		$keywords = $this->get_keywords( $since );
-		if ( null !== $keywords ) {
-			$data['keywords'] = $keywords;
-		}
-
-		$backlinks = $this->get_backlinks();
-		if ( null !== $backlinks ) {
-			$data['backlinks'] = $backlinks;
-		}
-
-		$competitors = $this->get_competitors();
-		if ( null !== $competitors ) {
-			$data['competitors'] = $competitors;
-		}
-
-		$bots = $this->get_bots( $days );
-		if ( null !== $bots ) {
-			$data['bots'] = $bots;
-		}
-
-		$spend = $this->get_spend();
-		if ( null !== $spend ) {
-			$data['spend'] = $spend;
-		}
-
-		$aeo_movers = $this->get_aeo_movers();
-		if ( null !== $aeo_movers ) {
-			$data['aeo_movers'] = $aeo_movers;
-		}
-
-		// Attention section is built last from assembled data.
+		// Drop null sections; build attention last from what survived.
+		$data              = array_filter( $sections, static fn( $v ) => null !== $v );
 		$data['attention'] = $this->build_attention( $data );
 
 		return $data;
