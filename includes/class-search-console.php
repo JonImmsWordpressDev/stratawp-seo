@@ -495,6 +495,90 @@ class SWPS_Search_Console {
 	}
 
 	/**
+	 * Fetch per-page GSC metrics for an explicit date window.
+	 *
+	 * Returns an associative array keyed by page URL; each value is an array
+	 * with keys: clicks (int), impressions (int), ctr (float), position (float).
+	 * Results are transient-cached for 12 hours keyed on window + row_limit.
+	 *
+	 * @param string $start     Start date 'Y-m-d'.
+	 * @param string $end       End date 'Y-m-d'.
+	 * @param int    $row_limit Maximum rows to fetch (default 1000, max 25000 per batch).
+	 * @return array<string, array{clicks: int, impressions: int, ctr: float, position: float}>
+	 */
+	public function get_page_metrics( string $start, string $end, int $row_limit = 1000 ): array {
+		if ( ! $this->is_connected() ) {
+			return array();
+		}
+
+		$row_limit = max( 1, $row_limit );
+		$cache_key = self::CACHE_PREFIX . 'page_metrics_' . md5( $start . '_' . $end . '_' . $row_limit );
+		$cached    = get_transient( $cache_key );
+		if ( false !== $cached ) {
+			return (array) $cached;
+		}
+
+		$property         = $this->get_property();
+		$encoded_property = rawurlencode( $property );
+
+		$raw_rows  = array();
+		$row_count = 0;
+		$start_row = 0;
+
+		while ( $row_count < $row_limit ) {
+			$batch_size = min( 25000, $row_limit - $row_count );
+			$response   = $this->api_request(
+				"/sites/{$encoded_property}/searchAnalytics/query",
+				'POST',
+				array(
+					'startDate'  => $start,
+					'endDate'    => $end,
+					'dimensions' => array( 'page' ),
+					'rowLimit'   => $batch_size,
+					'startRow'   => $start_row,
+				)
+			);
+
+			if ( is_wp_error( $response ) ) {
+				break;
+			}
+
+			$batch = $response['rows'] ?? array();
+			if ( empty( $batch ) ) {
+				break;
+			}
+
+			$batch_count = count( $batch );
+			$raw_rows    = array_merge( $raw_rows, $batch );
+			$row_count  += $batch_count;
+			$start_row  += $batch_count;
+
+			if ( $batch_count < $batch_size ) {
+				break;
+			}
+		}
+
+		// Re-index by page URL.
+		$result = array();
+		foreach ( $raw_rows as $row ) {
+			$url = $row['keys'][0] ?? '';
+			if ( '' === $url ) {
+				continue;
+			}
+			$result[ $url ] = array(
+				'clicks'      => (int)   ( $row['clicks']      ?? 0 ),
+				'impressions' => (int)   ( $row['impressions']  ?? 0 ),
+				'ctr'         => (float) ( $row['ctr']          ?? 0.0 ),
+				'position'    => (float) ( $row['position']     ?? 0.0 ),
+			);
+		}
+
+		set_transient( $cache_key, $result, self::CACHE_TTL );
+
+		return $result;
+	}
+
+	/**
 	 * Fetch search analytics from GSC API.
 	 *
 	 * @param string $property   Site URL.

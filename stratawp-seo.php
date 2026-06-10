@@ -114,6 +114,8 @@ require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-authority-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-coverage-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-question-coverage.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-metric-history.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-decay-watchdog.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-schema-generator.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-schema-migrator.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-optimizer.php';
@@ -264,6 +266,20 @@ final class StrataWP_SEO {
 	 */
 	public SWPS_Question_Coverage $question_coverage;
 
+	/**
+	 * Generic per-post metric history store (v4.18).
+	 *
+	 * @var SWPS_Metric_History
+	 */
+	public SWPS_Metric_History $metric_history;
+
+	/**
+	 * Content decay watchdog — weekly cron, detection, and email alert (v4.18).
+	 *
+	 * @var SWPS_Decay_Watchdog
+	 */
+	public SWPS_Decay_Watchdog $decay_watchdog;
+
 	// v4.0 admin shell.
 	public SWPS_User_Prefs $user_prefs;
 	public SWPS_Modules $modules;
@@ -348,6 +364,11 @@ final class StrataWP_SEO {
 
 		// Question coverage engine (v4.17) — weekly GSC question demand mining.
 		$this->question_coverage = new SWPS_Question_Coverage( $this->search_console, $this->topic_queue );
+
+		// Content decay watchdog (v4.18) — weekly scan, metric history, email alert.
+		SWPS_Metric_History::maybe_upgrade();
+		$this->metric_history  = new SWPS_Metric_History();
+		$this->decay_watchdog  = new SWPS_Decay_Watchdog( $this->search_console, $this->metric_history );
 
 		$this->competitors          = new SWPS_Competitors();
 		$this->local_seo            = new SWPS_Local_SEO();
@@ -1357,6 +1378,9 @@ function swps_activate(): void {
 	SWPS_Citation_Store::create_table();
 	update_option( SWPS_Citation_Store::OPT_DB_VER, SWPS_Citation_Store::DB_VERSION );
 	SWPS_Citation_Tracker::schedule_cron();
+	SWPS_Metric_History::create_table();
+	update_option( SWPS_Metric_History::OPT_DB_VER, SWPS_Metric_History::DB_VERSION );
+	SWPS_Decay_Watchdog::schedule_cron();
 
 	SWPS_Redirect_Manager::create_tables();
 	SWPS_Link_Keyword_Engine::create_tables();
@@ -1392,6 +1416,7 @@ function swps_deactivate(): void {
 	SWPS_Backlinks::unschedule_cron();
 	wp_clear_scheduled_hook( 'swps_aeo_sweep_proposals' );
 	SWPS_Question_Coverage::unschedule_cron();
+	SWPS_Decay_Watchdog::unschedule_cron();
 	wp_unschedule_hook( 'swps_send_digest' );
 	flush_rewrite_rules();
 }

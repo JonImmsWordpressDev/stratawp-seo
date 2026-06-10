@@ -38,6 +38,7 @@ $swps_cron_hooks = array(
 	'swps_send_digest',
 	'swps_citation_check',
 	'swps_question_mine',
+	'swps_decay_scan',
 );
 
 foreach ( $swps_cron_hooks as $swps_cron_hook ) {
@@ -98,6 +99,7 @@ $swps_tables = array(
 	'swps_link_graph',
 	'swps_backlinks',
 	'swps_citation_checks',
+	'swps_metric_history',
 );
 
 foreach ( $swps_tables as $swps_table ) {
