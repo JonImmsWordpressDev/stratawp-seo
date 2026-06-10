@@ -250,11 +250,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 	<?php
 	if ( ! empty( $bot_data ) ) :
-		$totals    = $bot_data['totals'];
-		$bots      = $bot_data['bots'];
-		$top_pages = $bot_data['top_pages'];
-		$gaps      = $bot_data['gaps'];
-		$top_404s  = $bot_data['top_404s'];
+		$totals       = $bot_data['totals'];
+		$bots         = $bot_data['bots'];
+		$top_pages    = $bot_data['top_pages'];
+		$gaps         = $bot_data['gaps'];
+		$top_404s     = $bot_data['top_404s'];
+		$compliance   = $bot_data['compliance'] ?? array();
+		$budget_by_pt = $bot_data['budget_by_pt'] ?? array();
+		$not_crawled  = $bot_data['not_crawled'] ?? array(
+			'rows'   => array(),
+			'reason' => '',
+		);
 
 		$delta = 0;
 		if ( $totals['prev_hits'] > 0 ) {
@@ -306,17 +312,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 						<th><?php esc_html_e( 'Bot', 'stratawp-seo' ); ?></th>
 						<th style="text-align:right"><?php esc_html_e( 'Hits (30d)', 'stratawp-seo' ); ?></th>
 						<th><?php esc_html_e( 'Last Seen', 'stratawp-seo' ); ?></th>
+						<th><?php esc_html_e( 'Verified %', 'stratawp-seo' ); ?></th>
+						<th><?php esc_html_e( 'Compliance', 'stratawp-seo' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
 					<?php
 					foreach ( $bots as $bot ) :
-						$last = $bot['last_seen'] ? human_time_diff( strtotime( $bot['last_seen'] ), time() ) . ' ago' : '—';
+						$last        = $bot['last_seen'] ? human_time_diff( strtotime( $bot['last_seen'] ), time() ) . ' ago' : '—';
+						$comp_row    = $compliance[ $bot['bot_key'] ] ?? null;
+						$ver_pct     = $comp_row ? $comp_row['verified_pct'] : null;
+						$comp_str    = $comp_row ? $comp_row['compliance'] : 'unknown';
+						$comp_colors = array(
+							'compliant' => 'var(--swps-success)',
+							'warning'   => 'var(--swps-warning, orange)',
+							'blocked'   => 'var(--swps-danger)',
+							'unknown'   => 'var(--swps-text-muted)',
+						);
+						$comp_labels = array(
+							'compliant' => __( 'Compliant', 'stratawp-seo' ),
+							'warning'   => __( 'Spoof risk', 'stratawp-seo' ),
+							'blocked'   => __( 'Blocked', 'stratawp-seo' ),
+							'unknown'   => __( '—', 'stratawp-seo' ),
+						);
+						$comp_color  = $comp_colors[ $comp_str ] ?? 'var(--swps-text-muted)';
+						$comp_label  = $comp_labels[ $comp_str ] ?? '—';
 						?>
 						<tr>
 							<td><code><?php echo esc_html( $bot['label'] ); ?></code></td>
 							<td style="text-align:right"><?php echo esc_html( number_format_i18n( $bot['hits'] ) ); ?></td>
 							<td style="color:var(--swps-text-muted)"><?php echo esc_html( $last ); ?></td>
+							<td style="text-align:right;color:var(--swps-text-muted)">
+								<?php echo null !== $ver_pct ? esc_html( $ver_pct . '%' ) : '—'; ?>
+							</td>
+							<td style="color:<?php echo esc_attr( $comp_color ); ?>;font-weight:500">
+								<?php echo esc_html( $comp_label ); ?>
+							</td>
 						</tr>
 					<?php endforeach; ?>
 				</tbody>
@@ -444,5 +475,97 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</tbody>
 		</table>
 	<?php endif; ?>
+		<?php /* ------------------------------------------------------------------ */ ?>
+		<?php /* Crawl Budget Report */ ?>
+		<?php /* ------------------------------------------------------------------ */ ?>
+
+		<?php if ( ! empty( $budget_by_pt ) ) : ?>
+		<div class="swps-section-h" style="margin-top:40px">
+			<h3><?php esc_html_e( 'Crawl Budget by Post Type (30d)', 'stratawp-seo' ); ?></h3>
+			<p style="color:var(--swps-text-muted);font-size:12px;margin:4px 0 0">
+				<?php esc_html_e( 'Verified hits per crawler per content type. Waste = 404 + redirect hits consuming crawl budget.', 'stratawp-seo' ); ?>
+			</p>
+		</div>
+		<table class="widefat striped">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'Bot', 'stratawp-seo' ); ?></th>
+					<th><?php esc_html_e( 'Post Type', 'stratawp-seo' ); ?></th>
+					<th style="text-align:right"><?php esc_html_e( 'Total Hits', 'stratawp-seo' ); ?></th>
+					<th style="text-align:right"><?php esc_html_e( 'Verified', 'stratawp-seo' ); ?></th>
+					<th style="text-align:right"><?php esc_html_e( 'Waste (broken+redir)', 'stratawp-seo' ); ?></th>
+					<th style="text-align:right"><?php esc_html_e( 'Waste %', 'stratawp-seo' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ( $budget_by_pt as $bpt_row ) : ?>
+					<?php
+					$bpt_waste_pct   = $bpt_row['total_hits'] > 0
+						? round( ( $bpt_row['waste_hits'] / $bpt_row['total_hits'] ) * 100, 1 )
+						: 0.0;
+					$bpt_waste_color = $bpt_waste_pct >= 20 ? 'var(--swps-danger)' : 'var(--swps-text-muted)';
+					?>
+					<tr>
+						<td><code><?php echo esc_html( $bpt_row['bot_key'] ); ?></code></td>
+						<td><?php echo esc_html( $bpt_row['post_type'] ); ?></td>
+						<td style="text-align:right"><?php echo esc_html( number_format_i18n( $bpt_row['total_hits'] ) ); ?></td>
+						<td style="text-align:right"><?php echo esc_html( number_format_i18n( $bpt_row['verified_hits'] ) ); ?></td>
+						<td style="text-align:right;color:<?php echo esc_attr( $bpt_waste_color ); ?>">
+							<?php echo esc_html( number_format_i18n( $bpt_row['waste_hits'] ) ); ?>
+						</td>
+						<td style="text-align:right;color:<?php echo esc_attr( $bpt_waste_color ); ?>">
+							<?php echo esc_html( $bpt_waste_pct . '%' ); ?>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+	<?php endif; ?>
+
+		<?php /* Not crawled by Googlebot in 90d */ ?>
+		<?php
+		$not_crawled_rows   = $not_crawled['rows'] ?? array();
+		$not_crawled_reason = $not_crawled['reason'] ?? '';
+		?>
+	<div class="swps-section-h" style="margin-top:32px">
+		<h3><?php esc_html_e( 'Sitemap Pages Not Crawled by Googlebot (90d)', 'stratawp-seo' ); ?></h3>
+		<p style="color:var(--swps-text-muted);font-size:12px;margin:4px 0 0">
+			<?php esc_html_e( 'Published pages in your sitemap with no verified Googlebot hit in the past 90 days. Consider reviewing internal linking and sitemap coverage.', 'stratawp-seo' ); ?>
+		</p>
+	</div>
+		<?php if ( 'insufficient_data' === $not_crawled_reason ) : ?>
+		<div class="swps-tile">
+			<p style="margin:0;color:var(--swps-text-muted)">
+				<?php esc_html_e( 'Insufficient data — need at least 30 days of Googlebot tracking data before this report is reliable. Check back later.', 'stratawp-seo' ); ?>
+			</p>
+		</div>
+	<?php elseif ( empty( $not_crawled_rows ) ) : ?>
+		<div class="swps-tile">
+			<p style="margin:0;color:var(--swps-text-muted)">
+				<?php esc_html_e( 'All tracked sitemap pages have been crawled by Googlebot in the past 90 days.', 'stratawp-seo' ); ?>
+			</p>
+		</div>
+	<?php else : ?>
+		<table class="widefat striped">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'Page', 'stratawp-seo' ); ?></th>
+					<th><?php esc_html_e( 'Post Type', 'stratawp-seo' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ( $not_crawled_rows as $nc_row ) : ?>
+					<tr>
+						<td>
+							<a href="<?php echo esc_url( get_edit_post_link( $nc_row['post_id'] ) ); ?>"><?php echo esc_html( $nc_row['title'] ); ?></a>
+							&nbsp;<a href="<?php echo esc_url( $nc_row['url'] ); ?>" target="_blank" rel="noopener" style="color:var(--swps-text-muted);font-size:11px">↗</a>
+						</td>
+						<td style="color:var(--swps-text-muted)"><?php echo esc_html( $nc_row['post_type'] ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+	<?php endif; ?>
+
 	<?php endif; // bot_data ?>
 </div>
