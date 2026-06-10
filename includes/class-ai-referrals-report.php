@@ -59,6 +59,7 @@ class SWPS_AI_Referrals_Report {
 			),
 			ARRAY_A
 		);
+		$rows = $rows ? $rows : array();
         // phpcs:enable
 
 		$daily       = array();
@@ -143,6 +144,7 @@ class SWPS_AI_Referrals_Report {
 			),
 			ARRAY_A
 		);
+		$rows = $rows ? $rows : array();
         // phpcs:enable
 
 		$out = array();
@@ -329,7 +331,7 @@ class SWPS_AI_Referrals_Report {
 
 		// Map crawls to (source, post_id), skipping bots with no visit-side counterpart.
 		$crawls = array();
-		foreach ( $crawl_rows as $row ) {
+		foreach ( $crawl_rows ? $crawl_rows : array() as $row ) {
 			$source = $bot_map[ $row['bot_key'] ] ?? '';
 			if ( '' === $source ) {
 				continue;
@@ -340,7 +342,7 @@ class SWPS_AI_Referrals_Report {
 		}
 
 		$visits = array();
-		foreach ( $visit_rows as $row ) {
+		foreach ( $visit_rows ? $visit_rows : array() as $row ) {
 			$visits[ $row['ai_source'] . '|' . $row['post_id'] ] = (int) $row['views'];
 		}
 
