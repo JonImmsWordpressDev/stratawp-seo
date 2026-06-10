@@ -113,6 +113,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-markup-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-authority-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-coverage-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-scorer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-question-coverage.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-schema-generator.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-schema-migrator.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-optimizer.php';

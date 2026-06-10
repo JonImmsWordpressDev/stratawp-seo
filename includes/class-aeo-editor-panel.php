@@ -144,6 +144,44 @@ class SWPS_AEO_Editor_Panel {
 					?>
 				</p>
 			<?php endif; ?>
+			<?php
+			// Question coverage checklist — rendered from cached meta only (zero AI on render).
+			$coverage_payload = get_post_meta( $post->ID, SWPS_AEO_Scorer::META_COVERAGE_PAYLOAD, true );
+			if ( is_array( $coverage_payload ) && ! empty( $coverage_payload['sub_queries'] ) ) :
+				$status_icons = array(
+					'answered' => '✓',
+					'partial'  => '◐',
+					'missing'  => '✗',
+				);
+				$status_colors = array(
+					'answered' => '#00a32a',
+					'partial'  => '#dba617',
+					'missing'  => '#d63638',
+				);
+				?>
+				<div class="swps-aeo-coverage-checklist" style="margin-top:10px;">
+					<p style="margin:0 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#666;font-weight:600;">
+						<?php esc_html_e( 'Coverage sub-questions', 'stratawp-seo' ); ?>
+					</p>
+					<ul style="list-style:none;padding:0;margin:0;font-size:11px;">
+						<?php foreach ( $coverage_payload['sub_queries'] as $item ) : ?>
+							<?php
+							if ( ! is_array( $item ) ) {
+								continue;
+							}
+							$status = (string) ( $item['status'] ?? 'missing' );
+							$q      = (string) ( $item['q']      ?? '' );
+							$icon   = $status_icons[ $status ]  ?? '?';
+							$color  = $status_colors[ $status ] ?? '#666';
+							?>
+							<li style="display:flex;gap:4px;padding:3px 0;border-bottom:1px solid #f0f0f0;align-items:flex-start;">
+								<span style="color:<?php echo esc_attr( $color ); ?>;font-weight:700;flex-shrink:0;"><?php echo esc_html( $icon ); ?></span>
+								<span><?php echo esc_html( $q ); ?></span>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+				</div>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
