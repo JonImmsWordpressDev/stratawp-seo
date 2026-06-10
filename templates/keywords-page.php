@@ -84,6 +84,52 @@ if ( ! defined( 'ABSPATH' ) ) {
 	</div>
 	<?php endif; ?>
 
+	<div class="swps-settings-panel" id="swps-citations-card">
+		<h2 style="margin-top:0"><?php esc_html_e( 'AI Citations', 'stratawp-seo' ); ?></h2>
+		<p style="color:var(--swps-text-muted);font-size:12px;margin:0 0 12px">
+			<?php esc_html_e( 'Track whether AI assistants cite your site for your key prompts. Checks use your API keys; some providers bill per search — estimates only.', 'stratawp-seo' ); ?>
+		</p>
+
+		<div class="swps-citations-toolbar" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+			<input type="text" id="swps-citation-prompt-input" class="regular-text" style="flex:1;min-width:240px"
+					placeholder="<?php esc_attr_e( 'Add a prompt to track (e.g., best running shoes for flat feet)', 'stratawp-seo' ); ?>" />
+			<button class="button" id="swps-citation-add-btn"><?php esc_html_e( 'Add Prompt', 'stratawp-seo' ); ?></button>
+			<button class="button" id="swps-citation-seed-btn"><?php esc_html_e( 'Seed from keywords & GSC', 'stratawp-seo' ); ?></button>
+			<button class="swps-btn swps-btn-grad" id="swps-citation-run-btn"><?php esc_html_e( 'Run checks now', 'stratawp-seo' ); ?></button>
+			<span class="spinner" id="swps-citation-spinner"></span>
+		</div>
+
+		<div id="swps-citation-progress" style="display:none;font-size:12px;color:var(--swps-text-muted);margin-bottom:8px"></div>
+		<div id="swps-citation-seed-panel" style="display:none;margin-bottom:12px;border:1px solid #e0e0e0;border-radius:4px;padding:10px"></div>
+
+		<table class="widefat striped" id="swps-citations-table">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'Prompt', 'stratawp-seo' ); ?></th>
+					<th id="swps-citation-engine-cols"><?php esc_html_e( 'Engines', 'stratawp-seo' ); ?></th>
+					<th><?php esc_html_e( 'Last Check', 'stratawp-seo' ); ?></th>
+					<th><?php esc_html_e( 'Actions', 'stratawp-seo' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr><td colspan="4" class="swps-loading" style="color:var(--swps-text-muted)"><?php esc_html_e( 'Loading...', 'stratawp-seo' ); ?></td></tr>
+			</tbody>
+		</table>
+
+		<div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:16px">
+			<div style="flex:1;min-width:280px">
+				<h3 style="font-size:13px;margin:0 0 8px"><?php esc_html_e( 'Share of Voice (30d)', 'stratawp-seo' ); ?></h3>
+				<div id="swps-citation-sov"><span style="color:var(--swps-text-muted);font-size:12px"><?php esc_html_e( 'No checks yet.', 'stratawp-seo' ); ?></span></div>
+			</div>
+			<div style="flex:1;min-width:280px">
+				<h3 style="font-size:13px;margin:0 0 8px"><?php esc_html_e( 'Domains AI Cites (30d, top 10)', 'stratawp-seo' ); ?></h3>
+				<ol id="swps-citation-breakdown" style="margin:0;padding-left:18px;font-size:12px"></ol>
+			</div>
+		</div>
+
+		<p id="swps-citation-cap-line" style="color:var(--swps-text-muted);font-size:12px;margin:12px 0 0"></p>
+	</div>
+
 	<div id="swps-keyword-history-modal" class="swps-modal" style="display:none;">
 		<div class="swps-modal-content">
 			<span class="swps-modal-close">&times;</span>

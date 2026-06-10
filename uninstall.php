@@ -36,6 +36,7 @@ $swps_cron_hooks = array(
 	'swps_refresh_models',
 	'swps_aeo_sweep_proposals',
 	'swps_send_digest',
+	'swps_citation_check',
 );
 
 foreach ( $swps_cron_hooks as $swps_cron_hook ) {
@@ -95,6 +96,7 @@ $swps_tables = array(
 	'swps_link_index',
 	'swps_link_graph',
 	'swps_backlinks',
+	'swps_citation_checks',
 );
 
 foreach ( $swps_tables as $swps_table ) {

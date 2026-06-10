@@ -150,6 +150,104 @@ class SWPS_XAI_Provider extends SWPS_AI_Provider {
 		return $models;
 	}
 
+	/**
+	 * Run a search-grounded query via xAI Grok's search_parameters in chat completions.
+	 *
+	 * API: POST /v1/chat/completions with search_parameters:{mode:"on"}.
+	 * Citations surface as a top-level citations[] array of URL strings.
+	 * Ref: https://docs.x.ai/developers/rest-api-reference/inference/chat.md
+	 *
+	 * @param string $query      The search query / prompt.
+	 * @param int    $max_tokens Maximum tokens in the response.
+	 * @return array{text: string, citations: string[]}|WP_Error
+	 */
+	public function search_grounded( string $query, int $max_tokens = 1024 ): array|WP_Error {
+		$api_key = $this->get_api_key();
+
+		if ( empty( $api_key ) ) {
+			return new WP_Error( 'swps_no_api_key', __( 'Please enter your xAI API key in StrataWP SEO settings.', 'stratawp-seo' ) );
+		}
+
+		$body = array(
+			'model'             => $this->get_validated_model(),
+			'max_tokens'        => $max_tokens,
+			'messages'          => array(
+				array(
+					'role'    => 'user',
+					'content' => $query,
+				),
+			),
+			'search_parameters' => array(
+				'mode'             => 'on',
+				'return_citations' => true,
+			),
+		);
+
+		$response = wp_remote_post(
+			self::API_URL,
+			array(
+				'timeout' => 180,
+				'headers' => array(
+					'Content-Type'  => 'application/json',
+					'Authorization' => 'Bearer ' . $api_key,
+				),
+				'body'    => wp_json_encode( $body ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return new WP_Error(
+				'swps_api_request_failed',
+				/* translators: %s: error message */
+				sprintf( __( 'API request failed: %s', 'stratawp-seo' ), $response->get_error_message() )
+			);
+		}
+
+		$status_code   = wp_remote_retrieve_response_code( $response );
+		$response_body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $status_code ) {
+			$error_message = $response_body['error']['message'] ?? __( 'Unknown API error.', 'stratawp-seo' );
+			// 4xx indicating search is unsupported for this model.
+			$err_lc = strtolower( $error_message );
+			if ( $status_code >= 400 && $status_code < 500 &&
+				( false !== strpos( $err_lc, 'search' ) ||
+					false !== strpos( $err_lc, 'search_parameters' ) ) ) {
+				return new WP_Error(
+					'swps_search_unsupported',
+					/* translators: 1: HTTP status code, 2: error message */
+					sprintf( __( 'Grok API error (%1$d): %2$s', 'stratawp-seo' ), $status_code, $error_message ),
+					array( 'status' => (int) $status_code )
+				);
+			}
+			return new WP_Error(
+				'swps_api_error',
+				/* translators: 1: HTTP status code, 2: error message */
+				sprintf( __( 'Grok API error (%1$d): %2$s', 'stratawp-seo' ), $status_code, $error_message ),
+				array( 'status' => (int) $status_code )
+			);
+		}
+
+		$text = $response_body['choices'][0]['message']['content'] ?? '';
+		if ( '' === $text ) {
+			return new WP_Error( 'swps_empty_response', __( 'Received empty response from Grok.', 'stratawp-seo' ) );
+		}
+
+		// Citations are a top-level array of URL strings.
+		$raw_citations = $response_body['citations'] ?? array();
+		$urls          = array();
+		foreach ( $raw_citations as $url ) {
+			if ( is_string( $url ) && '' !== $url ) {
+				$urls[] = $url;
+			}
+		}
+
+		return array(
+			'text'      => $text,
+			'citations' => array_values( array_unique( $urls ) ),
+		);
+	}
+
 	public function test_key( string $api_key ): bool|WP_Error {
 		$response = wp_remote_post(
 			self::API_URL,
