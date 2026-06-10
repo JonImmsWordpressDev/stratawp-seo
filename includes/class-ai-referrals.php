@@ -150,9 +150,9 @@ class SWPS_AI_Referrals {
 	 * Returns null when either sample is below the minimum threshold to prevent
 	 * misleading ratios from sparse data.
 	 *
-	 * @param array{views: int, avg_time: float, avg_scroll: float, bounce_rate: float} $ai      AI aggregate metrics.
-	 * @param array{views: int, avg_time: float, avg_scroll: float, bounce_rate: float} $organic Organic aggregate metrics.
-	 * @param int                                                                       $min_n   Minimum sample size per group.
+	 * @param array{views?: int, avg_time?: float, avg_scroll?: float, bounce_rate?: float} $ai      AI aggregate metrics.
+	 * @param array{views?: int, avg_time?: float, avg_scroll?: float, bounce_rate?: float} $organic Organic aggregate metrics.
+	 * @param int                                                                           $min_n   Minimum sample size per group.
 	 * @return array{time_ratio: float, scroll_ratio: float, bounce_ratio: float, ai_n: int, organic_n: int}|null
 	 */
 	public static function engagement_comparison( array $ai, array $organic, int $min_n = 30 ): ?array {
@@ -165,11 +165,11 @@ class SWPS_AI_Referrals {
 		$organic_bounce = (float) ( $organic['bounce_rate'] ?? 1 );
 
 		return array(
-			'time_ratio'   => $organic_time > 0 ? round( (float) $ai['avg_time'] / $organic_time, 4 ) : 0.0,
-			'scroll_ratio' => $organic_scroll > 0 ? round( (float) $ai['avg_scroll'] / $organic_scroll, 4 ) : 0.0,
-			'bounce_ratio' => $organic_bounce > 0 ? round( (float) $ai['bounce_rate'] / $organic_bounce, 4 ) : 0.0,
-			'ai_n'         => (int) $ai['views'],
-			'organic_n'    => (int) $organic['views'],
+			'time_ratio'   => $organic_time > 0 ? round( (float) ( $ai['avg_time'] ?? 0 ) / $organic_time, 4 ) : 0.0,
+			'scroll_ratio' => $organic_scroll > 0 ? round( (float) ( $ai['avg_scroll'] ?? 0 ) / $organic_scroll, 4 ) : 0.0,
+			'bounce_ratio' => $organic_bounce > 0 ? round( (float) ( $ai['bounce_rate'] ?? 0 ) / $organic_bounce, 4 ) : 0.0,
+			'ai_n'         => (int) ( $ai['views'] ?? 0 ),
+			'organic_n'    => (int) ( $organic['views'] ?? 0 ),
 		);
 	}
 
