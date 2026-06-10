@@ -79,6 +79,23 @@ class SchemaGraphTest extends TestCase {
 		$this->assertCount( 2, $graph->get_nodes() );
 	}
 
+	public function test_add_node_drops_typeless_node(): void {
+		// A legacy filter returning junk (no @type) must not pollute the graph.
+		$graph = new SWPS_Schema_Graph();
+		$graph->add_node( array( '@id' => '#junk', 'name' => 'No type here' ) );
+		$this->assertCount( 0, $graph->get_nodes() );
+	}
+
+	public function test_add_node_filter_returns_empty_graph_still_valid(): void {
+		// Simulates a filter wiping a node: empty array dropped, other nodes intact.
+		$graph = new SWPS_Schema_Graph();
+		$graph->add_node( array( '@type' => 'WebSite', '@id' => '#website', 'name' => 'Acme' ) );
+		$graph->add_node( array() );
+		$nodes = $graph->get_nodes();
+		$this->assertCount( 1, $nodes );
+		$this->assertSame( 'WebSite', $nodes[0]['@type'] );
+	}
+
 	// -------------------------------------------------------------------------
 	// normalize_node
 	// -------------------------------------------------------------------------

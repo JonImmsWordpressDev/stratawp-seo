@@ -53,10 +53,13 @@ class SWPS_Schema_Graph {
 	 * If a node with the same @id already exists it is replaced (last-write wins,
 	 * so caller order determines precedence).
 	 *
+	 * Nodes without an '@type' are silently dropped — a legacy filter returning
+	 * an empty array or junk must not inject an invalid node into the graph.
+	 *
 	 * @param array $node Schema node array. Must contain '@type'.
 	 */
 	public function add_node( array $node ): void {
-		if ( empty( $node ) ) {
+		if ( empty( $node ) || empty( $node['@type'] ) ) {
 			return;
 		}
 

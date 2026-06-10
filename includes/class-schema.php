@@ -20,6 +20,16 @@
  *   3. FAQ / Takeaways: absorbed into graph when active; standalone fallback in
  *      stratawp-seo.php only fires when this module is deferred (duplicate-safe).
  *
+ * INTENTIONAL DIVERGENCE — AEO stays outside the @graph:
+ *   AEO types (HowTo/Recipe/Product/Review/FAQPage from _swps_aeo_schema_json)
+ *   are emitted as a SEPARATE standalone ld+json block at wp_head priority 10,
+ *   not merged into the @graph. Their defer logic is independent of the main
+ *   module: the swps_schema_override option can re-enable AEO output even when
+ *   the @graph is fully deferred to Yoast/RankMath/AIOSEO. Merging them would
+ *   couple the two defer policies and break the override path. So a page with
+ *   an AEO type assigned legitimately carries TWO ld+json blocks: one @graph
+ *   (when active) + one AEO block.
+ *
  * Legacy filter back-compat:
  *   swps_schema_article, swps_schema_breadcrumb, swps_schema_organization each
  *   receive a standalone-shaped copy of the node (with @context injected before
@@ -347,8 +357,16 @@ class SWPS_Schema {
 			'dateModified'     => get_the_modified_date( 'c', $post ),
 			'mainEntityOfPage' => array( '@id' => SWPS_Schema_Graph::webpage_id( $permalink ) ),
 			'wordCount'        => str_word_count( wp_strip_all_tags( $post->post_content ) ),
-			'publisher'        => array( '@id' => SWPS_Schema_Graph::org_id() ),
 		);
+
+		// Publisher — Google requires Organization type for Article.publisher.
+		// On personal-brand sites (swps_schema_entity_type = Person) the site
+		// entity node is Person-typed, so referencing it would emit an invalid
+		// Person publisher. Publisher is a recommended (not required) Article
+		// property, so we omit it entirely in that case.
+		if ( 'Organization' === get_option( 'swps_schema_entity_type', 'Organization' ) ) {
+			$node['publisher'] = array( '@id' => SWPS_Schema_Graph::org_id() );
+		}
 
 		// Author node: store inline for the filter shim (back-compat), then
 		// replace with an @id reference after the filter runs. That way
@@ -602,7 +620,9 @@ class SWPS_Schema {
 			'itemListElement' => $items,
 		);
 
-		$node = (array) apply_filters( 'swps_schema_takeaways', $node, $takeaways );
+		// Legacy filter shim — same public filter (swps_takeaways_schema) the
+		// standalone path applies; receives the graph-shaped node (with @id).
+		$node = SWPS_Hooks::filter_takeaways_schema( $node, $takeaways );
 
 		$graph->add_node( $node );
 	}
