@@ -136,6 +136,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-files.php';
 
 // Crawler verification (v4.19) — CIDR/rDNS-based search-bot hit verification.
 require_once SWPS_PLUGIN_DIR . 'includes/class-crawler-verification.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-budget-report.php';
 
 // Backlinks (v4.2.2) — manual/CSV-import backlink tracker with health monitor.
 require_once SWPS_PLUGIN_DIR . 'includes/class-backlinks.php';
@@ -252,6 +253,7 @@ final class StrataWP_SEO {
 	public SWPS_Image_SEO $image_seo;
 	public SWPS_Crawl_Files $crawl_files;
 	public SWPS_Crawler_Verification $crawler_verification;
+	public SWPS_Crawl_Budget_Report  $crawl_budget_report;
 	public SWPS_Backlinks $backlinks;
 	public SWPS_Autopilot_Guardian $autopilot_guardian;
 	public SWPS_Digest $digest;
@@ -383,6 +385,7 @@ final class StrataWP_SEO {
 		$this->crawl_files            = new SWPS_Crawl_Files();
 		SWPS_Bot_Analytics_Tracker::maybe_upgrade();
 		$this->crawler_verification = new SWPS_Crawler_Verification();
+		$this->crawl_budget_report  = new SWPS_Crawl_Budget_Report();
 		$this->backlinks            = new SWPS_Backlinks();
 		$this->settings             = new SWPS_Settings();
 		$this->analyzer             = new SWPS_Analyzer( $this->cache_manager );
