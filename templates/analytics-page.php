@@ -360,23 +360,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<?php endif; ?>
 
 		<?php if ( ! empty( $gaps ) ) : ?>
-		<?php
-		$gap_current_sort = isset( $_GET['gap_sort'] ) && 'score' === $_GET['gap_sort'] ? 'score' : 'date'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$gap_sort_score_url = esc_url( add_query_arg( 'gap_sort', 'score' ) );
-		$gap_sort_date_url  = esc_url( add_query_arg( 'gap_sort', 'date' ) );
-		?>
+			<?php
+			$swps_gap_sort           = isset( $_GET['gap_sort'] ) && 'score' === $_GET['gap_sort'] ? 'score' : 'date'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$swps_gap_sort_score_url = add_query_arg( 'gap_sort', 'score' );
+			$swps_gap_sort_date_url  = add_query_arg( 'gap_sort', 'date' );
+			?>
 		<div class="swps-section-h" style="margin-top:24px">
 			<h3><?php esc_html_e( 'AEO Gap — Posts Never Crawled (30d)', 'stratawp-seo' ); ?></h3>
 			<p style="color:var(--swps-text-muted);font-size:12px;margin:4px 0 0">
 				<?php esc_html_e( 'Published content that no AI crawler has fetched. Candidates for sitemap re-submission, internal linking, or refresh.', 'stratawp-seo' ); ?>
 				&nbsp;
 				<?php esc_html_e( 'Sort:', 'stratawp-seo' ); ?>
-				<?php if ( 'score' === $gap_current_sort ) : ?>
-					<a href="<?php echo $gap_sort_date_url; ?>"><?php esc_html_e( 'By date', 'stratawp-seo' ); ?></a>
+				<?php if ( 'score' === $swps_gap_sort ) : ?>
+					<a href="<?php echo esc_url( $swps_gap_sort_date_url ); ?>"><?php esc_html_e( 'By date', 'stratawp-seo' ); ?></a>
 					&middot; <strong><?php esc_html_e( 'By AEO score ↓', 'stratawp-seo' ); ?></strong>
 				<?php else : ?>
 					<strong><?php esc_html_e( 'By date', 'stratawp-seo' ); ?></strong>
-					&middot; <a href="<?php echo $gap_sort_score_url; ?>"><?php esc_html_e( 'By AEO score ↓', 'stratawp-seo' ); ?></a>
+					&middot; <a href="<?php echo esc_url( $swps_gap_sort_score_url ); ?>"><?php esc_html_e( 'By AEO score ↓', 'stratawp-seo' ); ?></a>
 				<?php endif; ?>
 			</p>
 		</div>

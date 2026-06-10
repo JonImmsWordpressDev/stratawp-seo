@@ -585,38 +585,37 @@ class SWPS_Bot_Analytics_Tracker {
 
 		$exclude = array_map( 'intval', (array) $hit_ids );
 
-		$wp_orderby = 'score' === $orderby
-			? array(
-				'meta_value_num' => 'DESC',
-				'date'           => 'DESC',
-			)
-			: 'date';
-		$wp_order   = 'score' === $orderby ? 'DESC' : 'DESC';
-
 		$query_args = array(
 			'post_type'      => array( 'post', 'page' ),
 			'post_status'    => 'publish',
 			'posts_per_page' => $limit,
 			'post__not_in'   => empty( $exclude ) ? array( 0 ) : $exclude,
-			'orderby'        => $wp_orderby,
-			'order'          => $wp_order,
+			'orderby'        => 'date',
+			'order'          => 'DESC',
 			'fields'         => 'ids',
 			'no_found_rows'  => true,
 		);
 
 		if ( 'score' === $orderby ) {
-			$query_args['meta_key']  = \SWPS_AEO_Scorer::META_TOTAL;
+			// Named OR meta_query clauses keep unscored posts in the result
+			// (LEFT JOIN), while ordering scored posts first by score desc.
 			$query_args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'relation' => 'OR',
-				array(
+				'relation'  => 'OR',
+				'has_score' => array(
 					'key'     => \SWPS_AEO_Scorer::META_TOTAL,
 					'compare' => 'EXISTS',
+					'type'    => 'NUMERIC',
 				),
-				array(
+				'no_score'  => array(
 					'key'     => \SWPS_AEO_Scorer::META_TOTAL,
 					'compare' => 'NOT EXISTS',
 				),
 			);
+			$query_args['orderby']    = array(
+				'has_score' => 'DESC',
+				'date'      => 'DESC',
+			);
+			unset( $query_args['order'] );
 		}
 
 		$query = new WP_Query( $query_args );
@@ -628,7 +627,7 @@ class SWPS_Bot_Analytics_Tracker {
 				continue;
 			}
 			$raw_score = get_post_meta( $post->ID, \SWPS_AEO_Scorer::META_TOTAL, true );
-			$out[] = array(
+			$out[]     = array(
 				'post_id'   => (int) $post->ID,
 				'title'     => (string) get_the_title( $post ),
 				'url'       => (string) get_permalink( $post ),

@@ -221,7 +221,9 @@ class SWPS_Visibility_Funnel {
 	 * @return array{published:int, crawled:int, visited:int, stages: array}
 	 */
 	public static function site_funnel( int $days ): array {
-		$cached = get_transient( self::TRANSIENT_FUNNEL );
+		$transient_key = self::TRANSIENT_FUNNEL . '_' . (int) $days;
+
+		$cached = get_transient( $transient_key );
 		if ( is_array( $cached ) ) {
 			return $cached;
 		}
@@ -281,7 +283,7 @@ class SWPS_Visibility_Funnel {
 			'stages'    => self::stage_rates( $published, $crawled, $visited ),
 		);
 
-		set_transient( self::TRANSIENT_FUNNEL, $result, self::FUNNEL_TTL );
+		set_transient( $transient_key, $result, self::FUNNEL_TTL );
 
 		return $result;
 	}
