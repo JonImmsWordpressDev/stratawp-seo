@@ -35,6 +35,9 @@
             "dealerdirect/phpcodesniffer-composer-installer": true
         },
         "optimize-autoloader": true,
+        "platform": {
+            "php": "8.0.30"
+        },
         "sort-packages": true
     },
     "scripts": {
