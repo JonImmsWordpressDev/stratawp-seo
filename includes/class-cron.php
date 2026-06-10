@@ -64,6 +64,9 @@ class SWPS_Cron {
 		$posts_per_run = (int) get_option( 'swps_cron_posts_per_run', 1 );
 		$posts_per_run = min( $posts_per_run, 5 );
 
+		$succeeded = 0;
+		$failed    = 0;
+
 		for ( $i = 0; $i < $posts_per_run; $i++ ) {
 			$topic    = '';
 			$template = get_option( 'swps_default_template', 'auto' );
@@ -83,17 +86,30 @@ class SWPS_Cron {
 			$result = $this->generator->generate_post( $topic, $template );
 
 			if ( is_wp_error( $result ) ) {
+				++$failed;
 				error_log( '[StrataWP SEO Cron] Generation failed: ' . $result->get_error_message() );
 
-				if ( $topic_id && $this->queue ) {
-					$this->queue->update_status( $topic_id, 'failed', $result->get_error_message() );
+				// Budget exhausted: every remaining post would fail too. Put
+				// the topic back in the queue untouched and stop the batch.
+				if ( 'swps_budget_exceeded' === $result->get_error_code() ) {
+					if ( $topic_id && $this->queue ) {
+						$this->queue->update_status( $topic_id, 'queued' );
+					}
+					break;
 				}
 
-				break;
+				if ( $topic_id && $this->queue ) {
+					SWPS_Autopilot_Guardian::handle_topic_failure( $topic_id, $result, $this->queue );
+				}
+
+				continue;
 			}
+
+			++$succeeded;
 
 			// Update topic status if from queue.
 			if ( $topic_id && $this->queue ) {
+				delete_post_meta( $topic_id, '_swps_attempt_count' );
 				$this->queue->update_status( $topic_id, 'published', '', $result['post_id'] );
 			}
 
@@ -102,6 +118,7 @@ class SWPS_Cron {
 			}
 		}
 
+		SWPS_Autopilot_Guardian::record_run( $succeeded, $failed );
 		update_option( 'swps_cron_last_run', current_time( 'mysql' ) );
 	}
 

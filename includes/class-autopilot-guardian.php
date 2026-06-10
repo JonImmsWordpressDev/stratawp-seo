@@ -203,6 +203,70 @@ class SWPS_Autopilot_Guardian {
 	}
 
 	/**
+	 * Handle a failed topic: requeue transient failures with backoff (capped
+	 * at MAX_ATTEMPTS total attempts), mark permanent ones failed.
+	 *
+	 * @param int              $topic_id Topic post ID.
+	 * @param WP_Error         $error    The generation error.
+	 * @param SWPS_Topic_Queue $queue    Queue for status updates.
+	 * @return string 'retrying' or 'failed'.
+	 */
+	public static function handle_topic_failure( int $topic_id, WP_Error $error, SWPS_Topic_Queue $queue ): string {
+		$attempts = (int) get_post_meta( $topic_id, '_swps_attempt_count', true ) + 1;
+		update_post_meta( $topic_id, '_swps_attempt_count', $attempts );
+
+		if ( self::is_transient_error( $error ) && $attempts < self::MAX_ATTEMPTS ) {
+			$queue->update_status(
+				$topic_id,
+				'retrying',
+				sprintf(
+					/* translators: 1: attempt, 2: max attempts, 3: error message */
+					__( 'Attempt %1$d of %2$d failed: %3$s — retry scheduled.', 'stratawp-seo' ),
+					$attempts,
+					self::MAX_ATTEMPTS,
+					$error->get_error_message()
+				)
+			);
+			stratawp_seo()->background_processor->schedule_generation( $topic_id, self::retry_delay( $attempts ) );
+			return 'retrying';
+		}
+
+		$queue->update_status( $topic_id, 'failed', $error->get_error_message() );
+		return 'failed';
+	}
+
+	/**
+	 * Record a per-run summary for the dashboard status strip.
+	 */
+	public static function record_run( int $succeeded, int $failed ): void {
+		update_option(
+			self::OPTION_LAST_RUN,
+			array(
+				'timestamp' => time(),
+				'succeeded' => $succeeded,
+				'failed'    => $failed,
+			),
+			false
+		);
+	}
+
+	/**
+	 * Status payload for the dashboard tile.
+	 */
+	public static function get_status(): array {
+		$tracker = new SWPS_Cost_Tracker();
+		$spent   = (float) ( $tracker->get_monthly_stats()['total_cost'] ?? 0 );
+		$budget  = (float) get_option( self::OPTION_BUDGET, 0 );
+
+		return array(
+			'last_run'     => get_option( self::OPTION_LAST_RUN, array() ),
+			'spent'        => $spent,
+			'budget'       => $budget,
+			'budget_state' => self::budget_state( $spent, $budget ),
+		);
+	}
+
+	/**
 	 * Gate a generation on the monthly budget.
 	 *
 	 * @return true|WP_Error True to proceed; WP_Error 'swps_budget_exceeded' to block.

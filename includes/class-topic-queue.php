@@ -66,6 +66,16 @@ class SWPS_Topic_Queue {
 				'label_count' => _n_noop( 'Failed <span class="count">(%s)</span>', 'Failed <span class="count">(%s)</span>', 'stratawp-seo' ),
 			)
 		);
+
+		register_post_status(
+			'retrying',
+			array(
+				'label'       => __( 'Retrying', 'stratawp-seo' ),
+				'public'      => false,
+				'internal'    => true,
+				'label_count' => _n_noop( 'Retrying <span class="count">(%s)</span>', 'Retrying <span class="count">(%s)</span>', 'stratawp-seo' ),
+			)
+		);
 	}
 
 	/**
@@ -209,7 +219,7 @@ class SWPS_Topic_Queue {
 		$topics = get_posts(
 			array(
 				'post_type'      => self::POST_TYPE,
-				'post_status'    => array( 'queued', 'generating', 'published', 'failed' ),
+				'post_status'    => array( 'queued', 'generating', 'published', 'failed', 'retrying' ),
 				'posts_per_page' => 200,
 				'date_query'     => array(
 					array(
@@ -229,6 +239,7 @@ class SWPS_Topic_Queue {
 				'generating' => '#2271b1',
 				'published'  => '#00a32a',
 				'failed'     => '#d63638',
+				'retrying'   => '#f59e0b',
 				default      => '#646970',
 			};
 
