@@ -142,6 +142,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-budget-report.php';
 // Site crawler (v4.19) — background broken-link / issues audit.
 require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-issues.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawler.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawl-admin.php';
 
 // Backlinks (v4.2.2) — manual/CSV-import backlink tracker with health monitor.
 require_once SWPS_PLUGIN_DIR . 'includes/class-backlinks.php';
@@ -260,6 +261,8 @@ final class StrataWP_SEO {
 	public SWPS_Crawler_Verification $crawler_verification;
 	public SWPS_Crawler_Enforcement  $crawler_enforcement;
 	public SWPS_Crawl_Budget_Report  $crawl_budget_report;
+	public SWPS_Site_Crawler $site_crawler;
+	public SWPS_Site_Crawl_Admin $site_crawl_admin;
 	public SWPS_Backlinks $backlinks;
 	public SWPS_Autopilot_Guardian $autopilot_guardian;
 	public SWPS_Digest $digest;
@@ -394,6 +397,7 @@ final class StrataWP_SEO {
 		$this->crawler_enforcement  = new SWPS_Crawler_Enforcement();
 		$this->crawl_budget_report  = new SWPS_Crawl_Budget_Report();
 		$this->site_crawler         = new SWPS_Site_Crawler();
+		$this->site_crawl_admin     = new SWPS_Site_Crawl_Admin( $this->site_crawler );
 		$this->backlinks            = new SWPS_Backlinks();
 		$this->settings             = new SWPS_Settings();
 		$this->analyzer             = new SWPS_Analyzer( $this->cache_manager );

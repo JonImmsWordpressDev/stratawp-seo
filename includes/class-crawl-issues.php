@@ -221,6 +221,41 @@ class SWPS_Crawl_Issues {
 	}
 
 	/**
+	 * Return all issue rows for a run, detail JSON decoded, grouped by type.
+	 *
+	 * Each row gains an 'is_new' flag: true when first_seen_run equals the
+	 * queried run (i.e. the issue was not present in any earlier run).
+	 *
+	 * @param int $run_id Target run ID.
+	 * @return array<string, array[]> Issue rows keyed by type.
+	 */
+	public static function issues_for_run( int $run_id ): array {
+		global $wpdb;
+
+		$table = $wpdb->prefix . self::TABLE_ISSUES;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = (array) $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id, type, url, detail, severity, post_id, first_seen_run FROM {$table} WHERE run_id = %d ORDER BY type, id",
+				$run_id
+			),
+			ARRAY_A
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		$grouped = array();
+		foreach ( $rows as $row ) {
+			$detail                    = json_decode( (string) $row['detail'], true );
+			$row['detail']             = is_array( $detail ) ? $detail : array();
+			$row['is_new']             = (int) $row['first_seen_run'] === $run_id;
+			$grouped[ $row['type'] ][] = $row;
+		}
+
+		return $grouped;
+	}
+
+	/**
 	 * Return the crawled-URL count for the given run.
 	 *
 	 * @param int $run_id Target run ID.

@@ -94,6 +94,16 @@ class SWPS_Site_Crawler {
 		wp_clear_scheduled_hook( self::WEEKLY_HOOK );
 	}
 
+	/**
+	 * Return the current crawl state array (empty array when no run exists).
+	 *
+	 * @return array Crawl state as persisted by start_run()/process_chunk().
+	 */
+	public static function get_state(): array {
+		$state = get_option( self::OPT_STATE, array() );
+		return is_array( $state ) ? $state : array();
+	}
+
 	// =========================================================================
 	// PURE STATIC HELPERS (unit-tested, no WP dependency)
 	// =========================================================================
