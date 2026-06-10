@@ -1277,6 +1277,11 @@ function swps_activate(): void {
 		'breadcrumbs_home_label'      => 'Home',
 		// Redirect defaults.
 		'auto_redirect_slug_change'   => 1,
+		// Email digest defaults.
+		'digest_enabled'              => 0,
+		'digest_frequency'            => 'weekly',
+		'digest_recipients'           => '',
+		'digest_ai_summary'           => 0,
 	);
 
 	foreach ( $defaults as $key => $value ) {
@@ -1331,6 +1336,7 @@ function swps_deactivate(): void {
 	SWPS_Competitors::unschedule_cron();
 	SWPS_Backlinks::unschedule_cron();
 	wp_clear_scheduled_hook( 'swps_aeo_sweep_proposals' );
+	wp_unschedule_hook( 'swps_send_digest' );
 	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'swps_deactivate' );

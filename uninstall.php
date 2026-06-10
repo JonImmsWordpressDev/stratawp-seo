@@ -35,6 +35,7 @@ $swps_cron_hooks = array(
 	'swps_competitors_daily_scan',
 	'swps_refresh_models',
 	'swps_aeo_sweep_proposals',
+	'swps_send_digest',
 );
 
 foreach ( $swps_cron_hooks as $swps_cron_hook ) {
