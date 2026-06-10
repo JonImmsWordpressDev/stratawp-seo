@@ -139,6 +139,10 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-crawler-verification.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-crawler-enforcement.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-budget-report.php';
 
+// Site crawler (v4.19) — background broken-link / issues audit.
+require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-issues.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawler.php';
+
 // Backlinks (v4.2.2) — manual/CSV-import backlink tracker with health monitor.
 require_once SWPS_PLUGIN_DIR . 'includes/class-backlinks.php';
 
@@ -389,6 +393,7 @@ final class StrataWP_SEO {
 		$this->crawler_verification = new SWPS_Crawler_Verification();
 		$this->crawler_enforcement  = new SWPS_Crawler_Enforcement();
 		$this->crawl_budget_report  = new SWPS_Crawl_Budget_Report();
+		$this->site_crawler         = new SWPS_Site_Crawler();
 		$this->backlinks            = new SWPS_Backlinks();
 		$this->settings             = new SWPS_Settings();
 		$this->analyzer             = new SWPS_Analyzer( $this->cache_manager );
@@ -1407,6 +1412,8 @@ function swps_activate(): void {
 	SWPS_Backlinks::create_tables();
 	SWPS_Backlinks::schedule_cron();
 
+	SWPS_Crawl_Issues::create_tables();
+
 	if ( ! wp_next_scheduled( 'swps_prune_404_logs' ) ) {
 		wp_schedule_event( time(), 'daily', 'swps_prune_404_logs' );
 	}
@@ -1436,6 +1443,7 @@ function swps_deactivate(): void {
 	SWPS_Question_Coverage::unschedule_cron();
 	SWPS_Decay_Watchdog::unschedule_cron();
 	wp_unschedule_hook( 'swps_send_digest' );
+	wp_unschedule_hook( SWPS_Site_Crawler::CRON_HOOK );
 	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'swps_deactivate' );
