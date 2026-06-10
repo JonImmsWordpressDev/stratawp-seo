@@ -2,14 +2,30 @@
 /**
  * Schema / Structured Data output.
  *
- * Outputs JSON-LD on the frontend:
- *   - Legacy set (v1-v4): Article, Breadcrumb, WebSite, Organization/Person.
- *     Hooked at wp_head priority 1. Bails entirely if Yoast / RankMath /
- *     AIOSEO is active.
- *   - AEO (v4.6+): dynamic per-post HowTo / Recipe / Product / Review /
- *     FAQPage from _swps_aeo_schema_json post meta. Hooked at wp_head
- *     priority 10. Defers to other SEO plugins by default; respects the
- *     swps_schema_override option for per-type re-enable.
+ * Outputs a single JSON-LD @graph block on every frontend page when StrataWP
+ * SEO's schema module is active (i.e. no Yoast / RankMath / AIOSEO active).
+ * Graph composition:
+ *   - Front page:  Organization, WebSite
+ *   - All pages:   BreadcrumbList (when HTML breadcrumbs disabled)
+ *   - Singular post: Article (→ author Person, publisher Organization)
+ *   - Author archive: ProfilePage (→ Person mainEntity)
+ *   - FAQ / Key Takeaways post meta: absorbed as graph nodes when this module
+ *     is active; standalone fallback from stratawp-seo.php when deferred.
+ *
+ * Three defer policies (unchanged from pre-graph):
+ *   1. Legacy schema set (Organisation/WebSite/Article/Breadcrumb):
+ *      bail entirely when Yoast / RankMath / AIOSEO is active.
+ *   2. AEO post schema (HowTo/Recipe/…): always registers; defers per-type via
+ *      is_aeo_schema_deferred() unless swps_schema_override is on.
+ *   3. FAQ / Takeaways: absorbed into graph when active; standalone fallback in
+ *      stratawp-seo.php only fires when this module is deferred (duplicate-safe).
+ *
+ * Legacy filter back-compat:
+ *   swps_schema_article, swps_schema_breadcrumb, swps_schema_organization each
+ *   receive a standalone-shaped copy of the node (with @context injected before
+ *   the filter, stripped after). The returned data is normalised and merged into
+ *   the graph. Third-party consumers may modify the node body as before; the
+ *   one behavioral difference is that output now appears inside one @graph block.
  *
  * @package StrataWP_SEO
  */
@@ -22,10 +38,20 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Class SWPS_Schema
  *
  * Two hook registrations on construction (see __construct):
- *   - maybe_render_aeo_schema at priority 10 (always, with internal defer)
- *   - output_schema at priority 1 (only when no other SEO plugin is active)
+ *   - maybe_render_aeo_schema at wp_head priority 10 (always, internal defer)
+ *   - output_schema at wp_head priority 1 (only when no other SEO plugin active)
  */
 class SWPS_Schema {
+
+	/**
+	 * Detects whether the main schema module (legacy set + graph) is deferred
+	 * to another SEO plugin.
+	 *
+	 * @return bool True when Yoast / RankMath / AIOSEO is active.
+	 */
+	public static function is_main_schema_deferred(): bool {
+		return defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' );
+	}
 
 	/**
 	 * Constructor — bail if schema is disabled or another SEO plugin handles it.
@@ -40,61 +66,71 @@ class SWPS_Schema {
 		}
 
 		// AEO schema (v4.6) always registers — it does its own per-type
-		// deferral check inside the callback so a future override toggle
-		// (swps_schema_override) can re-enable per-type emission when
-		// another SEO plugin is active.
+		// deferral check inside the callback.
 		add_action( 'wp_head', array( $this, 'maybe_render_aeo_schema' ), 10 );
 
-		// Defer the legacy (v1-v4) schema set entirely to other SEO plugins
-		// when they're active. This is the pre-existing behavior; AEO is
-		// handled above with its own deferral.
-		if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) ) {
+		// Defer the legacy schema set (and @graph) to other SEO plugins.
+		if ( self::is_main_schema_deferred() ) {
 			return;
 		}
 
 		add_action( 'wp_head', array( $this, 'output_schema' ), 1 );
 	}
 
+	// -------------------------------------------------------------------------
+	// Main output
+	// -------------------------------------------------------------------------
+
 	/**
-	 * Main wp_head callback — dispatches to individual schema methods.
+	 * Main wp_head callback — builds and emits a single @graph block.
+	 *
+	 * Organization is emitted on every page so Article/WebPage nodes can
+	 * reference it by @id without creating orphan refs. WebSite is front-page
+	 * only (it carries the SearchAction sitelinks box).
 	 */
 	public function output_schema(): void {
+		$graph = new SWPS_Schema_Graph();
+
+		// Organization always present — referenced by Article.publisher and WebPage.
+		$this->add_organization_node( $graph );
+
 		if ( is_front_page() ) {
-			$this->website_schema();
-			$this->organization_schema();
+			$this->add_website_node( $graph );
+		}
+
+		// WebPage node on every non-front-page so Article.mainEntityOfPage resolves.
+		if ( ! is_front_page() ) {
+			$this->add_webpage_node( $graph );
 		}
 
 		if ( is_singular( 'post' ) ) {
-			$this->article_schema();
+			$this->add_article_node( $graph );
 		}
 
-		// Output JSON-LD breadcrumbs only when the HTML breadcrumbs feature is disabled.
-		// When enabled, SWPS_Breadcrumbs outputs inline microdata schema instead.
+		// JSON-LD breadcrumbs only when HTML breadcrumbs feature is disabled.
 		if ( ! is_front_page() && ! get_option( 'swps_breadcrumbs_enabled', 1 ) ) {
-			$this->breadcrumb_schema();
+			$this->add_breadcrumb_node( $graph );
 		}
 
-		// Author archive — emit ProfilePage + Person entity.
 		if ( is_author() ) {
-			$this->author_schema();
-		}
-	}
-
-	/**
-	 * Output a JSON-LD script tag from a schema array.
-	 *
-	 * @param array $schema Schema data array.
-	 */
-	private function output_jsonld( array $schema ): void {
-		if ( empty( $schema ) ) {
-			return;
+			$this->add_author_nodes( $graph );
 		}
 
-        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-LD script tag.
-		echo '<script type="application/ld+json">'
-			. wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
-			. '</script>' . "\n";
+		// FAQ / Key Takeaways — absorb into graph when schema is active.
+		// The standalone hooks in stratawp-seo.php are gated on is_main_schema_deferred()
+		// so they fire ONLY under Yoast/RankMath/AIOSEO; this path handles the
+		// active-schema case, preventing duplicate emission.
+		if ( is_singular( 'post' ) ) {
+			$this->add_faq_node( $graph );
+			$this->add_takeaways_node( $graph );
+		}
+
+		$graph->output();
 	}
+
+	// -------------------------------------------------------------------------
+	// AEO (unchanged from pre-graph)
+	// -------------------------------------------------------------------------
 
 	/**
 	 * Render dynamic AEO JSON-LD on singulars if the post has a schema type assigned.
@@ -160,239 +196,112 @@ class SWPS_Schema {
 	 * enabled the swps_schema_override toggle.
 	 */
 	private function is_aeo_schema_deferred(): bool {
-		if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) ) {
+		if ( self::is_main_schema_deferred() ) {
 			return ! (bool) get_option( 'swps_schema_override', false );
 		}
 		return false;
 	}
 
-	/**
-	 * Output Article schema on single posts.
-	 */
-	private function article_schema(): void {
-		$post = get_post();
-
-		if ( ! $post ) {
-			return;
-		}
-
-		$article_type = get_option( 'swps_schema_article_type', 'Article' );
-		$author       = get_userdata( $post->post_author );
-		$excerpt      = get_the_excerpt( $post );
-
-		if ( empty( $excerpt ) ) {
-			$excerpt = wp_trim_words( wp_strip_all_tags( $post->post_content ), 25, '...' );
-		}
-
-		$schema = array(
-			'@context'         => 'https://schema.org',
-			'@type'            => $article_type,
-			'headline'         => get_the_title( $post ),
-			'description'      => $excerpt,
-			'datePublished'    => get_the_date( 'c', $post ),
-			'dateModified'     => get_the_modified_date( 'c', $post ),
-			'mainEntityOfPage' => array(
-				'@type' => 'WebPage',
-				'@id'   => get_permalink( $post ),
-			),
-			'wordCount'        => str_word_count( wp_strip_all_tags( $post->post_content ) ),
-		);
-
-		// Author — inline Person node with E-E-A-T fields (commit c).
-		if ( $author ) {
-			$schema['author'] = $this->build_person_node( $author );
-		}
-
-		// Featured image.
-		$thumb_id = get_post_thumbnail_id( $post );
-
-		if ( $thumb_id ) {
-			$img_data = wp_get_attachment_image_src( $thumb_id, 'full' );
-
-			if ( $img_data ) {
-				$schema['image'] = array(
-					'@type'  => 'ImageObject',
-					'url'    => $img_data[0],
-					'width'  => $img_data[1],
-					'height' => $img_data[2],
-				);
-			}
-		}
-
-		// Publisher — references Organization settings.
-		$org_name = get_option( 'swps_schema_name', '' );
-
-		if ( empty( $org_name ) ) {
-			$org_name = get_bloginfo( 'name' );
-		}
-
-		$publisher = array(
-			'@type' => 'Organization',
-			'name'  => $org_name,
-		);
-
-		$logo_url = get_option( 'swps_schema_logo', '' );
-
-		if ( ! empty( $logo_url ) ) {
-			$publisher['logo'] = array(
-				'@type' => 'ImageObject',
-				'url'   => $logo_url,
-			);
-		}
-
-		$schema['publisher'] = $publisher;
-
-		/**
-		 * Filter the Article schema before output.
-		 *
-		 * @param array $schema  Article schema array.
-		 * @param int   $post_id Post ID.
-		 */
-		$schema = SWPS_Hooks::filter_schema_article( $schema, $post->ID );
-
-		$this->output_jsonld( $schema );
-	}
+	// -------------------------------------------------------------------------
+	// Graph node builders
+	// -------------------------------------------------------------------------
 
 	/**
-	 * Output BreadcrumbList schema on all pages except homepage.
-	 */
-	private function breadcrumb_schema(): void {
-		$items = array();
-
-		// Home is always first.
-		$items[] = array(
-			'name' => get_bloginfo( 'name' ),
-			'url'  => home_url( '/' ),
-		);
-
-		if ( is_singular( 'post' ) ) {
-			$post     = get_post();
-			$category = $this->get_primary_category( $post );
-
-			if ( $category ) {
-				$items[] = array(
-					'name' => $category->name,
-					'url'  => get_category_link( $category->term_id ),
-				);
-			}
-
-			$items[] = array(
-				'name' => get_the_title( $post ),
-				'url'  => get_permalink( $post ),
-			);
-		} elseif ( is_page() ) {
-			$post      = get_post();
-			$ancestors = array_reverse( get_post_ancestors( $post ) );
-
-			foreach ( $ancestors as $ancestor_id ) {
-				$items[] = array(
-					'name' => get_the_title( $ancestor_id ),
-					'url'  => get_permalink( $ancestor_id ),
-				);
-			}
-
-			$items[] = array(
-				'name' => get_the_title( $post ),
-				'url'  => get_permalink( $post ),
-			);
-		} elseif ( is_category() || is_tag() || is_tax() ) {
-			$term = get_queried_object();
-
-			if ( $term ) {
-				$items[] = array(
-					'name' => $term->name,
-					'url'  => get_term_link( $term ),
-				);
-			}
-		} elseif ( is_author() ) {
-			$author = get_queried_object();
-
-			if ( $author ) {
-				$items[] = array(
-					'name' => $author->display_name,
-					'url'  => get_author_posts_url( $author->ID ),
-				);
-			}
-		}
-
-		// Need at least 2 items (Home + something) for a valid breadcrumb.
-		if ( count( $items ) < 2 ) {
-			return;
-		}
-
-		$list_items = array();
-
-		foreach ( $items as $position => $item ) {
-			$list_items[] = array(
-				'@type'    => 'ListItem',
-				'position' => $position + 1,
-				'name'     => $item['name'],
-				'item'     => $item['url'],
-			);
-		}
-
-		$schema = array(
-			'@context'        => 'https://schema.org',
-			'@type'           => 'BreadcrumbList',
-			'itemListElement' => $list_items,
-		);
-
-		/** Filter the Breadcrumb schema before output. */
-		$schema = SWPS_Hooks::filter_schema_breadcrumb( $schema );
-
-		$this->output_jsonld( $schema );
-	}
-
-	/**
-	 * Get the primary category for a post.
+	 * Add the Organization (or Person for personal-brand sites) node.
 	 *
-	 * Uses Yoast primary category if set, otherwise falls back to first category.
+	 * Legacy filter: swps_schema_organization receives a standalone-shaped copy
+	 * (with @context). The returned array is stripped of @context and merged.
 	 *
-	 * @param WP_Post $post Post object.
-	 * @return WP_Term|null Category term or null.
+	 * @param SWPS_Schema_Graph $graph Target graph.
 	 */
-	private function get_primary_category( WP_Post $post ): ?WP_Term {
-		// Check Yoast primary category first.
-		$primary_id = get_post_meta( $post->ID, '_yoast_wpseo_primary_category', true );
-
-		if ( $primary_id ) {
-			$term = get_term( (int) $primary_id, 'category' );
-
-			if ( $term && ! is_wp_error( $term ) ) {
-				return $term;
-			}
-		}
-
-		// Fall back to first assigned category.
-		$categories = get_the_category( $post->ID );
-
-		if ( ! empty( $categories ) ) {
-			return $categories[0];
-		}
-
-		return null;
-	}
-
-	/**
-	 * Output WebSite schema on the homepage.
-	 */
-	private function website_schema(): void {
-		$name = get_option( 'swps_schema_name', '' );
+	private function add_organization_node( SWPS_Schema_Graph $graph ): void {
+		$entity_type = get_option( 'swps_schema_entity_type', 'Organization' );
+		$name        = get_option( 'swps_schema_name', '' );
 
 		if ( empty( $name ) ) {
 			$name = get_bloginfo( 'name' );
 		}
 
-		$schema = array(
+		$node = array(
 			'@context' => 'https://schema.org',
-			'@type'    => 'WebSite',
+			'@type'    => $entity_type,
+			'@id'      => SWPS_Schema_Graph::org_id(),
 			'name'     => $name,
 			'url'      => home_url( '/' ),
 		);
 
-		// Optional sitelinks searchbox.
+		if ( 'Organization' === $entity_type ) {
+			$logo_url = get_option( 'swps_schema_logo', '' );
+			if ( ! empty( $logo_url ) ) {
+				$node['logo'] = array(
+					'@type' => 'ImageObject',
+					'url'   => $logo_url,
+				);
+			}
+		}
+
+		$social_raw = get_option( 'swps_schema_social_profiles', '' );
+		if ( ! empty( $social_raw ) ) {
+			$urls = array_values( array_filter( array_map( 'trim', explode( "\n", $social_raw ) ) ) );
+			if ( ! empty( $urls ) ) {
+				$node['sameAs'] = $urls;
+			}
+		}
+
+		// Legacy filter shim — receives standalone-shaped copy with @context; see class-hooks.php.
+		$node = SWPS_Schema_Graph::normalize_node(
+			SWPS_Hooks::filter_schema_organization( $node ),
+			SWPS_Schema_Graph::org_id()
+		);
+
+		$graph->add_node( $node );
+	}
+
+	/**
+	 * Add a WebPage node for the current URL.
+	 *
+	 * Emitted on every non-front-page so Article.mainEntityOfPage resolves
+	 * within the same @graph without creating orphan @id refs.
+	 *
+	 * @param SWPS_Schema_Graph $graph Target graph.
+	 */
+	private function add_webpage_node( SWPS_Schema_Graph $graph ): void {
+		$url = (string) ( is_singular() ? get_permalink() : get_pagenum_link() );
+		if ( '' === $url ) {
+			return;
+		}
+
+		$page_title = wp_strip_all_tags( (string) wp_title( '|', false, 'right' ) );
+		$node       = array(
+			'@type' => 'WebPage',
+			'@id'   => SWPS_Schema_Graph::webpage_id( $url ),
+			'url'   => $url,
+			'name'  => '' !== $page_title ? $page_title : get_bloginfo( 'name' ),
+		);
+
+		$graph->add_node( $node );
+	}
+
+	/**
+	 * Add the WebSite node.
+	 *
+	 * @param SWPS_Schema_Graph $graph Target graph.
+	 */
+	private function add_website_node( SWPS_Schema_Graph $graph ): void {
+		$name = get_option( 'swps_schema_name', '' );
+		if ( empty( $name ) ) {
+			$name = get_bloginfo( 'name' );
+		}
+
+		$node = array(
+			'@type' => 'WebSite',
+			'@id'   => SWPS_Schema_Graph::website_id(),
+			'name'  => $name,
+			'url'   => home_url( '/' ),
+		);
+
 		if ( get_option( 'swps_schema_searchbox', 1 ) ) {
-			$schema['potentialAction'] = array(
+			$node['potentialAction'] = array(
 				'@type'       => 'SearchAction',
 				'target'      => array(
 					'@type'       => 'EntryPoint',
@@ -402,18 +311,314 @@ class SWPS_Schema {
 			);
 		}
 
-		$this->output_jsonld( $schema );
+		$graph->add_node( $node );
 	}
+
+	/**
+	 * Add the Article node (references author Person by @id).
+	 *
+	 * Legacy filter: swps_schema_article receives a standalone-shaped copy
+	 * (with @context). The returned array is stripped of @context and merged.
+	 *
+	 * @param SWPS_Schema_Graph $graph Target graph.
+	 */
+	private function add_article_node( SWPS_Schema_Graph $graph ): void {
+		$post = get_post();
+		if ( ! $post ) {
+			return;
+		}
+
+		$article_type = get_option( 'swps_schema_article_type', 'Article' );
+		$author       = get_userdata( $post->post_author );
+		$permalink    = (string) get_permalink( $post );
+		$excerpt      = get_the_excerpt( $post );
+
+		if ( empty( $excerpt ) ) {
+			$excerpt = wp_trim_words( wp_strip_all_tags( $post->post_content ), 25, '...' );
+		}
+
+		$node = array(
+			'@context'         => 'https://schema.org',
+			'@type'            => $article_type,
+			'@id'              => SWPS_Schema_Graph::article_id( $permalink ),
+			'headline'         => get_the_title( $post ),
+			'description'      => $excerpt,
+			'datePublished'    => get_the_date( 'c', $post ),
+			'dateModified'     => get_the_modified_date( 'c', $post ),
+			'mainEntityOfPage' => array( '@id' => SWPS_Schema_Graph::webpage_id( $permalink ) ),
+			'wordCount'        => str_word_count( wp_strip_all_tags( $post->post_content ) ),
+			'publisher'        => array( '@id' => SWPS_Schema_Graph::org_id() ),
+		);
+
+		// Author node: store inline for the filter shim (back-compat), then
+		// replace with an @id reference after the filter runs. That way
+		// swps_schema_article filter consumers can still read/modify author data.
+		if ( $author ) {
+			$node['author'] = $this->build_person_node( $author );
+			// Also emit a standalone Person node in the graph.
+			$person_node = array_merge(
+				array( '@id' => SWPS_Schema_Graph::person_id( $author->ID ) ),
+				$node['author']
+			);
+			$graph->add_node( $person_node );
+		}
+
+		$thumb_id = get_post_thumbnail_id( $post );
+		if ( $thumb_id ) {
+			$img_data = wp_get_attachment_image_src( $thumb_id, 'full' );
+			if ( $img_data ) {
+				$node['image'] = array(
+					'@type'  => 'ImageObject',
+					'url'    => $img_data[0],
+					'width'  => $img_data[1],
+					'height' => $img_data[2],
+				);
+			}
+		}
+
+		/**
+		 * Filter the Article schema before output (legacy shim).
+		 *
+		 * Receives a standalone-shaped copy with @context. The @context is
+		 * stripped after the filter; output location changes from a separate
+		 * <script> tag to a node inside the @graph envelope.
+		 *
+		 * @param array $node    Article schema array.
+		 * @param int   $post_id Post ID.
+		 */
+		$node = SWPS_Schema_Graph::normalize_node(
+			SWPS_Hooks::filter_schema_article( $node, $post->ID ),
+			SWPS_Schema_Graph::article_id( $permalink )
+		);
+
+		// After filter: replace inline author object with @id reference so
+		// the graph stays interlinked. The separate Person node was already added.
+		if ( $author && isset( $node['author'] ) && is_array( $node['author'] ) ) {
+			$node['author'] = array( '@id' => SWPS_Schema_Graph::person_id( $author->ID ) );
+		}
+
+		$graph->add_node( $node );
+	}
+
+	/**
+	 * Add the BreadcrumbList node.
+	 *
+	 * Legacy filter: swps_schema_breadcrumb receives a standalone-shaped copy.
+	 *
+	 * @param SWPS_Schema_Graph $graph Target graph.
+	 */
+	private function add_breadcrumb_node( SWPS_Schema_Graph $graph ): void {
+		$items = array();
+		$url   = (string) ( is_singular() ? get_permalink() : '' );
+
+		$items[] = array(
+			'name' => get_bloginfo( 'name' ),
+			'url'  => home_url( '/' ),
+		);
+
+		if ( is_singular( 'post' ) ) {
+			$post     = get_post();
+			$category = $this->get_primary_category( $post );
+			if ( $category ) {
+				$items[] = array(
+					'name' => $category->name,
+					'url'  => get_category_link( $category->term_id ),
+				);
+			}
+			$items[] = array(
+				'name' => get_the_title( $post ),
+				'url'  => get_permalink( $post ),
+			);
+		} elseif ( is_page() ) {
+			$post      = get_post();
+			$ancestors = array_reverse( get_post_ancestors( $post ) );
+			foreach ( $ancestors as $ancestor_id ) {
+				$items[] = array(
+					'name' => get_the_title( $ancestor_id ),
+					'url'  => get_permalink( $ancestor_id ),
+				);
+			}
+			$items[] = array(
+				'name' => get_the_title( $post ),
+				'url'  => get_permalink( $post ),
+			);
+		} elseif ( is_category() || is_tag() || is_tax() ) {
+			$term = get_queried_object();
+			if ( $term ) {
+				$items[] = array(
+					'name' => $term->name,
+					'url'  => get_term_link( $term ),
+				);
+			}
+		} elseif ( is_author() ) {
+			$author = get_queried_object();
+			if ( $author ) {
+				$items[] = array(
+					'name' => $author->display_name,
+					'url'  => get_author_posts_url( $author->ID ),
+				);
+			}
+		}
+
+		if ( count( $items ) < 2 ) {
+			return;
+		}
+
+		$list_items = array();
+		foreach ( $items as $position => $item ) {
+			$list_items[] = array(
+				'@type'    => 'ListItem',
+				'position' => $position + 1,
+				'name'     => $item['name'],
+				'item'     => $item['url'],
+			);
+		}
+
+		$bc_id = SWPS_Schema_Graph::breadcrumb_id( '' !== $url ? $url : home_url( '/' ) );
+
+		$node = array(
+			'@context'        => 'https://schema.org',
+			'@type'           => 'BreadcrumbList',
+			'@id'             => $bc_id,
+			'itemListElement' => $list_items,
+		);
+
+		// Legacy filter shim — receives standalone-shaped copy with @context; see class-hooks.php.
+		$node = SWPS_Schema_Graph::normalize_node(
+			SWPS_Hooks::filter_schema_breadcrumb( $node ),
+			$bc_id
+		);
+
+		$graph->add_node( $node );
+	}
+
+	/**
+	 * Add the ProfilePage + Person nodes for author archives.
+	 *
+	 * @param SWPS_Schema_Graph $graph Target graph.
+	 */
+	private function add_author_nodes( SWPS_Schema_Graph $graph ): void {
+		$author = get_queried_object();
+		if ( ! ( $author instanceof WP_User ) ) {
+			return;
+		}
+
+		$author_url = get_author_posts_url( $author->ID );
+		$person_id  = SWPS_Schema_Graph::person_id( $author->ID );
+
+		// Full Person node.
+		$person = array_merge(
+			array( '@id' => $person_id ),
+			$this->build_person_node( $author )
+		);
+		$graph->add_node( $person );
+
+		// ProfilePage referencing Person.
+		$profile_node = array(
+			'@type'      => 'ProfilePage',
+			'@id'        => SWPS_Schema_Graph::profile_page_id( $author_url ),
+			'name'       => sprintf(
+				/* translators: %s: author display name */
+				__( 'Author: %s', 'stratawp-seo' ),
+				$author->display_name
+			),
+			'url'        => $author_url,
+			'mainEntity' => array( '@id' => $person_id ),
+		);
+		$graph->add_node( $profile_node );
+	}
+
+	/**
+	 * Add FAQ schema as a graph node (when post meta is present).
+	 *
+	 * This absorbs the FAQ/takeaways emission that previously came from
+	 * standalone hooks in stratawp-seo.php. Those standalone hooks still fire
+	 * ONLY when the main schema module is deferred (under Yoast/RankMath/AIOSEO)
+	 * — see the gating condition added in stratawp-seo.php — so emission is
+	 * always exactly once.
+	 *
+	 * @param SWPS_Schema_Graph $graph Target graph.
+	 */
+	private function add_faq_node( SWPS_Schema_Graph $graph ): void {
+		$post_id = get_the_ID();
+		if ( ! $post_id ) {
+			return;
+		}
+
+		// Re-use the normalisation logic from stratawp-seo.php. That method is
+		// on the main plugin class which isn't available here, so we call
+		// the FAQ schema helper directly via the plugin instance or duplicate
+		// the minimal normalization inline.
+		$schema = get_post_meta( $post_id, '_swps_faq_schema', true );
+		$node   = SWPS_Schema_Graph::normalize_faq_schema( $schema );
+
+		if ( empty( $node ) ) {
+			return;
+		}
+
+		// Assign @id and strip standalone @context for graph inclusion.
+		$permalink   = (string) get_permalink( $post_id );
+		$node['@id'] = trailingslashit( $permalink ) . '#faqpage';
+		unset( $node['@context'] );
+
+		$graph->add_node( $node );
+	}
+
+	/**
+	 * Add Key Takeaways ItemList node (when post meta is present).
+	 *
+	 * Same duplicate-prevention guarantee as add_faq_node().
+	 *
+	 * @param SWPS_Schema_Graph $graph Target graph.
+	 */
+	private function add_takeaways_node( SWPS_Schema_Graph $graph ): void {
+		if ( ! get_option( 'swps_takeaways_schema', 1 ) ) {
+			return;
+		}
+
+		$post_id   = get_the_ID();
+		$takeaways = $post_id ? get_post_meta( $post_id, '_swps_key_takeaways', true ) : null;
+
+		if ( empty( $takeaways ) || ! is_array( $takeaways ) ) {
+			return;
+		}
+
+		$items = array();
+		foreach ( $takeaways as $index => $takeaway ) {
+			$items[] = array(
+				'@type'    => 'ListItem',
+				'position' => $index + 1,
+				'name'     => $takeaway,
+			);
+		}
+
+		$permalink = (string) get_permalink( $post_id );
+
+		$node = array(
+			'@type'           => 'ItemList',
+			'@id'             => trailingslashit( $permalink ) . '#takeaways',
+			'name'            => __( 'Key Takeaways', 'stratawp-seo' ),
+			'numberOfItems'   => count( $takeaways ),
+			'itemListElement' => $items,
+		);
+
+		$node = (array) apply_filters( 'swps_schema_takeaways', $node, $takeaways );
+
+		$graph->add_node( $node );
+	}
+
+	// -------------------------------------------------------------------------
+	// Helpers
+	// -------------------------------------------------------------------------
 
 	/**
 	 * Build a Person schema node for an author, including E-E-A-T fields when set.
 	 *
-	 * Always includes @type, name, and url. Adds sameAs, jobTitle, and
-	 * description (credentials) only when the meta values are non-empty, so no
-	 * empty strings appear in the emitted JSON-LD.
+	 * Always includes @type, name, url. Adds sameAs/jobTitle/description only
+	 * when the meta values are non-empty (no empty strings in JSON-LD).
 	 *
 	 * @param WP_User $author The author user object.
-	 * @return array Person schema node.
+	 * @return array Person schema node (no @context, no @id).
 	 */
 	private function build_person_node( WP_User $author ): array {
 		$node = array(
@@ -429,11 +634,9 @@ class SWPS_Schema {
 		if ( ! empty( $sameas ) ) {
 			$node['sameAs'] = $sameas;
 		}
-
 		if ( '' !== $job_title ) {
 			$node['jobTitle'] = $job_title;
 		}
-
 		if ( '' !== $credentials ) {
 			$node['description'] = $credentials;
 		}
@@ -442,79 +645,43 @@ class SWPS_Schema {
 	}
 
 	/**
-	 * Output ProfilePage + Person schema on author archive pages.
+	 * Get the primary category for a post.
 	 *
-	 * Emits a ProfilePage whose mainEntity is the full Person node, including
-	 * any E-E-A-T fields stored against the author's user profile.
+	 * Uses Yoast primary category if set; falls back to first category.
+	 *
+	 * @param WP_Post $post Post object.
+	 * @return WP_Term|null Category term or null.
 	 */
-	private function author_schema(): void {
-		$author = get_queried_object();
+	private function get_primary_category( WP_Post $post ): ?WP_Term {
+		$primary_id = get_post_meta( $post->ID, '_yoast_wpseo_primary_category', true );
 
-		if ( ! ( $author instanceof WP_User ) ) {
-			return;
+		if ( $primary_id ) {
+			$term = get_term( (int) $primary_id, 'category' );
+			if ( $term && ! is_wp_error( $term ) ) {
+				return $term;
+			}
 		}
 
-		$person_node = $this->build_person_node( $author );
-
-		$schema = array(
-			'@context'   => 'https://schema.org',
-			'@type'      => 'ProfilePage',
-			'name'       => sprintf(
-				/* translators: %s: author display name */
-				__( 'Author: %s', 'stratawp-seo' ),
-				$author->display_name
-			),
-			'url'        => get_author_posts_url( $author->ID ),
-			'mainEntity' => $person_node,
-		);
-
-		$this->output_jsonld( $schema );
+		$categories = get_the_category( $post->ID );
+		return ! empty( $categories ) ? $categories[0] : null;
 	}
 
 	/**
-	 * Output Organization or Person schema on the homepage.
+	 * Output a JSON-LD script tag from a schema array.
+	 *
+	 * Used by maybe_render_aeo_schema() for standalone AEO nodes that are
+	 * intentionally emitted outside the @graph (AEO has its own defer logic).
+	 *
+	 * @param array $schema Schema data array.
 	 */
-	private function organization_schema(): void {
-		$entity_type = get_option( 'swps_schema_entity_type', 'Organization' );
-		$name        = get_option( 'swps_schema_name', '' );
-
-		if ( empty( $name ) ) {
-			$name = get_bloginfo( 'name' );
+	private function output_jsonld( array $schema ): void {
+		if ( empty( $schema ) ) {
+			return;
 		}
 
-		$schema = array(
-			'@context' => 'https://schema.org',
-			'@type'    => $entity_type,
-			'name'     => $name,
-			'url'      => home_url( '/' ),
-		);
-
-		// Logo (Organization only, per Google spec).
-		if ( 'Organization' === $entity_type ) {
-			$logo_url = get_option( 'swps_schema_logo', '' );
-
-			if ( ! empty( $logo_url ) ) {
-				$schema['logo'] = array(
-					'@type' => 'ImageObject',
-					'url'   => $logo_url,
-				);
-			}
-		}
-
-		// Social profiles.
-		$social_raw = get_option( 'swps_schema_social_profiles', '' );
-
-		if ( ! empty( $social_raw ) ) {
-			$urls = array_filter( array_map( 'trim', explode( "\n", $social_raw ) ) );
-
-			if ( ! empty( $urls ) ) {
-				$schema['sameAs'] = array_values( $urls );
-			}
-		}
-
-		/** Filter the Organization/Person schema before output. */
-		$schema = SWPS_Hooks::filter_schema_organization( $schema );
-
-		$this->output_jsonld( $schema );
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-LD script tag.
+		echo '<script type="application/ld+json">'
+			. wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
+			. '</script>' . "\n";
 	}
 }

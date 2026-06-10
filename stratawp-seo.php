@@ -86,6 +86,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/audit/class-schema-audit-module.php';
 
 // Schema structured data.
 require_once SWPS_PLUGIN_DIR . 'includes/class-schema-validator.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-schema-graph.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-author-profile.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-schema.php';
 
@@ -494,9 +495,15 @@ final class StrataWP_SEO {
 		add_action( 'wp_ajax_swps_preview_post', array( $this, 'ajax_preview_post' ) );
 		add_action( 'wp_ajax_swps_clear_cache', array( $this, 'ajax_clear_cache' ) );
 
-		// Frontend.
-		add_action( 'wp_head', array( $this, 'output_faq_schema' ) );
-		add_action( 'wp_head', array( $this, 'output_takeaways_schema' ) );
+		// Frontend — FAQ / Takeaways schema.
+		// When the StrataWP schema module is active (no other SEO plugin), these nodes
+		// are absorbed into the @graph by SWPS_Schema. Register the standalone hooks
+		// ONLY when the main schema is deferred (Yoast / RankMath / AIOSEO active) so
+		// emission is exactly once regardless of which path handles it.
+		if ( SWPS_Schema::is_main_schema_deferred() ) {
+			add_action( 'wp_head', array( $this, 'output_faq_schema' ) );
+			add_action( 'wp_head', array( $this, 'output_takeaways_schema' ) );
+		}
 
 		// Content scoring on post creation.
 		add_action( 'swps_post_created', array( $this, 'score_generated_post' ), 10, 3 );
@@ -858,69 +865,15 @@ final class StrataWP_SEO {
 	/**
 	 * Normalize legacy FAQ schema meta into a safe schema array.
 	 *
-	 * Older versions stored a full script tag. Newer generated posts store the
-	 * schema array directly so output can always be encoded in one trusted path.
+	 * Delegates to SWPS_Schema_Graph::normalize_faq_schema() so both the
+	 * standalone Yoast-deferred path (here) and the @graph path (SWPS_Schema)
+	 * share one implementation.
+	 *
+	 * @param mixed $schema Raw value from get_post_meta.
+	 * @return array Normalised FAQPage schema array, or empty array.
 	 */
 	private function normalize_faq_schema_meta( mixed $schema ): array {
-		if ( empty( $schema ) ) {
-			return array();
-		}
-
-		if ( is_string( $schema ) ) {
-			$json = trim( $schema );
-
-			if ( false !== stripos( $json, '<script' ) ) {
-				if ( ! preg_match( '/<script[^>]*type=["\']application\/ld\+json["\'][^>]*>(.*?)<\/script>/is', $json, $matches ) ) {
-					return array();
-				}
-				$json = html_entity_decode( trim( $matches[1] ), ENT_QUOTES, 'UTF-8' );
-			}
-
-			$schema = json_decode( $json, true );
-		}
-
-		if ( ! is_array( $schema ) || 'FAQPage' !== ( $schema['@type'] ?? '' ) ) {
-			return array();
-		}
-
-		$entities = $schema['mainEntity'] ?? array();
-		if ( ! is_array( $entities ) ) {
-			return array();
-		}
-
-		$normalized = array(
-			'@context'   => 'https://schema.org',
-			'@type'      => 'FAQPage',
-			'name'       => sanitize_text_field( wp_strip_all_tags( (string) ( $schema['name'] ?? get_the_title() ) ) ),
-			'mainEntity' => array(),
-		);
-
-		foreach ( $entities as $entity ) {
-			if ( ! is_array( $entity ) ) {
-				continue;
-			}
-
-			$answer = $entity['acceptedAnswer'] ?? array();
-			$text   = is_array( $answer ) ? ( $answer['text'] ?? '' ) : '';
-
-			$question = sanitize_text_field( wp_strip_all_tags( (string) ( $entity['name'] ?? '' ) ) );
-			$text     = sanitize_textarea_field( wp_strip_all_tags( (string) $text ) );
-
-			if ( '' === $question || '' === $text ) {
-				continue;
-			}
-
-			$normalized['mainEntity'][] = array(
-				'@type'          => 'Question',
-				'name'           => $question,
-				'acceptedAnswer' => array(
-					'@type' => 'Answer',
-					'text'  => $text,
-				),
-			);
-		}
-
-		return empty( $normalized['mainEntity'] ) ? array() : $normalized;
+		return SWPS_Schema_Graph::normalize_faq_schema( $schema );
 	}
 
 	/**
