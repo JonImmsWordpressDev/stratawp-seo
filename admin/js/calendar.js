@@ -117,6 +117,26 @@
                 }
             });
         }
+
+        // Approve proposal button.
+        const approveBtn = document.getElementById('swps-topic-approve');
+        if (approveBtn) {
+            approveBtn.addEventListener('click', function() {
+                const topicId = this.dataset.topicId;
+                reviewProposal(topicId, 'approve');
+            });
+        }
+
+        // Dismiss proposal button.
+        const dismissBtn = document.getElementById('swps-topic-dismiss');
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', function() {
+                const topicId = this.dataset.topicId;
+                if (confirm('Dismiss this proposal?')) {
+                    reviewProposal(topicId, 'dismiss');
+                }
+            });
+        }
     });
 
     function openCreateModal(dateStr) {
@@ -136,6 +156,7 @@
         if (!modal) return;
 
         const props = event.extendedProps;
+        const isProposed = props.status === 'proposed';
 
         document.getElementById('swps-detail-title').textContent = event.title;
         document.getElementById('swps-detail-date').textContent = event.startStr;
@@ -143,11 +164,32 @@
         document.getElementById('swps-detail-template').textContent = props.template || 'auto';
         document.getElementById('swps-detail-notes').textContent = props.notes || 'No notes';
 
+        // Rationale row — visible only for proposed topics.
+        const rationaleRow = document.getElementById('swps-detail-rationale-row');
+        if (rationaleRow) {
+            rationaleRow.style.display = isProposed ? '' : 'none';
+            const rationaleEl = document.getElementById('swps-detail-rationale');
+            if (rationaleEl) {
+                rationaleEl.textContent = props.rationale || '';
+            }
+        }
+
         const deleteBtn = document.getElementById('swps-topic-delete');
         if (deleteBtn) {
             deleteBtn.dataset.topicId = event.id;
-            // Only show delete for queued/failed topics.
             deleteBtn.style.display = (props.status === 'queued' || props.status === 'failed') ? '' : 'none';
+        }
+
+        const approveBtn = document.getElementById('swps-topic-approve');
+        if (approveBtn) {
+            approveBtn.dataset.topicId = event.id;
+            approveBtn.style.display = isProposed ? '' : 'none';
+        }
+
+        const dismissBtn = document.getElementById('swps-topic-dismiss');
+        if (dismissBtn) {
+            dismissBtn.dataset.topicId = event.id;
+            dismissBtn.style.display = isProposed ? '' : 'none';
         }
 
         modal.classList.add('swps-modal-open');
@@ -217,6 +259,30 @@
                     closeAllModals();
                     calendar.refetchEvents();
                 }
+            },
+        });
+    }
+
+    function reviewProposal(topicId, action) {
+        var ajaxAction = action === 'approve' ? 'swps_scout_approve' : 'swps_scout_dismiss';
+        jQuery.ajax({
+            url: swpsCalendar.ajax_url,
+            type: 'POST',
+            data: {
+                action: ajaxAction,
+                nonce: swpsCalendar.scout_nonce,
+                topic_id: topicId,
+            },
+            success: function(response) {
+                if (response.success) {
+                    closeAllModals();
+                    calendar.refetchEvents();
+                } else {
+                    alert(response.data.message || 'Action failed.');
+                }
+            },
+            error: function() {
+                alert('Request failed.');
             },
         });
     }

@@ -80,6 +80,15 @@ class SWPS_Cron {
 					$template = get_post_meta( $next_topic->ID, '_swps_template', true ) ?: $template;
 					$topic_id = $next_topic->ID;
 					$this->queue->update_status( $topic_id, 'generating' );
+				} elseif ( get_option( SWPS_Topic_Scout_Cron::OPT_AUTOPROMOTE, 0 ) ) {
+					// Queue empty and auto-promote is on: promote the top proposal.
+					$promoted = $this->maybe_autopromote_proposal();
+					if ( $promoted ) {
+						$topic    = $promoted->post_title;
+						$template = get_post_meta( $promoted->ID, '_swps_template', true ) ?: $template;
+						$topic_id = $promoted->ID;
+						$this->queue->update_status( $topic_id, 'generating' );
+					}
 				}
 			}
 
@@ -194,6 +203,57 @@ class SWPS_Cron {
 		}
 
 		return $next->getTimestamp();
+	}
+
+	/**
+	 * Promote the top proposed topic to 'queued' status with a back-dated
+	 * post_date so get_next_topic() picks it up immediately.
+	 *
+	 * Called only when the queue is empty and auto-promote is enabled.
+	 *
+	 * @return WP_Post|null The promoted topic, or null when no proposals exist.
+	 */
+	private function maybe_autopromote_proposal(): ?WP_Post {
+		if ( ! $this->queue ) {
+			return null;
+		}
+
+		$proposals = get_posts(
+			array(
+				'post_type'      => SWPS_Topic_Queue::POST_TYPE,
+				'post_status'    => 'proposed',
+				'posts_per_page' => 1,
+				'orderby'        => 'date',
+				'order'          => 'ASC',
+			)
+		);
+
+		if ( empty( $proposals ) ) {
+			return null;
+		}
+
+		$proposal  = $proposals[0];
+		$one_min_ago = gmdate( 'Y-m-d H:i:s', time() - 60 );
+
+		wp_update_post(
+			array(
+				'ID'            => $proposal->ID,
+				'post_status'   => 'queued',
+				'post_date'     => $one_min_ago,
+				'post_date_gmt' => $one_min_ago,
+			)
+		);
+
+		$rationale = (string) get_post_meta( $proposal->ID, SWPS_Topic_Scout_Cron::META_RATIONALE, true );
+		SWPS_Generator::append_log(
+			sprintf(
+				'Auto-promoted proposal: %s%s',
+				$proposal->post_title,
+				$rationale ? ' — ' . $rationale : ''
+			)
+		);
+
+		return get_post( $proposal->ID );
 	}
 
 	/**
