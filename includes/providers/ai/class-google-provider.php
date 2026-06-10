@@ -42,7 +42,7 @@ class SWPS_Google_Provider extends SWPS_AI_Provider {
 		}
 
 		$model = $this->get_validated_model();
-		$url   = self::API_BASE . $model . ':generateContent?key=' . $api_key;
+		$url   = self::API_BASE . $model . ':generateContent?key=' . rawurlencode( $api_key );
 
 		$body = array(
 			'system_instruction' => array(
@@ -179,7 +179,7 @@ class SWPS_Google_Provider extends SWPS_AI_Provider {
 		}
 
 		$model = $this->get_validated_model();
-		$url   = self::API_BASE . $model . ':generateContent?key=' . $api_key;
+		$url   = self::API_BASE . $model . ':generateContent?key=' . rawurlencode( $api_key );
 
 		$body = array(
 			'contents'         => array(
@@ -279,7 +279,7 @@ class SWPS_Google_Provider extends SWPS_AI_Provider {
 
 	public function test_key( string $api_key ): bool|WP_Error {
 		$model = $this->get_validated_model();
-		$url   = self::API_BASE . $model . ':generateContent?key=' . $api_key;
+		$url   = self::API_BASE . $model . ':generateContent?key=' . rawurlencode( $api_key );
 
 		$response = wp_remote_post(
 			$url,

@@ -138,6 +138,7 @@ class SWPS_Citation_Store {
 				"SELECT prompt_hash, engine, check_date, cited, cited_domains
                  FROM {$table}
                  WHERE prompt_hash IN ({$placeholders})
+                   AND check_date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
                  ORDER BY check_date DESC",
 				$hashes
 			),

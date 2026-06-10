@@ -331,6 +331,10 @@ class SWPS_Citation_Tracker {
 			return new WP_Error( 'swps_citation_invalid_engine', __( 'Unknown AI engine.', 'stratawp-seo' ) );
 		}
 
+		if ( ! in_array( $engine, $this->prompts->enabled_engines(), true ) ) {
+			return new WP_Error( 'swps_citation_engine_disabled', __( 'This engine is not enabled for citation checks.', 'stratawp-seo' ) );
+		}
+
 		// Increment BEFORE the call — failed calls may still bill.
 		$counter = self::counter_option();
 		update_option( $counter, (int) get_option( $counter, 0 ) + 1, false );
