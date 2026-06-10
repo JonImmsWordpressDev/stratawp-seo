@@ -557,9 +557,12 @@ class SWPS_Bot_Analytics_Tracker {
 	/**
 	 * Published posts with ZERO bot hits in the window — the AEO gap report.
 	 *
-	 * @return array<int, array{post_id:int, title:string, url:string, post_date:string}>
+	 * @param int    $days    Look-back window in days.
+	 * @param int    $limit   Max rows (1–100).
+	 * @param string $orderby 'date' (default) or 'score' (AEO score desc — high-score-but-uncrawled first).
+	 * @return array<int, array{post_id:int, title:string, url:string, post_date:string, aeo_score:int|null}>
 	 */
-	public function get_gap_posts( int $days = 30, int $limit = 25 ): array {
+	public function get_gap_posts( int $days = 30, int $limit = 25, string $orderby = 'date' ): array {
 		global $wpdb;
 		$raw   = $wpdb->prefix . self::RAW_TABLE;
 		$daily = $wpdb->prefix . self::DAILY_TABLE;
@@ -582,18 +585,40 @@ class SWPS_Bot_Analytics_Tracker {
 
 		$exclude = array_map( 'intval', (array) $hit_ids );
 
-		$query = new WP_Query(
-			array(
-				'post_type'      => array( 'post', 'page' ),
-				'post_status'    => 'publish',
-				'posts_per_page' => $limit,
-				'post__not_in'   => empty( $exclude ) ? array( 0 ) : $exclude,
-				'orderby'        => 'date',
-				'order'          => 'DESC',
-				'fields'         => 'ids',
-				'no_found_rows'  => true,
-			)
+		$query_args = array(
+			'post_type'      => array( 'post', 'page' ),
+			'post_status'    => 'publish',
+			'posts_per_page' => $limit,
+			'post__not_in'   => empty( $exclude ) ? array( 0 ) : $exclude,
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
 		);
+
+		if ( 'score' === $orderby ) {
+			// Named OR meta_query clauses keep unscored posts in the result
+			// (LEFT JOIN), while ordering scored posts first by score desc.
+			$query_args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'relation'  => 'OR',
+				'has_score' => array(
+					'key'     => \SWPS_AEO_Scorer::META_TOTAL,
+					'compare' => 'EXISTS',
+					'type'    => 'NUMERIC',
+				),
+				'no_score'  => array(
+					'key'     => \SWPS_AEO_Scorer::META_TOTAL,
+					'compare' => 'NOT EXISTS',
+				),
+			);
+			$query_args['orderby']    = array(
+				'has_score' => 'DESC',
+				'date'      => 'DESC',
+			);
+			unset( $query_args['order'] );
+		}
+
+		$query = new WP_Query( $query_args );
 
 		$out = array();
 		foreach ( $query->posts as $pid ) {
@@ -601,11 +626,13 @@ class SWPS_Bot_Analytics_Tracker {
 			if ( ! $post ) {
 				continue;
 			}
-			$out[] = array(
+			$raw_score = get_post_meta( $post->ID, \SWPS_AEO_Scorer::META_TOTAL, true );
+			$out[]     = array(
 				'post_id'   => (int) $post->ID,
 				'title'     => (string) get_the_title( $post ),
 				'url'       => (string) get_permalink( $post ),
 				'post_date' => (string) $post->post_date,
+				'aeo_score' => '' !== $raw_score ? (int) $raw_score : null,
 			);
 		}
 		return $out;

@@ -100,6 +100,7 @@ class SWPS_Dashboard {
 			'autopilot'           => $this->safe_get_autopilot(),
 			'posts_30d'           => $this->safe_get_post_views(),
 			'ai_referrals'        => $this->safe_get_ai_referrals(),
+			'ai_funnel'           => $this->safe_get_funnel(),
 			'top_issues'          => $this->safe_get_top_issues(),
 			'top_queries'         => $this->safe_get_top_gsc_queries(),
 			'auto_optimize_queue' => array(), // Phase 7 fills in.
@@ -318,6 +319,19 @@ class SWPS_Dashboard {
 				'views'     => 0,
 				'delta_pct' => null,
 			);
+		}
+	}
+
+	/**
+	 * Site-wide AI visibility funnel (crawled → AI-visited), transient-cached.
+	 *
+	 * @return array{published:int, crawled:int, visited:int, stages:array}|array{}
+	 */
+	private function safe_get_funnel(): array {
+		try {
+			return SWPS_Visibility_Funnel::site_funnel( 30 );
+		} catch ( \Throwable $e ) {
+			return array();
 		}
 	}
 

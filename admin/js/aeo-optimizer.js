@@ -87,6 +87,12 @@
             var actionBtn = r.has_proposal
                 ? '<button class="button swps-aeo-review"  data-id="' + r.post_id + '">' + escapeHtml(swpsAeo.i18n.review) + '</button>'
                 : '<button class="button swps-aeo-propose" data-id="' + r.post_id + '">' + escapeHtml(swpsAeo.i18n.generate) + '</button>';
+            var crawlCell = r.last_crawl_ago
+                ? escapeHtml(r.last_crawl_ago) + (r.last_bot ? '<br><small style="color:#999">' + escapeHtml(r.last_bot) + '</small>' : '')
+                : '<span style="color:#bbb">—</span>';
+            var visitsCell = r.ai_visits_30d > 0
+                ? String(r.ai_visits_30d)
+                : '<span style="color:#bbb">0</span>';
             return '<tr data-post-id="' + r.post_id + '">' +
                 '<td><span class="swps-aeo-score-cell ' + scoreClass(r.score) + '">' + r.score + '</span></td>' +
                 '<td>' +
@@ -99,6 +105,8 @@
                     chip('authority',      sub.authority) +
                     chip('coverage',       sub.coverage) +
                 '</td>' +
+                '<td style="font-size:12px">' + crawlCell + '</td>' +
+                '<td style="text-align:right">' + visitsCell + '</td>' +
                 '<td>' +
                     actionBtn + ' ' +
                     '<button class="button-link swps-aeo-dismiss" data-id="' + r.post_id + '">' + escapeHtml(swpsAeo.i18n.dismiss) + '</button>' +

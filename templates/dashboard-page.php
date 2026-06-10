@@ -298,6 +298,27 @@ $welcome_msg = sprintf(
 			<?php endif; ?>
 		</div>
 
+		<?php
+		$ai_funnel  = $data['ai_funnel'] ?? array();
+		$funnel_stages = $ai_funnel['stages'] ?? array();
+		if ( ! empty( $funnel_stages ) ) :
+			?>
+		<div class="swps-tile swps-tile-funnel">
+			<div class="swps-tile-h"><?php esc_html_e( 'AI Visibility Funnel (30d)', 'stratawp-seo' ); ?></div>
+			<ul class="swps-funnel-stages" style="list-style:none;padding:0;margin:8px 0 0;font-size:12px;">
+				<?php foreach ( $funnel_stages as $swps_stage ) : ?>
+					<li style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #eee;">
+						<span style="color:var(--swps-text-muted)"><?php echo esc_html( $swps_stage['label'] ); ?></span>
+						<span>
+							<strong><?php echo esc_html( number_format_i18n( $swps_stage['count'] ) ); ?></strong>
+							<span style="color:var(--swps-text-faint);margin-left:4px;"><?php echo esc_html( $swps_stage['pct'] . '%' ); ?></span>
+						</span>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+		</div>
+		<?php endif; ?>
+
 		<a class="swps-tile swps-tile-aeo" href="<?php echo esc_url( admin_url( 'admin.php?page=swps-aeo-optimize' ) ); ?>" style="text-decoration:none;color:inherit;display:block">
 			<div class="swps-tile-h"><?php esc_html_e( 'AEO health (avg)', 'stratawp-seo' ); ?></div>
 			<div class="swps-tile-stat">
