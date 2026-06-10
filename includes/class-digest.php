@@ -208,12 +208,10 @@ class SWPS_Digest {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$rows = $wpdb->get_results(
 				$wpdb->prepare(
-					"SELECT keyword,
-					MAX(CASE WHEN date > %s THEN position END) AS new_pos,
-					MAX(CASE WHEN date <= %s THEN position END) AS old_pos
-					FROM {$table}
-					GROUP BY keyword
-					HAVING new_pos IS NOT NULL OR old_pos IS NOT NULL",
+					"SELECT t.keyword,
+					(SELECT position FROM {$table} WHERE keyword = t.keyword AND date > %s ORDER BY date DESC LIMIT 1) AS new_pos,
+					(SELECT position FROM {$table} WHERE keyword = t.keyword AND date <= %s ORDER BY date DESC LIMIT 1) AS old_pos
+					FROM (SELECT DISTINCT keyword FROM {$table}) t",
 					$since_date,
 					$since_date
 				),
@@ -351,13 +349,16 @@ class SWPS_Digest {
 
 		// Recent generation failures.
 		if ( ! empty( $data['failures'] ) ) {
-			$count   = count( $data['failures'] );
-			$items[] = sprintf( '%d generation failure%s since last digest', $count, 1 === $count ? '' : 's' );
+			$count = count( $data['failures'] );
+			/* translators: %d: failure count */
+			$items[] = sprintf( _n( '%d generation failure since last digest', '%d generation failures since last digest', $count, 'stratawp-seo' ), $count );
 		}
 
 		// Broken backlinks.
 		if ( isset( $data['backlinks']['broken'] ) && $data['backlinks']['broken'] > 0 ) {
-			$items[] = sprintf( '%d broken backlink%s', $data['backlinks']['broken'], 1 === $data['backlinks']['broken'] ? '' : 's' );
+			$count = (int) $data['backlinks']['broken'];
+			/* translators: %d: broken backlink count */
+			$items[] = sprintf( _n( '%d broken backlink', '%d broken backlinks', $count, 'stratawp-seo' ), $count );
 		}
 
 		// Autopilot last-run failures.

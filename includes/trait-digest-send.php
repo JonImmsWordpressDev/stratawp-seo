@@ -58,7 +58,7 @@ trait SWPS_Digest_Send {
 
 		ob_start();
 		include SWPS_PLUGIN_DIR . 'templates/email/digest.php';
-		$html = ob_get_clean();
+		$html = (string) ob_get_clean();
 
 		if ( $test && $override_recipient ) {
 			$recipients = array( $override_recipient );
@@ -70,7 +70,12 @@ trait SWPS_Digest_Send {
 		}
 
 		$subject = sprintf( '[%s] SEO digest — %s', get_bloginfo( 'name' ), wp_date( get_option( 'date_format' ) ) );
-		$sent    = wp_mail( $recipients, $subject, $html, array( 'Content-Type: text/html; charset=UTF-8' ) );
+
+		try {
+			$sent = wp_mail( $recipients, $subject, $html, array( 'Content-Type: text/html; charset=UTF-8' ) );
+		} catch ( Throwable $e ) {
+			$sent = false;
+		}
 
 		if ( $sent && ! $test ) {
 			update_option( self::OPTION_LAST_SENT, time(), false );
