@@ -81,6 +81,7 @@ class SWPS_Autopilot_Guardian {
 	 * Exponential backoff: 15 min, 30 min, 60 min…
 	 *
 	 * @param int $attempt 1-based attempt number about to be scheduled.
+	 * @return int Delay in seconds before the next attempt.
 	 */
 	public static function retry_delay( int $attempt ): int {
 		$attempt = max( 1, $attempt );
