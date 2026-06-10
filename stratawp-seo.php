@@ -87,6 +87,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/audit/class-pagespeed-module.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-schema.php';
 
 // Analytics.
+require_once SWPS_PLUGIN_DIR . 'includes/class-ai-referrals.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-analytics-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-search-console.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-bot-analytics-tracker.php';
@@ -269,6 +270,7 @@ final class StrataWP_SEO {
 		$this->image_inserter        = new SWPS_Image_Inserter( $this->images );
 		$this->seo_audit             = new SWPS_SEO_Audit();
 		$this->schema                = new SWPS_Schema();
+		SWPS_AI_Referrals::maybe_upgrade();
 		$this->analytics_tracker     = new SWPS_Analytics_Tracker();
 		$this->bot_analytics_tracker = new SWPS_Bot_Analytics_Tracker();
 		$this->search_console        = new SWPS_Search_Console();
@@ -1314,6 +1316,8 @@ function swps_activate(): void {
 	SWPS_Analytics_Tracker::schedule_cron();
 	SWPS_Bot_Analytics_Tracker::create_tables();
 	SWPS_Bot_Analytics_Tracker::schedule_cron();
+	SWPS_AI_Referrals::create_table();
+	update_option( SWPS_AI_Referrals::OPT_DB_VER, SWPS_AI_Referrals::DB_VERSION );
 	SWPS_Search_Console::schedule_cron();
 	SWPS_Keyword_Tracker::create_tables();
 	SWPS_Keyword_Tracker::schedule_cron();

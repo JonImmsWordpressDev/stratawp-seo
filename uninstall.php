@@ -88,6 +88,7 @@ $swps_tables = array(
 	'swps_404_log',
 	'swps_analytics',
 	'swps_analytics_daily',
+	'swps_ai_referrals_daily',
 	'swps_bot_hits',
 	'swps_bot_hits_daily',
 	'swps_keyword_tracking',
