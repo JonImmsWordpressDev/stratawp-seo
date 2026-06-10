@@ -214,6 +214,77 @@ class SWPS_Search_Console {
 	}
 
 	/**
+	 * Fetch query+page two-dimension rows with startRow pagination.
+	 *
+	 * Each row: {keys: [query, page], clicks, impressions, ctr, position}.
+	 * Auth-guarded: returns array() when GSC is unconnected (no network call).
+	 * Cached for 12h (CACHE_TTL) like the other analytics fetches.
+	 *
+	 * @param int $days      Days to look back.
+	 * @param int $row_limit Maximum total rows to return (bounded pagination).
+	 * @return array<int, array<string, mixed>> Rows of analytics data.
+	 */
+	public function get_query_page_rows( int $days = 90, int $row_limit = 1000 ): array {
+		if ( ! $this->is_connected() ) {
+			return array();
+		}
+
+		$row_limit = max( 1, $row_limit );
+		$cache_key = self::CACHE_PREFIX . 'query_page_' . $days . '_' . $row_limit;
+		$cached    = get_transient( $cache_key );
+		if ( false !== $cached ) {
+			return (array) $cached;
+		}
+
+		$property         = $this->get_property();
+		$encoded_property = rawurlencode( $property );
+		$start            = gmdate( 'Y-m-d', strtotime( "-{$days} days" ) );
+		$end              = gmdate( 'Y-m-d', strtotime( '-2 days' ) ); // GSC data has 2-day delay.
+
+		$rows      = array();
+		$row_count = 0;
+		$start_row = 0;
+		// API maximum is 25000 rows per request; page until short response or cap.
+		while ( $row_count < $row_limit ) {
+			$batch_size = min( 25000, $row_limit - $row_count );
+			$response   = $this->api_request(
+				"/sites/{$encoded_property}/searchAnalytics/query",
+				'POST',
+				array(
+					'startDate'  => $start,
+					'endDate'    => $end,
+					'dimensions' => array( 'query', 'page' ),
+					'rowLimit'   => $batch_size,
+					'startRow'   => $start_row,
+				)
+			);
+
+			if ( is_wp_error( $response ) ) {
+				break;
+			}
+
+			$batch = $response['rows'] ?? array();
+			if ( empty( $batch ) ) {
+				break;
+			}
+
+			$batch_count = count( $batch );
+			$rows        = array_merge( $rows, $batch );
+			$row_count  += $batch_count;
+			$start_row  += $batch_count;
+
+			// Short batch = no more data upstream.
+			if ( $batch_count < $batch_size ) {
+				break;
+			}
+		}
+
+		set_transient( $cache_key, $rows, self::CACHE_TTL );
+
+		return $rows;
+	}
+
+	/**
 	 * Clear all GSC cached data.
 	 */
 	public function clear_cache(): void {

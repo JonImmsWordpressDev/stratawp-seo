@@ -112,6 +112,38 @@ class SWPS_AEO_Markup_Scorer {
 	}
 
 	/**
+	 * Extract heading texts (h2-h6) plus question-form <p>/<li> lines.
+	 *
+	 * Shared helper for the question-coverage matcher (Phase B): returns
+	 * the strings a searcher question could be "answered by" — all heading
+	 * texts and any body line ending in '?'. Reuses the same patterns as
+	 * count_questions() (kept in sync).
+	 *
+	 * @param string $html Raw post HTML.
+	 * @return string[] Plain-text headings/questions, tags stripped.
+	 */
+	public static function extract_headings( string $html ): array {
+		$out = array();
+		if ( preg_match_all( '#<h[2-6][^>]*>(.*?)</h[2-6]>#is', $html, $m ) ) {
+			foreach ( $m[1] as $text ) {
+				$text = trim( wp_strip_all_tags( $text ) );
+				if ( '' !== $text ) {
+					$out[] = $text;
+				}
+			}
+		}
+		if ( preg_match_all( '#(?:<p[^>]*>|<li[^>]*>)([^<]*\?)\s*(?:</p>|</li>)#i', $html, $m ) ) {
+			foreach ( $m[1] as $text ) {
+				$text = trim( wp_strip_all_tags( $text ) );
+				if ( '' !== $text ) {
+					$out[] = $text;
+				}
+			}
+		}
+		return array_values( array_unique( $out ) );
+	}
+
+	/**
 	 * For each question heading (h2-h6), check whether the next paragraph is
 	 * a short (<150 words) declarative answer. Returns fraction (0-1).
 	 *

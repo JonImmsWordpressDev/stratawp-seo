@@ -316,6 +316,29 @@
     $(document).on('click', '#swps-aeo-cancel',  function () { $modal.hide(); });
     $(document).on('click', '#swps-aeo-apply',   function () { apply(parseInt($(this).data('id'), 10)); });
 
+    // Question opportunities: queue a mined question as a topic.
+    $(document).on('click', '.swps-queue-question-topic', function () {
+        var $btn  = $(this);
+        var $card = $('#swps-aeo-question-opportunities');
+        $btn.prop('disabled', true);
+        $.post(swpsAeo.ajaxUrl, {
+            action:   'swps_queue_question_topic',
+            nonce:    $card.data('nonce'),
+            question: String($btn.data('question'))
+        }).done(function () {
+            var $row = $btn.closest('tr');
+            $row.fadeOut(200, function () {
+                $row.remove();
+                if ($card.find('tbody tr').length === 0) {
+                    $card.fadeOut(200);
+                }
+            });
+        }).fail(function (jqXHR) {
+            $btn.prop('disabled', false);
+            window.alert(extractErrorMessage(jqXHR, ''));
+        });
+    });
+
     // Support ?focus_post=N URL param: deep-link from Bot Analytics (Task 19).
     var match = window.location.search.match(/[?&]focus_post=(\d+)/);
     if (match) {

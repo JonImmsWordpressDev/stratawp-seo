@@ -23,10 +23,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class SWPS_AEO_Scorer {
 
-	public const META_TOTAL           = '_swps_aeo_score';
-	public const META_SUBSCORE_PREFIX = '_swps_aeo_subscore_';
-	public const META_LAST_SCAN       = '_swps_aeo_last_scan';
-	public const META_CONTENT_HASH    = '_swps_aeo_content_hash';
+	public const META_TOTAL            = '_swps_aeo_score';
+	public const META_SUBSCORE_PREFIX  = '_swps_aeo_subscore_';
+	public const META_LAST_SCAN        = '_swps_aeo_last_scan';
+	public const META_CONTENT_HASH     = '_swps_aeo_content_hash';
+	/** Stores coverage sub_queries + score keyed by content hash. */
+	public const META_COVERAGE_PAYLOAD = '_swps_aeo_coverage';
 
 	public const OPTION_THRESHOLD        = 'swps_aeo_threshold';
 	public const OPTION_WEIGHTS          = 'swps_aeo_weights';
@@ -121,6 +123,35 @@ class SWPS_AEO_Scorer {
 			);
 		}
 
+		$content_hash = md5( $post->post_content );
+		$focus_kw     = (string) get_post_meta( $post_id, '_swps_focus_keyword', true );
+
+		// Run coverage scorer when enabled and content has changed since last score.
+		// COST-SAFE: only runs inside explicit scan/score AJAX actions, never on
+		// page-load or save_post. The caller (do_scan_chunk/do_score) is the only
+		// path that reaches score_post.
+		$coverage_score_fresh = null;
+		if ( get_option( self::OPTION_COVERAGE_ENABLED ) ) {
+			$cached_payload = get_post_meta( $post_id, self::META_COVERAGE_PAYLOAD, true );
+			$cached_hash    = is_array( $cached_payload ) ? (string) ( $cached_payload['hash'] ?? '' ) : '';
+
+			if ( $cached_hash !== $content_hash ) {
+				// Content changed (or never scored): run the AI call.
+				$coverage_result = $this->coverage->score( $post->post_title, $post->post_content, $focus_kw );
+				if ( null !== $coverage_result['score'] ) {
+					$coverage_score_fresh = $coverage_result['score'];
+					update_post_meta( $post_id, self::META_COVERAGE_PAYLOAD, array(
+						'hash'        => $content_hash,
+						'score'       => $coverage_result['score'],
+						'sub_queries' => $coverage_result['sub_queries'],
+					) );
+				}
+			} else {
+				// Use the cached score; payload is still valid.
+				$coverage_score_fresh = is_array( $cached_payload ) ? (int) $cached_payload['score'] : null;
+			}
+		}
+
 		$ctx = array(
 			'title'           => $post->post_title,
 			'author'          => get_the_author_meta( 'display_name', (int) $post->post_author ),
@@ -128,7 +159,7 @@ class SWPS_AEO_Scorer {
 			'modified_unix'   => (int) strtotime( $post->post_modified_gmt ),
 			'word_count'      => str_word_count( wp_strip_all_tags( $post->post_content ) ),
 			'existing_schema' => $this->detect_existing_schema( $post ),
-			'coverage_cached' => $this->load_cached_coverage( $post_id, $post->post_content ),
+			'coverage_cached' => $coverage_score_fresh ?? $this->load_cached_coverage( $post_id, $post->post_content ),
 		);
 
 		$result = $this->score_html( $post->post_content, $ctx, $weights );
@@ -140,6 +171,10 @@ class SWPS_AEO_Scorer {
 			} else {
 				update_post_meta( $post_id, self::META_SUBSCORE_PREFIX . $k, $v );
 			}
+		}
+		// Persist the content hash when coverage ran (guards re-scoring same content).
+		if ( null !== $coverage_score_fresh ) {
+			update_post_meta( $post_id, self::META_CONTENT_HASH, $content_hash );
 		}
 		update_post_meta( $post_id, self::META_LAST_SCAN, time() );
 

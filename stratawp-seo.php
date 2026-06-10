@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.16.0
+ * Version: 4.17.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.16.0' );
+define( 'SWPS_VERSION', '4.17.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -113,6 +113,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-markup-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-authority-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-coverage-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-scorer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-question-coverage.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-schema-generator.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-schema-migrator.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-optimizer.php';
@@ -256,6 +257,13 @@ final class StrataWP_SEO {
 	public SWPS_AEO_Optimizer         $aeo_optimizer;
 	public SWPS_AEO_Editor_Panel      $aeo_editor_panel;
 
+	/**
+	 * Question coverage engine (v4.17) — GSC question demand mining.
+	 *
+	 * @var SWPS_Question_Coverage
+	 */
+	public SWPS_Question_Coverage $question_coverage;
+
 	// v4.0 admin shell.
 	public SWPS_User_Prefs $user_prefs;
 	public SWPS_Modules $modules;
@@ -337,6 +345,9 @@ final class StrataWP_SEO {
 			$this->rate_limiter
 		);
 		$this->aeo_editor_panel  = new SWPS_AEO_Editor_Panel( $this->aeo_scorer );
+
+		// Question coverage engine (v4.17) — weekly GSC question demand mining.
+		$this->question_coverage = new SWPS_Question_Coverage( $this->search_console, $this->topic_queue );
 
 		$this->competitors          = new SWPS_Competitors();
 		$this->local_seo            = new SWPS_Local_SEO();
@@ -1380,6 +1391,7 @@ function swps_deactivate(): void {
 	SWPS_Competitors::unschedule_cron();
 	SWPS_Backlinks::unschedule_cron();
 	wp_clear_scheduled_hook( 'swps_aeo_sweep_proposals' );
+	SWPS_Question_Coverage::unschedule_cron();
 	wp_unschedule_hook( 'swps_send_digest' );
 	flush_rewrite_rules();
 }

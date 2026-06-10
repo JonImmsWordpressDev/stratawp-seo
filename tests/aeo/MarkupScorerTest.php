@@ -51,4 +51,19 @@ final class MarkupScorerTest extends TestCase {
 		$score_right = $this->scorer->score( $html_recipe, array( 'existing_schema' => 'Recipe',  'title' => 'My favorite cookies' ) );
 		$this->assertLessThan( $score_right, $score_wrong );
 	}
+
+	public function test_extract_headings_returns_heading_texts_and_body_questions(): void {
+		$html = '<h2>Choosing flour</h2><p>Use bread flour.</p>' .
+				'<h3>How much water?</h3><p>About 75% hydration.</p>' .
+				'<p>Can you freeze the dough?</p><p>Yes, after bulk.</p>';
+		$result = SWPS_AEO_Markup_Scorer::extract_headings( $html );
+		$this->assertContains( 'Choosing flour', $result );
+		$this->assertContains( 'How much water?', $result );
+		$this->assertContains( 'Can you freeze the dough?', $result );
+		$this->assertNotContains( 'Use bread flour.', $result );
+	}
+
+	public function test_extract_headings_empty_html_returns_empty(): void {
+		$this->assertSame( array(), SWPS_AEO_Markup_Scorer::extract_headings( '' ) );
+	}
 }

@@ -79,6 +79,8 @@ class SWPS_AEO_Optimizer {
 		}
 		$threshold  = (int) get_option( 'swps_aeo_threshold', SWPS_AEO_Scorer::DEFAULT_THRESHOLD );
 		$post_types = (array) get_option( 'swps_aeo_post_types', array( 'post', 'page' ) );
+		// Question topic candidates mined from GSC (template renders the card).
+		$question_candidates = (array) get_option( SWPS_Question_Coverage::OPTION_CANDIDATES, array() );
 		// Make vars available to template (Task 15 creates the actual template).
 		if ( file_exists( SWPS_PLUGIN_DIR . 'templates/aeo-page.php' ) ) {
 			require SWPS_PLUGIN_DIR . 'templates/aeo-page.php';
@@ -383,6 +385,28 @@ class SWPS_AEO_Optimizer {
 			$expected_type ?? 'none',
 			mb_substr( $post->post_content, 0, 8000 )
 		);
+
+		// Append coverage gap instruction when a cached payload has actionable gaps.
+		$coverage_payload = get_post_meta( $post_id, SWPS_AEO_Scorer::META_COVERAGE_PAYLOAD, true );
+		if ( is_array( $coverage_payload ) && ! empty( $coverage_payload['sub_queries'] ) ) {
+			$gap_instruction = SWPS_Question_Coverage::format_gap_instruction(
+				(array) $coverage_payload['sub_queries'],
+				3
+			);
+			if ( '' !== $gap_instruction ) {
+				$user .= "\n\n" . $gap_instruction;
+			}
+		}
+
+		// Append GSC-mined unanswered searcher questions (set by the weekly
+		// question-mining cron; meta read only — no GSC call here).
+		$unanswered = get_post_meta( $post_id, SWPS_Question_Coverage::META_UNANSWERED, true );
+		if ( is_array( $unanswered ) && ! empty( $unanswered ) ) {
+			$gsc_instruction = SWPS_Question_Coverage::format_unanswered_instruction( $unanswered, 3 );
+			if ( '' !== $gsc_instruction ) {
+				$user .= "\n\n" . $gsc_instruction;
+			}
+		}
 
 		$result = $this->ai_provider->chat_json( $system, $user, 4096 );
 		if ( is_wp_error( $result ) ) {
