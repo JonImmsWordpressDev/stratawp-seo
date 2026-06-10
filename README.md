@@ -21,7 +21,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, a per-post meta editor, **Local SEO** (LocalBusiness schema with NAP and opening hours), **Image SEO** (auto-alt + filename sanitization + lazy-load), **Crawlers & Files** (in-admin editor for /llms.txt and /robots.txt), and **Backlinks** (manual/CSV-import tracker with daily health monitoring) — on autopilot or on demand.
 
-[![Version](https://img.shields.io/badge/version-4.11.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.12.0-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -1446,6 +1446,10 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 ---
 
 ## Changelog
+
+### v4.12.0 — June 2026
+- **New — White-label email digest:** weekly/daily/monthly report of generations, failures, keyword movers, backlinks, competitors, AI-bot trends, and AI spend, led by a needs-attention triage section; agency branding (logo, accent color, footer), multiple recipients, test-send button, and an optional AI executive summary.
+- **New:** generation failures are now persistently recorded and surfaced in the digest.
 
 ### v4.11.0 — June 2026
 - **New — Autopilot Guardian:** monthly AI budget cap with 80 % warning notice, automatic retry with exponential backoff for transient API errors, failed-topic requeue (max 3 attempts per topic), and a dashboard autopilot status tile showing enabled state, last-run health, and budget spend vs cap. A single failed generation no longer abandons the rest of a scheduled batch.

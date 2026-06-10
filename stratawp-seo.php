@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.11.0
+ * Version: 4.12.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.11.0' );
+define( 'SWPS_VERSION', '4.12.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -63,6 +63,8 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-duplicate-checker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rate-limiter.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-cost-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-autopilot-guardian.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-digest.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-digest-settings.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-topic-queue.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-content-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-voice-profile.php';
@@ -223,6 +225,8 @@ final class StrataWP_SEO {
 	public SWPS_Crawl_Files $crawl_files;
 	public SWPS_Backlinks $backlinks;
 	public SWPS_Autopilot_Guardian $autopilot_guardian;
+	public SWPS_Digest $digest;
+	public SWPS_Digest_Settings $digest_settings;
 
 	// AEO Optimize (v4.6).
 	public SWPS_AEO_Scorer            $aeo_scorer;
@@ -324,6 +328,8 @@ final class StrataWP_SEO {
 		);
 		$this->cron                 = new SWPS_Cron( $this->generator, $this->topic_queue );
 		$this->autopilot_guardian   = new SWPS_Autopilot_Guardian();
+		$this->digest               = new SWPS_Digest();
+		$this->digest_settings      = new SWPS_Digest_Settings( $this->digest );
 
 		// Initialize v2.0 subsystems.
 		$this->calendar             = new SWPS_Calendar( $this->topic_queue );
@@ -1277,6 +1283,11 @@ function swps_activate(): void {
 		'breadcrumbs_home_label'      => 'Home',
 		// Redirect defaults.
 		'auto_redirect_slug_change'   => 1,
+		// Email digest defaults.
+		'digest_enabled'              => 0,
+		'digest_frequency'            => 'weekly',
+		'digest_recipients'           => '',
+		'digest_ai_summary'           => 0,
 	);
 
 	foreach ( $defaults as $key => $value ) {
@@ -1331,6 +1342,7 @@ function swps_deactivate(): void {
 	SWPS_Competitors::unschedule_cron();
 	SWPS_Backlinks::unschedule_cron();
 	wp_clear_scheduled_hook( 'swps_aeo_sweep_proposals' );
+	wp_unschedule_hook( 'swps_send_digest' );
 	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'swps_deactivate' );

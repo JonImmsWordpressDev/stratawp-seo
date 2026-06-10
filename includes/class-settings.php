@@ -1632,6 +1632,7 @@ class SWPS_Settings {
 				'label'    => __( 'Analytics', 'stratawp-seo' ),
 				'sections' => array(
 					'swps_analytics_section',
+					'swps_digest_section',
 				),
 			),
 			'aeo'             => array(
