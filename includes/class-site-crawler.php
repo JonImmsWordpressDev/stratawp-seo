@@ -562,10 +562,15 @@ class SWPS_Site_Crawler {
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		if ( empty( $rows ) ) {
-			// Internal queue empty: check external links, then finish.
+			// Internal queue empty: check external links, then finish. This
+			// runs in its own chunk request so the external phase does not
+			// extend the final page-fetch chunk.
 			$this->check_external_links( $state );
 			$this->finish_run( $state );
-			return SWPS_Crawl_Issues::progress_snapshot( $run_id );
+
+			$snapshot         = SWPS_Crawl_Issues::progress_snapshot( $run_id );
+			$snapshot['done'] = true;
+			return $snapshot;
 		}
 
 		$crawled_count = 0;
@@ -665,7 +670,12 @@ class SWPS_Site_Crawler {
 
 		update_option( self::OPT_STATE, $state, false );
 
-		return SWPS_Crawl_Issues::progress_snapshot( $run_id );
+		// Not done yet even when the queue just emptied: the next chunk call
+		// performs external checks + finish_run() and reports done=true.
+		$snapshot         = SWPS_Crawl_Issues::progress_snapshot( $run_id );
+		$snapshot['done'] = false;
+
+		return $snapshot;
 	}
 
 	// =========================================================================
@@ -780,8 +790,13 @@ class SWPS_Site_Crawler {
 				usleep( (int) $delay_us );
 			}
 
-			$status   = $this->check_external_url( $link );
-			$severity = $status >= 500 ? 'error' : 'warning';
+			$status = $this->check_external_url( $link );
+
+			// 5xx = genuinely broken (error). Everything else that reaches
+			// this branch (4xx walls after the GET fallback, or non-standard
+			// codes like LinkedIn's 999 bot-wall) is a warning — these are
+			// usually anti-bot noise, not dead links.
+			$severity = ( $status >= 500 && $status < 600 ) ? 'error' : 'warning';
 
 			if ( $status >= 400 ) {
 				SWPS_Crawl_Issues::insert_issue(
