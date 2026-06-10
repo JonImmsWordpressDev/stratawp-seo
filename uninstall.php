@@ -39,6 +39,8 @@ $swps_cron_hooks = array(
 	'swps_citation_check',
 	'swps_question_mine',
 	'swps_decay_scan',
+	'swps_crawler_ranges_fetch',
+	'swps_crawler_rdns',
 );
 
 foreach ( $swps_cron_hooks as $swps_cron_hook ) {
