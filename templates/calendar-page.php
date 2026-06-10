@@ -34,6 +34,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<?php esc_html_e( 'AI Published', 'stratawp-seo' ); ?>
 		</div>
 		<div class="swps-legend-item">
+			<span class="swps-legend-dot swps-legend-retrying"></span>
+			<?php esc_html_e( 'Retrying', 'stratawp-seo' ); ?>
+		</div>
+		<div class="swps-legend-item">
 			<span class="swps-legend-dot swps-legend-failed"></span>
 			<?php esc_html_e( 'Failed', 'stratawp-seo' ); ?>
 		</div>
