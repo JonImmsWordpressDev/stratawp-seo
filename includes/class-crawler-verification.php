@@ -50,6 +50,21 @@ class SWPS_Crawler_Verification {
 	public const CRON_RDNS = 'swps_crawler_rdns';
 
 	/**
+	 * Cron hook — daily reconciliation (disallowed-but-crawling + spoofed share).
+	 */
+	public const CRON_RECONCILE = 'swps_crawler_reconcile';
+
+	/**
+	 * Spoofed-share threshold: fire a finding when spoofed hits exceed this fraction.
+	 */
+	private const SPOOFED_THRESHOLD = 0.20;
+
+	/**
+	 * Transient key for the pending admin notice (expires after 2 days).
+	 */
+	private const TRANSIENT_NOTICE = 'swps_crawler_reconcile_notice';
+
+	/**
 	 * RDNS batch size per hourly run.
 	 */
 	private const RDNS_BATCH = 50;
@@ -66,10 +81,12 @@ class SWPS_Crawler_Verification {
 	public function __construct() {
 		add_action( self::CRON_RANGES, array( $this, 'fetch_ip_ranges' ) );
 		add_action( self::CRON_RDNS, array( $this, 'run_rdns_batch' ) );
+		add_action( self::CRON_RECONCILE, array( $this, 'run_reconciliation' ) );
+		add_action( 'admin_notices', array( $this, 'maybe_show_reconcile_notice' ) );
 	}
 
 	/**
-	 * Schedule both cron events. Called on plugin activation.
+	 * Schedule all cron events. Called on plugin activation.
 	 */
 	public static function schedule_cron(): void {
 		if ( ! wp_next_scheduled( self::CRON_RANGES ) ) {
@@ -78,13 +95,17 @@ class SWPS_Crawler_Verification {
 		if ( ! wp_next_scheduled( self::CRON_RDNS ) ) {
 			wp_schedule_event( time(), 'hourly', self::CRON_RDNS );
 		}
+		if ( ! wp_next_scheduled( self::CRON_RECONCILE ) ) {
+			// Run daily at ~02:00 UTC (offset 2 hours from now, then daily).
+			wp_schedule_event( time() + 2 * HOUR_IN_SECONDS, 'daily', self::CRON_RECONCILE );
+		}
 	}
 
 	/**
-	 * Unschedule both cron events. Called on plugin deactivation.
+	 * Unschedule all cron events. Called on plugin deactivation.
 	 */
 	public static function unschedule_cron(): void {
-		foreach ( array( self::CRON_RANGES, self::CRON_RDNS ) as $hook ) {
+		foreach ( array( self::CRON_RANGES, self::CRON_RDNS, self::CRON_RECONCILE ) as $hook ) {
 			$ts = wp_next_scheduled( $hook );
 			if ( $ts ) {
 				wp_unschedule_event( $ts, $hook );
@@ -494,5 +515,200 @@ class SWPS_Crawler_Verification {
 			return false; // No data yet — not "stale", just absent.
 		}
 		return ( time() - (int) $stored['fetched_at'] ) > self::STALE_THRESHOLD;
+	}
+
+
+	// -------------------------------------------------------------------------
+	// Daily reconciliation
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Daily reconciliation cron handler.
+	 *
+	 * Compares yesterday's verified bot hits against the user's robots.txt intent
+	 * (swps_ai_bots_allowed option) and checks for spoofed-share spikes.
+	 *
+	 * Two-consecutive-day smoothing: a finding must appear on two consecutive
+	 * calendar dates before it triggers the notice/email.
+	 */
+	public function run_reconciliation(): void {
+		$report    = new SWPS_Crawl_Budget_Report();
+		$stats     = $report->get_yesterday_bot_stats();
+		$yesterday = gmdate( 'Y-m-d', strtotime( '-1 day' ) );
+
+		if ( empty( $stats ) ) {
+			return; // No data — nothing to reconcile.
+		}
+
+		// Determine which bots the user has explicitly blocked in robots.txt.
+		$allowed_raw  = get_option( 'swps_ai_bots_allowed', null );
+		$blocked_keys = array();
+		if ( is_array( $allowed_raw ) ) {
+			$all_known    = array_keys( SWPS_AI_Bots::KNOWN_BOTS );
+			$allowed_keys = array_keys( array_filter( $allowed_raw ) );
+			$blocked_keys = array_values( array_diff( $all_known, $allowed_keys ) );
+		}
+
+		$today_findings = array(
+			'disallowed_crawling' => array(),
+			'spoofed_bots'        => array(),
+		);
+
+		foreach ( $stats as $bot_key => $data ) {
+			$total   = (int) $data['total_hits'];
+			$spoofed = (int) $data['spoofed_hits'];
+
+			if ( $total <= 0 ) {
+				continue;
+			}
+
+			// (a) Disallowed bot still crawling as VERIFIED.
+			if ( in_array( $bot_key, $blocked_keys, true ) && (int) $data['verified_hits'] > 0 ) {
+				$today_findings['disallowed_crawling'][] = $bot_key;
+			}
+
+			// (b) Spoofed share > 20%.
+			if ( ( $spoofed / $total ) > self::SPOOFED_THRESHOLD ) {
+				$today_findings['spoofed_bots'][] = $bot_key;
+			}
+		}
+
+		// Two-consecutive-day smoothing.
+		$prev = (array) get_option( SWPS_Crawl_Budget_Report::OPT_RECONCILE_PREV, array() );
+
+		$smoothed = array(
+			'disallowed_crawling' => array(),
+			'spoofed_bots'        => array(),
+		);
+
+		if ( ! empty( $prev['date'] ) && ! empty( $prev['findings'] ) ) {
+			$prev_date     = (string) $prev['date'];
+			$prev_findings = (array) $prev['findings'];
+			$expected_prev = gmdate( 'Y-m-d', strtotime( $yesterday . ' -1 day' ) );
+
+			if ( $prev_date === $expected_prev ) {
+				// Two consecutive days — intersect findings.
+				foreach ( array( 'disallowed_crawling', 'spoofed_bots' ) as $key ) {
+					$prev_set         = (array) ( $prev_findings[ $key ] ?? array() );
+					$today_set        = $today_findings[ $key ];
+					$smoothed[ $key ] = array_values( array_intersect( $prev_set, $today_set ) );
+				}
+			}
+		}
+
+		// Store today's raw findings for tomorrow's smoothing pass.
+		update_option(
+			SWPS_Crawl_Budget_Report::OPT_RECONCILE_PREV,
+			array(
+				'date'     => $yesterday,
+				'findings' => $today_findings,
+			),
+			false
+		);
+
+		if ( empty( $smoothed['disallowed_crawling'] ) && empty( $smoothed['spoofed_bots'] ) ) {
+			// No smoothed findings — clear any stale notice transient.
+			delete_transient( self::TRANSIENT_NOTICE );
+			update_option( SWPS_Crawl_Budget_Report::OPT_RECONCILE_FINDINGS, array(), false );
+			return;
+		}
+
+		// Persist smoothed findings and set notice transient (2-day TTL).
+		update_option( SWPS_Crawl_Budget_Report::OPT_RECONCILE_FINDINGS, $smoothed, false );
+		set_transient( self::TRANSIENT_NOTICE, $smoothed, 2 * DAY_IN_SECONDS );
+
+		// Send email if not suppressed.
+		$this->maybe_send_reconcile_email( $smoothed );
+	}
+
+	/**
+	 * Render an admin notice when the reconciliation transient is set.
+	 * The notice is rendered once; admins can dismiss it.
+	 */
+	public function maybe_show_reconcile_notice(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$findings = get_transient( self::TRANSIENT_NOTICE );
+		if ( ! is_array( $findings ) || ( empty( $findings['disallowed_crawling'] ) && empty( $findings['spoofed_bots'] ) ) ) {
+			return;
+		}
+
+		$lines = array();
+		if ( ! empty( $findings['disallowed_crawling'] ) ) {
+			$bots    = implode( ', ', array_map( 'esc_html', $findings['disallowed_crawling'] ) );
+			$lines[] = sprintf(
+				/* translators: %s: comma-separated bot keys */
+				__( '<strong>Disallowed bots still crawling (verified):</strong> %s', 'stratawp-seo' ),
+				$bots
+			);
+		}
+		if ( ! empty( $findings['spoofed_bots'] ) ) {
+			$bots    = implode( ', ', array_map( 'esc_html', $findings['spoofed_bots'] ) );
+			$lines[] = sprintf(
+				/* translators: %s: comma-separated bot keys */
+				__( '<strong>High spoofed-traffic share (>20%%):</strong> %s', 'stratawp-seo' ),
+				$bots
+			);
+		}
+
+		echo '<div class="notice notice-warning is-dismissible">';
+		echo '<p><strong>' . esc_html__( 'StrataWP SEO — Crawler Reconciliation', 'stratawp-seo' ) . '</strong></p>';
+		echo '<ul>';
+		foreach ( $lines as $line ) {
+			echo '<li>' . wp_kses( $line, array( 'strong' => array() ) ) . '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		}
+		echo '</ul>';
+		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=swps-analytics' ) ) . '">' . esc_html__( 'View Crawl Budget Report', 'stratawp-seo' ) . '</a></p>';
+		echo '</div>';
+	}
+
+	/**
+	 * Send a reconciliation digest email if not suppressed.
+	 *
+	 * Uses swps_crawler_email option (default 1 = enabled).
+	 * Recipients fall back to swps_digest_recipients, then admin_email.
+	 *
+	 * @param array{disallowed_crawling: string[], spoofed_bots: string[]} $findings Smoothed findings.
+	 */
+	private function maybe_send_reconcile_email( array $findings ): void {
+		if ( ! (bool) get_option( 'swps_crawler_email', 1 ) ) {
+			return;
+		}
+
+		$recipients_raw = (string) get_option( 'swps_digest_recipients', '' );
+		if ( $recipients_raw ) {
+			$recipients = array_filter( array_map( 'trim', explode( "\n", $recipients_raw ) ) );
+		} else {
+			$recipients = array( get_option( 'admin_email' ) );
+		}
+
+		$subject = sprintf(
+			/* translators: %s: site name */
+			__( '[%s] Crawler Reconciliation Alert', 'stratawp-seo' ),
+			get_bloginfo( 'name' )
+		);
+
+		$lines = array();
+		if ( ! empty( $findings['disallowed_crawling'] ) ) {
+			$lines[] = '- Disallowed bots crawling (verified): ' . implode( ', ', $findings['disallowed_crawling'] );
+		}
+		if ( ! empty( $findings['spoofed_bots'] ) ) {
+			$lines[] = '- Spoofed traffic spike (>20%): ' . implode( ', ', $findings['spoofed_bots'] );
+		}
+
+		$body = sprintf(
+			/* translators: 1: site name, 2: findings list */
+			__( "Crawler reconciliation findings for %1\$s (2-consecutive-day confirmed):\n\n%2\$s\n\nLog in to StrataWP SEO to review the Crawl Budget report.", 'stratawp-seo' ),
+			get_bloginfo( 'name' ),
+			implode( "\n", $lines )
+		);
+
+		try {
+			wp_mail( $recipients, $subject, $body );
+		} catch ( Throwable $e ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
+			unset( $e );
+		}
 	}
 }

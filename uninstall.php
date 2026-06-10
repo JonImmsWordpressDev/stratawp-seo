@@ -41,6 +41,7 @@ $swps_cron_hooks = array(
 	'swps_decay_scan',
 	'swps_crawler_ranges_fetch',
 	'swps_crawler_rdns',
+	'swps_crawler_reconcile',
 );
 
 foreach ( $swps_cron_hooks as $swps_cron_hook ) {
