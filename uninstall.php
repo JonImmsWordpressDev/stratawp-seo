@@ -2,7 +2,8 @@
 /**
  * Uninstall StrataWP SEO.
  *
- * Removes all plugin data: options, post meta, CPT posts, cron events, transients.
+ * Removes all plugin data: options, post meta, CPT posts, cron events, transients,
+ * custom tables, term meta, and user meta.
  *
  * @package StrataWP_SEO
  */
@@ -19,23 +20,44 @@ $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'swps\_%'" );
 // 2. Remove all _swps_* post meta.
 $wpdb->query( "DELETE FROM {$wpdb->postmeta} WHERE meta_key LIKE '\_swps\_%'" );
 
-// 3. Delete all swps_topic CPT posts.
-$topics = get_posts(
-	array(
-		'post_type'      => 'swps_topic',
-		'post_status'    => 'any',
-		'posts_per_page' => -1,
-		'fields'         => 'ids',
-	)
-);
+// 3. Delete all plugin CPT posts.
+foreach ( array( 'swps_topic', 'swps_voice_profile' ) as $swps_post_type ) {
+	$swps_posts = get_posts(
+		array(
+			'post_type'      => $swps_post_type,
+			'post_status'    => 'any',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		)
+	);
 
-foreach ( $topics as $topic_id ) {
-	wp_delete_post( $topic_id, true );
+	foreach ( $swps_posts as $swps_post_id ) {
+		wp_delete_post( $swps_post_id, true );
+	}
 }
 
-// 4. Remove cron events.
-wp_unschedule_hook( 'swps_generate_scheduled_post' );
-wp_unschedule_hook( 'swps_process_topic' );
+// 4. Remove cron events (recurring and single) for every plugin hook.
+$swps_cron_hooks = array(
+	'swps_generate_scheduled_post',
+	'swps_process_topic',
+	'swps_generate_featured_image',
+	'swps_generate_content_image',
+	'swps_prune_404_logs',
+	'swps_audit_cron',
+	'swps_analytics_aggregate',
+	'swps_bot_analytics_aggregate',
+	'swps_gsc_refresh_data',
+	'swps_keyword_sync',
+	'swps_link_maintenance',
+	'swps_backlinks_daily_verify',
+	'swps_competitors_daily_scan',
+	'swps_refresh_models',
+	'swps_aeo_sweep_proposals',
+);
+
+foreach ( $swps_cron_hooks as $swps_cron_hook ) {
+	wp_unschedule_hook( $swps_cron_hook );
+}
 
 // 5. Remove transients.
 $wpdb->query(
@@ -46,21 +68,30 @@ $wpdb->query(
 if ( function_exists( 'as_unschedule_all_actions' ) ) {
 	as_unschedule_all_actions( 'swps_process_topic' );
 	as_unschedule_all_actions( 'swps_generate_scheduled_post' );
+	as_unschedule_all_actions( 'swps_generate_featured_image' );
+	as_unschedule_all_actions( 'swps_generate_content_image' );
 }
 
-// 7. Drop v3.0 custom tables.
-$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}swps_redirects" );
-$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}swps_404_log" );
+// 7. Drop all custom tables.
+$swps_tables = array(
+	'swps_redirects',
+	'swps_404_log',
+	'swps_analytics',
+	'swps_analytics_daily',
+	'swps_bot_hits',
+	'swps_bot_hits_daily',
+	'swps_keyword_tracking',
+	'swps_link_index',
+	'swps_link_graph',
+	'swps_backlinks',
+);
 
-// 7a. Drop bot analytics tables (v4.5).
-$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}swps_bot_hits" );
-$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}swps_bot_hits_daily" );
+foreach ( $swps_tables as $swps_table ) {
+	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}{$swps_table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+}
 
 // 8. Remove term meta.
 $wpdb->query( "DELETE FROM {$wpdb->termmeta} WHERE meta_key LIKE '\_swps\_%'" );
 
-// 9. Unschedule v3.0 cron events.
-wp_unschedule_hook( 'swps_prune_404_logs' );
-
-// 10. Unschedule v4.5 cron events.
-wp_unschedule_hook( 'swps_bot_analytics_aggregate' );
+// 9. Remove user meta.
+$wpdb->query( "DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE '\_swps\_%'" );

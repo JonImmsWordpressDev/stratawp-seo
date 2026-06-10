@@ -380,6 +380,44 @@ class SWPS_Analytics_Tracker {
 	}
 
 	/**
+	 * Get a prepared LEFT JOIN clause exposing summed views per post over
+	 * the last $days days as `swps_views_sort.views`.
+	 *
+	 * Combines raw (recent) + daily (aggregated) data the same way as
+	 * get_post_stats(), so sorting matches the displayed view counts.
+	 * Used by the posts list "Views (30d)" column sort.
+	 *
+	 * @param int $days Number of days to look back.
+	 * @return string Prepared SQL JOIN clause.
+	 */
+	public function get_views_orderby_join( int $days = 30 ): string {
+		global $wpdb;
+
+		$raw   = $wpdb->prefix . self::RAW_TABLE;
+		$daily = $wpdb->prefix . self::DAILY_TABLE;
+		$since = gmdate( 'Y-m-d', strtotime( "-{$days} days" ) );
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return $wpdb->prepare(
+			" LEFT JOIN (
+                 SELECT post_id, SUM(views) as views
+                 FROM (
+                     SELECT post_id, 1 as views
+                     FROM {$raw}
+                     WHERE DATE(created_at) >= %s AND post_id > 0
+                     UNION ALL
+                     SELECT post_id, views
+                     FROM {$daily}
+                     WHERE date >= %s AND post_id > 0
+                 ) combined
+                 GROUP BY post_id
+             ) swps_views_sort ON swps_views_sort.post_id = {$wpdb->posts}.ID",
+			$since,
+			$since
+		);
+	}
+
+	/**
 	 * Drop custom tables. Called on uninstall.
 	 */
 	public static function drop_tables(): void {

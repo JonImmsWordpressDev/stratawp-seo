@@ -26,3 +26,6 @@ AGENTS.md
 
 # PHPUnit cache
 .phpunit.cache/
+
+.claude-flow/
+CLAUDE.local.md

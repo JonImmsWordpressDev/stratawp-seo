@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.9.3
+Stable tag: 4.9.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -252,6 +252,10 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
 
 == Changelog ==
+
+= 4.9.4 — 2026-06-09 =
+* Fix: The "Views (30d)" posts-list column is now actually sortable. The column header was registered as sortable, but no orderby handler existed, so clicking it did nothing. Sorting now ranks posts by their summed views over the last 30 days — combining recent raw hits with aggregated daily data, matching the displayed counts — in both directions; posts with no recorded views sort as zero.
+* Fix: Uninstall now removes all plugin data. Previously uninstall.php dropped only 4 of the 10 custom tables — swps_analytics, swps_analytics_daily, swps_keyword_tracking, swps_link_index, swps_link_graph, and swps_backlinks survived uninstall — and cleared only 4 of the 15 cron hooks. It now drops every plugin table, unschedules every plugin cron hook (including the single-event image-generation jobs), deletes Voice Profile posts alongside Topic posts, and removes the per-user theme preference (_swps_theme user meta).
 
 = 4.9.3 — 2026-06-03 =
 * Fix: robots.txt now advertises the canonical sitemap at /sitemap_index.xml instead of the legacy /swps-sitemap.xml redirect (issue #48). The sitemap engine was upgraded to a full index in 4.7, but the robots.txt Sitemap directive still pointed at the old single-file URL — which is now only a 301 redirect — so crawlers such as Ubersuggest reported the sitemap as missing. The advertised URL is now a single source of truth shared with the llms.txt generator, and stays correct when Yoast, Rank Math, or All in One SEO is handling sitemaps.

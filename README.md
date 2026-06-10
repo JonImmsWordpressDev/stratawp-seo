@@ -21,7 +21,7 @@
 
 **AI-powered SEO content generator that knows your WordPress site.** Generate optimized blog posts with internal linking, structured data, sitemaps, redirects, AI-crawler access control, llms.txt, on-site analytics, GSC integration, a per-post meta editor, **Local SEO** (LocalBusiness schema with NAP and opening hours), **Image SEO** (auto-alt + filename sanitization + lazy-load), **Crawlers & Files** (in-admin editor for /llms.txt and /robots.txt), and **Backlinks** (manual/CSV-import tracker with daily health monitoring) — on autopilot or on demand.
 
-[![Version](https://img.shields.io/badge/version-4.9.3-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.9.4-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -1274,6 +1274,10 @@ Only if you choose **Replace** mode — that serves your content verbatim with n
 ---
 
 ## Changelog
+
+### v4.9.4 — June 2026
+- **Fix — "Views (30d)" column sorting:** the posts-list Views column header was registered as sortable, but clicking it did nothing — no orderby handler existed for it. A `posts_clauses` handler now joins an aggregated subquery over the analytics tables (recent raw hits + aggregated daily rows, the same 30-day window as the displayed counts), so ascending and descending sort both work and match the numbers shown; posts with no recorded views sort as zero.
+- **Fix — complete data removal on uninstall:** `uninstall.php` previously dropped only 4 of the plugin's 10 custom tables — `swps_analytics`, `swps_analytics_daily`, `swps_keyword_tracking`, `swps_link_index`, `swps_link_graph`, and `swps_backlinks` were left behind — and unscheduled only 4 of its 15 cron hooks. Uninstall now drops every plugin table, clears every plugin cron hook (recurring and single-event, including the featured/content image-generation jobs and their Action Scheduler entries), deletes Voice Profile posts alongside Topic posts, and removes the per-user theme preference (`_swps_theme` user meta) so no plugin data survives removal.
 
 ### v4.9.3 — June 2026
 - **Fix — robots.txt points at the real sitemap:** the virtual robots.txt now advertises the canonical sitemap index at `/sitemap_index.xml` instead of the legacy `/swps-sitemap.xml` URL (issue #48). When the sitemap engine was upgraded to a full index, `/swps-sitemap.xml` became a 301 redirect, but the robots.txt `Sitemap:` directive was never updated — so crawlers such as Ubersuggest reported the sitemap as not found. The advertised URL is now a single source of truth shared with the `/llms.txt` generator and stays correct when Yoast, Rank Math, or All in One SEO is handling sitemaps.

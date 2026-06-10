@@ -34,6 +34,7 @@ class SWPS_Analytics_Dashboard {
 		add_filter( 'manage_posts_columns', array( $this, 'add_views_column' ) );
 		add_action( 'manage_posts_custom_column', array( $this, 'render_views_column' ), 10, 2 );
 		add_filter( 'manage_edit-post_sortable_columns', array( $this, 'sortable_views_column' ) );
+		add_filter( 'posts_clauses', array( $this, 'handle_views_orderby' ), 10, 2 );
 
 		// Post metabox.
 		add_action( 'add_meta_boxes', array( $this, 'register_metabox' ) );
@@ -356,6 +357,36 @@ class SWPS_Analytics_Dashboard {
 	public function sortable_views_column( array $columns ): array {
 		$columns['swps_views'] = 'swps_views';
 		return $columns;
+	}
+
+	/**
+	 * Sort the posts list by 30-day views when the Views column is clicked.
+	 *
+	 * Views live in the analytics tables (raw + daily), not postmeta, so
+	 * this joins an aggregated subquery instead of using meta_value_num.
+	 * Posts with no recorded views sort as zero.
+	 *
+	 * @param array    $clauses SQL clauses for the query.
+	 * @param WP_Query $query   The current query.
+	 * @return array Modified clauses.
+	 */
+	public function handle_views_orderby( array $clauses, WP_Query $query ): array {
+		if ( ! is_admin() || ! $query->is_main_query() ) {
+			return $clauses;
+		}
+
+		if ( 'swps_views' !== $query->get( 'orderby' ) ) {
+			return $clauses;
+		}
+
+		global $wpdb;
+
+		$order = 'ASC' === strtoupper( (string) $query->get( 'order' ) ) ? 'ASC' : 'DESC';
+
+		$clauses['join']   .= $this->tracker->get_views_orderby_join( 30 );
+		$clauses['orderby'] = "COALESCE(swps_views_sort.views, 0) {$order}, {$wpdb->posts}.ID {$order}";
+
+		return $clauses;
 	}
 
 	/**
