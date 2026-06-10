@@ -246,7 +246,7 @@ class SWPS_Refresh_Queue_Admin {
 		}
 
 		$post_id = absint( $_POST['post_id'] ?? 0 );
-		if ( ! $post_id ) {
+		if ( ! $post_id || ! get_post( $post_id ) ) {
 			wp_send_json_error( array( 'message' => __( 'Invalid post ID.', 'stratawp-seo' ) ) );
 		}
 
