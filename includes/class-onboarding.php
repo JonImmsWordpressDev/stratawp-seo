@@ -18,50 +18,28 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class SWPS_Onboarding {
 
-	/**
-	 * WordPress option that persists wizard progress.
-	 *
-	 * @var string
-	 */
+	/** WordPress option that persists wizard progress. */
 	public const OPTION_STATE = 'swps_onboarding_state';
 
-	/**
-	 * Canonical wizard step order.
-	 *
-	 * @var array<int, string>
-	 */
+	/** Canonical wizard step order. */
 	public const STEPS = array( 'migrate', 'api_key', 'site_info', 'audit', 'preview' );
 
-	/**
-	 * Nonce action used for all wizard AJAX endpoints.
-	 *
-	 * @var string
-	 */
+	/** Nonce action used for all wizard AJAX endpoints. */
 	private const NONCE_ACTION = 'swps_onboarding';
 
-	/**
-	 * Wizard admin page slug.
-	 *
-	 * @var string
-	 */
+	/** Wizard admin page slug. */
 	private const PAGE_SLUG = 'swps-onboarding';
 
-	/**
-	 * Activation-redirect transient key.
-	 *
-	 * @var string
-	 */
+	/** Activation-redirect transient key. */
 	private const REDIRECT_TRANSIENT = 'swps_onboarding_redirect';
 
 	/**
-	 * Register WordPress hooks.
-	 *
-	 * Called in the constructor so hooks are wired at instantiation time,
-	 * not at require_once time (keeps things testable).
+	 * Register WordPress hooks (wired at instantiation, not require time).
 	 */
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'register_page' ), 70 );
 		add_action( 'admin_init', array( $this, 'maybe_redirect' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 
 		// AJAX endpoints — both logged-in (wp_ajax_) and nopriv omitted (all require manage_options).
 		$endpoints = array(
@@ -78,8 +56,6 @@ class SWPS_Onboarding {
 			add_action( "wp_ajax_{$action}", array( $this, "ajax_{$action}" ) );
 		}
 	}
-
-	// -- Pure static helpers (no WordPress required — unit-testable) --
 
 	/**
 	 * Normalise a raw option value into a well-typed state array.
@@ -130,8 +106,6 @@ class SWPS_Onboarding {
 		);
 	}
 
-	// -- Admin page registration --
-
 	/**
 	 * Register the Setup Wizard submenu page (visible — no hidden-page pattern exists).
 	 *
@@ -167,7 +141,52 @@ class SWPS_Onboarding {
 		}
 	}
 
-	// -- Activation redirect --
+	/**
+	 * Enqueue wizard CSS/JS only on the wizard page.
+	 *
+	 * @param string $hook Current admin page hook suffix.
+	 * @since 4.13.0
+	 */
+	public function enqueue_assets( string $hook ): void {
+		if ( 'stratawp-seo_page_swps-onboarding' !== $hook ) {
+			return;
+		}
+		wp_enqueue_style(
+			'swps-onboarding',
+			SWPS_PLUGIN_URL . 'admin/css/onboarding.css',
+			array( 'swps-tokens', 'swps-components', 'swps-templates' ),
+			SWPS_VERSION
+		);
+		wp_enqueue_script(
+			'swps-onboarding',
+			SWPS_PLUGIN_URL . 'admin/js/onboarding.js',
+			array(),
+			SWPS_VERSION,
+			true
+		);
+		wp_localize_script(
+			'swps-onboarding',
+			'swpsOnboarding',
+			array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( self::NONCE_ACTION ),
+				'i18n'    => array(
+					'testing'      => __( 'Testing key…', 'stratawp-seo' ),
+					'keyRequired'  => __( 'Please paste an API key first.', 'stratawp-seo' ),
+					'suggesting'   => __( 'Asking the AI…', 'stratawp-seo' ),
+					'suggested'    => __( 'Suggestion ready — edit it, then save.', 'stratawp-seo' ),
+					'noSuggestion' => __( 'No suggestion available — add a key in step 2 or write your own.', 'stratawp-seo' ),
+					'descRequired' => __( 'Please enter a description first.', 'stratawp-seo' ),
+					'auditing'     => __( 'Running the audit — this can take a minute…', 'stratawp-seo' ),
+					/* translators: 1: passed module count, 2: issue count */
+					'auditDone'    => __( '%1$s passed / %2$s issues.', 'stratawp-seo' ),
+					'openAudit'    => __( 'Open the audit', 'stratawp-seo' ),
+					'generating'   => __( 'Generating — usually 30–60 seconds…', 'stratawp-seo' ),
+					'failed'       => __( 'Request failed.', 'stratawp-seo' ),
+				),
+			)
+		);
+	}
 
 	/**
 	 * Redirect to the wizard on first activation (bails on AJAX/network/CLI/bulk).
@@ -182,27 +201,17 @@ class SWPS_Onboarding {
 		delete_transient( self::REDIRECT_TRANSIENT );
 
 		// Bail conditions that make a redirect inappropriate.
-		if ( wp_doing_ajax() ) {
+		if ( wp_doing_ajax() || is_network_admin() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
 			return;
 		}
-		if ( is_network_admin() ) {
-			return;
-		}
-		if ( isset( $_GET['activate-multi'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			return;
-		}
-		if ( defined( 'WP_CLI' ) && WP_CLI ) {
-			return;
-		}
-		if ( ! current_user_can( 'manage_options' ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only bulk-activation check.
+		if ( isset( $_GET['activate-multi'] ) || ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG ) );
 		exit;
 	}
-
-	// -- AJAX shared security guard --
 
 	/**
 	 * Verify nonce and manage_options capability; die on failure.
@@ -217,8 +226,6 @@ class SWPS_Onboarding {
 		}
 	}
 
-	// -- AJAX private state helper --
-
 	/**
 	 * Mark a single wizard step as complete and persist the state option.
 	 *
@@ -230,8 +237,6 @@ class SWPS_Onboarding {
 		$state['steps'][ $step ] = true;
 		update_option( self::OPTION_STATE, $state, false );
 	}
-
-	// -- AJAX handlers --
 
 	/**
 	 * Return current wizard status: normalised state, progress, and migration detection.
@@ -320,26 +325,30 @@ class SWPS_Onboarding {
 	public function ajax_swps_onboarding_suggest_site_info(): void {
 		$this->check_ajax();
 
-		$analyzer = stratawp_seo()->analyzer;
-		$summary  = $analyzer->get_site_summary( 50 );
-		$provider = SWPS_Provider_Factory::create_ai_provider();
+		try {
+			$analyzer = stratawp_seo()->analyzer;
+			$summary  = $analyzer->get_site_summary( 50 );
+			$provider = SWPS_Provider_Factory::create_ai_provider();
 
-		if ( empty( $provider->get_api_key() ) ) {
-			wp_send_json_success( array( 'suggestion' => '' ) );
+			if ( empty( $provider->get_api_key() ) ) {
+				wp_send_json_success( array( 'suggestion' => '' ) );
+			}
+
+			$system = 'You are an SEO assistant. Respond only with a 1-2 sentence plain-text site description — no markdown, no lists.';
+			$user   = sprintf(
+				/* translators: %s: JSON-encoded site summary data */
+				'Based on this WordPress site data, write a concise 1-2 sentence description of the site for SEO purposes: %s',
+				wp_json_encode( $summary )
+			);
+
+			$response = $provider->chat( $system, $user, 200 );
+
+			$suggestion = is_wp_error( $response ) ? '' : trim( $response );
+
+			wp_send_json_success( array( 'suggestion' => $suggestion ) );
+		} catch ( Throwable $e ) {
+			wp_send_json_error( array( 'message' => __( 'Suggestion unavailable right now.', 'stratawp-seo' ) ) );
 		}
-
-		$system = 'You are an SEO assistant. Respond only with a 1-2 sentence plain-text site description — no markdown, no lists.';
-		$user   = sprintf(
-			/* translators: %s: JSON-encoded site summary data */
-			'Based on this WordPress site data, write a concise 1-2 sentence description of the site for SEO purposes: %s',
-			wp_json_encode( $summary )
-		);
-
-		$response = $provider->chat( $system, $user, 200 );
-
-		$suggestion = is_wp_error( $response ) ? '' : trim( $response );
-
-		wp_send_json_success( array( 'suggestion' => $suggestion ) );
 	}
 
 	/**
