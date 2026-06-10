@@ -118,6 +118,11 @@ require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-authority-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-coverage-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-question-coverage.php';
+
+// Topic Autopilot (v4.19) — pure helpers + weekly scout cron.
+require_once SWPS_PLUGIN_DIR . 'includes/class-topic-scout.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-topic-scout-cron.php';
+
 require_once SWPS_PLUGIN_DIR . 'includes/class-metric-history.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-decay-watchdog.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-refresh-queue-admin.php';
@@ -292,6 +297,13 @@ final class StrataWP_SEO {
 	public SWPS_Question_Coverage $question_coverage;
 
 	/**
+	 * Topic Scout cron + settings wiring (v4.19).
+	 *
+	 * @var SWPS_Topic_Scout_Cron
+	 */
+	public SWPS_Topic_Scout_Cron $topic_scout_cron;
+
+	/**
 	 * Generic per-post metric history store (v4.18).
 	 *
 	 * @var SWPS_Metric_History
@@ -404,6 +416,13 @@ final class StrataWP_SEO {
 
 		// Question coverage engine (v4.17) — weekly GSC question demand mining.
 		$this->question_coverage = new SWPS_Question_Coverage( $this->search_console, $this->topic_queue );
+
+		// Topic Autopilot (v4.19) — weekly scout cron + settings.
+		$this->topic_scout_cron = new SWPS_Topic_Scout_Cron(
+			$this->search_console,
+			$this->topic_queue,
+			$this->duplicate_checker
+		);
 
 		// Content decay watchdog (v4.18) — weekly scan, metric history, email alert.
 		SWPS_Metric_History::maybe_upgrade();
@@ -1393,6 +1412,7 @@ function swps_activate(): void {
 	SWPS_Metric_History::create_table();
 	update_option( SWPS_Metric_History::OPT_DB_VER, SWPS_Metric_History::DB_VERSION );
 	SWPS_Decay_Watchdog::schedule_cron();
+	SWPS_Topic_Scout_Cron::schedule_cron();
 
 	SWPS_Redirect_Manager::create_tables();
 	SWPS_Link_Keyword_Engine::create_tables();
@@ -1434,6 +1454,7 @@ function swps_deactivate(): void {
 	wp_clear_scheduled_hook( 'swps_aeo_sweep_proposals' );
 	SWPS_Question_Coverage::unschedule_cron();
 	SWPS_Decay_Watchdog::unschedule_cron();
+	SWPS_Topic_Scout_Cron::unschedule_cron();
 	wp_clear_scheduled_hook( SWPS_Cannibalization::CRON_HOOK );
 	wp_unschedule_hook( 'swps_send_digest' );
 	wp_unschedule_hook( SWPS_Site_Crawler::CRON_HOOK );

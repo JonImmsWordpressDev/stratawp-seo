@@ -76,6 +76,9 @@ class SWPS_Topic_Queue {
 				'label_count' => _n_noop( 'Retrying <span class="count">(%s)</span>', 'Retrying <span class="count">(%s)</span>', 'stratawp-seo' ),
 			)
 		);
+
+		// Proposed status — AI scout suggestions pending user approval.
+		SWPS_Topic_Scout_Cron::register_proposed_status();
 	}
 
 	/**
@@ -219,7 +222,7 @@ class SWPS_Topic_Queue {
 		$topics = get_posts(
 			array(
 				'post_type'      => self::POST_TYPE,
-				'post_status'    => array( 'queued', 'generating', 'published', 'failed', 'retrying' ),
+				'post_status'    => array( 'queued', 'generating', 'published', 'failed', 'retrying', 'proposed' ),
 				'posts_per_page' => 200,
 				'date_query'     => array(
 					array(
@@ -240,8 +243,16 @@ class SWPS_Topic_Queue {
 				'published'  => '#00a32a',
 				'failed'     => '#d63638',
 				'retrying'   => '#f59e0b',
+				'proposed'   => '#8b5cf6',
 				default      => '#646970',
 			};
+
+			$rationale = '';
+			$keyword   = '';
+			if ( 'proposed' === $topic->post_status ) {
+				$rationale = (string) get_post_meta( $topic->ID, SWPS_Topic_Scout_Cron::META_RATIONALE, true );
+				$keyword   = (string) get_post_meta( $topic->ID, SWPS_Topic_Scout_Cron::META_KEYWORD, true );
+			}
 
 			$events[] = array(
 				'id'              => $topic->ID,
@@ -250,10 +261,12 @@ class SWPS_Topic_Queue {
 				'backgroundColor' => $color,
 				'borderColor'     => $color,
 				'extendedProps'   => array(
-					'status'   => $topic->post_status,
-					'template' => $template,
-					'notes'    => $topic->post_content,
-					'type'     => 'topic',
+					'status'    => $topic->post_status,
+					'template'  => $template,
+					'notes'     => $topic->post_content,
+					'type'      => 'topic',
+					'rationale' => $rationale,
+					'keyword'   => $keyword,
 				),
 			);
 		}
