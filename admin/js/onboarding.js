@@ -222,8 +222,8 @@
                         var card = document.getElementById('swps-ob-preview-card');
                         document.getElementById('swps-ob-preview-title').textContent = res.data.title;
                         document.getElementById('swps-ob-preview-meta').textContent = res.data.meta_description;
-                        // content_html is wp_kses_post-sanitized server-side.
-                        document.getElementById('swps-ob-preview-content').innerHTML = res.data.content_html;
+                        // Plain-text excerpt — textContent keeps AI output out of the DOM as markup.
+                        document.getElementById('swps-ob-preview-content').textContent = res.data.content_excerpt;
                         card.hidden = false;
                         markDone('preview');
                     } else {

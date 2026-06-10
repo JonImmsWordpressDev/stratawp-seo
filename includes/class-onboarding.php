@@ -429,17 +429,11 @@ class SWPS_Onboarding {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
 
-		// Return title, meta description, and first ~600 chars of sanitised content.
-		$content_html = isset( $result['content_html'] ) ? wp_kses_post( $result['content_html'] ) : '';
-		if ( mb_strlen( $content_html ) > 600 ) {
-			// Truncate at a space boundary to avoid mid-tag splits.
-			$content_html = mb_substr( $content_html, 0, 600 );
-			$last_space   = mb_strrpos( $content_html, ' ' );
-			if ( false !== $last_space ) {
-				$content_html = mb_substr( $content_html, 0, $last_space );
-			}
-			$content_html .= '&hellip;';
-		}
+		// Return title, meta description, and a plain-text excerpt. Plain text
+		// (rendered via textContent in JS) keeps AI-generated markup out of the
+		// admin DOM entirely and can't be broken by truncation.
+		$excerpt = isset( $result['content_html'] ) ? wp_strip_all_tags( $result['content_html'] ) : '';
+		$excerpt = wp_trim_words( $excerpt, 100, '…' );
 
 		$this->mark_step( 'preview' );
 
@@ -447,7 +441,7 @@ class SWPS_Onboarding {
 			array(
 				'title'            => isset( $result['title'] ) ? sanitize_text_field( $result['title'] ) : '',
 				'meta_description' => isset( $result['meta_description'] ) ? sanitize_text_field( $result['meta_description'] ) : '',
-				'content_html'     => $content_html,
+				'content_excerpt'  => $excerpt,
 			)
 		);
 	}
