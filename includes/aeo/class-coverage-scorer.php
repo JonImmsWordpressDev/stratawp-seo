@@ -148,12 +148,20 @@ class SWPS_AEO_Coverage_Scorer {
 		if ( preg_match_all( '#<h2[^>]*>(.*?)</h2>(.*?)(?=<h2|$)#is', $html, $m, PREG_SET_ORDER ) ) {
 			foreach ( $m as $match ) {
 				$h2   = trim( wp_strip_all_tags( $match[1] ) );
-				$body = trim( wp_strip_all_tags( $match[2] ) );
+				$lines[] = '## ' . $h2;
+
+				// H3 sub-headings within this section keep nested structure visible.
+				if ( preg_match_all( '#<h3[^>]*>(.*?)</h3>#is', $match[2], $h3m ) ) {
+					foreach ( $h3m[1] as $h3 ) {
+						$lines[] = '### ' . trim( wp_strip_all_tags( $h3 ) );
+					}
+				}
+
+				$body  = trim( wp_strip_all_tags( $match[2] ) );
 				$first = '';
 				if ( preg_match( '/^([^.?!]*[.?!])/u', $body, $sm ) ) {
 					$first = trim( $sm[1] );
 				}
-				$lines[] = '## ' . $h2;
 				if ( '' !== $first ) {
 					$lines[] = $first;
 				}
