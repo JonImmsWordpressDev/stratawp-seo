@@ -1,10 +1,7 @@
 <?php
 /**
- * Citation tracker — storage, cron runner, and pure static helpers.
- *
- * This file ships the pure static helpers only (Task 1). Table creation,
- * cron runner, admin CRUD, and AEO hook are wired in Task 2 once the first
- * call site exists (no require_once in stratawp-seo.php yet).
+ * Citation tracker — prompts, capped search-grounded checks, cron, AEO loss
+ * hook, and pure static helpers. Storage lives in SWPS_Citation_Store.
  *
  * @package StrataWP_SEO
  */
@@ -14,11 +11,52 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Manages AI citation tracking: storage, cron runner, and pure static helpers.
+ * Manages AI citation tracking: prompts, capped checks, cron, AEO loss hook,
+ * and pure static helpers.
  *
  * @package StrataWP_SEO
  */
 class SWPS_Citation_Tracker {
+
+	public const CRON_HOOK        = 'swps_citation_check';
+	public const OPTION_FREQUENCY = 'swps_citation_frequency';
+	public const OPTION_CAP       = 'swps_citation_monthly_cap';
+	public const META_LOSS        = '_swps_citation_loss';
+
+	/** Default monthly search-call cap. */
+	private const DEFAULT_CAP = 200;
+
+	/**
+	 * Prompt list, engines, and domain configuration.
+	 *
+	 * @var SWPS_Citation_Prompts
+	 */
+	private SWPS_Citation_Prompts $prompts;
+
+	/**
+	 * Wire cron, reschedule-on-change, and the AEO proposal filter.
+	 *
+	 * @param SWPS_Citation_Prompts $prompts Prompt/engine/domain configuration.
+	 */
+	public function __construct( SWPS_Citation_Prompts $prompts ) {
+		$this->prompts = $prompts;
+
+		add_action( self::CRON_HOOK, array( $this, 'run_checks' ) );
+
+		// Reschedule when the frequency changes (both add_ and update_ in case
+		// activation defaults were never seeded) — digest precedent.
+		add_action( 'update_option_' . self::OPTION_FREQUENCY, array( __CLASS__, 'reschedule_cron' ), 10, 0 );
+		add_action( 'add_option_' . self::OPTION_FREQUENCY, array( __CLASS__, 'reschedule_cron' ), 10, 0 );
+
+		add_filter( 'swps_aeo_proposal', array( $this, 'filter_aeo_proposal' ), 10, 2 );
+	}
+
+	/**
+	 * Prompt/engine/domain configuration (for admin UI access).
+	 */
+	public function prompts(): SWPS_Citation_Prompts {
+		return $this->prompts;
+	}
 
 	// -------------------------------------------------------------------------
 	// Pure static helpers (WP-free; fully unit-tested)
@@ -211,5 +249,245 @@ class SWPS_Citation_Tracker {
 		// Rule (b): 5 or more words.
 		$words = preg_split( '/\s+/', $query, -1, PREG_SPLIT_NO_EMPTY );
 		return count( $words ) >= 5;
+	}
+
+	// -------------------------------------------------------------------------
+	// Cron scheduling (keyword-tracker precedent)
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Schedule the citation check cron at the configured frequency.
+	 */
+	public static function schedule_cron(): void {
+		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
+			$frequency = get_option( self::OPTION_FREQUENCY, 'weekly' );
+			$frequency = in_array( $frequency, array( 'daily', 'weekly' ), true ) ? $frequency : 'weekly';
+			wp_schedule_event( time(), $frequency, self::CRON_HOOK );
+		}
+	}
+
+	/**
+	 * Unschedule the citation check cron.
+	 */
+	public static function unschedule_cron(): void {
+		$timestamp = wp_next_scheduled( self::CRON_HOOK );
+		if ( $timestamp ) {
+			wp_unschedule_event( $timestamp, self::CRON_HOOK );
+		}
+	}
+
+	/**
+	 * Reschedule with the new frequency (hooked to option changes).
+	 */
+	public static function reschedule_cron(): void {
+		self::unschedule_cron();
+		self::schedule_cron();
+	}
+
+	// -------------------------------------------------------------------------
+	// Capped check runner
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Current month's call-counter option name (swps_citation_calls_YYYY_MM).
+	 */
+	public static function counter_option(): string {
+		return 'swps_citation_calls_' . gmdate( 'Y_m' );
+	}
+
+	/**
+	 * Whether the monthly call cap has been reached.
+	 */
+	public function cap_reached(): bool {
+		$cap = (int) get_option( self::OPTION_CAP, self::DEFAULT_CAP );
+		return (int) get_option( self::counter_option(), 0 ) >= $cap;
+	}
+
+	/**
+	 * Run one search-grounded citation check for a prompt × engine pair and
+	 * persist today's row. The cap is checked FIRST and the counter increments
+	 * BEFORE the provider call (failed calls may still bill).
+	 *
+	 * @param string $prompt The prompt to check.
+	 * @param string $engine Provider slug (anthropic|openai|google|xai).
+	 * @return array|WP_Error The stored row data on success.
+	 */
+	public function check_one( string $prompt, string $engine ): array|WP_Error {
+		$prompt = mb_substr( sanitize_text_field( trim( $prompt ) ), 0, 500 );
+		if ( '' === $prompt ) {
+			return new WP_Error( 'swps_citation_empty_prompt', __( 'Prompt cannot be empty.', 'stratawp-seo' ) );
+		}
+
+		// Cap guard FIRST.
+		if ( $this->cap_reached() ) {
+			return new WP_Error(
+				'swps_citation_cap_reached',
+				__( 'Monthly AI search call cap reached. Raise the cap in settings or wait for next month.', 'stratawp-seo' )
+			);
+		}
+
+		$providers = SWPS_Provider_Factory::all_ai_providers();
+		if ( ! isset( $providers[ $engine ] ) ) {
+			return new WP_Error( 'swps_citation_invalid_engine', __( 'Unknown AI engine.', 'stratawp-seo' ) );
+		}
+
+		// Increment BEFORE the call — failed calls may still bill.
+		$counter = self::counter_option();
+		update_option( $counter, (int) get_option( $counter, 0 ) + 1, false );
+
+		$result = $providers[ $engine ]->search_grounded( $prompt, 1024 );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$hosts   = self::extract_domains( $result['citations'] );
+		$matched = array();
+		foreach ( $this->prompts->our_domains() as $domain ) {
+			if ( self::domain_cited( $domain, $hosts ) ) {
+				$matched[] = $domain;
+			}
+		}
+
+		$row = array(
+			'prompt_hash'   => md5( $prompt ),
+			'prompt'        => $prompt,
+			'engine'        => $engine,
+			'check_date'    => gmdate( 'Y-m-d' ),
+			'cited'         => empty( $matched ) ? 0 : 1,
+			'our_domains'   => (string) wp_json_encode( $matched ),
+			'cited_domains' => (string) wp_json_encode( $hosts ),
+		);
+
+		SWPS_Citation_Store::upsert_check( $row );
+
+		return $row;
+	}
+
+	/**
+	 * Cron callback: loop prompts × enabled engines with the cap guard, prune
+	 * old rows, then run the loss detector.
+	 */
+	public function run_checks(): void {
+		$engines = $this->prompts->enabled_engines();
+
+		foreach ( $this->prompts->get_prompts() as $entry ) {
+			foreach ( $engines as $engine ) {
+				$result = $this->check_one( $entry['prompt'], $engine );
+				if ( is_wp_error( $result ) && 'swps_citation_cap_reached' === $result->get_error_code() ) {
+					break 2; // Cap hit — stop the whole run.
+				}
+			}
+		}
+
+		SWPS_Citation_Store::prune( 180 );
+		$this->detect_losses();
+	}
+
+	// -------------------------------------------------------------------------
+	// State queries (implementations live in SWPS_Citation_Store)
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Per-prompt per-engine citation states (smoothed over last 3 checks).
+	 *
+	 * @return array[] Entries: { prompt, post_id, states: engine => { state, last_date } }.
+	 */
+	public function prompt_states(): array {
+		return SWPS_Citation_Store::prompt_states( $this->prompts->get_prompts(), $this->prompts->enabled_engines() );
+	}
+
+	/**
+	 * Share-of-voice data over the window for us + competitors.
+	 *
+	 * @param int $days Window in days.
+	 * @return array { total_prompts: int, counts: domain => int, pct: domain => float, us: string }.
+	 */
+	public function share_of_voice_data( int $days = 30 ): array {
+		return SWPS_Citation_Store::share_of_voice_data( $this->prompts->our_domains(), $this->prompts->competitor_domains(), $days );
+	}
+
+	/**
+	 * Top domains cited by AI engines for our prompts over the window.
+	 *
+	 * @param int $days  Window in days.
+	 * @param int $limit Max domains returned.
+	 * @return array<string, int> domain => citation count, descending.
+	 */
+	public function cited_domains_breakdown( int $days = 30, int $limit = 10 ): array {
+		return SWPS_Citation_Store::cited_domains_breakdown( $days, $limit );
+	}
+
+	// -------------------------------------------------------------------------
+	// Lost-citation → AEO context
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Detect prompts (with post_id > 0) in the 'lost' state and store loss
+	 * context as post meta; clear the meta when the state returns to 'cited'.
+	 */
+	public function detect_losses(): void {
+		foreach ( $this->prompt_states() as $row ) {
+			$post_id = (int) $row['post_id'];
+			if ( $post_id <= 0 ) {
+				continue;
+			}
+
+			$lost_engines = array();
+			$cited_any    = false;
+			foreach ( $row['states'] as $engine => $info ) {
+				if ( 'lost' === $info['state'] ) {
+					$lost_engines[] = $engine;
+				} elseif ( 'cited' === $info['state'] ) {
+					$cited_any = true;
+				}
+			}
+
+			if ( ! empty( $lost_engines ) ) {
+				update_post_meta(
+					$post_id,
+					self::META_LOSS,
+					array(
+						'prompt'            => $row['prompt'],
+						'engines'           => $lost_engines,
+						'top_cited_domains' => array_keys( array_slice( SWPS_Citation_Store::cited_domains_breakdown( 30, 5 ), 0, 5, true ) ),
+						'time'              => time(),
+					)
+				);
+			} elseif ( $cited_any ) {
+				delete_post_meta( $post_id, self::META_LOSS );
+			}
+		}
+	}
+
+	/**
+	 * Append lost-citation context to an AEO proposal payload.
+	 *
+	 * The swps_aeo_proposal filter fires AFTER the AI call, so this cannot
+	 * influence the generation prompt; instead it conservatively attaches a
+	 * citation_loss key (raw meta) and a human-readable citation_loss_note to
+	 * the proposal payload for the editor UI to surface alongside the edits.
+	 *
+	 * @param array $proposal The AI proposal payload.
+	 * @param int   $post_id  The post being optimized.
+	 * @return array The (possibly annotated) proposal.
+	 */
+	public function filter_aeo_proposal( $proposal, $post_id ): array {
+		$proposal = (array) $proposal;
+		$loss     = get_post_meta( (int) $post_id, self::META_LOSS, true );
+
+		if ( ! is_array( $loss ) || empty( $loss['prompt'] ) ) {
+			return $proposal;
+		}
+
+		$proposal['citation_loss']      = $loss;
+		$proposal['citation_loss_note'] = sprintf(
+			/* translators: 1: prompt text, 2: engine list, 3: domain list */
+			__( 'AI engines (%2$s) recently stopped citing this site for the prompt "%1$s". Competing domains being cited: %3$s.', 'stratawp-seo' ),
+			(string) $loss['prompt'],
+			implode( ', ', (array) ( $loss['engines'] ?? array() ) ),
+			implode( ', ', (array) ( $loss['top_cited_domains'] ?? array() ) )
+		);
+
+		return $proposal;
 	}
 }

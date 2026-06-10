@@ -97,6 +97,9 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-analytics-dashboard.php';
 
 // Keywords & Meta Editor.
 require_once SWPS_PLUGIN_DIR . 'includes/class-keyword-tracker.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-citation-store.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-citation-prompts.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-citation-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-keywords-page.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-meta-editor.php';
 
@@ -208,6 +211,12 @@ final class StrataWP_SEO {
 	public SWPS_Search_Console $search_console;
 	public SWPS_Analytics_Dashboard $analytics_dashboard;
 	public SWPS_Keyword_Tracker $keyword_tracker;
+	/**
+	 * AI citation tracker.
+	 *
+	 * @var SWPS_Citation_Tracker
+	 */
+	public SWPS_Citation_Tracker $citation_tracker;
 	public SWPS_Keywords_Page $keywords_page;
 	public SWPS_Meta_Editor $meta_editor;
 	public SWPS_Head_Cleanup $head_cleanup;
@@ -273,11 +282,13 @@ final class StrataWP_SEO {
 		$this->seo_audit             = new SWPS_SEO_Audit();
 		$this->schema                = new SWPS_Schema();
 		SWPS_AI_Referrals::maybe_upgrade();
+		SWPS_Citation_Store::maybe_upgrade();
 		$this->analytics_tracker     = new SWPS_Analytics_Tracker();
 		$this->bot_analytics_tracker = new SWPS_Bot_Analytics_Tracker();
 		$this->search_console        = new SWPS_Search_Console();
 		$this->analytics_dashboard   = new SWPS_Analytics_Dashboard( $this->analytics_tracker, $this->search_console );
 		$this->keyword_tracker       = new SWPS_Keyword_Tracker( $this->search_console );
+		$this->citation_tracker      = new SWPS_Citation_Tracker( new SWPS_Citation_Prompts( $this->keyword_tracker, $this->search_console ) );
 		$this->keywords_page         = new SWPS_Keywords_Page( $this->keyword_tracker );
 		$this->meta_editor           = new SWPS_Meta_Editor();
 		$this->head_cleanup          = new SWPS_Head_Cleanup();
@@ -1323,6 +1334,9 @@ function swps_activate(): void {
 	SWPS_Search_Console::schedule_cron();
 	SWPS_Keyword_Tracker::create_tables();
 	SWPS_Keyword_Tracker::schedule_cron();
+	SWPS_Citation_Store::create_table();
+	update_option( SWPS_Citation_Store::OPT_DB_VER, SWPS_Citation_Store::DB_VERSION );
+	SWPS_Citation_Tracker::schedule_cron();
 
 	SWPS_Redirect_Manager::create_tables();
 	SWPS_Link_Keyword_Engine::create_tables();
@@ -1353,6 +1367,7 @@ function swps_deactivate(): void {
 	SWPS_Bot_Analytics_Tracker::unschedule_cron();
 	SWPS_Search_Console::unschedule_cron();
 	SWPS_Keyword_Tracker::unschedule_cron();
+	SWPS_Citation_Tracker::unschedule_cron();
 	SWPS_Competitors::unschedule_cron();
 	SWPS_Backlinks::unschedule_cron();
 	wp_clear_scheduled_hook( 'swps_aeo_sweep_proposals' );
