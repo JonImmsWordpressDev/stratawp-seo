@@ -86,6 +86,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/audit/class-schema-audit-module.php';
 
 // Schema structured data.
 require_once SWPS_PLUGIN_DIR . 'includes/class-schema-validator.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-author-profile.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-schema.php';
 
 // Analytics.
@@ -449,6 +450,9 @@ final class StrataWP_SEO {
 		$discovery                  = new SWPS_Model_Discovery();
 		new SWPS_Model_Cron( $discovery );
 		$this->rest_api             = new SWPS_REST_API();
+
+		// Author E-E-A-T profile fields (v4.19).
+		( new SWPS_Author_Profile() )->register_hooks();
 
 		// v4.0 admin shell — only relevant in admin, but instantiate always so REST routes register.
 		$this->user_prefs  = new SWPS_User_Prefs();

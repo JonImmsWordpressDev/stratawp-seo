@@ -73,6 +73,11 @@ class SWPS_Schema {
 		if ( ! is_front_page() && ! get_option( 'swps_breadcrumbs_enabled', 1 ) ) {
 			$this->breadcrumb_schema();
 		}
+
+		// Author archive — emit ProfilePage + Person entity.
+		if ( is_author() ) {
+			$this->author_schema();
+		}
 	}
 
 	/**
@@ -193,13 +198,9 @@ class SWPS_Schema {
 			'wordCount'        => str_word_count( wp_strip_all_tags( $post->post_content ) ),
 		);
 
-		// Author.
+		// Author — inline Person node with E-E-A-T fields (commit c).
 		if ( $author ) {
-			$schema['author'] = array(
-				'@type' => 'Person',
-				'name'  => $author->display_name,
-				'url'   => get_author_posts_url( $author->ID ),
-			);
+			$schema['author'] = $this->build_person_node( $author );
 		}
 
 		// Featured image.
@@ -400,6 +401,72 @@ class SWPS_Schema {
 				'query-input' => 'required name=search_term_string',
 			);
 		}
+
+		$this->output_jsonld( $schema );
+	}
+
+	/**
+	 * Build a Person schema node for an author, including E-E-A-T fields when set.
+	 *
+	 * Always includes @type, name, and url. Adds sameAs, jobTitle, and
+	 * description (credentials) only when the meta values are non-empty, so no
+	 * empty strings appear in the emitted JSON-LD.
+	 *
+	 * @param WP_User $author The author user object.
+	 * @return array Person schema node.
+	 */
+	private function build_person_node( WP_User $author ): array {
+		$node = array(
+			'@type' => 'Person',
+			'name'  => $author->display_name,
+			'url'   => get_author_posts_url( $author->ID ),
+		);
+
+		$sameas      = SWPS_Author_Profile::get_sameas( $author->ID );
+		$job_title   = SWPS_Author_Profile::get_job_title( $author->ID );
+		$credentials = SWPS_Author_Profile::get_credentials( $author->ID );
+
+		if ( ! empty( $sameas ) ) {
+			$node['sameAs'] = $sameas;
+		}
+
+		if ( '' !== $job_title ) {
+			$node['jobTitle'] = $job_title;
+		}
+
+		if ( '' !== $credentials ) {
+			$node['description'] = $credentials;
+		}
+
+		return $node;
+	}
+
+	/**
+	 * Output ProfilePage + Person schema on author archive pages.
+	 *
+	 * Emits a ProfilePage whose mainEntity is the full Person node, including
+	 * any E-E-A-T fields stored against the author's user profile.
+	 */
+	private function author_schema(): void {
+		$author = get_queried_object();
+
+		if ( ! ( $author instanceof WP_User ) ) {
+			return;
+		}
+
+		$person_node = $this->build_person_node( $author );
+
+		$schema = array(
+			'@context'   => 'https://schema.org',
+			'@type'      => 'ProfilePage',
+			'name'       => sprintf(
+				/* translators: %s: author display name */
+				__( 'Author: %s', 'stratawp-seo' ),
+				$author->display_name
+			),
+			'url'        => get_author_posts_url( $author->ID ),
+			'mainEntity' => $person_node,
+		);
 
 		$this->output_jsonld( $schema );
 	}
