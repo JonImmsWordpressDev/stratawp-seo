@@ -276,6 +276,28 @@ $welcome_msg = sprintf(
 			</div>
 		<?php endif; ?>
 
+		<?php $ai_referrals = $data['ai_referrals'] ?? array(); ?>
+		<div class="swps-tile">
+			<div class="swps-tile-h"><?php esc_html_e( 'AI referrals (30d)', 'stratawp-seo' ); ?></div>
+			<div class="swps-tile-stat"><?php echo number_format( (int) ( $ai_referrals['views'] ?? 0 ) ); ?></div>
+			<?php
+			if ( null !== ( $ai_referrals['delta_pct'] ?? null ) ) :
+				$ai_ref_delta = (float) $ai_referrals['delta_pct'];
+				$ai_ref_cls   = $ai_ref_delta >= 0 ? '' : ' is-down';
+				$ai_ref_arrow = $ai_ref_delta >= 0 ? '↑' : '↓';
+				?>
+				<div class="swps-tile-trend<?php echo esc_attr( $ai_ref_cls ); ?>">
+					<?php echo esc_html( $ai_ref_arrow ); ?>
+					<?php echo esc_html( number_format( abs( $ai_ref_delta ), 1 ) ); ?>%
+					<?php esc_html_e( 'vs prev 30d', 'stratawp-seo' ); ?>
+				</div>
+			<?php else : ?>
+				<div class="swps-tile-trend" style="color:var(--swps-text-faint)">
+					<?php esc_html_e( 'Views from AI assistants — no data yet', 'stratawp-seo' ); ?>
+				</div>
+			<?php endif; ?>
+		</div>
+
 		<a class="swps-tile swps-tile-aeo" href="<?php echo esc_url( admin_url( 'admin.php?page=swps-aeo-optimize' ) ); ?>" style="text-decoration:none;color:inherit;display:block">
 			<div class="swps-tile-h"><?php esc_html_e( 'AEO health (avg)', 'stratawp-seo' ); ?></div>
 			<div class="swps-tile-stat">

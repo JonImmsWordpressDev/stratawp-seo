@@ -88,6 +88,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-schema.php';
 
 // Analytics.
 require_once SWPS_PLUGIN_DIR . 'includes/class-ai-referrals.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-ai-referrals-report.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-analytics-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-search-console.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-bot-analytics-tracker.php';

@@ -105,6 +105,121 @@
         });
     }
 
+    function loadAiReferrals() {
+        if (!$('#swps-ai-ref-engines-table').length) return;
+
+        $.post(swpsAdmin.ajax_url, {
+            action: 'swps_analytics_ai_referrals',
+            nonce: swpsAdmin.nonce,
+            days: currentDays
+        }, function (res) {
+            if (!res.success) return;
+            var d = res.data;
+
+            // Summary tiles.
+            $('#swps-ai-ref-views').text(d.summary.total_views.toLocaleString());
+
+            var changeEl = $('#swps-ai-ref-change');
+            if (d.summary.delta_pct !== null) {
+                var up = d.summary.delta_pct >= 0;
+                changeEl.html('<span class="' + (up ? 'swps-change-up' : 'swps-change-down') + '">' +
+                    (up ? '↑' : '↓') + ' ' + Math.abs(d.summary.delta_pct) + '% vs prev period</span>');
+            } else {
+                changeEl.html('');
+            }
+
+            var engines = Object.keys(d.summary.by_source);
+            $('#swps-ai-ref-top-engine').text(engines.length ? engines[0] : '—');
+
+            // Views by engine.
+            var engineBody = $('#swps-ai-ref-engines-table tbody');
+            engineBody.empty();
+            if (!engines.length) {
+                engineBody.html('<tr><td colspan="2">No AI-referred views yet.</td></tr>');
+            } else {
+                engines.forEach(function (engine) {
+                    engineBody.append('<tr><td><code>' + escHtml(engine) + '</code></td>' +
+                        '<td style="text-align:right">' + d.summary.by_source[engine].toLocaleString() + '</td></tr>');
+                });
+            }
+
+            // Landing posts.
+            var landingBody = $('#swps-ai-ref-landing-table tbody');
+            landingBody.empty();
+            if (!d.landing_posts.length) {
+                landingBody.html('<tr><td colspan="6">No AI-referred visits yet.</td></tr>');
+            } else {
+                d.landing_posts.forEach(function (p) {
+                    var title = p.url
+                        ? '<a href="' + p.url + '" target="_blank">' + escHtml(p.title) + '</a>'
+                        : escHtml(p.title);
+                    landingBody.append('<tr><td>' + title + '</td>' +
+                        '<td style="text-align:right">' + p.views.toLocaleString() + '</td>' +
+                        '<td style="text-align:right">' + formatSeconds(p.avg_time) + '</td>' +
+                        '<td style="text-align:right">' + p.avg_scroll + '%</td>' +
+                        '<td style="text-align:right">' + p.bounce_rate + '%</td>' +
+                        '<td><code>' + escHtml(p.ai_sources || '') + '</code></td></tr>');
+                });
+            }
+
+            // Engagement panel.
+            var engEl = $('#swps-ai-ref-engagement');
+            if (!d.engagement) {
+                engEl.html('<p style="margin:0;color:var(--swps-text-muted)">Not enough data yet — engagement comparison needs at least 30 AI-referred views and 30 organic views in this period.</p>');
+            } else {
+                var e = d.engagement;
+                var html = '<table class="widefat striped" style="margin-top:4px"><thead><tr>' +
+                    '<th></th><th style="text-align:right">AI-referred</th><th style="text-align:right">Organic</th><th style="text-align:right">Ratio</th></tr></thead><tbody>';
+                html += '<tr><td>Avg time on page</td><td style="text-align:right">' + formatSeconds(e.ai.avg_time) + '</td>' +
+                    '<td style="text-align:right">' + formatSeconds(e.organic.avg_time) + '</td>' +
+                    '<td style="text-align:right">' + e.time_ratio.toFixed(2) + '×</td></tr>';
+                html += '<tr><td>Avg scroll depth</td><td style="text-align:right">' + e.ai.avg_scroll + '%</td>' +
+                    '<td style="text-align:right">' + e.organic.avg_scroll + '%</td>' +
+                    '<td style="text-align:right">' + e.scroll_ratio.toFixed(2) + '×</td></tr>';
+                html += '<tr><td>Bounce rate</td><td style="text-align:right">' + e.ai.bounce_rate + '%</td>' +
+                    '<td style="text-align:right">' + e.organic.bounce_rate + '%</td>' +
+                    '<td style="text-align:right">' + e.bounce_ratio.toFixed(2) + '×</td></tr>';
+                html += '</tbody></table>';
+                html += '<p style="color:var(--swps-text-muted);font-size:11px;margin:8px 0 0">Based on ' +
+                    e.ai_n.toLocaleString() + ' AI-referred views and ' + e.organic_n.toLocaleString() + ' organic views.</p>';
+                engEl.html(html);
+            }
+
+            // Funnel.
+            var funnelBody = $('#swps-ai-ref-funnel-table tbody');
+            funnelBody.empty();
+            if (!d.funnel.rows.length) {
+                funnelBody.html('<tr><td colspan="4">No AI crawl data for this period.</td></tr>');
+            } else {
+                d.funnel.rows.forEach(function (r) {
+                    var title = r.edit_link
+                        ? '<a href="' + r.edit_link + '">' + escHtml(r.title) + '</a>'
+                        : escHtml(r.title);
+                    funnelBody.append('<tr><td>' + title + '</td>' +
+                        '<td><code>' + escHtml(r.ai_source) + '</code></td>' +
+                        '<td style="text-align:right">' + r.crawls.toLocaleString() + '</td>' +
+                        '<td style="text-align:right">' + r.visits.toLocaleString() + '</td></tr>');
+                });
+            }
+
+            // Crawled but no AI visits.
+            var noVisitsBody = $('#swps-ai-ref-novisits-table tbody');
+            noVisitsBody.empty();
+            if (!d.funnel.crawled_no_visits.length) {
+                noVisitsBody.html('<tr><td colspan="3">None — every crawled post has AI-referred visits.</td></tr>');
+            } else {
+                d.funnel.crawled_no_visits.forEach(function (r) {
+                    var title = r.edit_link
+                        ? '<a href="' + r.edit_link + '">' + escHtml(r.title) + '</a>'
+                        : escHtml(r.title);
+                    noVisitsBody.append('<tr><td>' + title + '</td>' +
+                        '<td><code>' + escHtml(r.ai_source) + '</code></td>' +
+                        '<td style="text-align:right">' + r.crawls.toLocaleString() + '</td></tr>');
+                });
+            }
+        });
+    }
+
     // --- Chart.js Chart ---
 
     var chartInstance = null;
@@ -259,6 +374,7 @@
         if ($('.swps-analytics-wrap').length) {
             loadOverview();
             loadTopPages();
+            loadAiReferrals();
 
             if ($('#swps-top-queries-table').length) {
                 loadTopQueries();
@@ -271,6 +387,7 @@
                 currentDays = parseInt($(this).data('days'));
                 loadOverview();
                 loadTopPages();
+                loadAiReferrals();
                 if ($('#swps-top-queries-table').length) loadTopQueries();
             });
 
