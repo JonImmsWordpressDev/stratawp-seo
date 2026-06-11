@@ -80,6 +80,7 @@
 .swps-legend-retrying { background: #f59e0b; }
 .swps-legend-published { background: var(--swps-success); }
 .swps-legend-failed { background: var(--swps-error); }
+.swps-legend-proposed { background: #8b5cf6; }
 .swps-legend-existing { background: var(--swps-text-light); }
 
 /* Modal */

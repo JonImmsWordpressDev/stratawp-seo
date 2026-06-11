@@ -42,6 +42,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<?php esc_html_e( 'Failed', 'stratawp-seo' ); ?>
 		</div>
 		<div class="swps-legend-item">
+			<span class="swps-legend-dot swps-legend-proposed"></span>
+			<?php esc_html_e( 'Proposed', 'stratawp-seo' ); ?>
+		</div>
+		<div class="swps-legend-item">
 			<span class="swps-legend-dot swps-legend-existing"></span>
 			<?php esc_html_e( 'Existing Post', 'stratawp-seo' ); ?>
 		</div>
@@ -109,9 +113,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<td><?php esc_html_e( 'Notes:', 'stratawp-seo' ); ?></td>
 				<td id="swps-detail-notes"></td>
 			</tr>
+			<tr id="swps-detail-rationale-row" style="display:none">
+				<td><?php esc_html_e( 'Rationale:', 'stratawp-seo' ); ?></td>
+				<td id="swps-detail-rationale" style="font-style:italic;color:#8b5cf6"></td>
+			</tr>
 		</table>
 
 		<div class="swps-modal-actions">
+			<button type="button" id="swps-topic-approve" class="swps-btn swps-btn-grad" data-topic-id="" style="display:none">
+				<?php esc_html_e( 'Approve', 'stratawp-seo' ); ?>
+			</button>
+			<button type="button" id="swps-topic-dismiss" class="swps-btn swps-btn-secondary" data-topic-id="" style="display:none;color:var(--swps-crit);border-color:var(--swps-crit)">
+				<?php esc_html_e( 'Dismiss', 'stratawp-seo' ); ?>
+			</button>
 			<button type="button" id="swps-topic-delete" class="swps-btn swps-btn-secondary" data-topic-id="" style="color:var(--swps-crit);border-color:var(--swps-crit)">
 				<?php esc_html_e( 'Delete Topic', 'stratawp-seo' ); ?>
 			</button>

@@ -1664,6 +1664,7 @@ class SWPS_Settings {
 				'label'    => __( 'Schedule', 'stratawp-seo' ),
 				'sections' => array(
 					'swps_schedule_section',
+					'swps_topic_scout_section',
 				),
 			),
 			'seo'             => array(

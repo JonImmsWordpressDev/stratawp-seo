@@ -24,6 +24,10 @@ class SWPS_Calendar {
 		add_action( 'wp_ajax_swps_calendar_create_topic', array( $this, 'ajax_create_topic' ) );
 		add_action( 'wp_ajax_swps_calendar_update_topic', array( $this, 'ajax_update_topic' ) );
 		add_action( 'wp_ajax_swps_calendar_delete_topic', array( $this, 'ajax_delete_topic' ) );
+
+		// Proposal review (topic scout).
+		add_action( 'wp_ajax_swps_scout_approve', array( $this, 'ajax_approve_proposal' ) );
+		add_action( 'wp_ajax_swps_scout_dismiss', array( $this, 'ajax_dismiss_proposal' ) );
 	}
 
 	/**
@@ -76,9 +80,10 @@ class SWPS_Calendar {
 			'swps-calendar',
 			'swpsCalendar',
 			array(
-				'ajax_url'  => admin_url( 'admin-ajax.php' ),
-				'nonce'     => wp_create_nonce( 'swps_calendar_nonce' ),
-				'templates' => SWPS_Templates::get_options(),
+				'ajax_url'    => admin_url( 'admin-ajax.php' ),
+				'nonce'       => wp_create_nonce( 'swps_calendar_nonce' ),
+				'scout_nonce' => wp_create_nonce( 'swps_topic_scout' ),
+				'templates'   => SWPS_Templates::get_options(),
 			)
 		);
 	}
@@ -190,5 +195,68 @@ class SWPS_Calendar {
 		$this->queue->delete_topic( $topic_id );
 
 		wp_send_json_success( array( 'message' => 'Topic deleted.' ) );
+	}
+
+	/**
+	 * AJAX: Approve a proposed topic — set status to 'queued'.
+	 */
+	public function ajax_approve_proposal(): void {
+		check_ajax_referer( 'swps_topic_scout', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ), 403 );
+		}
+
+		$topic_id = absint( wp_unslash( $_POST['topic_id'] ?? 0 ) );
+		if ( ! $topic_id ) {
+			wp_send_json_error( array( 'message' => 'Missing topic ID.' ), 400 );
+		}
+
+		$post = get_post( $topic_id );
+		if ( ! $post instanceof WP_Post || SWPS_Topic_Queue::POST_TYPE !== $post->post_type ) {
+			wp_send_json_error( array( 'message' => 'Invalid topic.' ), 400 );
+		}
+
+		if ( 'proposed' !== $post->post_status ) {
+			wp_send_json_error( array( 'message' => __( 'Topic is not in proposed status.', 'stratawp-seo' ) ), 400 );
+		}
+
+		wp_update_post(
+			array(
+				'ID'          => $topic_id,
+				'post_status' => 'queued',
+			)
+		);
+
+		wp_send_json_success( array( 'message' => __( 'Proposal approved and added to queue.', 'stratawp-seo' ) ) );
+	}
+
+	/**
+	 * AJAX: Dismiss a proposed topic — move to trash.
+	 */
+	public function ajax_dismiss_proposal(): void {
+		check_ajax_referer( 'swps_topic_scout', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ), 403 );
+		}
+
+		$topic_id = absint( wp_unslash( $_POST['topic_id'] ?? 0 ) );
+		if ( ! $topic_id ) {
+			wp_send_json_error( array( 'message' => 'Missing topic ID.' ), 400 );
+		}
+
+		$post = get_post( $topic_id );
+		if ( ! $post instanceof WP_Post || SWPS_Topic_Queue::POST_TYPE !== $post->post_type ) {
+			wp_send_json_error( array( 'message' => 'Invalid topic.' ), 400 );
+		}
+
+		if ( 'proposed' !== $post->post_status ) {
+			wp_send_json_error( array( 'message' => __( 'Topic is not in proposed status.', 'stratawp-seo' ) ), 400 );
+		}
+
+		wp_trash_post( $topic_id );
+
+		wp_send_json_success( array( 'message' => __( 'Proposal dismissed.', 'stratawp-seo' ) ) );
 	}
 }

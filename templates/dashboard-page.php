@@ -334,6 +334,19 @@ $welcome_msg = sprintf(
 		</a>
 		<?php endif; ?>
 
+		<?php
+		$swps_cannibal = $data['cannibalization'] ?? array();
+		if ( ! empty( $swps_cannibal ) ) :
+			?>
+		<a class="swps-tile swps-tile-cannibal" href="<?php echo esc_url( $swps_cannibal['url'] ); ?>" style="text-decoration:none;color:inherit;display:block">
+			<div class="swps-tile-h"><?php esc_html_e( 'Cannibalization', 'stratawp-seo' ); ?></div>
+			<div class="swps-tile-stat" style="color:#ef4444"><?php echo esc_html( (string) $swps_cannibal['count'] ); ?></div>
+			<div class="swps-tile-trend" style="color:var(--swps-text-muted)">
+				<?php esc_html_e( 'queries splitting impressions across pages', 'stratawp-seo' ); ?>
+			</div>
+		</a>
+		<?php endif; ?>
+
 		<a class="swps-tile swps-tile-aeo" href="<?php echo esc_url( admin_url( 'admin.php?page=swps-aeo-optimize' ) ); ?>" style="text-decoration:none;color:inherit;display:block">
 			<div class="swps-tile-h"><?php esc_html_e( 'AEO health (avg)', 'stratawp-seo' ); ?></div>
 			<div class="swps-tile-stat">

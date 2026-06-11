@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.18.0
+ * Version: 4.19.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.18.0' );
+define( 'SWPS_VERSION', '4.19.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -82,8 +82,12 @@ require_once SWPS_PLUGIN_DIR . 'includes/audit/class-robots-module.php';
 require_once SWPS_PLUGIN_DIR . 'includes/audit/class-meta-robots-module.php';
 require_once SWPS_PLUGIN_DIR . 'includes/audit/class-image-seo-module.php';
 require_once SWPS_PLUGIN_DIR . 'includes/audit/class-pagespeed-module.php';
+require_once SWPS_PLUGIN_DIR . 'includes/audit/class-schema-audit-module.php';
 
 // Schema structured data.
+require_once SWPS_PLUGIN_DIR . 'includes/class-schema-validator.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-schema-graph.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-author-profile.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-schema.php';
 
 // Analytics.
@@ -114,6 +118,11 @@ require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-authority-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/aeo/class-coverage-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-aeo-scorer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-question-coverage.php';
+
+// Topic Autopilot (v4.19) — pure helpers + weekly scout cron.
+require_once SWPS_PLUGIN_DIR . 'includes/class-topic-scout.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-topic-scout-cron.php';
+
 require_once SWPS_PLUGIN_DIR . 'includes/class-metric-history.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-decay-watchdog.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-refresh-queue-admin.php';
@@ -148,6 +157,10 @@ require_once SWPS_PLUGIN_DIR . 'includes/audit/class-site-crawl-module.php';
 // Backlinks (v4.2.2) — manual/CSV-import backlink tracker with health monitor.
 require_once SWPS_PLUGIN_DIR . 'includes/class-backlinks.php';
 
+// Keyword cannibalization detector (v4.19).
+require_once SWPS_PLUGIN_DIR . 'includes/class-cannibalization.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-cannibalization-admin.php';
+
 // v3.0 classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-head-cleanup.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rss-optimizer.php';
@@ -179,6 +192,10 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-calendar.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-background-processor.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-model-cron.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rest-api.php';
+require_once SWPS_PLUGIN_DIR . 'includes/trait-ability-defs.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-abilities.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-abilities-rest.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-abilities-settings.php';
 
 // GitHub-based plugin updater.
 require_once SWPS_PLUGIN_DIR . 'includes/class-github-updater.php';
@@ -284,6 +301,13 @@ final class StrataWP_SEO {
 	public SWPS_Question_Coverage $question_coverage;
 
 	/**
+	 * Topic Scout cron + settings wiring (v4.19).
+	 *
+	 * @var SWPS_Topic_Scout_Cron
+	 */
+	public SWPS_Topic_Scout_Cron $topic_scout_cron;
+
+	/**
 	 * Generic per-post metric history store (v4.18).
 	 *
 	 * @var SWPS_Metric_History
@@ -297,6 +321,27 @@ final class StrataWP_SEO {
 	 */
 	public SWPS_Decay_Watchdog $decay_watchdog;
 	public SWPS_Refresh_Queue_Admin $refresh_queue_admin;
+
+	/**
+	 * Machine-callable abilities registry (v4.19).
+	 *
+	 * @var SWPS_Abilities
+	 */
+	public SWPS_Abilities $abilities;
+
+	/**
+	 * Keyword cannibalization detector (v4.19).
+	 *
+	 * @var SWPS_Cannibalization
+	 */
+	public SWPS_Cannibalization $cannibalization;
+
+	/**
+	 * Cannibalization admin page + AJAX (v4.19).
+	 *
+	 * @var SWPS_Cannibalization_Admin
+	 */
+	public SWPS_Cannibalization_Admin $cannibalization_admin;
 
 	// v4.0 admin shell.
 	public SWPS_User_Prefs $user_prefs;
@@ -383,11 +428,23 @@ final class StrataWP_SEO {
 		// Question coverage engine (v4.17) — weekly GSC question demand mining.
 		$this->question_coverage = new SWPS_Question_Coverage( $this->search_console, $this->topic_queue );
 
+		// Topic Autopilot (v4.19) — weekly scout cron + settings.
+		$this->topic_scout_cron = new SWPS_Topic_Scout_Cron(
+			$this->search_console,
+			$this->topic_queue,
+			$this->duplicate_checker
+		);
+
 		// Content decay watchdog (v4.18) — weekly scan, metric history, email alert.
 		SWPS_Metric_History::maybe_upgrade();
 		$this->metric_history  = new SWPS_Metric_History();
 		$this->decay_watchdog  = new SWPS_Decay_Watchdog( $this->search_console, $this->metric_history );
 		$this->refresh_queue_admin   = new SWPS_Refresh_Queue_Admin( $this->metric_history );
+
+		// Keyword cannibalization detector (v4.19).
+		SWPS_Cannibalization::maybe_upgrade();
+		$this->cannibalization       = new SWPS_Cannibalization( $this->search_console );
+		$this->cannibalization_admin = new SWPS_Cannibalization_Admin( $this->cannibalization );
 
 		$this->competitors          = new SWPS_Competitors();
 		$this->local_seo            = new SWPS_Local_SEO();
@@ -401,6 +458,7 @@ final class StrataWP_SEO {
 		$this->site_crawler         = new SWPS_Site_Crawler();
 		$this->site_crawl_admin     = new SWPS_Site_Crawl_Admin( $this->site_crawler );
 		add_filter( 'swps_audit_modules', array( 'SWPS_Site_Crawl_Module', 'register' ) );
+		add_filter( 'swps_audit_modules', array( 'SWPS_Schema_Audit_Module', 'register' ) );
 		$this->backlinks            = new SWPS_Backlinks();
 		$this->settings             = new SWPS_Settings();
 		$this->analyzer             = new SWPS_Analyzer( $this->cache_manager );
@@ -424,6 +482,15 @@ final class StrataWP_SEO {
 		new SWPS_Model_Cron( $discovery );
 		$this->rest_api             = new SWPS_REST_API();
 
+		// Abilities API — machine-callable SEO operations (v4.19).
+		SWPS_Abilities::maybe_upgrade();
+		$this->abilities = new SWPS_Abilities();
+		new SWPS_Abilities_Rest( $this->abilities );
+		new SWPS_Abilities_Settings( $this->abilities );
+
+		// Author E-E-A-T profile fields (v4.19).
+		( new SWPS_Author_Profile() )->register_hooks();
+
 		// v4.0 admin shell — only relevant in admin, but instantiate always so REST routes register.
 		$this->user_prefs  = new SWPS_User_Prefs();
 		$this->modules     = new SWPS_Modules();
@@ -441,6 +508,9 @@ final class StrataWP_SEO {
 
 		// Redirect 404 log pruning cron.
 		add_action( 'swps_prune_404_logs', array( SWPS_Redirect_Manager::class, 'prune_404_logs' ) );
+
+		// Ability activity-log pruning (90 days) rides the same daily cron.
+		add_action( 'swps_prune_404_logs', array( SWPS_Abilities::class, 'prune_log' ) );
 
 		// Admin assets.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
@@ -464,9 +534,15 @@ final class StrataWP_SEO {
 		add_action( 'wp_ajax_swps_preview_post', array( $this, 'ajax_preview_post' ) );
 		add_action( 'wp_ajax_swps_clear_cache', array( $this, 'ajax_clear_cache' ) );
 
-		// Frontend.
-		add_action( 'wp_head', array( $this, 'output_faq_schema' ) );
-		add_action( 'wp_head', array( $this, 'output_takeaways_schema' ) );
+		// Frontend — FAQ / Takeaways schema.
+		// When the StrataWP schema module is active (no other SEO plugin), these nodes
+		// are absorbed into the @graph by SWPS_Schema. Register the standalone hooks
+		// ONLY when the main schema is deferred (Yoast / RankMath / AIOSEO active) so
+		// emission is exactly once regardless of which path handles it.
+		if ( SWPS_Schema::is_main_schema_deferred() ) {
+			add_action( 'wp_head', array( $this, 'output_faq_schema' ) );
+			add_action( 'wp_head', array( $this, 'output_takeaways_schema' ) );
+		}
 
 		// Content scoring on post creation.
 		add_action( 'swps_post_created', array( $this, 'score_generated_post' ), 10, 3 );
@@ -828,69 +904,15 @@ final class StrataWP_SEO {
 	/**
 	 * Normalize legacy FAQ schema meta into a safe schema array.
 	 *
-	 * Older versions stored a full script tag. Newer generated posts store the
-	 * schema array directly so output can always be encoded in one trusted path.
+	 * Delegates to SWPS_Schema_Graph::normalize_faq_schema() so both the
+	 * standalone Yoast-deferred path (here) and the @graph path (SWPS_Schema)
+	 * share one implementation.
+	 *
+	 * @param mixed $schema Raw value from get_post_meta.
+	 * @return array Normalised FAQPage schema array, or empty array.
 	 */
 	private function normalize_faq_schema_meta( mixed $schema ): array {
-		if ( empty( $schema ) ) {
-			return array();
-		}
-
-		if ( is_string( $schema ) ) {
-			$json = trim( $schema );
-
-			if ( false !== stripos( $json, '<script' ) ) {
-				if ( ! preg_match( '/<script[^>]*type=["\']application\/ld\+json["\'][^>]*>(.*?)<\/script>/is', $json, $matches ) ) {
-					return array();
-				}
-				$json = html_entity_decode( trim( $matches[1] ), ENT_QUOTES, 'UTF-8' );
-			}
-
-			$schema = json_decode( $json, true );
-		}
-
-		if ( ! is_array( $schema ) || 'FAQPage' !== ( $schema['@type'] ?? '' ) ) {
-			return array();
-		}
-
-		$entities = $schema['mainEntity'] ?? array();
-		if ( ! is_array( $entities ) ) {
-			return array();
-		}
-
-		$normalized = array(
-			'@context'   => 'https://schema.org',
-			'@type'      => 'FAQPage',
-			'name'       => sanitize_text_field( wp_strip_all_tags( (string) ( $schema['name'] ?? get_the_title() ) ) ),
-			'mainEntity' => array(),
-		);
-
-		foreach ( $entities as $entity ) {
-			if ( ! is_array( $entity ) ) {
-				continue;
-			}
-
-			$answer = $entity['acceptedAnswer'] ?? array();
-			$text   = is_array( $answer ) ? ( $answer['text'] ?? '' ) : '';
-
-			$question = sanitize_text_field( wp_strip_all_tags( (string) ( $entity['name'] ?? '' ) ) );
-			$text     = sanitize_textarea_field( wp_strip_all_tags( (string) $text ) );
-
-			if ( '' === $question || '' === $text ) {
-				continue;
-			}
-
-			$normalized['mainEntity'][] = array(
-				'@type'          => 'Question',
-				'name'           => $question,
-				'acceptedAnswer' => array(
-					'@type' => 'Answer',
-					'text'  => $text,
-				),
-			);
-		}
-
-		return empty( $normalized['mainEntity'] ) ? array() : $normalized;
+		return SWPS_Schema_Graph::normalize_faq_schema( $schema );
 	}
 
 	/**
@@ -1410,6 +1432,7 @@ function swps_activate(): void {
 	SWPS_Metric_History::create_table();
 	update_option( SWPS_Metric_History::OPT_DB_VER, SWPS_Metric_History::DB_VERSION );
 	SWPS_Decay_Watchdog::schedule_cron();
+	SWPS_Topic_Scout_Cron::schedule_cron();
 
 	SWPS_Redirect_Manager::create_tables();
 	SWPS_Link_Keyword_Engine::create_tables();
@@ -1422,6 +1445,9 @@ function swps_activate(): void {
 	SWPS_Crawl_Issues::create_tables();
 	update_option( SWPS_Crawl_Issues::OPT_DB_VER, SWPS_Crawl_Issues::DB_VERSION );
 	SWPS_Site_Crawler::schedule_weekly_cron();
+
+	SWPS_Abilities::create_log_table();
+	update_option( SWPS_Abilities::OPT_DB_VER, SWPS_Abilities::DB_VERSION );
 
 	if ( ! wp_next_scheduled( 'swps_prune_404_logs' ) ) {
 		wp_schedule_event( time(), 'daily', 'swps_prune_404_logs' );
@@ -1451,6 +1477,8 @@ function swps_deactivate(): void {
 	wp_clear_scheduled_hook( 'swps_aeo_sweep_proposals' );
 	SWPS_Question_Coverage::unschedule_cron();
 	SWPS_Decay_Watchdog::unschedule_cron();
+	SWPS_Topic_Scout_Cron::unschedule_cron();
+	wp_clear_scheduled_hook( SWPS_Cannibalization::CRON_HOOK );
 	wp_unschedule_hook( 'swps_send_digest' );
 	wp_unschedule_hook( SWPS_Site_Crawler::CRON_HOOK );
 	SWPS_Site_Crawler::unschedule_weekly_cron();

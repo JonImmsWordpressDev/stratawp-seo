@@ -104,6 +104,7 @@ class SWPS_Dashboard {
 			'ai_citations'        => $this->safe_get_citations(),
 			'top_issues'          => $this->safe_get_top_issues(),
 			'top_queries'         => $this->safe_get_top_gsc_queries(),
+			'cannibalization'     => $this->safe_get_cannibalization(),
 			'auto_optimize_queue' => array(), // Phase 7 fills in.
 			'competitors'         => $this->safe_get_competitor_summary(),
 			'backlinks'           => $this->safe_get_backlinks_summary(),
@@ -436,6 +437,29 @@ class SWPS_Dashboard {
 				),
 				'recent' => array(),
 			);
+		}
+	}
+
+	/**
+	 * Cannibalization tile data — open finding count.
+	 *
+	 * Returns empty array when there are zero open findings so the tile
+	 * is suppressed entirely on the dashboard.
+	 *
+	 * @return array{count: int, url: string}|array{}
+	 */
+	private function safe_get_cannibalization(): array {
+		try {
+			$count = SWPS_Cannibalization::count_open();
+			if ( $count <= 0 ) {
+				return array();
+			}
+			return array(
+				'count' => $count,
+				'url'   => admin_url( 'admin.php?page=' . SWPS_Cannibalization_Admin::PAGE_SLUG ),
+			);
+		} catch ( \Throwable $e ) {
+			return array();
 		}
 	}
 
