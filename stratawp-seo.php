@@ -509,6 +509,9 @@ final class StrataWP_SEO {
 		// Redirect 404 log pruning cron.
 		add_action( 'swps_prune_404_logs', array( SWPS_Redirect_Manager::class, 'prune_404_logs' ) );
 
+		// Ability activity-log pruning (90 days) rides the same daily cron.
+		add_action( 'swps_prune_404_logs', array( SWPS_Abilities::class, 'prune_log' ) );
+
 		// Admin assets.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
 

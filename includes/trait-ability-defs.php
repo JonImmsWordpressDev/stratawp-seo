@@ -558,16 +558,26 @@ trait SWPS_Ability_Defs {
 	 * Callback: delete-redirect — remove a redirect by ID (undo affordance for add-redirect).
 	 *
 	 * @param array $input Validated input.
-	 * @return array
+	 * @return array|WP_Error
 	 */
-	public function cb_delete_redirect( array $input ): array {
+	public function cb_delete_redirect( array $input ) {
 		global $wpdb;
 
-		$id    = (int) ( $input['redirect_id'] ?? 0 );
+		$id = (int) ( $input['redirect_id'] ?? 0 );
+		if ( $id <= 0 ) {
+			return new WP_Error( 'swps_invalid_redirect_id', __( 'redirect_id must be a positive integer.', 'stratawp-seo' ) );
+		}
+
 		$table = $wpdb->prefix . 'swps_redirects';
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE id = %d", $id ) );
+		if ( null === $exists ) {
+			return new WP_Error( 'swps_redirect_not_found', __( 'No redirect found with that ID.', 'stratawp-seo' ) );
+		}
+
 		$deleted = $wpdb->delete( $table, array( 'id' => $id ), array( '%d' ) );
+		// phpcs:enable
 		delete_transient( 'swps_redirect_cache' );
 
 		return array( 'deleted' => ( false !== $deleted && $deleted > 0 ) );

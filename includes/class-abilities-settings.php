@@ -295,8 +295,10 @@ class SWPS_Abilities_Settings {
 	 * Hooked on wp_abilities_api_init (WP ≥ 6.9).
 	 */
 	public function register_wp_abilities(): void {
-		foreach ( $this->abilities->get_defs() as $def ) {
-			if ( ! $this->abilities->is_enabled( $def['name'] ) ) {
+		$registry = $this->abilities;
+
+		foreach ( $registry->get_defs() as $def ) {
+			if ( ! $registry->is_enabled( $def['name'] ) ) {
 				continue;
 			}
 
@@ -312,8 +314,10 @@ class SWPS_Abilities_Settings {
 					'category'            => self::CATEGORY_SLUG,
 					'input_schema'        => $def['input_schema'] ?? array(),
 					'output_schema'       => $def['output_schema'] ?? array(),
-					'execute_callback'    => function ( $input = array() ) use ( $def ) {
-						return call_user_func( $def['callback'], is_array( $input ) ? $input : array() );
+					'execute_callback'    => static function ( $input = array() ) use ( $registry, $def ) {
+						// Route through the full pipeline: enabled re-check,
+						// input validation, callback, activity log.
+						return $registry->execute( $def['name'], is_array( $input ) ? $input : array() );
 					},
 					'permission_callback' => static function (): bool {
 						return current_user_can( 'manage_options' );
