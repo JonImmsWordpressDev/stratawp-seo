@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.18.0
+Stable tag: 4.19.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -400,6 +400,15 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.19.0 =
+* New: Verified crawler analytics — search-engine bot tracking, CIDR/rDNS spoof detection, "blocked bot still crawling" alerts, opt-in fail-open 403 enforcement, and a crawl-budget report.
+* New: Site crawler — politeness-capped crawl of your own site finding broken links, redirect chains/loops, canonical mismatches, noindexed sitemap URLs, H1 problems, and mixed content, with one-click fixes and a weekly re-crawl.
+* New: Keyword cannibalization detector — finds queries where your pages split impressions, with consolidate (undoable 301), differentiate, and canonicalize resolutions.
+* New: Schema overhaul — one interlinked @graph per page, author E-E-A-T entities (Person/ProfilePage from new user-profile fields), and a schema validation audit module that checks your real rendered output.
+* New: Data-driven topic autopilot — a weekly scout turns Search Console demand, striking-distance queries, and orphan pages into reviewable topic proposals; optional auto-promote keeps the queue fed.
+* New: Machine Access — your SEO operations exposed as WP Abilities (WordPress 6.9+) and REST endpoints for AI assistants/MCP, with per-ability toggles (writes off by default) and an activity log.
+* Improved: full documentation overhaul — README restructured around four pillars with fresh screenshots of every admin page.
 
 = 4.18.0 =
 * New: Content decay watchdog — weekly Search Console scan flags posts losing clicks (28-day windows, configurable threshold), classifies the likely cause, tracks metric + AEO-score history with sparklines, emails you when a top post decays, and queues one-click AI refresh proposals through the reviewed AEO apply/undo pipeline.

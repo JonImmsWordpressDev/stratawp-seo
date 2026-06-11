@@ -21,7 +21,7 @@
 
 **AI-powered SEO that knows your WordPress site — and knows how AI search works.** Generate site-aware blog posts, run your technical SEO (sitemaps, redirects, schema `@graph`, audits, a full site crawler), get *cited* by AI answer engines (AEO scoring, llms.txt, AI citation tracking, AI referral analytics), and let the automation layer watch your budget, your decaying posts, and your topic pipeline while you sleep.
 
-[![Version](https://img.shields.io/badge/version-4.18.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.19.0-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -1711,6 +1711,15 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 ---
 
 ## Changelog
+
+### v4.19.0 — June 2026
+- **Verified crawler analytics** — search-bot tracking with CIDR/rDNS spoof detection, reconciliation alerts, opt-in fail-open 403 enforcement, and a crawl-budget report
+- **Site crawler** — broken links, redirect chains/loops, canonical mismatches, noindexed sitemap URLs, H1 issues, and mixed content, with one-click fixes
+- **Keyword cannibalization detector** — split-impression findings with undoable consolidation
+- **Schema overhaul** — unified @graph, author E-E-A-T entities, and a rendered-output validation audit
+- **Data-driven topic autopilot** — Search Console demand becomes reviewable topic proposals
+- **Machine Access** — WP Abilities + REST endpoints for AI assistants (writes off by default, activity-logged)
+- **Docs overhaul** — README restructured around four pillars with fresh screenshots
 
 ### v4.18.0 — June 2026
 - **Content decay watchdog** — weekly GSC scan compares rolling 28-day windows per post, flags decays past your threshold with a heuristic cause (position drop / demand drop / CTR drop / staleness), with cooldowns, a minimum-impressions floor, and a one-email summary alert for top posts
