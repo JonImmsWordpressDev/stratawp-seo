@@ -8,11 +8,18 @@ Stable tag: 4.18.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-AI-powered SEO for WordPress: site-aware content generation, technical SEO, schema, analytics, AI-crawler/AEO optimization, and keyword tracking.
+AI-powered SEO for WordPress: site-aware content generation, a full technical SEO suite, AI visibility & AEO optimization, and an automation layer with budgets, digests, and decay alerts.
 
 == Description ==
 
-StrataWP SEO is an AI-powered content generation and technical SEO plugin for WordPress. It analyzes your existing site content, then generates SEO-optimized blog posts with internal linking, FAQ schema, and featured images — on autopilot or on demand.
+StrataWP SEO is four products in one plugin:
+
+1. **An AI content engine** — site-aware blog posts (Anthropic, OpenAI, Google, xAI) with internal linking, FAQ schema, images, voice profiles, and a review-first Auto-Optimize loop.
+2. **An AI visibility & AEO layer** — the differentiator: AEO scoring with a live question-coverage checklist, robots.txt + llms.txt management for 15 AI crawlers, and analytics that prove the loop — which AI bots crawl you, which AI assistants send visitors, and whether ChatGPT, Claude, Gemini, and Grok actually cite you.
+3. **A complete technical SEO suite** — sitemaps, redirects, a unified schema.org @graph with author E-E-A-T, meta editor, a 10-module audit, a site crawler with one-click fixes, cannibalization detection, verified search-bot analytics, Local SEO, Image SEO, and Yoast/Rank Math migration.
+4. **An automation & insight layer** — a monthly AI budget guardian, a white-label email digest, a content decay watchdog with a refresh queue, a data-driven topic autopilot, and Machine Access (WP Abilities API) for AI agents.
+
+It can replace Yoast/RankMath/AIOSEO outright, or coexist with them (schema and meta output auto-disable when those plugins are detected).
 
 = AI Content Generation =
 
@@ -42,6 +49,24 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 * **Content calendar** — visual overview of scheduled and generated content
 * **Bulk generation** — generate up to 5 posts in one click
 
+= Autopilot Guardian (v4.11) =
+
+* **Monthly AI budget cap** (USD) with an 80% warning notice and a hard stop at the cap
+* **Transient-error retry** with exponential backoff — one failed generation no longer abandons a scheduled batch
+* **Failed-topic auto-requeue** (max 3 attempts) and a dashboard autopilot status tile (state, last-run health, spend vs cap)
+
+= Topic Autopilot (v4.19) =
+
+* **Weekly scout** mines Search Console question queries, striking-distance keywords, and orphan pages into ranked topic proposals with a plain-English rationale
+* **Approve or dismiss on the Content Calendar** — proposals arrive as a distinct "proposed" status
+* **Optional auto-promote** queues the top proposal automatically each week
+
+= Onboarding Wizard (v4.13) =
+
+* **5-minute guided setup** — migrate from Yoast/Rank Math, validate your AI key with a live test, AI-suggest your site description, run the first audit, and generate a preview post
+* **Dashboard setup checklist** persists until every step is complete (dismissible)
+* **Test & Save** — AI provider keys can be validated from the UI
+
 = AI Auto-Optimize (v4.1) =
 
 * **Re-score all published posts** — chunked scanning (10 posts per batch) with live progress; works on busy sites without hitting PHP timeouts
@@ -60,13 +85,50 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 * **Dashboard tile** — average AEO score and % of posts above threshold
 * **Deep-linked from AI Bot Analytics** — jump from any AEO gap-report row straight into the optimizer
 
+= Question Coverage Engine (v4.17) =
+
+* **Live Coverage dimension** — one AI call per scored post builds a query fan-out checklist (the sub-questions an answer engine would decompose your topic into, marked answered / partial / missing)
+* **Search Console question mining** — weekly cron finds real question queries your pages get impressions for but don't answer
+* **Q&A proposal inserts** — unanswered questions feed directly into AEO proposals and queue as topic suggestions
+
+= AI Citation Tracker (v4.16) =
+
+* **Search-grounded citation checks** — asks ChatGPT, Claude, Gemini, and Grok your tracked prompts (bring your own keys) and records whether your site is cited
+* **Per-engine state badges** (cited / lost / never / mixed), share-of-voice bars vs competitors, and a cited-domains breakdown
+* **Seed prompts from keywords/GSC**, a monthly call cap (default 200), a dashboard tile, and lost-citation context in the AEO editor panel
+
+= AI Referral Attribution & Visibility Funnel (v4.14–v4.15) =
+
+* **AI referral attribution** — human visits from ChatGPT, Perplexity, Claude, Gemini, Copilot and others classified at capture, with an AI Referrals analytics section (engine trends, landing posts, engagement vs organic)
+* **Crawl → visit funnel** — AI-bot crawl data joined to AI referral visits per post, with crawl-recency/AI-visit columns on the AEO queue and a dashboard funnel tile with stage conversion rates
+* **AEO-score sorting on the crawl-gap report** — high-quality-but-uncrawled posts surface first
+
 = Technical SEO Audit =
 
-* **8 audit modules** — Canonical URLs, XML Sitemap, Open Graph, Twitter Cards, Robots.txt, Meta Robots, Image SEO, Page Speed Hints
+* **10 audit modules** — Canonical URLs, XML Sitemap, Open Graph, Twitter Cards, Robots.txt, Meta Robots, Image SEO, Page Speed Hints, Schema Validation (live-page JSON-LD checks), and Site Crawl results
 * **Auto-fix** — one-click fixes for canonical tags, OG/Twitter meta, sitemap generation
 * **Scheduled audits** — daily, weekly, or monthly automated checks
 * **Dashboard widget** — site health score at a glance
 * **CSV export** — download audit results for reporting
+
+= Site Crawler (v4.19) =
+
+* **Politeness-capped self-crawl** — page caps and a configurable delay, run in chunks from the admin, with an optional weekly re-crawl
+* **8 issue types** — broken links, redirect chains/loops, canonical mismatches, missing/duplicate H1s, mixed content, and noindexed URLs still in the sitemap
+* **One-click fixes** — create a redirect, exclude from sitemap, or ignore an external host right from the issue row
+
+= Keyword Cannibalization Detector (v4.19) =
+
+* **GSC-driven findings** — queries where multiple posts split impressions and clicks, with a winner/loser and estimated impact per finding
+* **Three resolutions** — Consolidate (undoable 301 to the winner), Differentiate, or Canonicalize — plus dismiss
+* **Dashboard tile** with the open-findings count
+
+= Verified Crawler Analytics (v4.19) =
+
+* **Search-bot tracking** — Googlebot, bingbot, Applebot, YandexBot, DuckDuckBot tracked alongside the AI bots (analytics only — never written to robots.txt or llms.txt)
+* **Spoof detection** — every hit verified against published IP ranges (CIDR, cron-refreshed) with a reverse-DNS fallback
+* **Opt-in, fail-open 403 enforcement** for verified-spoofed bots — unverifiable hits always pass through, so the real Googlebot can never be blocked
+* **Crawl budget report** — crawl activity by post type (30d) on the Analytics page, with daily reconciliation notices
 
 = Search Appearance =
 
@@ -112,10 +174,11 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 
 = Schema / Structured Data =
 
+* **Unified @graph (v4.19)** — Organization, WebSite, WebPage, Article, BreadcrumbList, Person, and ProfilePage emitted as one interlinked JSON-LD block with stable @ids
+* **Author E-E-A-T entities (v4.19)** — per-user profile fields (job title, credentials, sameAs links) feed Person schema and ProfilePage on author archives
 * **Article schema** — automatic JSON-LD on all posts (Article, BlogPosting, or NewsArticle)
-* **Breadcrumb schema** — BreadcrumbList on posts, pages, archives, and author pages
 * **WebSite schema** — with optional SearchAction for Google sitelinks searchbox
-* **Organization/Person schema** — configurable entity type with logo and social profiles
+* **Schema validation audit module** — samples live pages and checks required fields, orphan references, and date consistency
 * **Conflict detection** — auto-disables when Yoast SEO, RankMath, or All in One SEO is active
 
 = Frontend Breadcrumbs =
@@ -176,6 +239,8 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 * **Views column** — sortable "Views (30d)" column in the posts list table
 * **Configurable retention** — keep data for 30, 90, 180, or 365 days
 * **AI Bot Analytics** — server-side tracking of GPTBot, ClaudeBot, PerplexityBot, Google-Extended and 11 more AI crawlers, with per-bot hit counts, top crawled pages, AEO gap report (posts no AI engine has fetched), and 404 monitoring
+* **AI Referrals** — visits from AI assistants classified at capture, with engine trends and engagement vs organic
+* **Crawl budget report** — verified search-bot activity by post type (30d)
 
 = Keyword Research & Tracking =
 
@@ -204,6 +269,23 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 * **Dashboard widget** — live count + 3 most-recently-verified backlinks with status pills
 * No paid backlink index required — tracks the list you give it
 
+= White-Label Email Digest (v4.12) =
+
+* **Daily / weekly / monthly** report of generations, failures, keyword movers, backlinks, competitors, AI-bot trends, and AI spend — led by a needs-attention triage section
+* **Agency branding** (logo, accent color, footer), multiple recipients, test-send button, optional AI executive summary
+
+= Content Decay Watchdog & Refresh Queue (v4.18) =
+
+* **Weekly Search Console scan** compares rolling 28-day windows per post and flags decays past your threshold (default 20%) with a heuristic cause (position / demand / CTR drop, staleness)
+* **Metric + AEO-score history with sparklines**, minimum-impressions floor, cooldowns, and an optional email alert
+* **Refresh Queue** ranked by traffic at risk, with one-click AI refresh proposals through the reviewed AEO apply/undo flow
+
+= Machine Access (v4.19) =
+
+* **13 governed abilities** (queue topics, generate posts, run audits, AEO scan/propose/apply/undo, manage redirects, read stats) registered with the WP Abilities API (WordPress 6.9+) and exposed via REST
+* **Write abilities are off by default** — per-ability toggles plus an activity log of every call
+* **Standard WordPress auth** — application passwords work out of the box for external agents
+
 = Migration Tool (v4.4) =
 
 * **Import from Yoast SEO, Yoast SEO Premium, Rank Math, and Rank Math Pro** — source plugins auto-detected, with post counts shown before you start
@@ -223,9 +305,9 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 
 = Developer Features =
 
-* **45+ filters and actions** — extend every part of the generation pipeline
+* **50+ filters and actions** — extend every part of the generation pipeline
 * **WP-CLI commands** — generate, analyze, status, queue, bot-stats, and migrate-qapage from the terminal
-* **REST API** — programmatic access to generation and audit features
+* **REST API** — programmatic access to generation, audit, AEO, bot analytics, and abilities endpoints
 * **Cost tracking** — monitor token usage and estimated API costs
 
 == Installation ==
@@ -241,6 +323,19 @@ StrataWP SEO is an AI-powered content generation and technical SEO plugin for Wo
 * WordPress 6.0 or higher
 * PHP 8.0 or higher
 * An API key from at least one AI provider (Anthropic, OpenAI, Google, or xAI)
+
+== Screenshots ==
+
+1. Dashboard — KPI tiles, autopilot status, AI visibility funnel, citations, and module grid
+2. Setup Wizard — guided 5-minute onboarding with live API key validation
+3. Generate Content — the AI content generator with templates and voice profiles
+4. AEO Optimize — 4-dimension AI-citeability scoring with reviewed AI proposals
+5. Analytics — cookie-free on-site stats, GSC, AI crawlers, AI referrals, and crawl budget
+6. Keywords — research, rank tracking, and the AI citation tracker card
+7. Refresh Queue — decayed posts ranked by traffic at risk, with sparklines
+8. Site Crawl — self-crawl issue queue with one-click fixes
+9. Keyword Cannibalization — split-query findings with consolidate/differentiate/canonicalize
+10. Machine Access — ability toggles and activity log for AI agents
 
 == Frequently Asked Questions ==
 
@@ -287,6 +382,18 @@ Yes. The built-in analytics tracker is cookie-free and does not use any external
 = Do I need Google Search Console credentials? =
 
 No. GSC integration is optional. The on-site analytics works entirely without any external services. Add Google OAuth credentials only if you want search clicks, impressions, and ranking data.
+
+= Will the AI spend money without me knowing? =
+
+No — spend is bounded in several places. The monthly AI budget cap (Settings → Schedule) hard-stops generation at your limit with a warning at 80%; the AI citation tracker has its own monthly call cap (default 200); the AEO Coverage dimension is a single toggle if you want zero-cost scoring; and Cost Tracking records every call per provider and model.
+
+= Does crawler enforcement risk blocking Google? =
+
+It's designed not to. Enforcement is off by default, per-bot opt-in, and fail-open: a 403 is only sent when a hit is positively verified as spoofed against the engine's own published IP ranges (with a reverse-DNS fallback). If verification can't reach a verdict, the request always passes through — the real Googlebot can never be blocked by a stale IP list.
+
+= Do I need all the API keys? =
+
+No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything AI-powered. Optional extras: a free stock-photo key or Gemini for images, Google OAuth credentials for Search Console features (rank tracking, decay watchdog, cannibalization, question mining), and per-engine keys for the AI citation tracker — it only checks the engines you've configured.
 
 = What happens to my data if I delete the plugin? =
 
