@@ -176,6 +176,31 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<?php esc_html_e( 'Use swps_breadcrumbs() in your theme template or the [swps_breadcrumbs] shortcode to display breadcrumbs.', 'stratawp-seo' ); ?>
 		</p>
 
+		<h2><?php esc_html_e( 'SEO Meta Box', 'stratawp-seo' ); ?></h2>
+		<table class="form-table">
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Show on post types', 'stratawp-seo' ); ?></th>
+				<td>
+					<?php
+					$meta_types = (array) get_option( 'swps_meta_editor_post_types', array( 'post', 'page' ) );
+					$all_types  = get_post_types( array( 'public' => true ), 'objects' );
+					foreach ( $all_types as $pt ) :
+						if ( 'attachment' === $pt->name ) {
+							continue;
+						}
+						?>
+						<label style="display: block; margin-bottom: 6px;">
+							<input type="checkbox" name="swps_meta_editor_post_types[]"
+								value="<?php echo esc_attr( $pt->name ); ?>"
+								<?php checked( in_array( $pt->name, $meta_types, true ) ); ?>>
+							<?php echo esc_html( $pt->labels->name ); ?>
+						</label>
+					<?php endforeach; ?>
+					<p class="description"><?php esc_html_e( 'Add the StrataWP SEO meta box (Meta Title, Description, Focus Words, social & sitemap controls) to these post types. Enable Products here to use it with WooCommerce.', 'stratawp-seo' ); ?></p>
+				</td>
+			</tr>
+		</table>
+
 		<h2><?php esc_html_e( 'Post List SEO Column', 'stratawp-seo' ); ?></h2>
 		<table class="form-table">
 			<tr>

@@ -556,10 +556,27 @@ class SWPS_Meta_Editor {
 	 */
 	private function get_enabled_post_types(): array {
 		$saved = get_option( 'swps_meta_editor_post_types', '' );
-		if ( ! empty( $saved ) ) {
-			return array_map( 'sanitize_text_field', explode( ',', $saved ) );
+
+		if ( is_array( $saved ) && ! empty( $saved ) ) {
+			// New storage format (settings UI): array of post-type slugs.
+			$types = array_map( 'sanitize_text_field', $saved );
+		} elseif ( is_string( $saved ) && '' !== $saved ) {
+			// Legacy storage format: comma-separated string.
+			$types = array_map( 'sanitize_text_field', explode( ',', $saved ) );
+		} else {
+			$types = array( 'post', 'page' );
 		}
-		return array( 'post', 'page' );
+
+		/**
+		 * Filters the post types that get the StrataWP SEO meta box
+		 * (Meta Title, Description, Focus Words, social, sitemap controls).
+		 *
+		 * Useful for enabling the editor on custom post types — e.g.
+		 * WooCommerce `product` — without touching the settings UI.
+		 *
+		 * @param string[] $types Post-type slugs.
+		 */
+		return (array) apply_filters( 'swps_meta_editor_post_types', $types );
 	}
 
 	/**

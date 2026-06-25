@@ -4,7 +4,7 @@ Tags: seo, ai, content generator, analytics, schema
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 4.19.0
+Stable tag: 4.20.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -400,6 +400,10 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.20.0 =
+* New: Choose which post types get the SEO meta box (Meta Title, Description, Focus Words, social & sitemap controls) under Search Appearance → SEO Meta Box. Enable it on WooCommerce Products or any custom post type — previously it was limited to Posts and Pages.
+* New: `swps_meta_editor_post_types` filter for developers to enable the meta box on custom post types programmatically.
 
 = 4.19.0 =
 * New: Verified crawler analytics — search-engine bot tracking, CIDR/rDNS spoof detection, "blocked bot still crawling" alerts, opt-in fail-open 403 enforcement, and a crawl-budget report.
