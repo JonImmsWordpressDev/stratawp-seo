@@ -1195,6 +1195,18 @@ class SWPS_Settings {
 				'default'           => 300,
 			)
 		);
+		// Post types that get the SEO meta box (Meta Title, Focus Words, etc.).
+		// Lets users enable the editor on custom post types such as WooCommerce products.
+		register_setting(
+			'swps_search_appearance',
+			'swps_meta_editor_post_types',
+			array(
+				'sanitize_callback' => function ( $value ) {
+					return is_array( $value ) ? array_map( 'sanitize_text_field', $value ) : array( 'post', 'page' );
+				},
+				'default'           => array( 'post', 'page' ),
+			)
+		);
 
 		// Internal Links settings.
 		register_setting(
