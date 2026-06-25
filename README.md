@@ -21,7 +21,7 @@
 
 **AI-powered SEO that knows your WordPress site — and knows how AI search works.** Generate site-aware blog posts, run your technical SEO (sitemaps, redirects, schema `@graph`, audits, a full site crawler), get *cited* by AI answer engines (AEO scoring, llms.txt, AI citation tracking, AI referral analytics), and let the automation layer watch your budget, your decaying posts, and your topic pipeline while you sleep.
 
-[![Version](https://img.shields.io/badge/version-4.19.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.20.0-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -1711,6 +1711,10 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 ---
 
 ## Changelog
+
+### v4.20.0 — June 2026
+- **SEO meta box on any post type** — choose which post types show the StrataWP SEO meta box (Meta Title, Description, Focus Words, social & sitemap controls) under *Search Appearance → SEO Meta Box*. Enable it on WooCommerce Products or any custom post type; previously it was limited to Posts and Pages
+- **Developer filter** — `swps_meta_editor_post_types` to enable the meta box on custom post types programmatically
 
 ### v4.19.0 — June 2026
 - **Verified crawler analytics** — search-bot tracking with CIDR/rDNS spoof detection, reconciliation alerts, opt-in fail-open 403 enforcement, and a crawl-budget report
