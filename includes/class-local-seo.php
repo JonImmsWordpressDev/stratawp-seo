@@ -76,9 +76,9 @@ class SWPS_Local_SEO {
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 
-		if ( ! is_admin() && $this->is_enabled() && ! $this->other_seo_plugin_active() ) {
-			add_action( 'wp_head', array( $this, 'output_schema' ), 2 );
-		}
+		// The LocalBusiness node is absorbed into the main SWPS_Schema @graph (with an
+		// @id and a founder link to the site entity) via SWPS_Schema::add_local_business_node(),
+		// rather than emitted as a disconnected standalone <script> block.
 	}
 
 	public function register_menu(): void {
@@ -125,7 +125,7 @@ class SWPS_Local_SEO {
 		);
 	}
 
-	public function defaults(): array {
+	public static function defaults(): array {
 		return array(
 			'enabled'       => 0,
 			'business_type' => 'LocalBusiness',
@@ -262,18 +262,44 @@ class SWPS_Local_SEO {
 	}
 
 	public function build_schema(): array {
-		$d = $this->get();
+		$node = self::graph_node();
+		if ( empty( $node ) ) {
+			return array();
+		}
+		return array_merge( array( '@context' => 'https://schema.org' ), $node );
+	}
+
+	/**
+	 * Build the LocalBusiness node for embedding in the main schema @graph.
+	 *
+	 * Carries a stable @id (#localbusiness) and a link to the site's
+	 * Person/Organization entity, so the business is connected within the graph
+	 * instead of floating as a disconnected node. No @context — the @graph
+	 * envelope carries it. Empty array when not configured (no name set).
+	 *
+	 * @return array
+	 */
+	public static function graph_node(): array {
+		$stored = get_option( self::OPTION_KEY, array() );
+		$d      = wp_parse_args( is_array( $stored ) ? $stored : array(), self::defaults() );
 
 		if ( '' === trim( (string) $d['name'] ) ) {
 			return array();
 		}
 
 		$schema = array(
-			'@context' => 'https://schema.org',
-			'@type'    => $d['business_type'] ?: 'LocalBusiness',
-			'name'     => $d['name'],
-			'url'      => home_url( '/' ),
+			'@type' => $d['business_type'] ?: 'LocalBusiness',
+			'@id'   => SWPS_Schema_Graph::local_business_id(),
+			'name'  => $d['name'],
+			'url'   => home_url( '/' ),
 		);
+
+		// Connect the business to the site entity so the node is linked in the graph.
+		if ( 'Person' === get_option( 'swps_schema_entity_type', 'Organization' ) ) {
+			$schema['founder'] = array( '@id' => SWPS_Schema_Graph::org_id() );
+		} else {
+			$schema['parentOrganization'] = array( '@id' => SWPS_Schema_Graph::org_id() );
+		}
 
 		if ( '' !== trim( $d['phone'] ) ) {
 			$schema['telephone'] = $d['phone'];

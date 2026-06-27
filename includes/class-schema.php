@@ -108,6 +108,11 @@ class SWPS_Schema {
 			$this->add_website_node( $graph );
 		}
 
+		// LocalBusiness absorbed into the graph on the homepage when Local SEO is on.
+		if ( is_front_page() || is_home() ) {
+			$this->add_local_business_node( $graph );
+		}
+
 		// WebPage node on every non-front-page so Article.mainEntityOfPage resolves.
 		if ( ! is_front_page() ) {
 			$this->add_webpage_node( $graph );
@@ -322,6 +327,37 @@ class SWPS_Schema {
 		}
 
 		$graph->add_node( $node );
+	}
+
+	/**
+	 * Absorb the Local SEO LocalBusiness node into the graph (homepage only).
+	 *
+	 * The node carries a stable @id and a link to the site entity, so it is
+	 * connected within the @graph rather than emitted as a disconnected block.
+	 *
+	 * @param SWPS_Schema_Graph $graph Target graph.
+	 */
+	private function add_local_business_node( SWPS_Schema_Graph $graph ): void {
+		if ( ! class_exists( 'SWPS_Local_SEO' ) ) {
+			return;
+		}
+
+		$opts = get_option( 'swps_local_seo', array() );
+		if ( empty( $opts['enabled'] ) ) {
+			return;
+		}
+
+		/** This filter mirrors the legacy standalone emitter's context gate. */
+		if ( ! (bool) apply_filters( 'swps_local_seo_emit', true ) ) {
+			return;
+		}
+
+		$node = SWPS_Local_SEO::graph_node();
+		if ( ! empty( $node ) ) {
+			$graph->add_node(
+				SWPS_Schema_Graph::normalize_node( $node, SWPS_Schema_Graph::local_business_id() )
+			);
+		}
 	}
 
 	/**
