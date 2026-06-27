@@ -134,6 +134,15 @@ class SWPS_Schema_Graph {
 	}
 
 	/**
+	 * Build the LocalBusiness @id for this site.
+	 *
+	 * @return string Fragment identifier.
+	 */
+	public static function local_business_id(): string {
+		return home_url( '/#localbusiness' );
+	}
+
+	/**
 	 * Build the WebPage @id for a URL.
 	 *
 	 * @param string $url Canonical URL.
