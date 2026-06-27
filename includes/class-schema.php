@@ -373,12 +373,17 @@ class SWPS_Schema {
 		// swps_schema_article filter consumers can still read/modify author data.
 		if ( $author ) {
 			$node['author'] = $this->build_person_node( $author );
-			// Also emit a standalone Person node in the graph.
-			$person_node = array_merge(
-				array( '@id' => SWPS_Schema_Graph::person_id( $author->ID ) ),
-				$node['author']
-			);
-			$graph->add_node( $person_node );
+			// Organization-entity sites get a standalone author Person node. On
+			// personal-brand (Person) sites the site entity (#person) IS the author,
+			// so we skip the duplicate node and point author at the main entity after
+			// the filter runs — keeping one coherent Person across the whole graph.
+			if ( 'Person' !== get_option( 'swps_schema_entity_type', 'Organization' ) ) {
+				$person_node = array_merge(
+					array( '@id' => SWPS_Schema_Graph::person_id( $author->ID ) ),
+					$node['author']
+				);
+				$graph->add_node( $person_node );
+			}
 		}
 
 		$thumb_id = get_post_thumbnail_id( $post );
@@ -409,10 +414,15 @@ class SWPS_Schema {
 			SWPS_Schema_Graph::article_id( $permalink )
 		);
 
-		// After filter: replace inline author object with @id reference so
-		// the graph stays interlinked. The separate Person node was already added.
+		// After filter: replace inline author object with an @id reference so the
+		// graph stays interlinked. On personal-brand (Person) sites that @id is the
+		// single #person entity; on Organization sites it's the standalone author node.
 		if ( $author && isset( $node['author'] ) && is_array( $node['author'] ) ) {
-			$node['author'] = array( '@id' => SWPS_Schema_Graph::person_id( $author->ID ) );
+			$node['author'] = array(
+				'@id' => 'Person' === get_option( 'swps_schema_entity_type', 'Organization' )
+					? SWPS_Schema_Graph::org_id()
+					: SWPS_Schema_Graph::person_id( $author->ID ),
+			);
 		}
 
 		$graph->add_node( $node );
