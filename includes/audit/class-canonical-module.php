@@ -93,8 +93,19 @@ class SWPS_Canonical_Module extends SWPS_Audit_Module {
 			return;
 		}
 
+		// Defer to the Meta Editor when a per-post canonical override exists — it
+		// emits its own canonical (and removes the core tag) at priority 2.
+		$post_id = get_the_ID();
+		if ( $post_id && get_post_meta( $post_id, '_swps_canonical_url', true ) ) {
+			return;
+		}
+
 		$url = wp_get_canonical_url();
 		if ( $url ) {
+			// This module is the single canonical owner on singular views; suppress
+			// WordPress core's default rel_canonical (priority 10) so the page does
+			// not render two <link rel="canonical"> tags.
+			remove_action( 'wp_head', 'rel_canonical' );
 			printf( '<link rel="canonical" href="%s" />' . "\n", esc_url( $url ) );
 		}
 	}
