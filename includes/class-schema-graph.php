@@ -111,12 +111,17 @@ class SWPS_Schema_Graph {
 	}
 
 	/**
-	 * Build the Organization @id for this site.
+	 * Build the main-entity @id for this site.
+	 *
+	 * On personal-brand sites (entity type Person) the fragment is #person so the
+	 * node's @id and @type stay aligned; otherwise #organization. All publisher /
+	 * author references resolve through this method, so they remain consistent.
 	 *
 	 * @return string Fragment identifier.
 	 */
 	public static function org_id(): string {
-		return home_url( '/#organization' );
+		$type = get_option( 'swps_schema_entity_type', 'Organization' );
+		return home_url( 'Person' === $type ? '/#person' : '/#organization' );
 	}
 
 	/**
