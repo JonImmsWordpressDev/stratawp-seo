@@ -1,14 +1,14 @@
 === StrataWP SEO ===
 Contributors: jonimms
-Tags: seo, ai, content generator, analytics, schema
+Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
-Tested up to: 6.7
+Tested up to: 6.8
 Requires PHP: 8.0
 Stable tag: 4.20.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-AI-powered SEO for WordPress: site-aware content generation, a full technical SEO suite, AI visibility & AEO optimization, and an automation layer with budgets, digests, and decay alerts.
+AI content generation, a full technical SEO suite, AEO & AI-visibility optimization, and automation with budgets, digests, and decay alerts.
 
 == Description ==
 
@@ -310,6 +310,27 @@ It can replace Yoast/RankMath/AIOSEO outright, or coexist with them (schema and 
 * **REST API** — programmatic access to generation, audit, AEO, bot analytics, and abilities endpoints
 * **Cost tracking** — monitor token usage and estimated API costs
 
+= Third-Party Services =
+
+StrataWP SEO connects to external services **only when you configure them**, always with your own API keys. Nothing is sent anywhere by default, and the on-site analytics and AI-crawler logging run entirely on your own server (no external service, no cookies, no IP storage).
+
+**AI providers — content generation, AEO proposals, and citation checks.** When you generate or optimize content, the plugin sends your prompt and the relevant post/site content to the AI provider you select, using your key:
+
+* Anthropic (Claude) — terms: https://www.anthropic.com/legal/commercial-terms · privacy: https://www.anthropic.com/legal/privacy
+* OpenAI (GPT) — terms: https://openai.com/policies/terms-of-use · privacy: https://openai.com/policies/privacy-policy
+* Google (Gemini) — terms: https://ai.google.dev/gemini-api/terms · privacy: https://policies.google.com/privacy
+* xAI (Grok) — terms: https://x.ai/legal/terms-of-service · privacy: https://x.ai/legal/privacy-policy
+
+**AI citation tracker (optional).** If enabled, the plugin queries the AI engines you choose (ChatGPT, Claude, Gemini, Grok) with your tracked prompts to check whether your site is cited. Uses your keys; same terms as above.
+
+**Stock-image providers (optional).** When you fetch featured or in-content images, your search query is sent to the provider you choose:
+
+* Unsplash — terms: https://unsplash.com/terms · privacy: https://unsplash.com/privacy
+* Pexels — terms: https://www.pexels.com/terms-of-service/ · privacy: https://www.pexels.com/privacy-policy/
+* Pixabay — terms: https://pixabay.com/service/terms/ · privacy: https://pixabay.com/service/privacy/
+
+**Google Search Console (optional).** If you connect Google OAuth, the plugin reads your Search Console performance data (clicks, impressions, queries, positions) to power rank tracking, the decay watchdog, cannibalization detection, and question mining — terms: https://developers.google.com/terms · privacy: https://policies.google.com/privacy
+
 == Installation ==
 
 1. Upload the `stratawp-seo` folder to `/wp-content/plugins/`
@@ -400,6 +421,22 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.20.5 =
+* Fixed: homepage og:type is now "website" (was "article"); og:image and the Twitter image fall back to the site logo/icon so image-less pages get a proper social card (Twitter card upgrades to summary_large_image automatically).
+* New: llms.txt discovery `<link>` in `<head>`, and a `/llms-full.txt` endpoint (the llms.txt index plus full plain-text of the front page, pages, and recent posts for AI systems).
+
+= 4.20.4 =
+* Improved: the LocalBusiness node is now absorbed into the main schema @graph with a stable @id and a link to the site entity, instead of a disconnected standalone block.
+
+= 4.20.3 =
+* Fixed: on personal-brand (Person) sites, Article.author now references the single site Person entity instead of emitting a duplicate Person node.
+
+= 4.20.2 =
+* Fixed: Person-entity sites now emit @id=#person (was #organization), keeping @type and @id aligned for correct entity resolution.
+
+= 4.20.1 =
+* Fixed: duplicate rel=canonical on singular views — the canonical module now removes WordPress core's default canonical so only one is output.
 
 = 4.20.0 =
 * New: Choose which post types get the SEO meta box (Meta Title, Description, Focus Words, social & sitemap controls) under Search Appearance → SEO Meta Box. Enable it on WooCommerce Products or any custom post type — previously it was limited to Posts and Pages.
