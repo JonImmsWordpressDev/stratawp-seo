@@ -4,6 +4,34 @@ $has_niche   = ! empty( get_option( 'swps_site_niche' ) );
 $schedule    = SWPS_Cron::get_schedule_info();
 $cost_stats  = stratawp_seo()->cost_tracker->get_monthly_stats();
 $templates   = SWPS_Templates::get_options();
+
+// "What happens when you generate" summary — surfaces the otherwise-hidden
+// settings (model, where it lands, length, images, style) so users aren't
+// generating blind. See issue #74.
+$gen_provider_slug = (string) get_option( 'swps_ai_provider', 'anthropic' );
+$gen_provider_name = SWPS_Provider_Factory::create_ai_provider()->get_name();
+$gen_model_id      = (string) get_option( 'swps_model', '' );
+$gen_models        = SWPS_Provider_Factory::get_models_for_provider( $gen_provider_slug );
+$gen_model_label   = '' !== $gen_model_id ? ( $gen_models[ $gen_model_id ] ?? $gen_model_id ) : __( 'Provider default', 'stratawp-seo' );
+$gen_status        = (string) get_option( 'swps_post_status', 'draft' );
+$gen_status_labels = array(
+	'draft'   => __( 'Saved as a draft for your review — not published', 'stratawp-seo' ),
+	'pending' => __( 'Saved as Pending Review for your approval', 'stratawp-seo' ),
+	'publish' => __( 'Published immediately (live on your site)', 'stratawp-seo' ),
+);
+$gen_status_label  = $gen_status_labels[ $gen_status ] ?? ucfirst( $gen_status );
+$gen_min_words     = (int) get_option( 'swps_word_count_min', 1200 );
+$gen_max_words     = (int) get_option( 'swps_word_count_max', 2000 );
+$gen_images_on     = (bool) get_option( 'swps_featured_images', false );
+$gen_tone          = (string) get_option( 'swps_tone', 'professional' );
+$gen_style         = trim( (string) get_option( 'swps_writing_style', '' ) );
+// A custom writing style can be a long paragraph; show only a short preview so
+// the summary stays compact (the full style still applies during generation).
+$gen_style_preview = '' !== $gen_style ? wp_trim_words( $gen_style, 16, '…' ) : '';
+$gen_tone_label    = '' !== $gen_style_preview
+	? ucfirst( $gen_tone ) . ' — ' . $gen_style_preview
+	: ucfirst( $gen_tone );
+$gen_settings_url  = admin_url( 'admin.php?page=swps-settings' );
 ?>
 <div class="wrap swps-generate-wrap">
 	<?php
@@ -63,11 +91,72 @@ $templates   = SWPS_Templates::get_options();
 			<!-- Rate limit indicator -->
 			<div id="swps-rate-limit" class="swps-rate-limit" style="display: none;"></div>
 
+			<!-- "What happens when you generate" summary (issue #74) -->
+			<div class="swps-gen-summary">
+				<p class="swps-gen-summary-title">
+					<span class="dashicons dashicons-info-outline"></span>
+					<?php esc_html_e( 'What happens when you generate', 'stratawp-seo' ); ?>
+				</p>
+				<table class="swps-info-table">
+					<tr>
+						<td><?php esc_html_e( 'Written by:', 'stratawp-seo' ); ?></td>
+						<td><?php echo esc_html( $gen_provider_name . ' — ' . $gen_model_label ); ?></td>
+					</tr>
+					<tr>
+						<td><?php esc_html_e( 'After writing:', 'stratawp-seo' ); ?></td>
+						<td><?php echo esc_html( $gen_status_label ); ?></td>
+					</tr>
+					<tr>
+						<td><?php esc_html_e( 'Length:', 'stratawp-seo' ); ?></td>
+						<td>
+						<?php
+						echo esc_html(
+							sprintf(
+								/* translators: 1: minimum word count, 2: maximum word count. */
+								__( '~%1$s–%2$s words', 'stratawp-seo' ),
+								number_format_i18n( $gen_min_words ),
+								number_format_i18n( $gen_max_words )
+							)
+						);
+						?>
+						</td>
+					</tr>
+					<tr>
+						<td><?php esc_html_e( 'Featured image:', 'stratawp-seo' ); ?></td>
+						<td><?php echo $gen_images_on ? esc_html__( 'Added automatically', 'stratawp-seo' ) : esc_html__( 'Not added', 'stratawp-seo' ); ?></td>
+					</tr>
+					<tr>
+						<td><?php esc_html_e( 'Tone / style:', 'stratawp-seo' ); ?></td>
+						<td><?php echo esc_html( $gen_tone_label ); ?></td>
+					</tr>
+					<tr>
+						<td><?php esc_html_e( 'Language:', 'stratawp-seo' ); ?></td>
+						<td><?php esc_html_e( 'English', 'stratawp-seo' ); ?></td>
+					</tr>
+				</table>
+				<p class="swps-gen-summary-foot">
+					<?php
+					printf(
+						/* translators: %s: settings page URL. */
+						wp_kses(
+							__( 'These come from your <a href="%s">content settings</a>. Generating calls your AI provider and uses API credits. <strong>Preview</strong> shows a draft without saving; <strong>Generate Post</strong> creates the post above.', 'stratawp-seo' ),
+							array(
+								'a'      => array( 'href' => array() ),
+								'strong' => array(),
+							)
+						),
+						esc_url( $gen_settings_url )
+					);
+					?>
+				</p>
+			</div>
+
 			<div class="swps-generate-actions">
 				<button
 					type="button"
 					id="swps-generate-btn"
 					class="button button-primary button-hero"
+					title="<?php esc_attr_e( 'Writes one new SEO-optimized post using the settings shown above, then saves it per your “After writing” setting. Uses API credits.', 'stratawp-seo' ); ?>"
 					<?php echo ! $has_api_key ? 'disabled' : ''; ?>
 				>
 					<span class="dashicons dashicons-edit-large" style="margin-top: 4px;"></span>
@@ -78,6 +167,7 @@ $templates   = SWPS_Templates::get_options();
 					type="button"
 					id="swps-preview-btn"
 					class="button button-secondary button-hero"
+					title="<?php esc_attr_e( 'Generates a sample article and shows it in a popup without saving anything. Uses API credits.', 'stratawp-seo' ); ?>"
 					<?php echo ! $has_api_key ? 'disabled' : ''; ?>
 				>
 					<span class="dashicons dashicons-visibility" style="margin-top: 4px;"></span>

@@ -376,3 +376,56 @@ body.swps-has-shell .swps-card h3 {
 body.swps-has-shell .swps-card-desc {
     color: var(--swps-text-muted);
 }
+
+/* admin.css's legacy :root clobbers the --swps-text alias to dark slate
+   (#1E293B). tokens.css intends --swps-text to alias the primary text colour
+   (var(--swps-text-primary)), but admin.css loads last and wins at :root — so
+   every shell element using `color: var(--swps-text)` (card/section headings,
+   the stat-tile numbers, form labels, keyword table cells, metric values, the
+   content calendar, etc.) renders dark-on-dark and looks blank until selected.
+   Restore the intended aliasing for the shell scope: `body.swps-has-shell`
+   (0,1,1) beats admin.css's `:root` (0,1,0) and stays theme-aware, so the light
+   theme still resolves to its own dark text. --swps-text is used exclusively
+   for `color:` in admin.css/calendar.css, so this only touches text; the light
+   SERP/social preview mocks hardcode their own text colours and are unaffected. */
+body.swps-has-shell {
+    --swps-text: var(--swps-text-primary);
+}
+
+/* "What happens when you generate" summary on the Generate page (issue #74). */
+body.swps-has-shell .swps-gen-summary {
+    margin: 4px 0 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius);
+    background: var(--swps-bg-surface-strong);
+}
+body.swps-has-shell .swps-gen-summary-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 8px;
+    font-weight: 600;
+    color: var(--swps-text-primary);
+}
+body.swps-has-shell .swps-gen-summary-title .dashicons {
+    color: var(--swps-accent-1);
+}
+body.swps-has-shell .swps-gen-summary .swps-info-table td:first-child {
+    color: var(--swps-text-muted);
+    white-space: nowrap;
+    width: 1%;
+    padding-right: 14px;
+}
+body.swps-has-shell .swps-gen-summary .swps-info-table td {
+    color: var(--swps-text-body);
+}
+body.swps-has-shell .swps-gen-summary-foot {
+    margin: 10px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--swps-text-muted);
+}
+body.swps-has-shell .swps-gen-summary-foot a {
+    color: var(--swps-accent-1);
+}

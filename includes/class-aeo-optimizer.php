@@ -416,7 +416,12 @@ class SWPS_AEO_Optimizer {
 			$user .= "\n\n" . __( 'This post is losing search traffic. Prioritize a freshness refresh: update outdated facts and year references cautiously - never invent statistics or data; add a brief updated note near the top; refresh the TL;DR/summary if present.', 'stratawp-seo' );
 		}
 
-		$result = $this->ai_provider->chat_json( $system, $user, 4096 );
+		// 8192 (not 4096) output budget: an AEO proposal bundles find/replace
+		// edits, structural inserts AND a schema block, which overflows a 4096
+		// cap on longer posts. When the response truncates, chat_json() returns
+		// a "hit token limit" error *after* the provider has already billed the
+		// call — so the user is charged for a failed proposal (see issue #75).
+		$result = $this->ai_provider->chat_json( $system, $user, 8192 );
 		if ( is_wp_error( $result ) ) {
 			return array( 'error' => $result->get_error_message(), 'http_status' => 500 );
 		}

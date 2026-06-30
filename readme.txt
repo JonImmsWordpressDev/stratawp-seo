@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.20.6
+Stable tag: 4.21.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,13 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.21.0 =
+* Fixed: the "Site Overview" and "Cost This Month" stat values on the Generate Content screen were rendering dark-on-dark and looked blank until you selected the text — they are now legible.
+* Fixed: AEO optimizer proposals on longer posts could fail with a token-limit error *after* your AI provider had already been billed; the proposal output budget has been raised so they complete instead of wasting credits.
+* New: AEO review now warns you when a post cannot reach your target score, so you don't re-run (and re-spend) on a post the optimizer can't push further from edits alone.
+* New: "Informational Article" content template for plain, well-organized explainer posts.
+* New: a "What happens when you generate" summary on the Generate page — shows which AI model writes the post, whether it's saved as a draft or published, the target length, whether a featured image is added, the tone/style, and the language — plus hover tooltips on the Generate and Preview buttons so you know what each does before spending credits.
 
 = 4.20.6 =
 * Changed: removed the self-hosted GitHub updater; the plugin no longer updates itself outside the official directory.
