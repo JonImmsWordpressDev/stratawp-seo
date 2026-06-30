@@ -1712,6 +1712,12 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 
 ## Changelog
 
+### v4.21.0 — June 2026
+- **Generate Content readability fix** — the *Site Overview* and *Cost This Month* stat values were rendering dark-on-dark and looked blank until selected; they're now legible on the dark theme
+- **AEO token-waste fix** — proposals on longer posts could fail with a token-limit error after the AI provider had already been billed; the proposal output budget is raised so they complete, and the review modal now warns when a post can't reach your target score so you don't re-spend re-running it
+- **Informational Article template** — a new content type for plain, well-organized explainer posts
+- **"What happens when you generate" summary** — the Generate page now shows the AI model writing the post, whether it's saved as a draft or published, target length, featured-image behavior, tone/style, and language; the Generate and Preview buttons gained tooltips explaining what each does before you spend credits
+
 ### v4.20.0 — June 2026
 - **SEO meta box on any post type** — choose which post types show the StrataWP SEO meta box (Meta Title, Description, Focus Words, social & sitemap controls) under *Search Appearance → SEO Meta Box*. Enable it on WooCommerce Products or any custom post type; previously it was limited to Posts and Pages
 - **Developer filter** — `swps_meta_editor_post_types` to enable the meta box on custom post types programmatically

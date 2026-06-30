@@ -204,6 +204,28 @@
         var proj = proposal.projected_score != null ? proposal.projected_score : '—';
         var html = '<h2>' + escapeHtml(swpsAeo.i18n.projected) + ': ' + escapeHtml(proj) + '</h2>';
 
+        // Guidance: when the proposal still lands below the user's target, tell
+        // them re-running is unlikely to help so they don't burn tokens on
+        // repeat passes (issue #75).
+        var threshold = currentThreshold();
+        var current   = allResults.find(function (r) { return r.post_id === postId; });
+        if (typeof proj === 'number' && proj < threshold) {
+            html += '<p style="margin:8px 0 16px;padding:10px 12px;border-radius:6px;' +
+                'background:rgba(249,115,22,0.12);color:#9a3412;font-size:13px;line-height:1.5;">' +
+                escapeHtml('Note: even after applying these changes, the projected score (' + proj +
+                    ') stays below your target of ' + threshold + '. This is usually the most the ' +
+                    'optimizer can add from edits alone, so running another proposal rarely helps. To ' +
+                    'score higher, expand the article manually (more depth, examples, or answers to ' +
+                    'common reader questions), then re-scan.') +
+                '</p>';
+        } else if (typeof proj === 'number' && current && proj <= current.score) {
+            html += '<p style="margin:8px 0 16px;padding:10px 12px;border-radius:6px;' +
+                'background:rgba(59,130,246,0.10);color:#1e40af;font-size:13px;line-height:1.5;">' +
+                escapeHtml('This proposal does not raise the score above its current ' + current.score +
+                    '. Applying it is optional.') +
+                '</p>';
+        }
+
         if (proposal.schema && proposal.schema.type && proposal.schema.type !== 'null') {
             var validErr = proposal.schema.validation_error;
             html += '<h3>' + escapeHtml(swpsAeo.i18n.schemaSection) + '</h3>';

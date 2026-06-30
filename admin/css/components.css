@@ -376,3 +376,53 @@ body.swps-has-shell .swps-card h3 {
 body.swps-has-shell .swps-card-desc {
     color: var(--swps-text-muted);
 }
+
+/* Stat tiles inside cards (e.g. "Site Overview", "Cost This Month" on the
+   Generate page). admin.css's legacy :root redefines --swps-text to dark
+   slate (#1E293B), which wins the cascade and renders the numbers invisible
+   on the shell's dark card surface. Re-point them at the theme-aware tokens
+   that admin.css does not clobber so the values stay legible in both themes. */
+body.swps-has-shell .swps-stat-number {
+    color: var(--swps-text-primary);
+}
+body.swps-has-shell .swps-stat-label {
+    color: var(--swps-text-muted);
+}
+
+/* "What happens when you generate" summary on the Generate page (issue #74). */
+body.swps-has-shell .swps-gen-summary {
+    margin: 4px 0 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--swps-border);
+    border-radius: var(--swps-radius);
+    background: var(--swps-bg-surface-strong);
+}
+body.swps-has-shell .swps-gen-summary-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 8px;
+    font-weight: 600;
+    color: var(--swps-text-primary);
+}
+body.swps-has-shell .swps-gen-summary-title .dashicons {
+    color: var(--swps-accent-1);
+}
+body.swps-has-shell .swps-gen-summary .swps-info-table td:first-child {
+    color: var(--swps-text-muted);
+    white-space: nowrap;
+    width: 1%;
+    padding-right: 14px;
+}
+body.swps-has-shell .swps-gen-summary .swps-info-table td {
+    color: var(--swps-text-body);
+}
+body.swps-has-shell .swps-gen-summary-foot {
+    margin: 10px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--swps-text-muted);
+}
+body.swps-has-shell .swps-gen-summary-foot a {
+    color: var(--swps-accent-1);
+}

@@ -20,37 +20,42 @@ class SWPS_Templates {
 	 */
 	public static function get_templates(): array {
 		return array(
-			'auto'       => array(
+			'auto'          => array(
 				'name'            => __( 'Auto (AI Decides)', 'stratawp-seo' ),
 				'system_modifier' => '',
 				'user_modifier'   => '',
 			),
-			'listicle'   => array(
+			'informational' => array(
+				'name'            => __( 'Informational Article', 'stratawp-seo' ),
+				'system_modifier' => "\nCONTENT FORMAT: Write this as a straightforward informational article that explains a subject clearly and thoroughly. Use descriptive H2/H3 headings, short readable paragraphs, and a logical top-to-bottom flow. No gimmicky format — just clear, well-organized explanation.",
+				'user_modifier'   => "\n- Format as a clear, informative article that explains the subject\n- Open with a concise summary of what the reader will learn\n- Use descriptive H2/H3 headings to organize topics\n- Keep paragraphs short and easy to scan\n- Cover the topic comprehensively and end with a brief conclusion",
+			),
+			'listicle'      => array(
 				'name'            => __( 'Listicle', 'stratawp-seo' ),
 				'system_modifier' => "\nCONTENT FORMAT: Write this as a numbered listicle (e.g., \"7 Ways to...\", \"10 Best...\"). Each list item should have its own H2 heading with a number, followed by 2-3 paragraphs of detail.",
 				'user_modifier'   => "\n- Format as a numbered listicle with 7-15 items\n- Each item gets its own H2 heading\n- Include a brief intro and conclusion",
 			),
-			'how-to'     => array(
+			'how-to'        => array(
 				'name'            => __( 'How-To Guide', 'stratawp-seo' ),
 				'system_modifier' => "\nCONTENT FORMAT: Write this as a step-by-step how-to guide. Use numbered steps as H2 headings (\"Step 1: ...\"). Include prerequisites, tools needed, and expected outcomes.",
 				'user_modifier'   => "\n- Format as a step-by-step how-to guide\n- Include a prerequisites/what you'll need section\n- Number each step clearly\n- Add tips and warnings where relevant\n- Include an expected results section",
 			),
-			'comparison' => array(
+			'comparison'    => array(
 				'name'            => __( 'Comparison / Vs', 'stratawp-seo' ),
 				'system_modifier' => "\nCONTENT FORMAT: Write this as a detailed comparison article. Compare 2-4 options/products/approaches side by side. Include a comparison table in HTML, pros and cons for each, and a clear recommendation.",
 				'user_modifier'   => "\n- Format as a comparison article\n- Include an HTML comparison table with key features\n- List pros and cons for each option\n- Provide a clear winner/recommendation with reasoning\n- Add a \"Who should choose what\" section",
 			),
-			'case-study' => array(
+			'case-study'    => array(
 				'name'            => __( 'Case Study', 'stratawp-seo' ),
 				'system_modifier' => "\nCONTENT FORMAT: Write this as a case study with clear sections: Challenge/Problem, Solution/Approach, Results/Outcomes, and Key Takeaways. Use specific (but realistic fictional) data points and metrics.",
 				'user_modifier'   => "\n- Format as a case study\n- Include sections: Background, Challenge, Solution, Results, Key Takeaways\n- Use specific metrics and data points (realistic examples)\n- Include quotes or testimonials (fictional but realistic)\n- End with actionable lessons readers can apply",
 			),
-			'news'       => array(
+			'news'          => array(
 				'name'            => __( 'News / Trend Analysis', 'stratawp-seo' ),
 				'system_modifier' => "\nCONTENT FORMAT: Write this as a news analysis or trend piece. Cover the who/what/when/where/why. Include expert perspectives, industry impact, and future predictions.",
 				'user_modifier'   => "\n- Format as a news/trend analysis article\n- Lead with the most important information (inverted pyramid)\n- Include industry context and background\n- Add expert perspectives and analysis\n- Discuss implications and future predictions\n- Keep a journalistic, balanced tone",
 			),
-			'tutorial'   => array(
+			'tutorial'      => array(
 				'name'            => __( 'Tutorial / Deep Dive', 'stratawp-seo' ),
 				'system_modifier' => "\nCONTENT FORMAT: Write this as an in-depth tutorial or technical deep dive. Include code examples where relevant (in <pre><code> blocks), detailed explanations, and practical examples.",
 				'user_modifier'   => "\n- Format as a detailed tutorial or deep dive\n- Include code examples in <pre><code> blocks where relevant\n- Explain concepts from basics to advanced\n- Add practical, real-world examples\n- Include troubleshooting tips and common pitfalls\n- Provide references for further learning",
