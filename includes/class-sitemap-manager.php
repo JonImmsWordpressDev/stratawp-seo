@@ -248,15 +248,28 @@ class SWPS_Sitemap_Manager {
 		echo '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">' . "\n";
 
 		// Include homepage on first page of 'page' sitemap.
+		$front_page_id = 0;
 		if ( 'page' === $post_type && 1 === $page ) {
 			printf(
 				"<url>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n  <priority>1.0</priority>\n</url>\n",
 				esc_url( home_url( '/' ) ),
 				gmdate( 'Y-m-d\TH:i:s+00:00' )
 			);
+
+			// When a static front page is set, it is emitted above as the
+			// homepage URL. Skip it in the loop below so it is not listed
+			// twice (the static front page's permalink is home_url('/')).
+			if ( 'page' === (string) get_option( 'show_on_front' ) ) {
+				$front_page_id = (int) get_option( 'page_on_front' );
+			}
 		}
 
 		foreach ( $posts as $post ) {
+			// Skip the static front page; already emitted as the homepage URL.
+			if ( $front_page_id && (int) $post->ID === $front_page_id ) {
+				continue;
+			}
+
 			// Respect exclusions.
 			if ( get_post_meta( $post->ID, '_swps_sitemap_exclude', true ) ) {
 				continue;
