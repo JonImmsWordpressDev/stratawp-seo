@@ -389,6 +389,13 @@ body.swps-has-shell .swps-stat-label {
     color: var(--swps-text-muted);
 }
 
+/* Form field labels use var(--swps-text), which admin.css's legacy :root
+   clobbers to dark slate — leaving them dark-on-dark (barely legible) on the
+   shell's dark cards. Re-point at the un-clobbered theme token. */
+body.swps-has-shell .swps-form-group label {
+    color: var(--swps-text-primary);
+}
+
 /* "What happens when you generate" summary on the Generate page (issue #74). */
 body.swps-has-shell .swps-gen-summary {
     margin: 4px 0 16px;
