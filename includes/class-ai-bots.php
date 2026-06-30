@@ -55,6 +55,7 @@ class SWPS_AI_Bots {
 	public function __construct() {
 		add_filter( 'robots_txt', array( $this, 'filter_robots_txt' ), 100, 2 );
 		add_action( 'init', array( $this, 'maybe_serve_llms_txt' ), 1 );
+		add_action( 'wp_head', array( $this, 'output_llms_discovery_link' ), 5 );
 	}
 
 	/**
@@ -160,15 +161,29 @@ class SWPS_AI_Bots {
 		}
 
 		$uri = isset( $_SERVER['REQUEST_URI'] ) ? wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ) : '';
-		if ( '/llms.txt' !== $uri ) {
+		if ( '/llms.txt' !== $uri && '/llms-full.txt' !== $uri ) {
 			return;
 		}
 
 		nocache_headers();
 		header( 'Content-Type: text/markdown; charset=utf-8' );
 		header( 'X-Robots-Tag: noindex' );
-		echo $this->generate_llms_txt(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped — markdown body
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped — markdown body
+		echo '/llms-full.txt' === $uri ? $this->generate_llms_full_txt() : $this->generate_llms_txt();
 		exit;
+	}
+
+	/**
+	 * Output the llms.txt discovery <link> in <head> so AI clients can find it.
+	 */
+	public function output_llms_discovery_link(): void {
+		if ( ! get_option( 'swps_llms_txt_enabled', 1 ) ) {
+			return;
+		}
+		printf(
+			'<link rel="alternate" type="text/plain" title="llms.txt" href="%s" />' . "\n",
+			esc_url( home_url( '/llms.txt' ) )
+		);
 	}
 
 	/**
@@ -261,6 +276,62 @@ class SWPS_AI_Bots {
 		}
 
 		return apply_filters( 'swps_llms_txt_content', $out );
+	}
+
+	/**
+	 * Build llms-full.txt: the llms.txt index followed by the full plain-text body
+	 * of the front page, top-level pages, and recent posts. Used by AI systems
+	 * (e.g. Perplexity) that prefer full prose over crawling each page.
+	 */
+	public function generate_llms_full_txt(): string {
+		$out  = $this->generate_llms_txt();
+		$out .= "\n# Full content\n\n";
+
+		$ids      = array();
+		$front_id = (int) get_option( 'page_on_front' );
+		if ( $front_id ) {
+			$ids[] = $front_id;
+		}
+
+		$pages = get_posts(
+			array(
+				'post_type'      => 'page',
+				'post_status'    => 'publish',
+				'posts_per_page' => 25,
+				'post_parent'    => 0,
+				'orderby'        => 'menu_order title',
+				'order'          => 'ASC',
+				'fields'         => 'ids',
+			)
+		);
+		$posts = get_posts(
+			array(
+				'post_type'      => 'post',
+				'post_status'    => 'publish',
+				'posts_per_page' => (int) apply_filters( 'swps_llms_full_txt_post_limit', 25 ),
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+				'fields'         => 'ids',
+			)
+		);
+
+		$all_ids = array_unique(
+			array_merge( $ids, array_map( 'intval', $pages ), array_map( 'intval', $posts ) )
+		);
+
+		foreach ( $all_ids as $id ) {
+			$post = get_post( $id );
+			if ( ! $post ) {
+				continue;
+			}
+			$title = $this->collapse_whitespace( wp_strip_all_tags( get_the_title( $post ) ) );
+			$url   = get_permalink( $post );
+			$body  = wp_strip_all_tags( strip_shortcodes( do_blocks( (string) $post->post_content ) ) );
+			$body  = trim( (string) preg_replace( "/\n{3,}/", "\n\n", (string) $body ) );
+			$out  .= "## {$title}\n{$url}\n\n{$body}\n\n";
+		}
+
+		return apply_filters( 'swps_llms_full_txt_content', $out );
 	}
 
 	/**

@@ -592,9 +592,12 @@ class SWPS_Meta_Editor {
 			?: get_the_excerpt( $post_id );
 
 		$image = get_post_meta( $post_id, '_swps_social_image', true )
-				?: get_the_post_thumbnail_url( $post_id, 'large' );
+				?: get_the_post_thumbnail_url( $post_id, 'large' )
+				?: (string) get_option( 'swps_schema_logo', '' )
+				?: (string) get_site_icon_url( 512 );
 
-		printf( '<meta property="og:type" content="article" />' . "\n" );
+		// Posts are articles; the front page and other pages are websites.
+		printf( '<meta property="og:type" content="%s" />' . "\n", esc_attr( is_singular( 'post' ) ? 'article' : 'website' ) );
 		printf( '<meta property="og:title" content="%s" />' . "\n", esc_attr( $title ) );
 		printf( '<meta property="og:description" content="%s" />' . "\n", esc_attr( $desc ) );
 		printf( '<meta property="og:url" content="%s" />' . "\n", esc_url( get_permalink( $post_id ) ) );
@@ -617,7 +620,9 @@ class SWPS_Meta_Editor {
 			?: get_the_excerpt( $post_id );
 
 		$image = get_post_meta( $post_id, '_swps_social_image', true )
-				?: get_the_post_thumbnail_url( $post_id, 'large' );
+				?: get_the_post_thumbnail_url( $post_id, 'large' )
+				?: (string) get_option( 'swps_schema_logo', '' )
+				?: (string) get_site_icon_url( 512 );
 
 		printf( '<meta name="twitter:card" content="%s" />' . "\n", $image ? 'summary_large_image' : 'summary' );
 		printf( '<meta name="twitter:title" content="%s" />' . "\n", esc_attr( $title ) );
