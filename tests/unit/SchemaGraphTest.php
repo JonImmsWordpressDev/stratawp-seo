@@ -35,6 +35,11 @@ if ( ! function_exists( 'home_url' ) ) {
 		return 'https://example.com' . $path;
 	}
 }
+if ( ! function_exists( 'get_option' ) ) {
+	function get_option( string $option, $default_value = false ) {
+		return $default_value;
+	}
+}
 if ( ! function_exists( 'get_the_title' ) ) {
 	function get_the_title(): string {
 		return 'Test Post';
