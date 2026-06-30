@@ -64,4 +64,35 @@ class SitemapUrlTest extends TestCase {
 			SWPS_Sitemap_Manager::get_sitemap_url()
 		);
 	}
+
+	/**
+	 * The legacy /swps-sitemap.xml URL must 301 to the canonical index. Its
+	 * dedicated rewrite resolves to `legacy_redirect`, but the generic
+	 * `{type}-sitemap.xml` rule can win the ordering and yield the raw prefix
+	 * `swps`. Both must be treated as the legacy redirect so the URL resolves
+	 * regardless of which rewrite rule fires first (issue: /swps-sitemap.xml
+	 * 404'd in production because the generic rule matched first).
+	 */
+	public function test_legacy_redirect_type_covers_both_resolutions(): void {
+		$this->assertTrue(
+			SWPS_Sitemap_Manager::is_legacy_redirect_type( 'legacy_redirect' ),
+			'The dedicated legacy rewrite must redirect.'
+		);
+		$this->assertTrue(
+			SWPS_Sitemap_Manager::is_legacy_redirect_type( 'swps' ),
+			'The generic rule matching swps-sitemap.xml (type "swps") must redirect too.'
+		);
+	}
+
+	/**
+	 * Real sitemap types must NOT be treated as the legacy redirect.
+	 */
+	public function test_real_sitemap_types_are_not_redirected(): void {
+		foreach ( array( 'index', 'author', 'post', 'page', 'category', 'post_tag', '' ) as $type ) {
+			$this->assertFalse(
+				SWPS_Sitemap_Manager::is_legacy_redirect_type( $type ),
+				"Type '{$type}' must not be treated as a legacy redirect."
+			);
+		}
+	}
 }

@@ -51,6 +51,23 @@ class SWPS_Sitemap_Manager {
 		return home_url( '/sitemap_index.xml' );
 	}
 
+	/**
+	 * Whether a resolved sitemap "type" is the legacy /swps-sitemap.xml URL
+	 * that should 301 to the canonical index.
+	 *
+	 * The dedicated rewrite maps `swps-sitemap.xml` to `legacy_redirect`, but
+	 * the generic `{type}-sitemap(\d*).xml` rule matches the same URL and can
+	 * win the ordering, yielding the raw prefix `swps` instead. Treating both
+	 * as the legacy redirect makes /swps-sitemap.xml resolve regardless of
+	 * which rewrite rule fires first (no public post type/taxonomy is named
+	 * `swps`, so there is nothing legitimate to shadow).
+	 *
+	 * @param string $type The resolved swps_sitemap query var.
+	 */
+	public static function is_legacy_redirect_type( string $type ): bool {
+		return 'legacy_redirect' === $type || 'swps' === $type;
+	}
+
 	public function __construct() {
 		// Disable WP core sitemaps to prevent conflict detection from blocking us.
 		add_filter( 'wp_sitemaps_enabled', '__return_false' );
@@ -120,7 +137,7 @@ class SWPS_Sitemap_Manager {
 		}
 
 		// Legacy redirect.
-		if ( 'legacy_redirect' === $type ) {
+		if ( self::is_legacy_redirect_type( $type ) ) {
 			wp_redirect( home_url( '/sitemap_index.xml' ), 301 );
 			exit;
 		}
