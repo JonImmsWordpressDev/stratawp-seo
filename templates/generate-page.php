@@ -25,8 +25,11 @@ $gen_max_words     = (int) get_option( 'swps_word_count_max', 2000 );
 $gen_images_on     = (bool) get_option( 'swps_featured_images', false );
 $gen_tone          = (string) get_option( 'swps_tone', 'professional' );
 $gen_style         = trim( (string) get_option( 'swps_writing_style', '' ) );
-$gen_tone_label    = '' !== $gen_style
-	? ucfirst( $gen_tone ) . ' — ' . $gen_style
+// A custom writing style can be a long paragraph; show only a short preview so
+// the summary stays compact (the full style still applies during generation).
+$gen_style_preview = '' !== $gen_style ? wp_trim_words( $gen_style, 16, '…' ) : '';
+$gen_tone_label    = '' !== $gen_style_preview
+	? ucfirst( $gen_tone ) . ' — ' . $gen_style_preview
 	: ucfirst( $gen_tone );
 $gen_settings_url  = admin_url( 'admin.php?page=swps-settings' );
 ?>
