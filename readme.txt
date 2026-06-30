@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.21.2
+Stable tag: 4.21.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,9 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.21.3 =
+* Fixed: the legacy `/swps-sitemap.xml` address returned a 404 instead of redirecting to your current sitemap. It now reliably 301-redirects to `/sitemap_index.xml`.
 
 = 4.21.2 =
 * Fixed: the XML sitemap listed your homepage twice when the site uses a static front page. The homepage now appears only once in the page sitemap.
