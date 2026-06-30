@@ -228,10 +228,6 @@ class SWPS_Local_SEO {
 
 	// ---------- Schema ----------
 
-	private function other_seo_plugin_active(): bool {
-		return defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' );
-	}
-
 	/**
 	 * Output LocalBusiness JSON-LD on the homepage (and any page slug listed
 	 * via the `swps_local_seo_schema_pages` filter — defaults to homepage only).
