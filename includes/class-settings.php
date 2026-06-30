@@ -852,16 +852,11 @@ class SWPS_Settings {
 			)
 		);
 
-		$this->add_field(
-			'meta_editor_post_types',
-			__( 'Post Types', 'stratawp-seo' ),
-			'text',
-			'swps_meta_section',
-			array(
-				'placeholder' => 'post,page',
-				'description' => __( 'Comma-separated post types to show the meta editor on. Default: post,page', 'stratawp-seo' ),
-			)
-		);
+		// NOTE: The post-type selector for the meta box lives under Search Appearance
+		// → SEO Meta Box (swps_meta_editor_post_types, registered below as an array).
+		// The legacy comma-separated text field that used to be here was removed: it
+		// re-registered the same option with sanitize_text_field, which silently
+		// stripped the array value on save (e.g. ticking Products never persisted).
 
 		$this->add_field(
 			'meta_auto_generate',

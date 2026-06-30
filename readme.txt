@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.21.3
+Stable tag: 4.21.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,11 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.21.4 =
+* Fixed: choosing which post types show the SEO meta box (Search Appearance → SEO Meta Box → "Show on post types") now saves correctly. Ticking Products — or any custom post type — previously never persisted, because a leftover legacy setting re-sanitized the checkbox selection as plain text and silently dropped it on save.
+* Fixed: a "translation loading triggered too early" notice (`_load_textdomain_just_in_time`) on WordPress 6.7+, caused by the Abilities registry translating its labels during `plugins_loaded`. Ability definitions are now built lazily, after `init`.
+* Fixed: on fresh installs the SEO Meta Box post-type checkboxes could appear unticked until the first save.
 
 = 4.21.3 =
 * Fixed: the legacy `/swps-sitemap.xml` address returned a 404 instead of redirecting to your current sitemap. It now reliably 301-redirects to `/sitemap_index.xml`.
