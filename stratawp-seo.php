@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.21.3
+ * Version: 4.21.4
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.21.3' );
+define( 'SWPS_VERSION', '4.21.4' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -1381,7 +1381,7 @@ function swps_activate(): void {
 		'gsc_client_secret'           => '',
 		// Keywords & Meta defaults.
 		'meta_editor_enabled'         => 1,
-		'meta_editor_post_types'      => 'post,page',
+		'meta_editor_post_types'      => array( 'post', 'page' ),
 		'meta_auto_generate'          => 0,
 		'keyword_tracking_frequency'  => 'weekly',
 		// RSS Feed defaults.

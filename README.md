@@ -1712,6 +1712,11 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 
 ## Changelog
 
+### v4.21.4 — June 2026
+- **SEO meta box post types now save** — ticking Products (or any custom post type) under *Search Appearance → SEO Meta Box → Show on post types* now persists. A leftover legacy text setting was re-sanitizing the checkbox selection as a string and silently discarding it on save
+- **No more early-translation notice** — fixed the `_load_textdomain_just_in_time` ("translation loading triggered too early") notice on WordPress 6.7+ by building the Abilities registry's definitions lazily instead of during `plugins_loaded`
+- **Fresh-install polish** — the SEO Meta Box post-type checkboxes no longer appear unticked until the first save on new installs
+
 ### v4.21.1 — June 2026
 - **Update notifications restored (temporary)** — the self-hosted GitHub updater is re-enabled so existing installs keep receiving update notifications until the plugin is live in the WordPress.org directory, at which point it will be removed again (.org prohibits plugins updating themselves outside the official directory)
 

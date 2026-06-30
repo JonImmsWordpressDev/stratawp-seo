@@ -43,18 +43,35 @@ class SWPS_Abilities {
 	/**
 	 * Canonical ability definitions.
 	 *
-	 * Populated by SWPS_Ability_Defs::build_defs() in the constructor.
+	 * Populated lazily by defs() on first access (never in the constructor).
 	 * Each def: name, label, description, write (bool), input_schema, output_schema, callback.
 	 *
-	 * @var array[]
+	 * @var array[]|null
 	 */
-	private array $defs = array();
+	private ?array $defs = null;
 
 	/**
-	 * Constructor — build ability definitions via trait.
+	 * Constructor.
+	 *
+	 * Intentionally does NOT build the ability definitions: build_defs() calls
+	 * __() for every label/description, and this object is instantiated on
+	 * plugins_loaded. Translating that early trips WordPress 6.7's
+	 * _load_textdomain_just_in_time notice. defs() defers the build (and its
+	 * __() calls) to first use — REST, admin, or the WP Abilities API — all of
+	 * which run on or after init.
 	 */
-	public function __construct() {
-		$this->defs = $this->build_defs();
+	public function __construct() {}
+
+	/**
+	 * Lazily build and memoize the ability definitions.
+	 *
+	 * @return array[]
+	 */
+	private function defs(): array {
+		if ( null === $this->defs ) {
+			$this->defs = $this->build_defs();
+		}
+		return $this->defs;
 	}
 
 	// =========================================================================
@@ -67,7 +84,7 @@ class SWPS_Abilities {
 	 * @return array[]
 	 */
 	public function get_defs(): array {
-		return $this->defs;
+		return $this->defs();
 	}
 
 	/**
@@ -305,7 +322,7 @@ class SWPS_Abilities {
 	 * @return array|null
 	 */
 	private function find_def( string $name ): ?array {
-		foreach ( $this->defs as $def ) {
+		foreach ( $this->defs() as $def ) {
 			if ( $def['name'] === $name ) {
 				return $def;
 			}
