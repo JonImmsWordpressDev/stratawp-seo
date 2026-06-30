@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.21.0
+Stable tag: 4.21.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,9 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.21.1 =
+* Restored: the self-hosted GitHub updater is back temporarily so you keep getting update notifications until the plugin is available in the WordPress.org directory. It will be removed again once the .org listing is live.
 
 = 4.21.0 =
 * Fixed: the "Site Overview" and "Cost This Month" stat values on the Generate Content screen were rendering dark-on-dark and looked blank until you selected the text — they are now legible.

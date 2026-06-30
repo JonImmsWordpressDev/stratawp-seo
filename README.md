@@ -1712,6 +1712,9 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 
 ## Changelog
 
+### v4.21.1 — June 2026
+- **Update notifications restored (temporary)** — the self-hosted GitHub updater is re-enabled so existing installs keep receiving update notifications until the plugin is live in the WordPress.org directory, at which point it will be removed again (.org prohibits plugins updating themselves outside the official directory)
+
 ### v4.21.0 — June 2026
 - **Generate Content readability fix** — the *Site Overview* and *Cost This Month* stat values were rendering dark-on-dark and looked blank until selected; they're now legible on the dark theme
 - **AEO token-waste fix** — proposals on longer posts could fail with a token-limit error after the AI provider had already been billed; the proposal output budget is raised so they complete, and the review modal now warns when a post can't reach your target score so you don't re-spend re-running it
