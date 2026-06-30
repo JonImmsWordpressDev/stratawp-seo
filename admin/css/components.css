@@ -377,23 +377,19 @@ body.swps-has-shell .swps-card-desc {
     color: var(--swps-text-muted);
 }
 
-/* Stat tiles inside cards (e.g. "Site Overview", "Cost This Month" on the
-   Generate page). admin.css's legacy :root redefines --swps-text to dark
-   slate (#1E293B), which wins the cascade and renders the numbers invisible
-   on the shell's dark card surface. Re-point them at the theme-aware tokens
-   that admin.css does not clobber so the values stay legible in both themes. */
-body.swps-has-shell .swps-stat-number {
-    color: var(--swps-text-primary);
-}
-body.swps-has-shell .swps-stat-label {
-    color: var(--swps-text-muted);
-}
-
-/* Form field labels use var(--swps-text), which admin.css's legacy :root
-   clobbers to dark slate — leaving them dark-on-dark (barely legible) on the
-   shell's dark cards. Re-point at the un-clobbered theme token. */
-body.swps-has-shell .swps-form-group label {
-    color: var(--swps-text-primary);
+/* admin.css's legacy :root clobbers the --swps-text alias to dark slate
+   (#1E293B). tokens.css intends --swps-text to alias the primary text colour
+   (var(--swps-text-primary)), but admin.css loads last and wins at :root — so
+   every shell element using `color: var(--swps-text)` (card/section headings,
+   the stat-tile numbers, form labels, keyword table cells, metric values, the
+   content calendar, etc.) renders dark-on-dark and looks blank until selected.
+   Restore the intended aliasing for the shell scope: `body.swps-has-shell`
+   (0,1,1) beats admin.css's `:root` (0,1,0) and stays theme-aware, so the light
+   theme still resolves to its own dark text. --swps-text is used exclusively
+   for `color:` in admin.css/calendar.css, so this only touches text; the light
+   SERP/social preview mocks hardcode their own text colours and are unaffected. */
+body.swps-has-shell {
+    --swps-text: var(--swps-text-primary);
 }
 
 /* "What happens when you generate" summary on the Generate page (issue #74). */
