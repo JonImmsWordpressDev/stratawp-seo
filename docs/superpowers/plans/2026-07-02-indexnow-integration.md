@@ -1369,7 +1369,7 @@ Add to `SWPS_IndexNow`:
 		if ( ! $tax || empty( $tax->public ) ) {
 			return;
 		}
-		if ( ! SWPS_Sitemap_Manager::is_term_indexable( $term_id ) ) {
+		if ( ! SWPS_Sitemap_Manager::is_term_indexable( $term_id, $taxonomy ) ) {
 			return;
 		}
 		$url = get_term_link( $term_id, $taxonomy );

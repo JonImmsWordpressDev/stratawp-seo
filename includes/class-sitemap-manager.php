@@ -57,8 +57,17 @@ class SWPS_Sitemap_Manager {
 
 	/**
 	 * Term eligibility, mirroring render_taxonomy_sitemap()'s inline checks.
+	 * Also rejects terms whose taxonomy is hidden from the sitemap, so this
+	 * is a self-contained, taxonomy-aware public API (later tasks call it
+	 * directly on term-change hooks).
+	 *
+	 * @param int    $term_id  Term ID.
+	 * @param string $taxonomy Taxonomy name the term belongs to.
 	 */
-	public static function is_term_indexable( int $term_id ): bool {
+	public static function is_term_indexable( int $term_id, string $taxonomy ): bool {
+		if ( self::is_taxonomy_hidden_from_sitemap( $taxonomy ) ) {
+			return false;
+		}
 		if ( get_term_meta( $term_id, '_swps_sitemap_exclude', true ) ) {
 			return false;
 		}
@@ -108,8 +117,11 @@ class SWPS_Sitemap_Manager {
 				continue;
 			}
 			foreach ( $terms as $term ) {
-				if ( self::is_term_indexable( (int) $term->term_id ) ) {
-					$urls[] = get_term_link( $term );
+				if ( self::is_term_indexable( (int) $term->term_id, $taxonomy ) ) {
+					$link = get_term_link( $term );
+					if ( ! is_wp_error( $link ) ) {
+						$urls[] = $link;
+					}
 				}
 			}
 		}
