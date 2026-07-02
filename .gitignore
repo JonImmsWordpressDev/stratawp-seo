@@ -34,3 +34,4 @@ CLAUDE.local.md
 agentdb.rvf
 agentdb.rvf.lock
 ruvector.db
+.swarm/
