@@ -135,4 +135,23 @@ class SWPS_IndexNow {
 		$log = get_option( self::OPT_LOG, array() );
 		return is_array( $log ) ? $log : array();
 	}
+
+	/** Add a URL to the debounce queue (deduped) and schedule a single flush. */
+	public static function enqueue_url( string $url ): void {
+		$url = esc_url_raw( $url );
+		if ( '' === $url ) {
+			return;
+		}
+		$queue = get_option( self::OPT_QUEUE, array() );
+		if ( ! is_array( $queue ) ) {
+			$queue = array();
+		}
+		if ( ! in_array( $url, $queue, true ) ) {
+			$queue[] = $url;
+			update_option( self::OPT_QUEUE, $queue, false );
+		}
+		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
+			wp_schedule_single_event( time() + self::DEBOUNCE_SECONDS, self::CRON_HOOK );
+		}
+	}
 }
