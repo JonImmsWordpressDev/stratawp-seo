@@ -40,10 +40,57 @@ class SWPS_IndexNow {
 		add_action( self::CRON_HOOK, array( $this, 'flush' ) );
 	}
 
-	/**
-	 * wp-cron handler — drains the debounce queue and submits. Filled in Task 7.
-	 */
+	/** wp-cron handler — drain the debounce queue and submit as one batch. */
 	public function flush(): void {
+		$queue = get_option( self::OPT_QUEUE, array() );
+		update_option( self::OPT_QUEUE, array(), false );
+		if ( ! is_array( $queue ) || empty( $queue ) ) {
+			return;
+		}
+		if ( self::should_skip_environment() ) {
+			self::append_log( array( 'time' => time(), 'trigger' => 'auto', 'count' => count( $queue ), 'code' => 0, 'result' => 'skipped_env' ) );
+			return;
+		}
+		$this->submit_urls( array_values( $queue ), 'auto' );
+	}
+
+	/**
+	 * POST one or more chunks of URLs to IndexNow. Logs each chunk's result.
+	 *
+	 * @return array[] One {code,result} per chunk.
+	 */
+	public function submit_urls( array $urls, string $trigger = 'manual' ): array {
+		$urls = array_values( array_unique( array_filter( $urls ) ) );
+		if ( empty( $urls ) ) {
+			return array();
+		}
+		$key = (string) get_option( self::OPT_KEY, '' );
+		if ( ! self::is_valid_key( $key ) ) {
+			self::append_log( array( 'time' => time(), 'trigger' => $trigger, 'count' => count( $urls ), 'code' => 0, 'result' => 'no_key' ) );
+			return array();
+		}
+		$host    = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+		$results = array();
+		foreach ( array_chunk( $urls, self::MAX_URLS_PER_REQUEST ) as $chunk ) {
+			$response = wp_remote_post(
+				self::ENDPOINT,
+				array(
+					'headers' => array( 'Content-Type' => 'application/json; charset=utf-8' ),
+					'body'    => wp_json_encode( self::build_payload( $host, $key, $chunk ) ),
+					'timeout' => 15,
+				)
+			);
+			if ( is_wp_error( $response ) ) {
+				$code   = 0;
+				$result = 'error';
+			} else {
+				$code   = (int) wp_remote_retrieve_response_code( $response );
+				$result = self::interpret_response_code( $code );
+			}
+			self::append_log( array( 'time' => time(), 'trigger' => $trigger, 'count' => count( $chunk ), 'code' => $code, 'result' => $result ) );
+			$results[] = array( 'code' => $code, 'result' => $result );
+		}
+		return $results;
 	}
 
 	/** Generate a fresh 32-char hex IndexNow key (does not persist). */
