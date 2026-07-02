@@ -556,9 +556,9 @@ Add to `SWPS_IndexNow` (after `flush()`):
 		return bin2hex( random_bytes( 16 ) );
 	}
 
-	/** IndexNow keys are 8–128 chars of [a-zA-Z0-9-]. */
+	/** IndexNow keys are 8–128 chars of [a-zA-Z0-9-]. The /D anchor rejects a trailing newline. */
 	public static function is_valid_key( string $key ): bool {
-		return (bool) preg_match( '/^[a-zA-Z0-9-]{8,128}$/', $key );
+		return (bool) preg_match( '/^[a-zA-Z0-9-]{8,128}$/D', $key );
 	}
 
 	/** Heuristic: does this host look like a local/staging environment? */
