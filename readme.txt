@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.21.4
+Stable tag: 4.22.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -140,7 +140,7 @@ It can replace Yoast/RankMath/AIOSEO outright, or coexist with them (schema and 
 * **Sitemap index** — post type, taxonomy, and author sub-sitemaps
 * **Per-URL control** — configurable priority and changefreq per URL
 * **Image sitemap entries** — image metadata included in sitemap output
-* **IndexNow support** — instant indexing notification on publish/update
+* **IndexNow integration** — auto-generated key served at /{key}.txt, auto-submit on publish/update/delete with a 60-second debounce, per-post and bulk resubmit, and a recent-activity log (auto-paused outside production)
 
 = Redirect Manager =
 
@@ -421,6 +421,9 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.22.0 =
+* New: IndexNow integration — instantly notify Bing, Yandex, Seznam, and Naver when you publish, update, or remove content. Includes an auto-generated verification key served at /{key}.txt, auto-submit on the post/term lifecycle with a 60-second debounce, per-post "Submit now" and bulk "Resubmit all" controls, a dedicated panel on the Sitemaps screen, and a recent-activity log. Submissions are automatically paused on non-production environments. (Google does not participate in IndexNow.)
 
 = 4.21.4 =
 * Fixed: choosing which post types show the SEO meta box (Search Appearance → SEO Meta Box → "Show on post types") now saves correctly. Ticking Products — or any custom post type — previously never persisted, because a leftover legacy setting re-sanitized the checkbox selection as plain text and silently dropped it on save.

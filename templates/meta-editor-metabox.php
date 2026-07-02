@@ -178,4 +178,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</label>
 		</p>
 	</div>
+
+	<?php if ( get_option( SWPS_IndexNow::OPT_ENABLED, 0 ) && isset( $post ) ) : ?>
+		<p class="swps-indexnow-metabox">
+			<button type="button" class="button" id="swps-indexnow-submit-post" data-post="<?php echo esc_attr( $post->ID ); ?>">
+				<?php esc_html_e( 'Submit to IndexNow now', 'stratawp-seo' ); ?>
+			</button>
+			<span id="swps-indexnow-submit-post-status"></span>
+		</p>
+	<?php endif; ?>
 </div>

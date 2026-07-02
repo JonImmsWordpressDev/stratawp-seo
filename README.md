@@ -112,7 +112,7 @@ This is the part Yoast doesn't have: a full pipeline for getting your content **
 #### AI Crawler Access & llms.txt
 - **AI bot allowlist** — robots.txt `Allow`/`Disallow` rules for 15 known AI crawlers (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, Applebot-Extended, CCBot, Bytespider, …)
 - **Dynamic llms.txt** at `/llms.txt`, built from your posts/pages/categories with one-line summaries — plus an in-admin editor for both `/llms.txt` (Auto/Custom) and `/robots.txt` (Auto/Append/Replace)
-- **IndexNow batch submission** — instant Bing/Yandex indexing (Bing's IndexNow feed powers ChatGPT search)
+- **IndexNow integration** — auto-generated verification key served at `/{key}.txt`; auto-submit on the post/term lifecycle with a 60-second debounce, per-post "Submit now" and bulk "Resubmit all", a dedicated panel on the Sitemaps screen, and a recent-activity log (auto-paused on non-production; Google does not participate in IndexNow)
 
 #### AI Bot Analytics, AI Referrals & the Visibility Funnel
 - **AI Bot Analytics** — server-side hit tracking for the 15 AI crawlers: per-bot dashboards, top crawled pages, recent bot 404s, and an AEO gap report sortable by AEO score (high-quality-but-uncrawled posts first)
@@ -156,7 +156,7 @@ This is the part Yoast doesn't have: a full pipeline for getting your content **
 - **Crawl budget report** — Analytics-page breakdown of crawl activity by post type (30d) so you can see where bots spend their time
 
 #### Sitemaps, Redirects & the Meta Layer
-- **Full sitemap system** — `/sitemap_index.xml` with post type / taxonomy / author sub-sitemaps, image entries, per-sitemap exclusion toggles, IndexNow batch submit
+- **Full sitemap system** — `/sitemap_index.xml` with post type / taxonomy / author sub-sitemaps, image entries, per-sitemap exclusion toggles, auto-submitting IndexNow panel
 - **Redirect manager** — 301/302/307/410 with exact + regex matching, 404 monitoring with one-click redirect creation, auto-redirect on slug change
 - **Internal links engine** — keyword and AI engines with an accept/skip review UI
 - **SEO meta editor** — per-post title/description/canonical/robots/OG/Twitter with live SERP preview, SEO checklist, and an AI Generate button
@@ -452,7 +452,7 @@ Configures `/sitemap_index.xml` and sub-sitemaps.
 
 **How to use it:**
 1. **Settings tab:** toggle individual post types/taxonomies in/out of the sitemap, set per-type priority and changefreq
-2. **Submit tab:** the **Ping Search Engines** button submits 50 most-recently-modified posts to IndexNow (Bing/Yandex/Seznam — Bing's feed powers ChatGPT search). Use after a major content push.
+2. **IndexNow panel:** enable IndexNow, generate the verification key (served at `/{key}.txt`), and pick which post types auto-submit on publish/update. The **Resubmit All URLs** button re-queues every indexable URL for submission to Bing, Yandex, Seznam, and Naver (Bing's feed powers ChatGPT search; Google does not participate). Submissions are automatically paused on non-production environments.
 3. **View raw:** click "View sitemap" to see the live XML
 
 ### Internal Links (`StrataWP SEO → Internal Links`)
@@ -1423,8 +1423,7 @@ SWPS_Image_Provider (abstract)
 - Each sub-sitemap respects the `swps_sitemap_exclude_{key}` option.
 - `urls_per_page` setting controls split point (default 1000, max 50000).
 - Image sitemap entries built from post attachments.
-- **IndexNow batch submit** — `ping_search_engines()` posts up to 50 most recently modified posts to `api.indexnow.org`, returns `{submitted, status, error}` for the admin UI to display.
-- Auto-fires after publish/update via `transition_post_status` (when enabled in audit settings).
+- **IndexNow integration** — handled by `SWPS_IndexNow`: auto-submits a URL to `api.indexnow.org` on post/term publish, update, or delete (60-second debounce), plus per-post and bulk "Resubmit All URLs" AJAX actions surfaced in the IndexNow panel on the Sitemaps admin page. Paused on non-production environments.
 
 ### SEO Audit (`SWPS_SEO_Audit`)
 
@@ -1674,7 +1673,7 @@ Two things: (1) writes `Allow: /` rules in robots.txt for the AI bots you've che
 
 ### How does IndexNow batch submission work?
 
-Click **Sitemaps → Ping Search Engines** and the plugin submits your 50 most recently modified posts to `api.indexnow.org`. Bing, Yandex, and Seznam pick these up within minutes — and Bing's IndexNow feed is what powers ChatGPT's web search.
+Enable it under **Sitemaps → IndexNow** — the plugin generates a verification key (served at `/{key}.txt`) and auto-submits a URL to `api.indexnow.org` whenever a post or term is published, updated, or deleted (60-second debounce so bulk edits collapse into one batch). You can also submit a single post via the "Submit to IndexNow now" button on its edit screen, or re-queue every indexable URL at once with **Resubmit All URLs** on the Sitemaps page. Bing, Yandex, Seznam, and Naver pick these up within minutes — and Bing's IndexNow feed is what powers ChatGPT's web search. Submissions are automatically paused on non-production environments.
 
 ### Do I need a paid Ahrefs or Moz account to use Backlinks?
 
@@ -1711,6 +1710,11 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 ---
 
 ## Changelog
+
+### v4.22.0 — July 2026
+- **IndexNow integration** — instantly notify Bing, Yandex, Seznam, and Naver when you publish, update, or remove content (Google does not participate in IndexNow). An auto-generated verification key is served at `/{key}.txt`; publishing, updating, or deleting a post/term auto-submits its URL with a 60-second debounce so bulk edits collapse into one batch
+- **Manual controls** — a per-post "Submit now" action and a bulk "Resubmit all" button, plus a dedicated IndexNow panel on the Sitemaps screen with a recent-activity log
+- **Safety guard** — submissions are automatically paused on non-production environments so IndexNow never fires from a dev copy
 
 ### v4.21.4 — June 2026
 - **SEO meta box post types now save** — ticking Products (or any custom post type) under *Search Appearance → SEO Meta Box → Show on post types* now persists. A leftover legacy text setting was re-sanitizing the checkbox selection as a string and silently discarding it on save

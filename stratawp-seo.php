@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.21.4
+ * Version: 4.22.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.21.4' );
+define( 'SWPS_VERSION', '4.22.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -61,6 +61,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-hooks.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-templates.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-duplicate-checker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rate-limiter.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-indexnow.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-cost-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-autopilot-guardian.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-digest.php';
@@ -271,6 +272,7 @@ final class StrataWP_SEO {
 	public SWPS_Redirect_Manager $redirect_manager;
 	public SWPS_Post_List_SEO $post_list_seo;
 	public SWPS_Sitemap_Admin $sitemap_admin;
+	public SWPS_IndexNow $indexnow;
 	public SWPS_Internal_Links $internal_links;
 	public SWPS_Internal_Links_Admin $internal_links_admin;
 	public SWPS_AI_Bots $ai_bots;
@@ -398,6 +400,7 @@ final class StrataWP_SEO {
 		$this->breadcrumbs           = new SWPS_Breadcrumbs();
 		$this->redirect_manager      = new SWPS_Redirect_Manager();
 		$this->sitemap_admin         = new SWPS_Sitemap_Admin();
+		$this->indexnow              = new SWPS_IndexNow();
 
 		if ( is_admin() ) {
 			$this->post_list_seo = new SWPS_Post_List_SEO( $this->content_scorer );
@@ -716,6 +719,7 @@ final class StrataWP_SEO {
 				SWPS_VERSION,
 				true
 			);
+			wp_enqueue_script( 'swps-indexnow', SWPS_PLUGIN_URL . 'admin/js/indexnow.js', array( 'swps-admin', 'jquery' ), SWPS_VERSION, true );
 		}
 
 		// Search Appearance page JS.
@@ -730,6 +734,7 @@ final class StrataWP_SEO {
 
 		if ( 'stratawp-seo_page_swps-sitemaps' === $hook ) {
 			wp_enqueue_script( 'swps-sitemaps', SWPS_PLUGIN_URL . 'admin/js/sitemaps.js', array( 'swps-admin' ), SWPS_VERSION, true );
+			wp_enqueue_script( 'swps-indexnow', SWPS_PLUGIN_URL . 'admin/js/indexnow.js', array( 'swps-admin', 'jquery' ), SWPS_VERSION, true );
 		}
 	}
 
@@ -1486,6 +1491,7 @@ function swps_deactivate(): void {
 	wp_unschedule_hook( 'swps_send_digest' );
 	wp_unschedule_hook( SWPS_Site_Crawler::CRON_HOOK );
 	SWPS_Site_Crawler::unschedule_weekly_cron();
+	wp_clear_scheduled_hook( SWPS_IndexNow::CRON_HOOK );
 	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'swps_deactivate' );
