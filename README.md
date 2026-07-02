@@ -452,7 +452,7 @@ Configures `/sitemap_index.xml` and sub-sitemaps.
 
 **How to use it:**
 1. **Settings tab:** toggle individual post types/taxonomies in/out of the sitemap, set per-type priority and changefreq
-2. **Submit tab:** the **Ping Search Engines** button submits 50 most-recently-modified posts to IndexNow (Bing/Yandex/Seznam — Bing's feed powers ChatGPT search). Use after a major content push.
+2. **IndexNow panel:** enable IndexNow, generate the verification key (served at `/{key}.txt`), and pick which post types auto-submit on publish/update. The **Resubmit All URLs** button re-queues every indexable URL for submission to Bing, Yandex, Seznam, and Naver (Bing's feed powers ChatGPT search; Google does not participate). Submissions are automatically paused on non-production environments.
 3. **View raw:** click "View sitemap" to see the live XML
 
 ### Internal Links (`StrataWP SEO → Internal Links`)
@@ -1423,8 +1423,7 @@ SWPS_Image_Provider (abstract)
 - Each sub-sitemap respects the `swps_sitemap_exclude_{key}` option.
 - `urls_per_page` setting controls split point (default 1000, max 50000).
 - Image sitemap entries built from post attachments.
-- **IndexNow batch submit** — `ping_search_engines()` posts up to 50 most recently modified posts to `api.indexnow.org`, returns `{submitted, status, error}` for the admin UI to display.
-- Auto-fires after publish/update via `transition_post_status` (when enabled in audit settings).
+- **IndexNow integration** — handled by `SWPS_IndexNow`: auto-submits a URL to `api.indexnow.org` on post/term publish, update, or delete (60-second debounce), plus per-post and bulk "Resubmit All URLs" AJAX actions surfaced in the IndexNow panel on the Sitemaps admin page. Paused on non-production environments.
 
 ### SEO Audit (`SWPS_SEO_Audit`)
 
@@ -1674,7 +1673,7 @@ Two things: (1) writes `Allow: /` rules in robots.txt for the AI bots you've che
 
 ### How does IndexNow batch submission work?
 
-Click **Sitemaps → Ping Search Engines** and the plugin submits your 50 most recently modified posts to `api.indexnow.org`. Bing, Yandex, and Seznam pick these up within minutes — and Bing's IndexNow feed is what powers ChatGPT's web search.
+Enable it under **Sitemaps → IndexNow** — the plugin generates a verification key (served at `/{key}.txt`) and auto-submits a URL to `api.indexnow.org` whenever a post or term is published, updated, or deleted (60-second debounce so bulk edits collapse into one batch). You can also submit a single post via the "Submit to IndexNow now" button on its edit screen, or re-queue every indexable URL at once with **Resubmit All URLs** on the Sitemaps page. Bing, Yandex, Seznam, and Naver pick these up within minutes — and Bing's IndexNow feed is what powers ChatGPT's web search. Submissions are automatically paused on non-production environments.
 
 ### Do I need a paid Ahrefs or Moz account to use Backlinks?
 

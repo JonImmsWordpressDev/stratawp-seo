@@ -20,7 +20,6 @@ class SWPS_IndexNow {
 	const MAX_LOG             = 50;
 	const MAX_URLS_PER_REQUEST = 10000;
 	const DEBOUNCE_SECONDS    = 60;
-	const DAILY_CAP           = 10000;
 
 	const OPT_ENABLED     = 'swps_indexnow_enabled';
 	const OPT_AUTO        = 'swps_indexnow_auto_submit';
@@ -28,8 +27,6 @@ class SWPS_IndexNow {
 	const OPT_POST_TYPES  = 'swps_indexnow_post_types';
 	const OPT_QUEUE       = 'swps_indexnow_queue';
 	const OPT_LOG         = 'swps_indexnow_log';
-	const OPT_DAILY_COUNT = 'swps_indexnow_daily_count';
-	const OPT_DAILY_DATE  = 'swps_indexnow_daily_date';
 
 	const META_LAST_URL  = '_swps_indexnow_last_url';
 	const META_SUBMITTED = '_swps_indexnow_submitted';
@@ -330,6 +327,8 @@ class SWPS_IndexNow {
 		if ( ! SWPS_Sitemap_Manager::is_term_indexable( $term_id, $taxonomy ) ) {
 			return;
 		}
+		// Note: on delete_term the term row is already gone, so get_term_link() returns WP_Error and the removal is skipped.
+		// Term de-indexing on deletion is a known gap (posts handle removal via the stashed _swps_indexnow_last_url).
 		$url = get_term_link( $term_id, $taxonomy );
 		if ( ! is_wp_error( $url ) ) {
 			self::enqueue_url( (string) $url );
