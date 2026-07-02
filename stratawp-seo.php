@@ -733,6 +733,7 @@ final class StrataWP_SEO {
 
 		if ( 'stratawp-seo_page_swps-sitemaps' === $hook ) {
 			wp_enqueue_script( 'swps-sitemaps', SWPS_PLUGIN_URL . 'admin/js/sitemaps.js', array( 'swps-admin' ), SWPS_VERSION, true );
+			wp_enqueue_script( 'swps-indexnow', SWPS_PLUGIN_URL . 'admin/js/indexnow.js', array( 'swps-admin', 'jquery' ), SWPS_VERSION, true );
 		}
 	}
 

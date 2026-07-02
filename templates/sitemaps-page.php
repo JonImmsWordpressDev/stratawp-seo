@@ -46,6 +46,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</tr>
 			</tbody>
 		</table>
+
+		<?php require SWPS_PLUGIN_DIR . 'templates/indexnow-panel.php'; ?>
 	</div>
 
 	<div id="tab-settings" class="swps-tab-content" data-tab="settings" style="display:none;">
