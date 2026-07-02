@@ -350,6 +350,50 @@ class SWPS_IndexNow {
 		}
 	}
 
+	/** AJAX: generate + persist a new IndexNow key (rotation). */
+	public function ajax_generate_key(): void {
+		check_ajax_referer( 'swps_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'stratawp-seo' ) ) );
+		}
+		$key = self::generate_key();
+		update_option( self::OPT_KEY, $key, false );
+		wp_send_json_success(
+			array(
+				'key'          => $key,
+				'key_file_url' => home_url( '/' . $key . '.txt' ),
+			)
+		);
+	}
+
+	/** AJAX: submit the full indexable URL set ("Resubmit all"). */
+	public function ajax_resubmit_all(): void {
+		check_ajax_referer( 'swps_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'stratawp-seo' ) ) );
+		}
+		if ( self::should_skip_environment() ) {
+			wp_send_json_error( array( 'message' => __( 'IndexNow is paused on non-production environments.', 'stratawp-seo' ) ) );
+		}
+		$urls    = SWPS_Sitemap_Manager::get_indexable_urls();
+		$results = $this->submit_urls( $urls, 'bulk' );
+		wp_send_json_success(
+			array(
+				'submitted' => count( $urls ),
+				'batches'   => $results,
+			)
+		);
+	}
+
+	/** AJAX: return the activity log for the admin panel. */
+	public function ajax_get_log(): void {
+		check_ajax_referer( 'swps_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'stratawp-seo' ) ) );
+		}
+		wp_send_json_success( array( 'log' => self::get_log() ) );
+	}
+
 	/** Serve GET /{key}.txt with the raw key body (init, priority 1). */
 	public function maybe_serve_key_file(): void {
 		$key = (string) get_option( self::OPT_KEY, '' );
