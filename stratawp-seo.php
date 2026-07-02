@@ -61,6 +61,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-hooks.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-templates.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-duplicate-checker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rate-limiter.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-indexnow.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-cost-tracker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-autopilot-guardian.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-digest.php';
@@ -271,6 +272,7 @@ final class StrataWP_SEO {
 	public SWPS_Redirect_Manager $redirect_manager;
 	public SWPS_Post_List_SEO $post_list_seo;
 	public SWPS_Sitemap_Admin $sitemap_admin;
+	public SWPS_IndexNow $indexnow;
 	public SWPS_Internal_Links $internal_links;
 	public SWPS_Internal_Links_Admin $internal_links_admin;
 	public SWPS_AI_Bots $ai_bots;
@@ -398,6 +400,7 @@ final class StrataWP_SEO {
 		$this->breadcrumbs           = new SWPS_Breadcrumbs();
 		$this->redirect_manager      = new SWPS_Redirect_Manager();
 		$this->sitemap_admin         = new SWPS_Sitemap_Admin();
+		$this->indexnow              = new SWPS_IndexNow();
 
 		if ( is_admin() ) {
 			$this->post_list_seo = new SWPS_Post_List_SEO( $this->content_scorer );
