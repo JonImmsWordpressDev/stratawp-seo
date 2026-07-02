@@ -1491,6 +1491,7 @@ function swps_deactivate(): void {
 	wp_unschedule_hook( 'swps_send_digest' );
 	wp_unschedule_hook( SWPS_Site_Crawler::CRON_HOOK );
 	SWPS_Site_Crawler::unschedule_weekly_cron();
+	wp_clear_scheduled_hook( SWPS_IndexNow::CRON_HOOK );
 	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'swps_deactivate' );

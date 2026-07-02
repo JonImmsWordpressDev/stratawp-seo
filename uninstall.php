@@ -46,6 +46,7 @@ $swps_cron_hooks = array(
 	'swps_site_crawl_weekly',
 	'swps_cannibal_scan',
 	'swps_audit_ability_run',
+	'swps_indexnow_flush',
 );
 
 foreach ( $swps_cron_hooks as $swps_cron_hook ) {
