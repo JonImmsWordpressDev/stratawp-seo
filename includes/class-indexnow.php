@@ -38,6 +38,24 @@ class SWPS_IndexNow {
 
 	public function __construct() {
 		add_action( self::CRON_HOOK, array( $this, 'flush' ) );
+
+		// Serve the verification file as early as possible.
+		add_action( 'init', array( $this, 'maybe_serve_key_file' ), 1 );
+
+		// Settings (Task 10) + admin surface (Task 11) + AJAX (Tasks 11-12).
+		add_action( 'admin_init', array( $this, 'register_settings' ) );
+		add_action( 'wp_ajax_' . 'swps_indexnow_generate_key', array( $this, 'ajax_generate_key' ) );
+		add_action( 'wp_ajax_' . 'swps_indexnow_resubmit_all', array( $this, 'ajax_resubmit_all' ) );
+		add_action( 'wp_ajax_' . 'swps_indexnow_get_log', array( $this, 'ajax_get_log' ) );
+		add_action( 'wp_ajax_' . 'swps_indexnow_submit_post', array( $this, 'ajax_submit_post' ) );
+
+		// Lifecycle triggers.
+		add_action( 'transition_post_status', array( $this, 'on_transition_post_status' ), 10, 3 );
+		add_action( 'before_delete_post', array( $this, 'on_delete_post' ) );
+		add_action( 'wp_trash_post', array( $this, 'on_delete_post' ) );
+		add_action( 'created_term', array( $this, 'on_term_change' ), 10, 3 );
+		add_action( 'edited_term', array( $this, 'on_term_change' ), 10, 3 );
+		add_action( 'delete_term', array( $this, 'on_term_change' ), 10, 3 );
 	}
 
 	/** wp-cron handler — drain the debounce queue and submit as one batch. */
@@ -234,5 +252,81 @@ class SWPS_IndexNow {
 		update_post_meta( $post->ID, self::META_LAST_URL, $url );
 		update_post_meta( $post->ID, self::META_SUBMITTED, $modified );
 		self::enqueue_url( $url );
+	}
+
+	/** Fired on every status change: enqueue on publish, submit the dead URL on unpublish. */
+	public function on_transition_post_status( string $new_status, string $old_status, $post ): void {
+		if ( ! is_object( $post ) || empty( $post->ID ) ) {
+			return;
+		}
+		if ( function_exists( 'wp_is_post_revision' ) && wp_is_post_revision( $post->ID ) ) {
+			return;
+		}
+		if ( 'publish' === $new_status ) {
+			$this->maybe_enqueue_post( $post );
+			return;
+		}
+		if ( 'publish' === $old_status && 'publish' !== $new_status ) {
+			$this->enqueue_removal( (int) $post->ID );
+		}
+	}
+
+	/** Fired on trash/delete: submit the last known public URL so engines recrawl (404/410). */
+	public function on_delete_post( int $post_id ): void {
+		$this->enqueue_removal( $post_id );
+	}
+
+	/** Submit a taxonomy term's URL when it changes, if its taxonomy is public + eligible. */
+	public function on_term_change( int $term_id, int $tt_id, string $taxonomy ): void {
+		if ( ! get_option( self::OPT_ENABLED, 0 ) || ! get_option( self::OPT_AUTO, 1 ) ) {
+			return;
+		}
+		if ( self::should_skip_environment() ) {
+			return;
+		}
+		$tax = get_taxonomy( $taxonomy );
+		if ( ! $tax || empty( $tax->public ) ) {
+			return;
+		}
+		if ( ! SWPS_Sitemap_Manager::is_term_indexable( $term_id, $taxonomy ) ) {
+			return;
+		}
+		$url = get_term_link( $term_id, $taxonomy );
+		if ( ! is_wp_error( $url ) ) {
+			self::enqueue_url( (string) $url );
+		}
+	}
+
+	/** Enqueue the stashed public URL for a removed/unpublished post. */
+	private function enqueue_removal( int $post_id ): void {
+		if ( ! get_option( self::OPT_ENABLED, 0 ) || ! get_option( self::OPT_AUTO, 1 ) ) {
+			return;
+		}
+		if ( self::should_skip_environment() ) {
+			return;
+		}
+		$url = (string) get_post_meta( $post_id, self::META_LAST_URL, true );
+		if ( '' !== $url ) {
+			self::enqueue_url( $url );
+		}
+	}
+
+	/** Serve GET /{key}.txt with the raw key body (init, priority 1). */
+	public function maybe_serve_key_file(): void {
+		$key = (string) get_option( self::OPT_KEY, '' );
+		if ( ! self::is_valid_key( $key ) ) {
+			return;
+		}
+		$path = isset( $_SERVER['REQUEST_URI'] )
+			? (string) wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH )
+			: '';
+		if ( ! self::key_file_path_matches( $path, $key ) ) {
+			return;
+		}
+		nocache_headers();
+		header( 'Content-Type: text/plain; charset=utf-8' );
+		header( 'X-Robots-Tag: noindex' );
+		echo esc_html( $key );
+		exit;
 	}
 }
