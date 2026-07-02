@@ -17,16 +17,111 @@ class SWPS_Sitemap_Manager {
 	private function get_urls_per_sitemap(): int {
 		return max( 100, min( 50000, (int) get_option( 'swps_sitemap_urls_per_page', 1000 ) ) );
 	}
-	private function is_post_type_hidden_from_sitemap( string $post_type ): bool {
+	private static function is_post_type_hidden_from_sitemap( string $post_type ): bool {
 		return 'attachment' === $post_type
 			|| (bool) get_option( "swps_sitemap_exclude_{$post_type}", 0 )
 			|| (bool) get_option( "swps_noindex_{$post_type}", 0 );
 	}
 
-	private function is_taxonomy_hidden_from_sitemap( string $taxonomy ): bool {
+	private static function is_taxonomy_hidden_from_sitemap( string $taxonomy ): bool {
 		return 'post_format' === $taxonomy
 			|| (bool) get_option( "swps_sitemap_exclude_{$taxonomy}", 0 )
 			|| (bool) get_option( "swps_noindex_{$taxonomy}", 0 );
+	}
+
+	/**
+	 * Canonical "is this URL part of the sitemap" predicate, shared with IndexNow.
+	 * Mirrors the inline skip logic in render_post_type_sitemap().
+	 *
+	 * @param WP_Post|object $post Post object with ID, post_status, post_type.
+	 */
+	public static function is_post_indexable( $post ): bool {
+		if ( ! is_object( $post ) || empty( $post->ID ) ) {
+			return false;
+		}
+		if ( 'publish' !== ( $post->post_status ?? '' ) ) {
+			return false;
+		}
+		if ( self::is_post_type_hidden_from_sitemap( (string) ( $post->post_type ?? '' ) ) ) {
+			return false;
+		}
+		if ( get_post_meta( $post->ID, '_swps_sitemap_exclude', true ) ) {
+			return false;
+		}
+		$robots = get_post_meta( $post->ID, '_swps_robots', true );
+		if ( ! empty( $robots ) && str_contains( (string) $robots, 'noindex' ) ) {
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Term eligibility, mirroring render_taxonomy_sitemap()'s inline checks.
+	 */
+	public static function is_term_indexable( int $term_id ): bool {
+		if ( get_term_meta( $term_id, '_swps_sitemap_exclude', true ) ) {
+			return false;
+		}
+		$robots = get_term_meta( $term_id, '_swps_robots', true );
+		if ( ! empty( $robots ) && str_contains( (string) $robots, 'noindex' ) ) {
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Full indexable URL set (posts + pages + CPTs + taxonomies + authors),
+	 * applying the same eligibility rules as the sitemap. Used by "Resubmit all".
+	 *
+	 * @return string[] Absolute URLs, deduped.
+	 */
+	public static function get_indexable_urls(): array {
+		$urls = array( home_url( '/' ) );
+
+		foreach ( get_post_types( array( 'public' => true ) ) as $post_type ) {
+			if ( self::is_post_type_hidden_from_sitemap( $post_type ) ) {
+				continue;
+			}
+			$posts = get_posts(
+				array(
+					'post_type'      => $post_type,
+					'post_status'    => 'publish',
+					'posts_per_page' => -1,
+					'fields'         => 'ids',
+					'no_found_rows'  => true,
+				)
+			);
+			foreach ( $posts as $post_id ) {
+				$post = get_post( $post_id );
+				if ( $post && self::is_post_indexable( $post ) ) {
+					$urls[] = get_permalink( $post );
+				}
+			}
+		}
+
+		foreach ( get_taxonomies( array( 'public' => true ) ) as $taxonomy ) {
+			if ( self::is_taxonomy_hidden_from_sitemap( $taxonomy ) ) {
+				continue;
+			}
+			$terms = get_terms( array( 'taxonomy' => $taxonomy, 'hide_empty' => true ) );
+			if ( is_wp_error( $terms ) ) {
+				continue;
+			}
+			foreach ( $terms as $term ) {
+				if ( self::is_term_indexable( (int) $term->term_id ) ) {
+					$urls[] = get_term_link( $term );
+				}
+			}
+		}
+
+		if ( ! get_option( 'swps_sitemap_exclude_author', 0 ) ) {
+			$authors = get_users( array( 'has_published_posts' => true, 'fields' => 'ID' ) );
+			foreach ( $authors as $author_id ) {
+				$urls[] = get_author_posts_url( (int) $author_id );
+			}
+		}
+
+		return array_values( array_unique( array_filter( $urls ) ) );
 	}
 
 	/**
@@ -157,12 +252,12 @@ class SWPS_Sitemap_Manager {
 		} else {
 			// Check if it's a taxonomy.
 			$taxonomies = get_taxonomies( array( 'public' => true ) );
-			if ( in_array( $type, $taxonomies, true ) && ! $this->is_taxonomy_hidden_from_sitemap( $type ) ) {
+			if ( in_array( $type, $taxonomies, true ) && ! self::is_taxonomy_hidden_from_sitemap( $type ) ) {
 				$this->render_taxonomy_sitemap( $type );
 			} else {
 				// Post type sitemap.
 				$post_types = get_post_types( array( 'public' => true ) );
-				if ( in_array( $type, $post_types, true ) && ! $this->is_post_type_hidden_from_sitemap( $type ) ) {
+				if ( in_array( $type, $post_types, true ) && ! self::is_post_type_hidden_from_sitemap( $type ) ) {
 					$this->render_post_type_sitemap( $type, $page );
 				} else {
 					status_header( 404 );
@@ -184,7 +279,7 @@ class SWPS_Sitemap_Manager {
 		// Post type sitemaps.
 		$post_types = get_post_types( array( 'public' => true ) );
 		foreach ( $post_types as $pt ) {
-			if ( $this->is_post_type_hidden_from_sitemap( $pt ) ) {
+			if ( self::is_post_type_hidden_from_sitemap( $pt ) ) {
 				continue;
 			}
 
@@ -204,7 +299,7 @@ class SWPS_Sitemap_Manager {
 		// Taxonomy sitemaps.
 		$taxonomies = get_taxonomies( array( 'public' => true ) );
 		foreach ( $taxonomies as $tax ) {
-			if ( $this->is_taxonomy_hidden_from_sitemap( $tax ) ) {
+			if ( self::is_taxonomy_hidden_from_sitemap( $tax ) ) {
 				continue;
 			}
 
@@ -242,7 +337,7 @@ class SWPS_Sitemap_Manager {
 	 * Render a post type sub-sitemap.
 	 */
 	private function render_post_type_sitemap( string $post_type, int $page ): void {
-		if ( $this->is_post_type_hidden_from_sitemap( $post_type ) ) {
+		if ( self::is_post_type_hidden_from_sitemap( $post_type ) ) {
 			return;
 		}
 
@@ -287,6 +382,7 @@ class SWPS_Sitemap_Manager {
 				continue;
 			}
 
+			// Keep in sync with SWPS_Sitemap_Manager::is_post_indexable().
 			// Respect exclusions.
 			if ( get_post_meta( $post->ID, '_swps_sitemap_exclude', true ) ) {
 				continue;
@@ -326,7 +422,7 @@ class SWPS_Sitemap_Manager {
 	 * Render a taxonomy sub-sitemap.
 	 */
 	private function render_taxonomy_sitemap( string $taxonomy ): void {
-		if ( $this->is_taxonomy_hidden_from_sitemap( $taxonomy ) ) {
+		if ( self::is_taxonomy_hidden_from_sitemap( $taxonomy ) ) {
 			return;
 		}
 
@@ -343,6 +439,7 @@ class SWPS_Sitemap_Manager {
 
 		if ( ! is_wp_error( $terms ) ) {
 			foreach ( $terms as $term ) {
+				// Keep in sync with SWPS_Sitemap_Manager::is_term_indexable().
 				// Respect exclusions.
 				if ( get_term_meta( $term->term_id, '_swps_sitemap_exclude', true ) ) {
 					continue;
