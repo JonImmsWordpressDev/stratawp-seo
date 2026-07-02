@@ -154,4 +154,38 @@ class SWPS_IndexNow {
 			wp_schedule_single_event( time() + self::DEBOUNCE_SECONDS, self::CRON_HOOK );
 		}
 	}
+
+	/**
+	 * Auto path: enqueue a post's permalink if IndexNow is enabled, auto-submit is
+	 * on, the post type is selected, the URL is sitemap-indexable, we're on
+	 * production, and the content actually changed since the last submit.
+	 *
+	 * @param WP_Post|object $post
+	 */
+	public function maybe_enqueue_post( $post ): void {
+		if ( ! is_object( $post ) || empty( $post->ID ) ) {
+			return;
+		}
+		if ( ! get_option( self::OPT_ENABLED, 0 ) || ! get_option( self::OPT_AUTO, 1 ) ) {
+			return;
+		}
+		$selected = (array) get_option( self::OPT_POST_TYPES, array() );
+		if ( ! in_array( ( $post->post_type ?? '' ), $selected, true ) ) {
+			return;
+		}
+		if ( ! SWPS_Sitemap_Manager::is_post_indexable( $post ) ) {
+			return;
+		}
+		if ( self::should_skip_environment() ) {
+			return;
+		}
+		$modified = (string) ( $post->post_modified_gmt ?? '' );
+		if ( '' !== $modified && (string) get_post_meta( $post->ID, self::META_SUBMITTED, true ) === $modified ) {
+			return; // No-op resave — content unchanged since last push.
+		}
+		$url = get_permalink( $post );
+		update_post_meta( $post->ID, self::META_LAST_URL, $url );
+		update_post_meta( $post->ID, self::META_SUBMITTED, $modified );
+		self::enqueue_url( $url );
+	}
 }

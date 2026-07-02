@@ -60,6 +60,10 @@ class IndexNowQueueTest extends TestCase {
 		$this->assertCount( 1, get_option( SWPS_IndexNow::OPT_QUEUE ) );
 	}
 
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
 	public function test_enqueue_schedules_flush_once_per_burst(): void {
 		SWPS_IndexNow::enqueue_url( 'https://example.com/a' );
 		SWPS_IndexNow::enqueue_url( 'https://example.com/b' );
