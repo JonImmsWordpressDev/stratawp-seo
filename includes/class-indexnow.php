@@ -118,4 +118,21 @@ class SWPS_IndexNow {
 	public static function key_file_path_matches( string $path, string $key ): bool {
 		return '/' . $key . '.txt' === $path;
 	}
+
+	/** Prepend an entry to the bounded activity log (newest first, capped at MAX_LOG). */
+	public static function append_log( array $entry ): void {
+		$log = get_option( self::OPT_LOG, array() );
+		if ( ! is_array( $log ) ) {
+			$log = array();
+		}
+		array_unshift( $log, $entry );
+		$log = array_slice( $log, 0, self::MAX_LOG );
+		update_option( self::OPT_LOG, $log, false );
+	}
+
+	/** @return array[] The activity log, newest first. */
+	public static function get_log(): array {
+		$log = get_option( self::OPT_LOG, array() );
+		return is_array( $log ) ? $log : array();
+	}
 }
