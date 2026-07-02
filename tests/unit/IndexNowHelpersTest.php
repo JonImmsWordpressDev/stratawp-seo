@@ -43,6 +43,7 @@ class IndexNowHelpersTest extends TestCase {
 		$this->assertFalse( SWPS_IndexNow::is_valid_key( 'short' ) );        // < 8
 		$this->assertFalse( SWPS_IndexNow::is_valid_key( 'has space here' ) );
 		$this->assertFalse( SWPS_IndexNow::is_valid_key( '' ) );
+		$this->assertFalse( SWPS_IndexNow::is_valid_key( "aaaaaaaa\n" ) );
 	}
 
 	public function test_is_staging_host(): void {

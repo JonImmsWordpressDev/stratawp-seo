@@ -53,7 +53,7 @@ class SWPS_IndexNow {
 
 	/** IndexNow keys are 8–128 chars of [a-zA-Z0-9-]. */
 	public static function is_valid_key( string $key ): bool {
-		return (bool) preg_match( '/^[a-zA-Z0-9-]{8,128}$/', $key );
+		return (bool) preg_match( '/^[a-zA-Z0-9-]{8,128}$/D', $key );
 	}
 
 	/** Heuristic: does this host look like a local/staging environment? */
