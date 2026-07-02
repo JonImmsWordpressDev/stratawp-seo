@@ -58,6 +58,45 @@ class SWPS_IndexNow {
 		add_action( 'delete_term', array( $this, 'on_term_change' ), 10, 3 );
 	}
 
+	/**
+	 * Register the three form-persisted options in a DEDICATED option group so a
+	 * partial form on the Sitemaps page cannot wipe unrelated swps_* options.
+	 * The API key is NOT registered here — it is managed via the generate-key AJAX
+	 * action and never rendered in the form. Each option is registered exactly once.
+	 */
+	public function register_settings(): void {
+		register_setting(
+			self::SETTINGS_GROUP,
+			self::OPT_ENABLED,
+			array( 'sanitize_callback' => array( __CLASS__, 'sanitize_checkbox' ), 'default' => 0 )
+		);
+		register_setting(
+			self::SETTINGS_GROUP,
+			self::OPT_AUTO,
+			array( 'sanitize_callback' => array( __CLASS__, 'sanitize_checkbox' ), 'default' => 1 )
+		);
+		register_setting(
+			self::SETTINGS_GROUP,
+			self::OPT_POST_TYPES,
+			array(
+				'type'              => 'array',
+				'sanitize_callback' => array( __CLASS__, 'sanitize_post_types' ),
+				'default'           => array( 'post', 'page' ),
+			)
+		);
+	}
+
+	public static function sanitize_checkbox( $value ): int {
+		return $value ? 1 : 0;
+	}
+
+	public static function sanitize_post_types( $value ): array {
+		if ( ! is_array( $value ) ) {
+			return array();
+		}
+		return array_values( array_map( 'sanitize_key', $value ) );
+	}
+
 	/** wp-cron handler — drain the debounce queue and submit as one batch. */
 	public function flush(): void {
 		$queue = get_option( self::OPT_QUEUE, array() );
