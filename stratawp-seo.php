@@ -719,6 +719,7 @@ final class StrataWP_SEO {
 				SWPS_VERSION,
 				true
 			);
+			wp_enqueue_script( 'swps-indexnow', SWPS_PLUGIN_URL . 'admin/js/indexnow.js', array( 'swps-admin', 'jquery' ), SWPS_VERSION, true );
 		}
 
 		// Search Appearance page JS.

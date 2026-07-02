@@ -54,10 +54,9 @@
 	}
 
 	$( function () {
-		if ( ! $( '#swps-indexnow-log' ).length ) {
-			return;
+		if ( $( '#swps-indexnow-log' ).length ) {
+			loadLog();
 		}
-		loadLog();
 
 		$( '#swps-indexnow-generate' ).on( 'click', function () {
 			var $b = $( this ).prop( 'disabled', true );
@@ -81,6 +80,19 @@
 					r && r.success ? describeResubmit( r.data ) : ( r && r.data ? r.data.message : 'Error' )
 				);
 				loadLog();
+			} ).always( function () {
+				$b.prop( 'disabled', false );
+			} );
+		} );
+
+		$( '#swps-indexnow-submit-post' ).on( 'click', function () {
+			var $b = $( this ).prop( 'disabled', true );
+			var id = $b.data( 'post' );
+			$( '#swps-indexnow-submit-post-status' ).text( 'Submitting…' );
+			post( 'swps_indexnow_submit_post', { post_id: id } ).done( function ( r ) {
+				$( '#swps-indexnow-submit-post-status' ).text(
+					r && r.success ? ( 'Submitted (' + r.data.result + ').' ) : ( r && r.data ? r.data.message : 'Error' )
+				);
 			} ).always( function () {
 				$b.prop( 'disabled', false );
 			} );

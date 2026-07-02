@@ -394,6 +394,30 @@ class SWPS_IndexNow {
 		wp_send_json_success( array( 'log' => self::get_log() ) );
 	}
 
+	/** AJAX: manually submit a single post's URL now (bypasses auto-submit toggle). */
+	public function ajax_submit_post(): void {
+		check_ajax_referer( 'swps_nonce', 'nonce' );
+		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+		if ( ! $post_id || ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'stratawp-seo' ) ) );
+		}
+		if ( ! get_option( self::OPT_ENABLED, 0 ) ) {
+			wp_send_json_error( array( 'message' => __( 'IndexNow is disabled. Enable it under Sitemaps → IndexNow.', 'stratawp-seo' ) ) );
+		}
+		if ( self::should_skip_environment() ) {
+			wp_send_json_error( array( 'message' => __( 'IndexNow is paused on non-production environments.', 'stratawp-seo' ) ) );
+		}
+		$post = get_post( $post_id );
+		if ( ! $post || ! SWPS_Sitemap_Manager::is_post_indexable( $post ) ) {
+			wp_send_json_error( array( 'message' => __( 'This URL is not eligible (unpublished, excluded, or noindex).', 'stratawp-seo' ) ) );
+		}
+		$url     = get_permalink( $post );
+		update_post_meta( $post_id, self::META_LAST_URL, $url );
+		$results = $this->submit_urls( array( $url ), 'manual' );
+		$result  = $results[0]['result'] ?? 'error';
+		wp_send_json_success( array( 'result' => $result, 'url' => $url ) );
+	}
+
 	/** Serve GET /{key}.txt with the raw key body (init, priority 1). */
 	public function maybe_serve_key_file(): void {
 		$key = (string) get_option( self::OPT_KEY, '' );
