@@ -60,6 +60,27 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
 		return (bool) preg_match( '/^claude-(2|3)[.-]|-4-[015](-|$)|-4-\d{8}/', $model );
 	}
 
+	/**
+	 * Concatenate the text content blocks of a Messages API response body.
+	 *
+	 * Newer Claude models (Sonnet 5 and later) run adaptive thinking by
+	 * default, so the `content` array may open with one or more `thinking`
+	 * blocks before the `text` block — `content[0]['text']` is not a safe
+	 * read. Non-text blocks (thinking, tool_use, ...) are skipped.
+	 *
+	 * @param array $content Decoded `content` array from the response body.
+	 * @return string Concatenated text ('' when the response has no text).
+	 */
+	public static function extract_text( array $content ): string {
+		$parts = array();
+		foreach ( $content as $block ) {
+			if ( is_array( $block ) && 'text' === ( $block['type'] ?? '' ) ) {
+				$parts[] = (string) ( $block['text'] ?? '' );
+			}
+		}
+		return implode( '', $parts );
+	}
+
 	public function chat( string $system_prompt, string $user_message, int $max_tokens = 4096 ): string|WP_Error {
 		$api_key = $this->get_api_key();
 
@@ -124,10 +145,6 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
 			);
 		}
 
-		if ( empty( $body['content'][0]['text'] ) ) {
-			return new WP_Error( 'swps_empty_response', __( 'Received empty response from Claude.', 'stratawp-seo' ) );
-		}
-
 		// Store usage data for cost tracking.
 		if ( ! empty( $body['usage'] ) ) {
 			$this->last_usage = array(
@@ -137,10 +154,32 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
 		}
 
 		// Store stop reason for truncation detection.
-		// Anthropic: 'end_turn', 'max_tokens', 'stop_sequence'.
+		// Anthropic: 'end_turn', 'max_tokens', 'stop_sequence', 'refusal'.
 		$this->last_stop_reason = $body['stop_reason'] ?? null;
 
-		$text = $body['content'][0]['text'];
+		// Newer Claude models (Sonnet 5 and later) run adaptive thinking by
+		// default, so the response content can start with `thinking` blocks
+		// before the `text` block — reading content[0]['text'] directly made
+		// every such response look empty ("Received empty response from
+		// Claude"). Collect every text block instead.
+		$text = self::extract_text( (array) ( $body['content'] ?? array() ) );
+
+		if ( '' === $text ) {
+			// A thinking-enabled model can burn the whole output budget on
+			// thinking and stop before emitting any text — surface that as
+			// truncation (actionable) rather than a generic empty response.
+			if ( 'max_tokens' === $this->last_stop_reason ) {
+				return new WP_Error(
+					'swps_response_truncated',
+					sprintf(
+						/* translators: %d: max_tokens budget for the request */
+						__( 'Claude used the entire %d-token response budget before producing any text (newer models spend part of the budget on internal reasoning). Try again or increase the token budget.', 'stratawp-seo' ),
+						$max_tokens
+					)
+				);
+			}
+			return new WP_Error( 'swps_empty_response', __( 'Received empty response from Claude.', 'stratawp-seo' ) );
+		}
 
 		// When using JSON prefill, prepend the opening brace we sent as assistant content.
 		if ( $this->requesting_json && $supports_prefill ) {

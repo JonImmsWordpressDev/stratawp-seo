@@ -1711,6 +1711,10 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 
 ## Changelog
 
+### v4.22.2 — July 2026
+- **"Received empty response from Claude" on Sonnet 5+ fixed** — Claude Sonnet 5 and newer models run adaptive thinking by default, so their responses open with a `thinking` content block before the `text` block. The provider read only the first block's text, so every response looked empty. Text is now collected from all text blocks in the response
+- **Clearer truncation error** — when a thinking-enabled model spends the entire `max_tokens` budget on reasoning before emitting any text, the error now says the token budget ran out (actionable) instead of "empty response"
+
 ### v4.22.1 — July 2026
 - **Sonnet 5 and newer Claude models fixed** — selecting Claude Sonnet 5 (or any Claude model newer than the 4.5 generation) no longer fails with `Claude API error (400): This model does not support assistant message prefill`. The prefill check only matched hyphen-suffixed version patterns (`5-…`), so bare model IDs like `claude-sonnet-5` slipped through; the check now allowlists the older prefill-capable generations instead, so future Claude releases work by default
 - **"No proposal cached" apply failures caught earlier** — the AEO optimizer now verifies a generated proposal actually saved (and reads back as valid JSON) before reporting success. Silent save failures — a database rejecting the write, object-cache hiccups — previously surfaced only later as a baffling "Apply failed: No proposal cached" when clicking Apply; they now produce an actionable error at generate time
