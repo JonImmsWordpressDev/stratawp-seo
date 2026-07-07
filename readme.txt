@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.22.1
+Stable tag: 4.22.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,10 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.22.2 =
+* Fixed: "Received empty response from Claude" when generating content with Claude Sonnet 5 or newer models. These models reason ("think") before answering by default, and the reasoning block ahead of the actual text made the response parser think it was empty. The parser now reads the text from anywhere in the response.
+* Improved: when a thinking-enabled model spends the entire response budget before producing text, the error now explains the token budget ran out instead of reporting an empty response.
 
 = 4.22.1 =
 * Fixed: selecting Claude Sonnet 5 (or other newer Claude models) failed with "Claude API error (400): This model does not support assistant message prefill". The prefill compatibility check now allowlists the older prefill-capable models, so new Claude releases work by default.
