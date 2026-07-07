@@ -449,7 +449,28 @@ class SWPS_AEO_Optimizer {
 		// Pre-slashing means the round-trip leaves the stored value as valid
 		// JSON. The same pattern is applied to META_SNAPSHOT and
 		// META_SCHEMA_JSON below.
-		update_post_meta( $post_id, self::META_PROPOSAL, wp_slash( (string) wp_json_encode( $proposal ) ) );
+		$encoded = wp_json_encode( $proposal );
+		if ( false === $encoded ) {
+			return array(
+				'error'       => __( 'The proposal could not be encoded for storage (the post or AI response contains characters that cannot be serialized). Nothing was saved — please try again.', 'stratawp-seo' ),
+				'http_status' => 500,
+			);
+		}
+		update_post_meta( $post_id, self::META_PROPOSAL, wp_slash( $encoded ) );
+
+		// Verify the save round-trips before reporting success. A silent write
+		// failure (DB charset stripping on non-utf8mb4 tables, an object-cache
+		// hiccup, a meta filter) previously surfaced only later as a baffling
+		// "No proposal cached" error when the user clicked Apply. Comparing
+		// _generated_at also catches the case where the write failed and the
+		// read-back returned a stale previous proposal.
+		$stored = json_decode( (string) get_post_meta( $post_id, self::META_PROPOSAL, true ), true );
+		if ( ! is_array( $stored ) || ( $stored['_generated_at'] ?? null ) !== ( $proposal['_generated_at'] ?? null ) ) {
+			return array(
+				'error'       => __( 'The proposal was generated but could not be saved, so applying it would fail. Check for database errors, then click "Generate proposal" again.', 'stratawp-seo' ),
+				'http_status' => 500,
+			);
+		}
 
 		return array( 'proposal' => $proposal );
 	}

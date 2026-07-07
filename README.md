@@ -1711,6 +1711,11 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 
 ## Changelog
 
+### v4.22.1 — July 2026
+- **Sonnet 5 and newer Claude models fixed** — selecting Claude Sonnet 5 (or any Claude model newer than the 4.5 generation) no longer fails with `Claude API error (400): This model does not support assistant message prefill`. The prefill check only matched hyphen-suffixed version patterns (`5-…`), so bare model IDs like `claude-sonnet-5` slipped through; the check now allowlists the older prefill-capable generations instead, so future Claude releases work by default
+- **"No proposal cached" apply failures caught earlier** — the AEO optimizer now verifies a generated proposal actually saved (and reads back as valid JSON) before reporting success. Silent save failures — a database rejecting the write, object-cache hiccups — previously surfaced only later as a baffling "Apply failed: No proposal cached" when clicking Apply; they now produce an actionable error at generate time
+- **Claude Opus 4.8 and Claude Sonnet 5** added to the built-in Anthropic model list used when live model discovery is unavailable
+
 ### v4.22.0 — July 2026
 - **IndexNow integration** — instantly notify Bing, Yandex, Seznam, and Naver when you publish, update, or remove content (Google does not participate in IndexNow). An auto-generated verification key is served at `/{key}.txt`; publishing, updating, or deleting a post/term auto-submits its URL with a 60-second debounce so bulk edits collapse into one batch
 - **Manual controls** — a per-post "Submit now" action and a bulk "Resubmit all" button, plus a dedicated IndexNow panel on the Sitemaps screen with a recent-activity log

@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.22.0
+Stable tag: 4.22.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,11 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.22.1 =
+* Fixed: selecting Claude Sonnet 5 (or other newer Claude models) failed with "Claude API error (400): This model does not support assistant message prefill". The prefill compatibility check now allowlists the older prefill-capable models, so new Claude releases work by default.
+* Fixed: "Apply failed: No proposal cached" could appear right after generating an AEO proposal when the save silently failed. The optimizer now verifies the proposal saved correctly before reporting success, and shows an actionable error at generate time instead.
+* Added: Claude Opus 4.8 and Claude Sonnet 5 in the built-in Anthropic model list (used when live model discovery is unavailable).
 
 = 4.22.0 =
 * New: IndexNow integration — instantly notify Bing, Yandex, Seznam, and Naver when you publish, update, or remove content. Includes an auto-generated verification key served at /{key}.txt, auto-submit on the post/term lifecycle with a 60-second debounce, per-post "Submit now" and bulk "Resubmit all" controls, a dedicated panel on the Sitemaps screen, and a recent-activity log. Submissions are automatically paused on non-production environments. (Google does not participate in IndexNow.)
