@@ -27,12 +27,37 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
 
 	public function get_available_models(): array {
 		return array(
+			'claude-opus-4-8'            => 'Claude Opus 4.8',
+			'claude-sonnet-5'            => 'Claude Sonnet 5',
 			'claude-opus-4-7'            => 'Claude Opus 4.7',
 			'claude-opus-4-6'            => 'Claude Opus 4.6',
 			'claude-sonnet-4-6'          => 'Claude Sonnet 4.6',
 			'claude-sonnet-4-5-20250929' => 'Claude Sonnet 4.5',
 			'claude-haiku-4-5-20251001'  => 'Claude Haiku 4.5',
 		);
+	}
+
+	/**
+	 * Whether a Claude model accepts assistant-message prefill.
+	 *
+	 * Prefill was removed in the Claude 4.6 family, and every model released
+	 * since (Opus 4.7/4.8, Sonnet 5, ...) rejects it with a 400. The previous
+	 * denylist regex required a hyphen after the version number ("5-"), so
+	 * bare model aliases like `claude-sonnet-5` slipped through and the whole
+	 * request failed with "This model does not support assistant message
+	 * prefill". Allowlisting the known prefill-capable generations instead is
+	 * future-proof: an unknown or newer model simply skips the prefill (the
+	 * JSON parser copes fine without it) rather than erroring the request.
+	 *
+	 * Matches: claude-2.x, claude-3.x, and the 4.0/4.1/4.5 generations —
+	 * aliases (claude-opus-4-1, claude-haiku-4-5), dated minor IDs
+	 * (claude-sonnet-4-5-20250929), and dated 4.0 IDs (claude-opus-4-20250514).
+	 *
+	 * @param string $model Anthropic model ID.
+	 * @return bool
+	 */
+	public static function model_supports_prefill( string $model ): bool {
+		return (bool) preg_match( '/^claude-(2|3)[.-]|-4-[015](-|$)|-4-\d{8}/', $model );
 	}
 
 	public function chat( string $system_prompt, string $user_message, int $max_tokens = 4096 ): string|WP_Error {
@@ -50,9 +75,8 @@ class SWPS_Anthropic_Provider extends SWPS_AI_Provider {
 		);
 
 		// Prefill with opening brace to guide Claude toward valid JSON output.
-		// Note: Claude 4.6+ models (opus-4-6, sonnet-4-6, and newer 4-7+) do not support assistant prefill.
 		$model            = $this->get_validated_model();
-		$supports_prefill = ! preg_match( '/-(4-6|4-7|4-8|4-9|5-)/', $model );
+		$supports_prefill = self::model_supports_prefill( $model );
 
 		if ( $this->requesting_json && $supports_prefill ) {
 			$messages[] = array(
