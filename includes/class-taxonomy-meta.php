@@ -36,7 +36,41 @@ class SWPS_Taxonomy_Meta {
 		// Frontend meta output for archive pages (only when no conflict).
 		if ( ! is_admin() && ! defined( 'WPSEO_VERSION' ) && ! defined( 'RANK_MATH_VERSION' ) && ! defined( 'AIOSEO_VERSION' ) ) {
 			add_action( 'wp_head', array( $this, 'output_archive_meta' ), 3 );
+			add_filter( 'wp_robots', array( $this, 'filter_robots' ) );
 		}
+	}
+
+	/**
+	 * Merge per-term robots settings into core's robots meta tag.
+	 *
+	 * Previously printed as a second <meta name="robots"> tag alongside
+	 * WordPress core's default tag.
+	 *
+	 * @param array $robots Core robots directives.
+	 * @return array
+	 */
+	public function filter_robots( array $robots ): array {
+		if ( ! is_category() && ! is_tag() && ! is_tax() ) {
+			return $robots;
+		}
+
+		$term = get_queried_object();
+		if ( ! $term instanceof \WP_Term ) {
+			return $robots;
+		}
+
+		$setting = get_term_meta( $term->term_id, '_swps_robots', true );
+		if ( empty( $setting ) ) {
+			return $robots;
+		}
+
+		foreach ( array_map( 'trim', explode( ',', $setting ) ) as $directive ) {
+			if ( '' !== $directive ) {
+				$robots[ $directive ] = true;
+			}
+		}
+
+		return $robots;
 	}
 
 	/**
@@ -168,21 +202,12 @@ class SWPS_Taxonomy_Meta {
 			printf( '<link rel="canonical" href="%s" />' . "\n", esc_url( $canonical ) );
 		}
 
-		// Robots.
-		$robots = get_term_meta( $term->term_id, '_swps_robots', true );
-		if ( ! empty( $robots ) ) {
-			printf( '<meta name="robots" content="%s" />' . "\n", esc_attr( $robots ) );
-		}
-
-		// OG tags.
-		$og_title = get_term_meta( $term->term_id, '_swps_og_title', true );
-		$og_desc  = get_term_meta( $term->term_id, '_swps_og_description', true );
-
-		if ( ! empty( $og_title ) ) {
-			printf( '<meta property="og:title" content="%s" />' . "\n", esc_attr( $og_title ) );
-		}
-		if ( ! empty( $og_desc ) ) {
-			printf( '<meta property="og:description" content="%s" />' . "\n", esc_attr( $og_desc ) );
-		}
+		// Robots are merged into core's tag via the wp_robots filter (see
+		// filter_robots). Open Graph output moved to
+		// SWPS_Search_Appearance::output_og_tags(), which emits the complete
+		// tag set (type/url/site_name/image) with the term-level
+		// _swps_og_title / _swps_og_description / _swps_og_image overrides —
+		// the partial og:title/og:description pair emitted here produced a
+		// malformed card on the platforms that read it.
 	}
 }

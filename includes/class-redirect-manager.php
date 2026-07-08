@@ -73,8 +73,9 @@ class SWPS_Redirect_Manager {
 				$pattern = '#' . str_replace( '#', '\#', $redirect->source_url ) . '#';
 				if ( preg_match( $pattern, $request_path, $matches ) ) {
 					$target = $redirect->target_url;
-					// Replace capture groups.
-					for ( $i = 1; $i < count( $matches ); $i++ ) {
+					// Replace capture groups, highest index first so $1 does
+					// not corrupt $10, $11, etc.
+					for ( $i = count( $matches ) - 1; $i >= 1; $i-- ) {
 						$target = str_replace( '$' . $i, $matches[ $i ], $target );
 					}
 					$redirect->target_url = $target;

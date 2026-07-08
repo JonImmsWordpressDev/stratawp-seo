@@ -329,7 +329,7 @@ class SWPS_Sitemap_Manager {
 			printf(
 				"<sitemap>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n</sitemap>\n",
 				esc_url( home_url( "/{$tax}-sitemap.xml" ) ),
-				gmdate( 'Y-m-d\TH:i:s+00:00' )
+				$this->get_site_lastmod()
 			);
 		}
 
@@ -338,7 +338,7 @@ class SWPS_Sitemap_Manager {
 			printf(
 				"<sitemap>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n</sitemap>\n",
 				esc_url( home_url( '/author-sitemap.xml' ) ),
-				gmdate( 'Y-m-d\TH:i:s+00:00' )
+				$this->get_site_lastmod()
 			);
 		}
 
@@ -377,7 +377,7 @@ class SWPS_Sitemap_Manager {
 			printf(
 				"<url>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n  <priority>1.0</priority>\n</url>\n",
 				esc_url( home_url( '/' ) ),
-				gmdate( 'Y-m-d\TH:i:s+00:00' )
+				$this->get_site_lastmod()
 			);
 
 			// When a static front page is set, it is emitted above as the
@@ -558,5 +558,19 @@ class SWPS_Sitemap_Manager {
 			)
 		);
 		return $date ? gmdate( 'Y-m-d\TH:i:s+00:00', strtotime( $date ) ) : gmdate( 'Y-m-d\TH:i:s+00:00' );
+	}
+
+	/**
+	 * Site-wide last modification timestamp for sitemap entries that
+	 * aggregate many objects (taxonomy/author sub-sitemaps, homepage URL).
+	 *
+	 * Previously these were stamped gmdate(now), which changed on every
+	 * request — a volatile lastmod is an unreliable crawl-scheduling signal.
+	 */
+	private function get_site_lastmod(): string {
+		$modified = get_lastpostmodified( 'gmt' );
+		return $modified
+			? gmdate( 'Y-m-d\TH:i:s+00:00', strtotime( $modified ) )
+			: gmdate( 'Y-m-d\TH:i:s+00:00' );
 	}
 }
