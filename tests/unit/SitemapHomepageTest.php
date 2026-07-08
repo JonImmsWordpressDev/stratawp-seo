@@ -47,6 +47,11 @@ if ( ! function_exists( 'get_post_modified_time' ) ) {
 		return 1700000000;
 	}
 }
+if ( ! function_exists( 'get_lastpostmodified' ) ) {
+	function get_lastpostmodified( $timezone = 'server', $post_type = 'any' ) {
+		return '2023-11-14 22:13:20';
+	}
+}
 if ( ! function_exists( 'esc_url' ) ) {
 	function esc_url( $url ) {
 		return $url;

@@ -1165,9 +1165,13 @@ class SWPS_Settings {
 		register_setting( 'swps_search_appearance', 'swps_title_template_404', array( 'sanitize_callback' => 'sanitize_text_field' ) );
 		register_setting( 'swps_search_appearance', 'swps_title_template_author', array( 'sanitize_callback' => 'sanitize_text_field' ) );
 		register_setting( 'swps_search_appearance', 'swps_title_template_date', array( 'sanitize_callback' => 'sanitize_text_field' ) );
+		register_setting( 'swps_search_appearance', 'swps_desc_template_homepage', array( 'sanitize_callback' => 'sanitize_textarea_field' ) );
+		register_setting( 'swps_search_appearance', 'swps_noindex_author', array( 'sanitize_callback' => 'absint' ) );
+		register_setting( 'swps_search_appearance', 'swps_noindex_date', array( 'sanitize_callback' => 'absint' ) );
 
 		// Breadcrumb settings.
 		register_setting( 'swps_search_appearance', 'swps_breadcrumbs_enabled', array( 'sanitize_callback' => 'absint' ) );
+		register_setting( 'swps_search_appearance', 'swps_breadcrumbs_jsonld', array( 'sanitize_callback' => 'absint' ) );
 		register_setting( 'swps_search_appearance', 'swps_breadcrumbs_separator', array( 'sanitize_callback' => 'sanitize_text_field' ) );
 		register_setting( 'swps_search_appearance', 'swps_breadcrumbs_home_label', array( 'sanitize_callback' => 'sanitize_text_field' ) );
 

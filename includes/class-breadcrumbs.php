@@ -114,8 +114,17 @@ class SWPS_Breadcrumbs {
 			if ( 'post' === $post->post_type ) {
 				$categories = get_the_category( $post->ID );
 				if ( ! empty( $categories ) ) {
-					// Use Yoast primary category if set, otherwise first.
-					$primary  = $categories[0];
+					// Use Yoast primary category if set, otherwise first — same
+					// resolution as the JSON-LD breadcrumb path in SWPS_Schema,
+					// so both trails show the same category.
+					$primary    = $categories[0];
+					$primary_id = (int) get_post_meta( $post->ID, '_yoast_wpseo_primary_category', true );
+					if ( $primary_id ) {
+						$term = get_term( $primary_id, 'category' );
+						if ( $term instanceof WP_Term ) {
+							$primary = $term;
+						}
+					}
 					$crumbs[] = array(
 						'label' => $primary->name,
 						'url'   => get_category_link( $primary->term_id ),

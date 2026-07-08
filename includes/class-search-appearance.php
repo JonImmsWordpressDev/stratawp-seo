@@ -51,8 +51,15 @@ class SWPS_Search_Appearance {
 		// Meta description for non-singular pages — priority 2 (same as Meta Editor).
 		add_action( 'wp_head', array( $this, 'output_meta_description' ), 2 );
 
-		// Robots directives from Search Appearance noindex controls.
-		add_action( 'wp_head', array( $this, 'output_robots_directives' ), 2 );
+		// Open Graph / Twitter for non-singular pages — priority 5 (Meta Editor
+		// covers singular views at priority 2; the audit OG module covers
+		// singular views at priority 5 when the Meta Editor is disabled).
+		add_action( 'wp_head', array( $this, 'output_og_tags' ), 5 );
+
+		// Robots directives from Search Appearance noindex controls — merged
+		// into WordPress core's single robots meta tag instead of printing a
+		// second <meta name="robots"> alongside core's.
+		add_filter( 'wp_robots', array( $this, 'filter_robots' ) );
 	}
 
 	/**
@@ -106,19 +113,113 @@ class SWPS_Search_Appearance {
 	}
 
 	/**
-	 * Output robots meta tags for Search Appearance visibility settings.
+	 * Merge Search Appearance visibility settings into core's robots meta tag.
+	 *
+	 * Using the wp_robots filter keeps the page on a single
+	 * <meta name="robots"> tag (core's), so directives like
+	 * max-image-preview:large are preserved alongside noindex.
+	 *
+	 * @param array $robots Core robots directives.
+	 * @return array
 	 */
-	public function output_robots_directives(): void {
-		$robots = $this->get_robots_directives();
+	public function filter_robots( array $robots ): array {
+		foreach ( $this->get_robots_directives() as $directive ) {
+			$robots[ $directive ] = true;
+		}
 
-		if ( empty( $robots ) ) {
+		return $robots;
+	}
+
+	/**
+	 * Output Open Graph and Twitter Card tags for non-singular pages.
+	 *
+	 * Singular views are handled by SWPS_Meta_Editor (or the audit OG module
+	 * when the Meta Editor is disabled). Without this, the blog index,
+	 * category/tag/taxonomy archives, author archives, and post type archives
+	 * shipped no social preview card at all.
+	 */
+	public function output_og_tags(): void {
+		if ( is_singular() || is_search() || is_404() || is_admin() || is_feed() ) {
 			return;
 		}
 
-		printf(
-			'<meta name="robots" content="%s" />' . "\n",
-			esc_attr( implode( ', ', $robots ) )
-		);
+		$title = wp_get_document_title();
+		$desc  = $this->get_description();
+		$url   = $this->get_context_url();
+		$image = (string) get_option( 'swps_schema_logo', '' )
+				?: (string) get_site_icon_url( 512 );
+
+		// Term-level social overrides from Taxonomy Meta.
+		if ( is_category() || is_tag() || is_tax() ) {
+			$term = get_queried_object();
+			if ( $term instanceof WP_Term ) {
+				$og_title = get_term_meta( $term->term_id, '_swps_og_title', true );
+				$og_desc  = get_term_meta( $term->term_id, '_swps_og_description', true );
+				$og_image = get_term_meta( $term->term_id, '_swps_og_image', true );
+				$title    = ! empty( $og_title ) ? $og_title : $title;
+				$desc     = ! empty( $og_desc ) ? $og_desc : $desc;
+				$image    = ! empty( $og_image ) ? $og_image : $image;
+			}
+		}
+
+		printf( '<meta property="og:type" content="website" />' . "\n" );
+		printf( '<meta property="og:title" content="%s" />' . "\n", esc_attr( $title ) );
+		if ( ! empty( $desc ) ) {
+			printf( '<meta property="og:description" content="%s" />' . "\n", esc_attr( wp_strip_all_tags( $desc ) ) );
+		}
+		if ( ! empty( $url ) ) {
+			printf( '<meta property="og:url" content="%s" />' . "\n", esc_url( $url ) );
+		}
+		if ( ! empty( $image ) ) {
+			printf( '<meta property="og:image" content="%s" />' . "\n", esc_url( $image ) );
+		}
+		printf( '<meta property="og:site_name" content="%s" />' . "\n", esc_attr( get_bloginfo( 'name' ) ) );
+
+		printf( '<meta name="twitter:card" content="%s" />' . "\n", $image ? 'summary_large_image' : 'summary' );
+		printf( '<meta name="twitter:title" content="%s" />' . "\n", esc_attr( $title ) );
+		if ( ! empty( $desc ) ) {
+			printf( '<meta name="twitter:description" content="%s" />' . "\n", esc_attr( wp_strip_all_tags( $desc ) ) );
+		}
+		if ( ! empty( $image ) ) {
+			printf( '<meta name="twitter:image" content="%s" />' . "\n", esc_url( $image ) );
+		}
+	}
+
+	/**
+	 * Canonical URL for the current non-singular context.
+	 */
+	private function get_context_url(): string {
+		if ( is_front_page() ) {
+			return home_url( '/' );
+		}
+
+		if ( is_home() ) {
+			$posts_page = (int) get_option( 'page_for_posts' );
+			return $posts_page ? (string) get_permalink( $posts_page ) : home_url( '/' );
+		}
+
+		if ( is_category() || is_tag() || is_tax() ) {
+			$term = get_queried_object();
+			if ( $term instanceof WP_Term ) {
+				$link = get_term_link( $term );
+				return is_wp_error( $link ) ? '' : $link;
+			}
+		}
+
+		if ( is_author() ) {
+			$author = get_queried_object();
+			return $author ? get_author_posts_url( $author->ID ) : '';
+		}
+
+		if ( is_post_type_archive() ) {
+			$post_type = get_query_var( 'post_type' );
+			if ( is_array( $post_type ) ) {
+				$post_type = reset( $post_type );
+			}
+			return is_string( $post_type ) ? (string) get_post_type_archive_link( $post_type ) : '';
+		}
+
+		return '';
 	}
 
 	/**
@@ -177,6 +278,14 @@ class SWPS_Search_Appearance {
 			}
 		}
 
+		if ( is_author() && get_option( 'swps_noindex_author', 0 ) ) {
+			return array( 'noindex', 'follow' );
+		}
+
+		if ( is_date() && get_option( 'swps_noindex_date', 0 ) ) {
+			return array( 'noindex', 'follow' );
+		}
+
 		return array();
 	}
 
@@ -184,7 +293,10 @@ class SWPS_Search_Appearance {
 	 * Get the title template for the current page context.
 	 */
 	private function get_title_template(): string {
-		if ( is_front_page() && is_home() ) {
+		// Both homepage setups — "your latest posts" AND a static front page —
+		// use the homepage template. The old is_front_page() && is_home() check
+		// silently ignored the configured template on static front pages.
+		if ( is_front_page() ) {
 			return get_option( 'swps_title_template_homepage', '%%sitename%%' );
 		}
 
@@ -237,6 +349,25 @@ class SWPS_Search_Appearance {
 	 * Get the meta description for the current page context.
 	 */
 	private function get_description(): string {
+		// Blog-index homepage / posts page: previously returned nothing, so the
+		// most-shared URL on a blog-style site had no meta description at all.
+		if ( is_home() || ( is_front_page() && ! is_singular() ) ) {
+			$posts_page = (int) get_option( 'page_for_posts' );
+			if ( $posts_page ) {
+				$meta_desc = get_post_meta( $posts_page, '_swps_meta_description', true );
+				if ( ! empty( $meta_desc ) ) {
+					return $meta_desc;
+				}
+			}
+
+			$template = get_option( 'swps_desc_template_homepage', '' );
+			if ( ! empty( $template ) ) {
+				return $this->resolve_variables( $template );
+			}
+
+			return (string) get_bloginfo( 'description' );
+		}
+
 		if ( is_singular() ) {
 			$post_type = get_post_type();
 			$template  = get_option( "swps_desc_template_{$post_type}", '%%excerpt%%' );

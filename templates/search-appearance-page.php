@@ -133,6 +133,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<input type="text" class="large-text swps-title-template"
 						name="swps_title_template_author"
 						value="<?php echo esc_attr( get_option( 'swps_title_template_author', '%%author%% %%sep%% %%sitename%%' ) ); ?>">
+					<label style="display:block;margin-top:6px;">
+						<input type="hidden" name="swps_noindex_author" value="0">
+						<input type="checkbox" name="swps_noindex_author" value="1"
+							<?php checked( get_option( 'swps_noindex_author', 0 ) ); ?>>
+						<?php esc_html_e( 'Noindex author archives (recommended for single-author sites — the author archive duplicates the blog index)', 'stratawp-seo' ); ?>
+					</label>
 				</td>
 			</tr>
 			<tr>
@@ -141,6 +147,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<input type="text" class="large-text swps-title-template"
 						name="swps_title_template_date"
 						value="<?php echo esc_attr( get_option( 'swps_title_template_date', '%%title%% %%sep%% %%sitename%%' ) ); ?>">
+					<label style="display:block;margin-top:6px;">
+						<input type="hidden" name="swps_noindex_date" value="0">
+						<input type="checkbox" name="swps_noindex_date" value="1"
+							<?php checked( get_option( 'swps_noindex_date', 0 ) ); ?>>
+						<?php esc_html_e( 'Noindex date archives (thin, near-duplicate listings)', 'stratawp-seo' ); ?>
+					</label>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Homepage Meta Description', 'stratawp-seo' ); ?></th>
+				<td>
+					<textarea class="large-text" rows="2"
+						name="swps_desc_template_homepage"><?php echo esc_textarea( get_option( 'swps_desc_template_homepage', '' ) ); ?></textarea>
+					<p class="description"><?php esc_html_e( 'Used on a "latest posts" homepage and the posts page. Leave blank to fall back to the site tagline. Template variables supported.', 'stratawp-seo' ); ?></p>
 				</td>
 			</tr>
 		</table>
@@ -154,6 +174,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 						<input type="checkbox" name="swps_breadcrumbs_enabled" value="1"
 							<?php checked( get_option( 'swps_breadcrumbs_enabled', 1 ) ); ?>>
 						<?php esc_html_e( 'Enable HTML breadcrumb output', 'stratawp-seo' ); ?>
+					</label>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Breadcrumb Structured Data', 'stratawp-seo' ); ?></th>
+				<td>
+					<label>
+						<input type="hidden" name="swps_breadcrumbs_jsonld" value="0">
+						<input type="checkbox" name="swps_breadcrumbs_jsonld" value="1"
+							<?php checked( get_option( 'swps_breadcrumbs_jsonld', 1 ) ); ?>>
+						<?php esc_html_e( 'Emit BreadcrumbList JSON-LD in the schema graph (recommended; disable only if your theme renders the HTML breadcrumb trail, which carries its own microdata)', 'stratawp-seo' ); ?>
 					</label>
 				</td>
 			</tr>

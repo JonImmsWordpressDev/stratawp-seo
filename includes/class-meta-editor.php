@@ -36,6 +36,7 @@ class SWPS_Meta_Editor {
 			add_action( 'wp_head', array( $this, 'output_meta_tags' ), 2 );
 			add_filter( 'pre_get_document_title', array( $this, 'filter_document_title' ), 20 );
 			add_filter( 'document_title_parts', array( $this, 'filter_title_parts' ), 20 );
+			add_filter( 'wp_robots', array( $this, 'filter_robots' ) );
 		}
 
 		// Auto-generate meta on publish if setting is enabled.
@@ -171,7 +172,6 @@ class SWPS_Meta_Editor {
 
 		$meta_desc = get_post_meta( $post_id, '_swps_meta_description', true );
 		$canonical = get_post_meta( $post_id, '_swps_canonical_url', true );
-		$robots    = get_post_meta( $post_id, '_swps_robots', true );
 
 		// Meta description.
 		$meta_desc = SWPS_Hooks::filter_meta_description( $meta_desc, $post_id );
@@ -186,17 +186,51 @@ class SWPS_Meta_Editor {
 			remove_action( 'wp_head', 'rel_canonical' );
 		}
 
-		// Robots.
-		$robots = SWPS_Hooks::filter_meta_robots( $robots, $post_id );
-		if ( ! empty( $robots ) && 'index, follow' !== $robots ) {
-			printf( '<meta name="robots" content="%s" />' . "\n", esc_attr( $robots ) );
-		}
+		// Robots are merged into core's single tag via the wp_robots filter
+		// (see filter_robots) so the page never carries two robots meta tags.
 
 		// Open Graph.
 		$this->output_og_tags( $post_id );
 
 		// Twitter Card.
 		$this->output_twitter_tags( $post_id );
+	}
+
+	/**
+	 * Merge the per-post robots setting into core's robots meta tag.
+	 *
+	 * Previously this printed its own <meta name="robots"> next to core's
+	 * default (max-image-preview:large), leaving two robots tags on
+	 * noindexed pages. Directives are parsed from the stored
+	 * comma-separated string (e.g. "noindex, follow").
+	 *
+	 * @param array $robots Core robots directives.
+	 * @return array
+	 */
+	public function filter_robots( array $robots ): array {
+		if ( ! is_singular() ) {
+			return $robots;
+		}
+
+		$post_id = get_the_ID();
+		if ( ! $post_id ) {
+			return $robots;
+		}
+
+		$setting = get_post_meta( $post_id, '_swps_robots', true );
+		$setting = SWPS_Hooks::filter_meta_robots( $setting, $post_id );
+
+		if ( empty( $setting ) || 'index, follow' === $setting ) {
+			return $robots;
+		}
+
+		foreach ( array_map( 'trim', explode( ',', $setting ) ) as $directive ) {
+			if ( '' !== $directive && 'index' !== $directive ) {
+				$robots[ $directive ] = true;
+			}
+		}
+
+		return $robots;
 	}
 
 	/**

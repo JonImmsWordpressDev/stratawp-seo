@@ -122,8 +122,13 @@ class SWPS_Schema {
 			$this->add_article_node( $graph );
 		}
 
-		// JSON-LD breadcrumbs only when HTML breadcrumbs feature is disabled.
-		if ( ! is_front_page() && ! get_option( 'swps_breadcrumbs_enabled', 1 ) ) {
+		// JSON-LD breadcrumbs — Google's preferred breadcrumb format. Previously
+		// gated on the HTML breadcrumbs toggle being OFF, which meant a default
+		// install (toggle on, but theme never calling swps_breadcrumbs()) shipped
+		// no BreadcrumbList markup at all. Now emitted by default; sites whose
+		// theme renders the microdata trail can turn this off to avoid the
+		// harmless duplicate.
+		if ( ! is_front_page() && get_option( 'swps_breadcrumbs_jsonld', 1 ) ) {
 			$this->add_breadcrumb_node( $graph );
 		}
 
@@ -344,6 +349,13 @@ class SWPS_Schema {
 
 		$opts = get_option( 'swps_local_seo', array() );
 		if ( empty( $opts['enabled'] ) ) {
+			return;
+		}
+
+		// Same "meaningful data" threshold as SWPS_Local_SEO::is_enabled() —
+		// without it, enabled + name but no locality emitted a thin,
+		// address-less LocalBusiness node.
+		if ( '' === trim( (string) ( $opts['name'] ?? '' ) ) || '' === trim( (string) ( $opts['locality'] ?? '' ) ) ) {
 			return;
 		}
 

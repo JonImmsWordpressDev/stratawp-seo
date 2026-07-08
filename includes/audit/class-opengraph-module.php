@@ -128,8 +128,8 @@ class SWPS_OpenGraph_Module extends SWPS_Audit_Module {
 		$site_name   = get_bloginfo( 'name' );
 		$image       = self::get_og_image( $post );
 
-		// OG tags.
-		printf( '<meta property="og:type" content="article" />' . "\n" );
+		// OG tags. Posts are articles; pages and other singulars are websites.
+		printf( '<meta property="og:type" content="%s" />' . "\n", esc_attr( is_singular( 'post' ) ? 'article' : 'website' ) );
 		printf( '<meta property="og:title" content="%s" />' . "\n", esc_attr( $title ) );
 		printf( '<meta property="og:description" content="%s" />' . "\n", esc_attr( $description ) );
 		printf( '<meta property="og:url" content="%s" />' . "\n", esc_url( $url ) );
@@ -151,9 +151,23 @@ class SWPS_OpenGraph_Module extends SWPS_Audit_Module {
 
 	/**
 	 * Get OG description from post.
-	 * Priority: Yoast meta desc → RankMath desc → excerpt → first 160 chars.
+	 * Priority: SWPS social desc → SWPS meta desc → Yoast → RankMath →
+	 * excerpt → first 160 chars.
 	 */
 	private static function get_description( WP_Post $post ): string {
+		// The plugin's own per-post fields win — previously only rival
+		// plugins' keys were read, so an SWPS description was silently
+		// ignored in this fallback path.
+		$desc = get_post_meta( $post->ID, '_swps_social_description', true );
+		if ( ! empty( $desc ) ) {
+			return $desc;
+		}
+
+		$desc = get_post_meta( $post->ID, '_swps_meta_description', true );
+		if ( ! empty( $desc ) ) {
+			return $desc;
+		}
+
 		$desc = get_post_meta( $post->ID, '_yoast_wpseo_metadesc', true );
 		if ( ! empty( $desc ) ) {
 			return $desc;
