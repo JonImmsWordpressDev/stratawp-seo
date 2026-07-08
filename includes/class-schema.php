@@ -108,8 +108,10 @@ class SWPS_Schema {
 			$this->add_website_node( $graph );
 		}
 
-		// LocalBusiness absorbed into the graph on the homepage when Local SEO is on.
-		if ( is_front_page() || is_home() ) {
+		// LocalBusiness absorbed into the graph on the front page when Local SEO
+		// is on. Front page only — emitting it on the posts page too duplicated
+		// the business entity on /blog/.
+		if ( is_front_page() ) {
 			$this->add_local_business_node( $graph );
 		}
 
@@ -198,6 +200,16 @@ class SWPS_Schema {
 			return;
 		}
 
+		// Sanitization gate — last line of defense for already-stored schema.
+		// Strips non-schema telemetry keys (the AI provider appends _usage
+		// token counts to every response, which leaked into public JSON-LD)
+		// and refuses to emit deprecated types (Google retired HowTo rich
+		// results in 2023).
+		$decoded = self::sanitize_aeo_schema( $decoded );
+		if ( empty( $decoded ) ) {
+			return;
+		}
+
 		/**
 		 * Filter the AEO-generated schema array before output.
 		 *
@@ -207,6 +219,64 @@ class SWPS_Schema {
 		$decoded = (array) apply_filters( "swps_schema_{$type}", $decoded, $post_id );
 
 		$this->output_jsonld( $decoded );
+	}
+
+	/**
+	 * Sanitize a stored AEO schema array before public output.
+	 *
+	 * @param array $schema Decoded schema array.
+	 * @return array Sanitized schema, or empty array when the type is deprecated.
+	 */
+	public static function sanitize_aeo_schema( array $schema ): array {
+		$schema = self::strip_private_keys( $schema );
+
+		/**
+		 * Filter the list of deprecated schema @types that must not be emitted.
+		 *
+		 * @param string[] $types Deprecated type names.
+		 */
+		$deprecated = (array) apply_filters( 'swps_schema_deprecated_types', array( 'HowTo' ) );
+
+		foreach ( (array) ( $schema['@type'] ?? array() ) as $node_type ) {
+			if ( in_array( (string) $node_type, $deprecated, true ) ) {
+				return array();
+			}
+		}
+
+		return $schema;
+	}
+
+	/**
+	 * Recursively remove underscore-prefixed keys (non-schema telemetry).
+	 *
+	 * @param array $data Schema data.
+	 * @return array
+	 */
+	private static function strip_private_keys( array $data ): array {
+		$clean = array();
+
+		foreach ( $data as $key => $value ) {
+			if ( is_string( $key ) && str_starts_with( $key, '_' ) ) {
+				continue;
+			}
+			$clean[ $key ] = is_array( $value ) ? self::strip_private_keys( $value ) : $value;
+		}
+
+		return $clean;
+	}
+
+	/**
+	 * Decode HTML entities and strip tags for JSON-LD text fields.
+	 *
+	 * WP display functions (get_the_title, get_the_excerpt, term names)
+	 * return entity-encoded strings (&amp;, &#8217;). JSON-LD strings should
+	 * carry real Unicode, not double-encoded entities.
+	 *
+	 * @param mixed $text Raw text.
+	 * @return string
+	 */
+	private static function plain_text( $text ): string {
+		return trim( html_entity_decode( wp_strip_all_tags( (string) $text ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
 	}
 
 	/**
@@ -291,12 +361,16 @@ class SWPS_Schema {
 			return;
 		}
 
-		$page_title = wp_strip_all_tags( (string) wp_title( '|', false, 'right' ) );
+		// wp_get_document_title() gives the full rendered title (with the site
+		// name interpolated). The previous wp_title( '|', ... ) call returned
+		// only the contextual part with the separator appended, so every
+		// WebPage.name ended in a dangling " |".
+		$page_title = self::plain_text( wp_get_document_title() );
 		$node       = array(
 			'@type' => 'WebPage',
 			'@id'   => SWPS_Schema_Graph::webpage_id( $url ),
 			'url'   => $url,
-			'name'  => '' !== $page_title ? $page_title : get_bloginfo( 'name' ),
+			'name'  => '' !== $page_title ? $page_title : self::plain_text( get_bloginfo( 'name' ) ),
 		);
 
 		$graph->add_node( $node );
@@ -399,22 +473,20 @@ class SWPS_Schema {
 			'@context'         => 'https://schema.org',
 			'@type'            => $article_type,
 			'@id'              => SWPS_Schema_Graph::article_id( $permalink ),
-			'headline'         => get_the_title( $post ),
-			'description'      => $excerpt,
+			'headline'         => self::plain_text( get_the_title( $post ) ),
+			'description'      => self::plain_text( $excerpt ),
 			'datePublished'    => get_the_date( 'c', $post ),
 			'dateModified'     => get_the_modified_date( 'c', $post ),
 			'mainEntityOfPage' => array( '@id' => SWPS_Schema_Graph::webpage_id( $permalink ) ),
 			'wordCount'        => str_word_count( wp_strip_all_tags( $post->post_content ) ),
 		);
 
-		// Publisher — Google requires Organization type for Article.publisher.
-		// On personal-brand sites (swps_schema_entity_type = Person) the site
-		// entity node is Person-typed, so referencing it would emit an invalid
-		// Person publisher. Publisher is a recommended (not required) Article
-		// property, so we omit it entirely in that case.
-		if ( 'Organization' === get_option( 'swps_schema_entity_type', 'Organization' ) ) {
-			$node['publisher'] = array( '@id' => SWPS_Schema_Graph::org_id() );
-		}
+		// Publisher — schema.org (and Google's Article documentation) accept
+		// Organization OR Person for Article.publisher, so reference the site
+		// entity regardless of its type. Previously publisher was omitted
+		// entirely on personal-brand (Person) sites, leaving every Article
+		// without a publisher.
+		$node['publisher'] = array( '@id' => SWPS_Schema_Graph::org_id() );
 
 		// Author node: store inline for the filter shim (back-compat), then
 		// replace with an @id reference after the filter runs. That way
@@ -545,7 +617,7 @@ class SWPS_Schema {
 			$list_items[] = array(
 				'@type'    => 'ListItem',
 				'position' => $position + 1,
-				'name'     => $item['name'],
+				'name'     => self::plain_text( $item['name'] ),
 				'item'     => $item['url'],
 			);
 		}
@@ -579,15 +651,25 @@ class SWPS_Schema {
 			return;
 		}
 
-		$author_url = get_author_posts_url( $author->ID );
-		$person_id  = SWPS_Schema_Graph::person_id( $author->ID );
+		$author_url     = get_author_posts_url( $author->ID );
+		$is_person_site = 'Person' === get_option( 'swps_schema_entity_type', 'Organization' );
 
-		// Full Person node.
-		$person = array_merge(
-			array( '@id' => $person_id ),
-			$this->build_person_node( $author )
-		);
-		$graph->add_node( $person );
+		// On personal-brand (Person) sites the site entity (#person) IS the
+		// author — reference it instead of emitting a second Person node with
+		// a different @id for the same human. This mirrors the reconciliation
+		// add_article_node already does for Article.author. Organization sites
+		// keep a standalone author Person node.
+		$person_id = $is_person_site
+			? SWPS_Schema_Graph::org_id()
+			: SWPS_Schema_Graph::person_id( $author->ID );
+
+		if ( ! $is_person_site ) {
+			$person = array_merge(
+				array( '@id' => $person_id ),
+				$this->build_person_node( $author )
+			);
+			$graph->add_node( $person );
+		}
 
 		// ProfilePage referencing Person.
 		$profile_node = array(
@@ -596,7 +678,7 @@ class SWPS_Schema {
 			'name'       => sprintf(
 				/* translators: %s: author display name */
 				__( 'Author: %s', 'stratawp-seo' ),
-				$author->display_name
+				self::plain_text( $author->display_name )
 			),
 			'url'        => $author_url,
 			'mainEntity' => array( '@id' => $person_id ),

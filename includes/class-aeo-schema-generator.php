@@ -119,6 +119,15 @@ class SWPS_AEO_Schema_Generator {
 
 		$json = $response;
 
+		// The AI provider appends telemetry to its decoded response (e.g. a
+		// _usage key with token counts). Strip underscore-prefixed keys so
+		// they are never validated, stored, or emitted in public JSON-LD.
+		foreach ( array_keys( $json ) as $key ) {
+			if ( is_string( $key ) && str_starts_with( $key, '_' ) ) {
+				unset( $json[ $key ] );
+			}
+		}
+
 		if ( function_exists( 'apply_filters' ) ) {
 			$json = (array) apply_filters( 'swps_aeo_schema_json', $json, $type, null );
 		}

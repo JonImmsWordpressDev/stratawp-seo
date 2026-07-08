@@ -522,6 +522,17 @@ class SWPS_Sitemap_Manager {
 		if ( $post && preg_match_all( '/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $post->post_content, $matches ) ) {
 			$seen = array( $thumb_id ? wp_get_attachment_url( $thumb_id ) : '' );
 			foreach ( $matches[1] as $img_url ) {
+				// The regex captures whatever literal sits in src="…" — including
+				// relative paths, lazy-load placeholders, and non-URL strings from
+				// code samples. Only absolute http(s) URLs belong in the image
+				// sitemap, and they must match the site's scheme (a stray http://
+				// theme-asset URL on an https site is a mixed-scheme signal).
+				if ( ! preg_match( '#^https?://#i', $img_url ) ) {
+					continue;
+				}
+				if ( is_ssl() ) {
+					$img_url = set_url_scheme( $img_url, 'https' );
+				}
 				if ( in_array( $img_url, $seen, true ) ) {
 					continue;
 				}
