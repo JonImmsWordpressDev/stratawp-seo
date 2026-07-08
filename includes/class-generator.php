@@ -451,9 +451,12 @@ PROMPT;
 		update_post_meta( $post_id, '_swps_focus_keyword', $focus_keyword );
 
 		// Generate meta title (shortened post title if AI didn't provide one).
+		// Shorten at a word boundary — the previous hard mb_substr cut produced
+		// mid-word titles ("…for Wor") in <title> and og:title on every
+		// generated post whose title ran past 60 chars.
 		$meta_title = sanitize_text_field( $ai_result['meta_title'] ?? '' );
 		if ( empty( $meta_title ) ) {
-			$meta_title = mb_substr( $ai_result['title'], 0, 60 );
+			$meta_title = self::shorten_at_word_boundary( (string) $ai_result['title'], 60 );
 		}
 		update_post_meta( $post_id, '_swps_meta_title', $meta_title );
 		$secondary     = $ai_result['secondary_keywords'] ?? array();
@@ -717,5 +720,30 @@ PROMPT;
 	 */
 	private function log( string $message ): void {
 		self::append_log( $message );
+	}
+
+	/**
+	 * Shorten a string to a maximum length, breaking at a word boundary.
+	 *
+	 * @param string $text       Text to shorten.
+	 * @param int    $max_length Maximum length in characters.
+	 * @return string
+	 */
+	public static function shorten_at_word_boundary( string $text, int $max_length ): string {
+		$text = trim( $text );
+		if ( mb_strlen( $text ) <= $max_length ) {
+			return $text;
+		}
+
+		$cut  = mb_substr( $text, 0, $max_length );
+		$last = mb_strrpos( $cut, ' ' );
+
+		// Only back off to the space when it doesn't gut the title; a title
+		// that is one giant unbroken token still gets the hard cut.
+		if ( false !== $last && $last > (int) ( $max_length / 2 ) ) {
+			$cut = mb_substr( $cut, 0, $last );
+		}
+
+		return rtrim( $cut, " \t\n\r\0\x0B,;:—–-" );
 	}
 }

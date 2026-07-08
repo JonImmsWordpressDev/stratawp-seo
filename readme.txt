@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.23.0
+Stable tag: 4.24.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,18 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.24.0 =
+* Fixed: AI telemetry (a _usage key with token counts) leaked into public AEO JSON-LD. Underscore-prefixed keys are now stripped at generation AND at render, so already-stored schema on live posts is cleaned without re-saving.
+* Fixed: deprecated schema types are no longer emitted from stored AEO data — Google retired HowTo rich results in 2023. Filterable via swps_schema_deprecated_types.
+* Fixed: every WebPage schema node's name ended in a dangling " |" — the builder used wp_title() (contextual part + separator) instead of the full document title.
+* Fixed: JSON-LD strings (Article headline/description, WebPage name, breadcrumb names) carried double-encoded HTML entities (&amp;, &#8217;); they now decode to real Unicode.
+* Fixed: Article.publisher was omitted entirely on personal-brand (Person) sites; it now references the site entity (schema.org and Google accept Person publishers).
+* Fixed: author archives emitted two Person nodes with different @ids for the same person on Person-entity sites; the ProfilePage now references the single site entity.
+* Fixed: generated meta titles were hard-cut at 60 characters mid-word; they now shorten at a word boundary.
+* New: self-referencing canonicals on the posts page, term/author/post-type archives (pagination-aware) — previously no canonical was emitted on any non-singular view.
+* Fixed: LocalBusiness schema no longer duplicates onto the posts page; it emits on the front page only.
+* Fixed: the image sitemap accepted any string found in an img src — including non-URL strings and http:// URLs on https sites. Entries are now validated as absolute URLs and scheme-normalized.
 
 = 4.23.0 =
 * New: the blog-index homepage and posts page now emit a meta description (posts-page SEO description, the new Homepage Meta Description setting, or the site tagline) and full Open Graph/Twitter Card tags — previously these pages shipped with no description and no social preview at all.

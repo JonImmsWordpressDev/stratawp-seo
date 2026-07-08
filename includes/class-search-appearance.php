@@ -51,6 +51,10 @@ class SWPS_Search_Appearance {
 		// Meta description for non-singular pages — priority 2 (same as Meta Editor).
 		add_action( 'wp_head', array( $this, 'output_meta_description' ), 2 );
 
+		// Self-referencing canonicals for non-singular views — neither core
+		// nor the Canonical module covers the posts page or archives.
+		add_action( 'wp_head', array( $this, 'output_canonical' ), 1 );
+
 		// Open Graph / Twitter for non-singular pages — priority 5 (Meta Editor
 		// covers singular views at priority 2; the audit OG module covers
 		// singular views at priority 5 when the Meta Editor is disabled).
@@ -183,6 +187,40 @@ class SWPS_Search_Appearance {
 		if ( ! empty( $image ) ) {
 			printf( '<meta name="twitter:image" content="%s" />' . "\n", esc_url( $image ) );
 		}
+	}
+
+	/**
+	 * Output a self-referencing canonical on non-singular views.
+	 *
+	 * WordPress core's rel_canonical and the Canonical audit module are both
+	 * singular-only, so the posts page, term archives, author archives, and
+	 * post type archives shipped with no canonical at all. Paginated archives
+	 * canonicalize to their own page URL.
+	 */
+	public function output_canonical(): void {
+		if ( is_singular() || is_404() || is_search() ) {
+			return;
+		}
+
+		// A manual term-level canonical override is emitted by Taxonomy Meta.
+		if ( is_category() || is_tag() || is_tax() ) {
+			$term = get_queried_object();
+			if ( $term instanceof WP_Term && get_term_meta( $term->term_id, '_swps_canonical_url', true ) ) {
+				return;
+			}
+		}
+
+		$url = $this->get_context_url();
+		if ( '' === $url ) {
+			return;
+		}
+
+		$paged = max( 1, (int) get_query_var( 'paged' ) );
+		if ( $paged > 1 ) {
+			$url = trailingslashit( $url ) . user_trailingslashit( 'page/' . $paged, 'paged' );
+		}
+
+		printf( '<link rel="canonical" href="%s" />' . "\n", esc_url( $url ) );
 	}
 
 	/**
