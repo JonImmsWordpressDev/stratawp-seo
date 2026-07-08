@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.22.2
+Stable tag: 4.23.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,19 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.23.0 =
+* New: the blog-index homepage and posts page now emit a meta description (posts-page SEO description, the new Homepage Meta Description setting, or the site tagline) and full Open Graph/Twitter Card tags — previously these pages shipped with no description and no social preview at all.
+* New: category, tag, taxonomy, author, and post type archives emit a complete social card (og:type/url/site_name/image + Twitter tags), honoring per-term social title/description/image overrides.
+* New: noindex options for author and date archives under Search Appearance (off by default).
+* New: BreadcrumbList JSON-LD is emitted by default in the schema graph (previously only when HTML breadcrumbs were disabled, so most sites had no breadcrumb markup). A new toggle disables it for themes that render the HTML breadcrumb trail.
+* Improved: robots directives now merge into WordPress core's single robots meta tag via the wp_robots filter instead of printing a second tag, preserving max-image-preview:large alongside noindex.
+* Improved: sitemap lastmod for taxonomy/author index entries and the homepage URL now reflects the site's real last-modified time instead of the render time.
+* Fixed: static front pages ignored the configured homepage title template.
+* Fixed: the fallback Open Graph module ignored the plugin's own meta/social description fields and marked pages as og:type=article.
+* Fixed: the HTML breadcrumb trail now honors the Yoast primary category, matching the JSON-LD trail.
+* Fixed: LocalBusiness schema no longer emits a thin, address-less node when Local SEO is enabled without a locality.
+* Fixed: regex redirect capture groups $10 and above are no longer corrupted by the $1 substitution.
 
 = 4.22.2 =
 * Fixed: "Received empty response from Claude" when generating content with Claude Sonnet 5 or newer models. These models reason ("think") before answering by default, and the reasoning block ahead of the actual text made the response parser think it was empty. The parser now reads the text from anywhere in the response.
