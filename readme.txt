@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.24.0
+Stable tag: 4.24.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,10 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.24.1 =
+* Fixed: the admin panel rendered with a corrupted mix of light- and dark-theme colors in the default dark theme — invisible white-on-white modal text (Generate preview, Calendar, Keywords research), light-gray borders on every card and input, low-contrast muted text across all pages, and the brand accent turning orange. The legacy stylesheet's :root variables were winning the cascade over the design-token stylesheet; the token theme blocks are now specificity-qualified so they always win on plugin pages.
+* Fixed: a 124px dead gap between the WordPress admin menu and the plugin content on viewports between 783 and 960px (WordPress auto-folds its menu there; the shell kept the full 160px offset).
 
 = 4.24.0 =
 * Fixed: AI telemetry (a _usage key with token counts) leaked into public AEO JSON-LD. Underscore-prefixed keys are now stripped at generation AND at render, so already-stored schema on live posts is cleaned without re-saving.
