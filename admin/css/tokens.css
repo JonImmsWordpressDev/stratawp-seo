@@ -16,10 +16,23 @@
  *
  * Dark theme by default. Light theme via [data-swps-theme="light"].
  * Legacy --swps-* names kept as aliases (admin.css continues to work).
+ *
+ * Specificity note: admin.css defines the legacy --swps-* names in a bare
+ * `:root` block (0,1,0) and prints AFTER this file on shell pages, so a
+ * plain attribute selector here would lose the cascade tie and the shell
+ * would render with light-theme text/border/surface values on the dark
+ * theme (issue #88 — "admin panel broken", dark-on-dark text, light-gray
+ * borders). The `:root[data-swps-theme=…]` forms are (0,2,0) and win
+ * regardless of print order. The bare `:root` fallback stays for the
+ * attribute-missing edge case; the light selector is included on this
+ * base block so the non-color tokens and legacy aliases also win in
+ * light mode — the light block below overrides its colors at equal
+ * specificity by source order.
  */
 
 :root,
-[data-swps-theme="dark"] {
+:root[data-swps-theme="dark"],
+:root[data-swps-theme="light"] {
     /* === Surfaces === */
     --swps-bg-app:        linear-gradient(180deg, #0F172A 0%, #1E293B 100%);
     --swps-bg-app-solid:  #0F172A;
@@ -109,7 +122,7 @@
     --swps-border-light:  var(--swps-border);
 }
 
-[data-swps-theme="light"] {
+:root[data-swps-theme="light"] {
     /* === Surfaces === */
     --swps-bg-app:        #FAFAFA;
     --swps-bg-app-solid:  #FAFAFA;

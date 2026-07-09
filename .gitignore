@@ -7,10 +7,11 @@ vendor/
 .idea/
 
 # Claude Code / Claude Flow tooling
+# (CLAUDE.md is tracked deliberately — it carries repo conventions,
+#  e.g. commit/PR attribution, that agent sessions must follow.)
 .claude/
 .claude-flow/
 .mcp.json
-CLAUDE.md
 
 # Codex / agent tooling
 .agents/

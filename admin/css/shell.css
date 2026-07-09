@@ -43,6 +43,14 @@ body.swps-has-shell #wpcontent {
 body.folded.swps-has-shell #wpcontent {
     margin-left: 36px; /* WP collapsed sidebar */
 }
+/* WP auto-folds the admin menu to 36px between 783-960px (core's
+   `.auto-fold #wpcontent` rule). Our 160px margin above outranks it,
+   leaving a 124px dead gap in that range — match core's fold here. */
+@media only screen and (min-width: 783px) and (max-width: 960px) {
+    body.auto-fold.swps-has-shell #wpcontent {
+        margin-left: 36px;
+    }
+}
 @media screen and (max-width: 782px) {
     body.swps-has-shell #wpcontent {
         margin-left: 0;
