@@ -1332,8 +1332,8 @@ stratawp-seo/
 │       └── page-header.php       Shared page header (also used by the inline Debug page)
 │
 ├── admin/
-│   ├── css/                      Design system (tokens.css, components.css, shell.css, templates.css) + per-page CSS (admin.css, aeo.css, calendar.css, pages/*.css)
-│   └── js/                       Per-page JS (admin.js + shell.js shared; aeo-optimizer.js, dashboard.js, backlinks.js, etc.)
+│   ├── css/                      Design system (tokens.css, components.css, admin-ui.css, templates.css) + per-page CSS (admin.css, aeo.css, calendar.css, pages/*.css)
+│   └── js/                       Per-page JS (admin.js + admin-ui.js shared; aeo-optimizer.js, dashboard.js, backlinks.js, etc.)
 │
 ├── docs/                         Internal docs and notes
 └── screenshots/                  WP plugin screenshots
@@ -1900,7 +1900,7 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 - **Brand palette overhaul** — switched from gold/black to **Emerald → Teal** (`#10B981 → #14B8A6` dark, `#059669 → #0D9488` light). Brand gold was clashing with status warn/info colors that also used gold tints; the new emerald-teal brand sits cleanly alongside the new semantic palette.
 - **Status palette refreshed** — green for good (`#22C55E` / `#16A34A`), red for bad (`#EF4444` / `#DC2626`), orange for warn (`#F97316` / `#C2410C`), blue for info (`#3B82F6` / `#2563EB`), violet for AI (`#8B5CF6` / `#7C3AED`), sky for "new" highlights (`#0EA5E9` / `#0284C7`).
 - Killed the colored halo on primary CTAs — `--swps-accent-glow` is now a clean depth shadow instead of a yellow neon glow.
-- Cleaned up every hardcoded brand-gold rgba in `tokens.css`, `components.css`, `shell.css`, `templates.css`, `pages/dashboard.css`, `admin.css`.
+- Cleaned up every hardcoded brand-gold rgba in `tokens.css`, `components.css`, `admin-ui.css`, `templates.css`, `pages/dashboard.css`, `admin.css`.
 
 ### 4.1.0–4.1.3
 - **NEW: AI Auto-Optimize page** — finds underperforming posts, generates AI edit proposals, applies edits with diff review. Manual review queue: every change is reviewed before it touches content. AJAX-driven, lives at `Create → Auto-Optimize`.
