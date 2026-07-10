@@ -96,7 +96,7 @@ class SWPS_Admin_Shell {
 	}
 
 	/**
-	 * Add body class so shell.css can scope WP overrides.
+	 * Add body class so the shell CSS can scope WP overrides.
 	 */
 	public function add_body_class( string $classes ): string {
 		if ( self::is_own_page() ) {
@@ -106,7 +106,13 @@ class SWPS_Admin_Shell {
 	}
 
 	/**
-	 * Enqueue tokens, shell, components CSS + shell.js.
+	 * Enqueue tokens, shell, components CSS + the shell JS.
+	 *
+	 * The shell asset FILES are named admin-ui.(css|js), not shell.*:
+	 * hosting WAFs commonly 403 any URL containing "shell" (webshell
+	 * scanner rules), which blocked these two files and collapsed the
+	 * whole admin layout on affected hosts (issue #88). Handles keep
+	 * the swps-shell name — they never appear in URLs.
 	 */
 	public function enqueue_assets( string $hook ): void {
 		if ( ! self::is_own_page( $hook ) ) {
@@ -130,7 +136,7 @@ class SWPS_Admin_Shell {
 
 		wp_enqueue_style(
 			'swps-shell',
-			SWPS_PLUGIN_URL . 'admin/css/shell.css',
+			SWPS_PLUGIN_URL . 'admin/css/admin-ui.css',
 			array( 'swps-tokens', 'dashicons' ),
 			SWPS_VERSION
 		);
@@ -151,7 +157,7 @@ class SWPS_Admin_Shell {
 
 		wp_enqueue_script(
 			'swps-shell',
-			SWPS_PLUGIN_URL . 'admin/js/shell.js',
+			SWPS_PLUGIN_URL . 'admin/js/admin-ui.js',
 			array(),
 			SWPS_VERSION,
 			true
@@ -222,7 +228,7 @@ class SWPS_Admin_Shell {
 				<span class="dashicons <?php echo esc_attr( $toggle_icon ); ?>"></span><span class="swps-shell-themebtn-label" data-swps-theme-label><?php echo esc_html( $toggle_word ); ?></span>
 			</button>
 			<a class="swps-shell-iconbtn"
-				href="https://github.com/jonimms/stratawp-seo"
+				href="https://github.com/JonImmsWordpressDev/stratawp-seo"
 				target="_blank"
 				rel="noopener noreferrer"
 				aria-label="<?php esc_attr_e( 'Help &amp; docs', 'stratawp-seo' ); ?>"
