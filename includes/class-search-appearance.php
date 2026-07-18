@@ -402,6 +402,22 @@ class SWPS_Search_Appearance {
 	 * Get the meta description for the current page context.
 	 */
 	private function get_description(): string {
+		/**
+		 * Filters the resolved meta description before output.
+		 *
+		 * Applies everywhere the description is consumed (meta description,
+		 * Open Graph, Twitter Card), letting themes correct or override the
+		 * stored value for any view.
+		 *
+		 * @param string $description Resolved description for the current view.
+		 */
+		return (string) apply_filters( 'swps_meta_description', $this->resolve_description() );
+	}
+
+	/**
+	 * Resolve the raw description from post meta, templates, and options.
+	 */
+	private function resolve_description(): string {
 		// Blog-index homepage / posts page: previously returned nothing, so the
 		// most-shared URL on a blog-style site had no meta description at all.
 		if ( is_home() || ( is_front_page() && ! is_singular() ) ) {
