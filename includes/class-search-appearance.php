@@ -220,6 +220,21 @@ class SWPS_Search_Appearance {
 			$url = trailingslashit( $url ) . user_trailingslashit( 'page/' . $paged, 'paged' );
 		}
 
+		/**
+		 * Filters the archive canonical URL before output.
+		 *
+		 * Themes that paginate archives with a custom query arg instead of
+		 * core's paged query var can append it here so paginated views keep
+		 * a self-referencing canonical. Return an empty string to suppress
+		 * the tag entirely.
+		 *
+		 * @param string $url Canonical URL for the current archive view.
+		 */
+		$url = (string) apply_filters( 'swps_canonical_url', $url );
+		if ( '' === $url ) {
+			return;
+		}
+
 		printf( '<link rel="canonical" href="%s" />' . "\n", esc_url( $url ) );
 	}
 
