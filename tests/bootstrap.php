@@ -27,6 +27,11 @@ if ( ! defined( 'WEEK_IN_SECONDS' ) ) {
     define( 'WEEK_IN_SECONDS', 604800 );
 }
 
+// wpdb result-format constants.
+if ( ! defined( 'ARRAY_A' ) ) {
+    define( 'ARRAY_A', 'ARRAY_A' );
+}
+
 if ( ! function_exists( 'wp_strip_all_tags' ) ) {
     function wp_strip_all_tags( $string, $remove_breaks = false ) {
         $string = preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', (string) $string );

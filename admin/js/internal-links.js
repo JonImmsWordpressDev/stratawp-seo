@@ -43,14 +43,26 @@
             tinymce.activeEditor.execCommand('mceInsertContent', false, ' ' + linkHtml);
         }
 
-        // Mark as inserted via AJAX.
-        $.post(swpsInternalLinks.ajaxUrl, {
-            action:      'swps_link_insert',
-            nonce:       swpsInternalLinks.nonce,
-            post_id:     postId,
-            target_id:   targetId,
-            anchor_text: anchor
-        }).always(function () {
+        // Mark as inserted via AJAX. Cross-site suggestions have no local
+        // post ID and are tracked by URL instead.
+        var insertRequest;
+        if ($li.data('cross-site')) {
+            insertRequest = $.post(swpsInternalLinks.ajaxUrl, {
+                action:  'swps_link_cross_insert',
+                nonce:   swpsInternalLinks.nonce,
+                post_id: postId,
+                url:     targetUrl
+            });
+        } else {
+            insertRequest = $.post(swpsInternalLinks.ajaxUrl, {
+                action:      'swps_link_insert',
+                nonce:       swpsInternalLinks.nonce,
+                post_id:     postId,
+                target_id:   targetId,
+                anchor_text: anchor
+            });
+        }
+        insertRequest.always(function () {
             $li.fadeOut(300, function () { $(this).remove(); });
         });
     });
@@ -63,12 +75,21 @@
         var targetId = $li.data('target-id');
         var postId   = $('#post_ID').val();
 
-        $.post(swpsInternalLinks.ajaxUrl, {
-            action:    'swps_link_dismiss',
-            nonce:     swpsInternalLinks.nonce,
-            post_id:   postId,
-            target_id: targetId
-        });
+        if ($li.data('cross-site')) {
+            $.post(swpsInternalLinks.ajaxUrl, {
+                action:  'swps_link_cross_dismiss',
+                nonce:   swpsInternalLinks.nonce,
+                post_id: postId,
+                url:     $li.data('target-url')
+            });
+        } else {
+            $.post(swpsInternalLinks.ajaxUrl, {
+                action:    'swps_link_dismiss',
+                nonce:     swpsInternalLinks.nonce,
+                post_id:   postId,
+                target_id: targetId
+            });
+        }
 
         $li.fadeOut(300, function () { $(this).remove(); });
     });

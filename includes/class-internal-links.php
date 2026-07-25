@@ -18,12 +18,31 @@ class SWPS_Internal_Links {
 	private const GRAPH_TABLE = 'swps_link_graph';
 	private const CRON_HOOK   = 'swps_link_maintenance';
 
+	/**
+	 * Keyword matching engine.
+	 *
+	 * @var SWPS_Link_Keyword_Engine
+	 */
 	private SWPS_Link_Keyword_Engine $keyword_engine;
+
+	/**
+	 * AI analysis engine.
+	 *
+	 * @var SWPS_Link_AI_Engine
+	 */
 	private SWPS_Link_AI_Engine $ai_engine;
 
-	public function __construct( SWPS_Link_Keyword_Engine $keyword_engine, SWPS_Link_AI_Engine $ai_engine ) {
+	/**
+	 * Cross-site (owned/partner domain) candidate source.
+	 *
+	 * @var SWPS_Cross_Site_Links
+	 */
+	private SWPS_Cross_Site_Links $cross_site;
+
+	public function __construct( SWPS_Link_Keyword_Engine $keyword_engine, SWPS_Link_AI_Engine $ai_engine, ?SWPS_Cross_Site_Links $cross_site = null ) {
 		$this->keyword_engine = $keyword_engine;
 		$this->ai_engine      = $ai_engine;
+		$this->cross_site     = $cross_site ?? new SWPS_Cross_Site_Links();
 
 		if ( ! get_option( 'swps_internal_links_enabled', 1 ) ) {
 			return;
@@ -42,6 +61,8 @@ class SWPS_Internal_Links {
 		add_action( 'wp_ajax_swps_link_dismiss', array( $this, 'ajax_dismiss' ) );
 		add_action( 'wp_ajax_swps_link_insert', array( $this, 'ajax_insert' ) );
 		add_action( 'wp_ajax_swps_link_deep_analysis', array( $this, 'ajax_deep_analysis' ) );
+		add_action( 'wp_ajax_swps_link_cross_dismiss', array( $this, 'ajax_cross_dismiss' ) );
+		add_action( 'wp_ajax_swps_link_cross_insert', array( $this, 'ajax_cross_insert' ) );
 
 		// Admin assets.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
@@ -236,15 +257,30 @@ class SWPS_Internal_Links {
 	 * @param string $content Post HTML content.
 	 */
 	public function detect_existing_links( int $post_id, string $content ): void {
-		$home_url = home_url();
+		$home_url      = home_url();
+		$owned_domains = $this->cross_site->get_owned_domains();
+		$cross_links   = array();
 
 		if ( ! preg_match_all( '/<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/is', $content, $matches, PREG_SET_ORDER ) ) {
+			$this->cross_site->set_existing_links( $post_id, array() );
 			return;
 		}
 
 		foreach ( $matches as $match ) {
 			$href        = $match[1];
 			$anchor_text = wp_strip_all_tags( $match[2] );
+
+			// Links to owned/partner domains have no local post ID, so
+			// they're tracked in post meta rather than the graph table.
+			if ( ! empty( $owned_domains )
+				&& strpos( $href, $home_url ) !== 0
+				&& SWPS_Cross_Site_Links::url_matches_domains( $href, $owned_domains ) ) {
+				$cross_links[] = array(
+					'url'    => $href,
+					'anchor' => sanitize_text_field( mb_substr( $anchor_text, 0, 255 ) ),
+				);
+				continue;
+			}
 
 			// Only internal links.
 			if ( strpos( $href, $home_url ) !== 0 && strpos( $href, '/' ) !== 0 ) {
@@ -267,6 +303,8 @@ class SWPS_Internal_Links {
 				)
 			);
 		}
+
+		$this->cross_site->set_existing_links( $post_id, $cross_links );
 	}
 
 	/**
@@ -484,6 +522,14 @@ class SWPS_Internal_Links {
 
 		$all_existing = array_merge( $existing, $inserted );
 
+		$cross_existing  = $this->cross_site->get_existing_links( $post->ID );
+		$cross_suggested = array();
+		if ( $this->cross_site->is_active() ) {
+			$threshold       = (float) get_option( 'swps_link_relevance_threshold', 0.3 );
+			$max             = (int) get_option( 'swps_link_max_suggestions', 10 );
+			$cross_suggested = $this->cross_site->find_candidates( $post->ID, $threshold, $max );
+		}
+
 		wp_nonce_field( 'swps_internal_links', 'swps_internal_links_nonce' );
 		?>
 		<div id="swps-internal-links-metabox">
@@ -491,13 +537,13 @@ class SWPS_Internal_Links {
 				<?php
 				printf(
 					esc_html__( 'This post has %1$d internal links. %2$d suggestions available.', 'stratawp-seo' ),
-					count( $all_existing ),
-					count( $suggested )
+					count( $all_existing ) + count( $cross_existing ),
+					count( $suggested ) + count( $cross_suggested )
 				);
 				?>
 			</p>
 
-			<?php if ( ! empty( $all_existing ) ) : ?>
+			<?php if ( ! empty( $all_existing ) || ! empty( $cross_existing ) ) : ?>
 				<h4><?php esc_html_e( 'Existing Links', 'stratawp-seo' ); ?></h4>
 				<ul class="swps-existing-links">
 					<?php
@@ -516,10 +562,21 @@ class SWPS_Internal_Links {
 							<?php endif; ?>
 						</li>
 					<?php endforeach; ?>
+					<?php foreach ( $cross_existing as $link ) : ?>
+						<li>
+							<a href="<?php echo esc_url( $link['url'] ); ?>" target="_blank" rel="noopener">
+								<?php echo esc_html( $link['url'] ); ?>
+							</a>
+							<span class="swps-cross-site-badge"><?php echo esc_html( (string) wp_parse_url( $link['url'], PHP_URL_HOST ) ); ?></span>
+							<?php if ( ! empty( $link['anchor'] ) ) : ?>
+								<span class="swps-anchor-text">(<?php echo esc_html( $link['anchor'] ); ?>)</span>
+							<?php endif; ?>
+						</li>
+					<?php endforeach; ?>
 				</ul>
 			<?php endif; ?>
 
-			<?php if ( ! empty( $suggested ) ) : ?>
+			<?php if ( ! empty( $suggested ) || ! empty( $cross_suggested ) ) : ?>
 				<h4><?php esc_html_e( 'Suggested Links', 'stratawp-seo' ); ?></h4>
 				<ul class="swps-suggested-links">
 					<?php
@@ -542,6 +599,30 @@ class SWPS_Internal_Links {
 							<span class="swps-suggested-anchor"><?php echo esc_html( $anchor ); ?></span>
 							<?php if ( ! empty( $link['anchor_context'] ) ) : ?>
 								<span class="swps-rationale"><?php echo esc_html( $link['anchor_context'] ); ?></span>
+							<?php endif; ?>
+							<span class="swps-link-actions">
+								<button type="button" class="button button-small swps-insert-link"><?php esc_html_e( 'Insert', 'stratawp-seo' ); ?></button>
+								<button type="button" class="button button-small swps-dismiss-link"><?php esc_html_e( 'Dismiss', 'stratawp-seo' ); ?></button>
+							</span>
+						</li>
+					<?php endforeach; ?>
+					<?php
+					foreach ( $cross_suggested as $suggestion ) :
+						$score  = (float) $suggestion['score'];
+						$color  = $score >= 0.7 ? 'green' : ( $score >= 0.4 ? 'orange' : 'red' );
+						$anchor = ! empty( $suggestion['anchor_text'] ) ? $suggestion['anchor_text'] : $suggestion['title'];
+						?>
+						<li data-cross-site="1"
+							data-target-url="<?php echo esc_url( $suggestion['url'] ); ?>"
+							data-anchor="<?php echo esc_attr( $anchor ); ?>">
+							<span class="swps-score-dot" style="color:<?php echo esc_attr( $color ); ?>;">&#9679;</span>
+							<a href="<?php echo esc_url( $suggestion['url'] ); ?>" target="_blank" rel="noopener">
+								<?php echo esc_html( $suggestion['title'] ); ?>
+							</a>
+							<span class="swps-cross-site-badge"><?php echo esc_html( (string) wp_parse_url( $suggestion['url'], PHP_URL_HOST ) ); ?></span>
+							<span class="swps-suggested-anchor"><?php echo esc_html( $anchor ); ?></span>
+							<?php if ( ! empty( $suggestion['rationale'] ) ) : ?>
+								<span class="swps-rationale"><?php echo esc_html( $suggestion['rationale'] ); ?></span>
 							<?php endif; ?>
 							<span class="swps-link-actions">
 								<button type="button" class="button button-small swps-insert-link"><?php esc_html_e( 'Insert', 'stratawp-seo' ); ?></button>
@@ -584,12 +665,20 @@ class SWPS_Internal_Links {
 		$suggested = $this->get_links( $post_id, 'suggested' );
 		$existing  = $this->get_links( $post_id, 'existing' );
 
-		wp_send_json_success(
-			array(
-				'suggested' => $suggested,
-				'existing'  => $existing,
-			)
+		$response = array(
+			'suggested' => $suggested,
+			'existing'  => $existing,
 		);
+
+		if ( $this->cross_site->is_active() ) {
+			$threshold = (float) get_option( 'swps_link_relevance_threshold', 0.3 );
+			$max       = (int) get_option( 'swps_link_max_suggestions', 10 );
+
+			$response['cross_site_suggested'] = $this->cross_site->find_candidates( $post_id, $threshold, $max );
+			$response['cross_site_existing']  = $this->cross_site->get_existing_links( $post_id );
+		}
+
+		wp_send_json_success( $response );
 	}
 
 	/**
@@ -644,6 +733,48 @@ class SWPS_Internal_Links {
 	}
 
 	/**
+	 * AJAX: Dismiss a cross-site link suggestion.
+	 */
+	public function ajax_cross_dismiss(): void {
+		check_ajax_referer( 'swps_internal_links', 'nonce' );
+
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
+		}
+
+		$post_id = absint( $_POST['post_id'] ?? 0 );
+		$url     = esc_url_raw( wp_unslash( $_POST['url'] ?? '' ) );
+
+		if ( ! $post_id || empty( $url ) || ! $this->cross_site->is_owned_url( $url ) ) {
+			wp_send_json_error( array( 'message' => 'Invalid request.' ) );
+		}
+
+		$this->cross_site->dismiss_url( $post_id, $url );
+		wp_send_json_success();
+	}
+
+	/**
+	 * AJAX: Mark a cross-site link as inserted.
+	 */
+	public function ajax_cross_insert(): void {
+		check_ajax_referer( 'swps_internal_links', 'nonce' );
+
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
+		}
+
+		$post_id = absint( $_POST['post_id'] ?? 0 );
+		$url     = esc_url_raw( wp_unslash( $_POST['url'] ?? '' ) );
+
+		if ( ! $post_id || empty( $url ) || ! $this->cross_site->is_owned_url( $url ) ) {
+			wp_send_json_error( array( 'message' => 'Invalid request.' ) );
+		}
+
+		$this->cross_site->mark_inserted( $post_id, $url );
+		wp_send_json_success();
+	}
+
+	/**
 	 * AJAX: Run AI deep analysis for a post's suggestions.
 	 */
 	public function ajax_deep_analysis(): void {
@@ -660,9 +791,6 @@ class SWPS_Internal_Links {
 
 		// Get current keyword-matched suggestions.
 		$suggested = $this->get_links( $post_id, 'suggested' );
-		if ( empty( $suggested ) ) {
-			wp_send_json_error( array( 'message' => 'No suggestions to analyze.' ) );
-		}
 
 		$candidates = array_map(
 			fn( $link ) => array(
@@ -672,14 +800,32 @@ class SWPS_Internal_Links {
 			$suggested
 		);
 
-		$result = $this->ai_engine->analyze( $post_id, $candidates );
+		// Cross-site candidates from owned/partner domains join the batch.
+		$cross_candidates = array();
+		if ( $this->cross_site->is_active() ) {
+			$threshold        = (float) get_option( 'swps_link_relevance_threshold', 0.3 );
+			$max              = (int) get_option( 'swps_link_max_suggestions', 10 );
+			$cross_candidates = $this->cross_site->find_candidates( $post_id, $threshold, $max );
+		}
+
+		if ( empty( $candidates ) && empty( $cross_candidates ) ) {
+			wp_send_json_error( array( 'message' => 'No suggestions to analyze.' ) );
+		}
+
+		$result = $this->ai_engine->analyze( $post_id, array_merge( $candidates, $cross_candidates ) );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
 
-		// Update graph with AI results.
+		// Update graph with AI results; cross-site results go to post meta.
+		$cross_enriched = array();
 		foreach ( $result as $enriched ) {
+			if ( ! empty( $enriched['cross_site'] ) ) {
+				$cross_enriched[] = $enriched;
+				continue;
+			}
+
 			$this->upsert_link(
 				array(
 					'source_post_id'  => $post_id,
@@ -693,9 +839,18 @@ class SWPS_Internal_Links {
 			);
 		}
 
+		if ( ! empty( $cross_enriched ) ) {
+			$this->cross_site->store_ai_enrichment( $post_id, $cross_enriched );
+		}
+
 		// Return updated suggestions.
 		$updated = $this->get_links( $post_id, 'suggested' );
-		wp_send_json_success( array( 'suggestions' => $updated ) );
+		wp_send_json_success(
+			array(
+				'suggestions' => $updated,
+				'cross_site'  => $cross_enriched,
+			)
+		);
 	}
 
 	// -------------------------------------------------------------------------

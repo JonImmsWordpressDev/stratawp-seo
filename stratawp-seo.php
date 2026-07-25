@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.24.2
+ * Version: 4.25.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.24.2' );
+define( 'SWPS_VERSION', '4.25.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -175,6 +175,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-sitemap-admin.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-post-list-seo.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-link-keyword-engine.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-link-ai-engine.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-cross-site-links.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-internal-links.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-internal-links-admin.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-ai-bots.php';
@@ -405,9 +406,11 @@ final class StrataWP_SEO {
 		if ( is_admin() ) {
 			$this->post_list_seo = new SWPS_Post_List_SEO( $this->content_scorer );
 		}
-		$link_keyword_engine        = new SWPS_Link_Keyword_Engine();
-		$link_ai_engine             = new SWPS_Link_AI_Engine( $this->api, $this->cost_tracker );
-		$this->internal_links       = new SWPS_Internal_Links( $link_keyword_engine, $link_ai_engine );
+		$link_keyword_engine = new SWPS_Link_Keyword_Engine();
+		$link_ai_engine      = new SWPS_Link_AI_Engine( $this->api, $this->cost_tracker );
+		$cross_site_links    = new SWPS_Cross_Site_Links();
+		$cross_site_links->register_hooks();
+		$this->internal_links       = new SWPS_Internal_Links( $link_keyword_engine, $link_ai_engine, $cross_site_links );
 		$this->internal_links_admin = new SWPS_Internal_Links_Admin( $this->internal_links );
 		$this->ai_bots              = new SWPS_AI_Bots();
 		$this->auto_optimize        = new SWPS_Auto_Optimize( $this->content_scorer );
