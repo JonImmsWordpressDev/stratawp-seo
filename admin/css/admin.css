@@ -1239,6 +1239,18 @@
     font-style: italic;
 }
 
+#swps-internal-links-metabox .swps-cross-site-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: var(--swps-radius-sm);
+    background: var(--swps-secondary-light);
+    color: var(--swps-secondary);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    vertical-align: middle;
+}
+
 #swps-internal-links-metabox .swps-link-actions {
     margin-left: auto;
 }

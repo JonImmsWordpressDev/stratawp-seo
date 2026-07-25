@@ -1207,6 +1207,30 @@ class SWPS_Settings {
 			)
 		);
 
+		// --- Cross-Site Linking Section ---
+		add_settings_section(
+			'swps_cross_site_section',
+			__( 'Cross-Site Linking', 'stratawp-seo' ),
+			array( $this, 'render_cross_site_section' ),
+			'stratawp-seo'
+		);
+
+		register_setting(
+			'stratawp-seo',
+			'swps_owned_domains',
+			array(
+				'sanitize_callback' => array( 'SWPS_Cross_Site_Links', 'sanitize_owned_domains' ),
+				'default'           => array(),
+			)
+		);
+		add_settings_field(
+			'swps_owned_domains',
+			__( 'Owned domains', 'stratawp-seo' ),
+			array( $this, 'render_owned_domains_field' ),
+			'stratawp-seo',
+			'swps_cross_site_section'
+		);
+
 		// Internal Links settings.
 		register_setting(
 			'swps_settings',
@@ -1525,6 +1549,29 @@ class SWPS_Settings {
 		echo '<p>' . esc_html__( 'Per-post SEO meta fields for titles, descriptions, social previews, and robots directives. Auto-disabled when Yoast, RankMath, or AIOSEO is active.', 'stratawp-seo' ) . '</p>';
 	}
 
+	/**
+	 * Render the Cross-Site Linking section description.
+	 */
+	public function render_cross_site_section(): void {
+		echo '<p>' . esc_html__( 'Suggest links between sites you own. Each domain\'s public posts are fetched over the WordPress REST API (cached daily) and offered as cross-site candidates in the Internal Links metabox.', 'stratawp-seo' ) . '</p>';
+	}
+
+	/**
+	 * Render the owned-domains textarea. The option is stored as an array
+	 * of normalized origins; the textarea shows one per line.
+	 */
+	public function render_owned_domains_field(): void {
+		$domains = get_option( 'swps_owned_domains', array() );
+		$value   = is_array( $domains ) ? implode( "\n", $domains ) : '';
+
+		printf(
+			'<textarea name="swps_owned_domains" class="large-text code" rows="4" placeholder="%s">%s</textarea>',
+			esc_attr( "partner-site.com\nhttps://another-site.com" ),
+			esc_textarea( $value )
+		);
+		echo '<p class="description">' . esc_html__( 'One domain per line. Only add sites you own or partner with — never third-party sites. Your own domain is ignored.', 'stratawp-seo' ) . '</p>';
+	}
+
 	public function render_analytics_section(): void {
 		echo '<p>' . esc_html__( 'On-site analytics tracking and Google Search Console integration.', 'stratawp-seo' ) . '</p>';
 	}
@@ -1684,6 +1731,7 @@ class SWPS_Settings {
 					'swps_audit_section',
 					'swps_schema_section',
 					'swps_meta_section',
+					'swps_cross_site_section',
 					'swps_cleanup_section',
 					'swps_rss_section',
 				),

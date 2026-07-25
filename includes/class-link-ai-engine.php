@@ -40,6 +40,22 @@ class SWPS_Link_AI_Engine {
 
 		$candidate_data = array();
 		foreach ( $candidates as $candidate ) {
+			// Cross-site candidates (owned/partner domains) have no local
+			// post ID — they're identified by URL and carry their own
+			// title/excerpt from the remote inventory.
+			if ( ! empty( $candidate['cross_site'] ) ) {
+				if ( empty( $candidate['url'] ) ) {
+					continue;
+				}
+				$candidate_data[] = array(
+					'url'        => (string) $candidate['url'],
+					'title'      => (string) ( $candidate['title'] ?? '' ),
+					'excerpt'    => (string) ( $candidate['excerpt'] ?? '' ),
+					'cross_site' => true,
+				);
+				continue;
+			}
+
 			$post = get_post( $candidate['post_id'] );
 			if ( ! $post ) {
 				continue;
@@ -66,6 +82,8 @@ You are an SEO internal linking specialist. Analyze the relationship between a s
 2. Suggested anchor text (2-6 words, natural phrasing that would fit in the source post)
 3. A one-line rationale explaining why these posts are related
 
+Candidates are identified by either a numeric "post_id" (same site) or a "url" with "cross_site": true (a partner site run by the same publisher). In each result, echo back exactly the identifier the candidate had: "post_id" for post_id candidates, "url" for url candidates.
+
 Respond with JSON only. No markdown fences.
 
 Required JSON structure:
@@ -75,6 +93,12 @@ Required JSON structure:
     "relevance_score": 0.85,
     "anchor_text": "suggested anchor text",
     "rationale": "Both posts discuss WordPress caching strategies"
+  },
+  {
+    "url": "https://partner-site.com/example-post/",
+    "relevance_score": 0.7,
+    "anchor_text": "suggested anchor text",
+    "rationale": "The partner post expands on this topic"
   }
 ]
 PROMPT;
@@ -114,17 +138,46 @@ PROMPT;
 			$analysis = $result['candidates'];
 		}
 
+		return self::parse_enriched_items( $analysis );
+	}
+
+	/**
+	 * Parse AI response items into enriched results.
+	 *
+	 * Local candidates are identified by post_id, cross-site candidates
+	 * (owned/partner domains) by url. Items missing an identifier or a
+	 * relevance score are skipped; scores are clamped to [0, 1].
+	 *
+	 * @param array $analysis Decoded AI response items.
+	 * @return array<int, array> Enriched results; cross-site entries carry
+	 *                           'url' and 'cross_site' => true.
+	 */
+	public static function parse_enriched_items( array $analysis ): array {
 		$enriched = array();
 		foreach ( $analysis as $item ) {
-			if ( ! isset( $item['post_id'], $item['relevance_score'] ) ) {
+			if ( ! is_array( $item ) || ! isset( $item['relevance_score'] ) ) {
 				continue;
 			}
-			$enriched[] = array(
-				'post_id'         => (int) $item['post_id'],
+
+			$base = array(
 				'relevance_score' => max( 0.0, min( 1.0, (float) $item['relevance_score'] ) ),
 				'anchor_text'     => sanitize_text_field( $item['anchor_text'] ?? '' ),
 				'rationale'       => sanitize_text_field( $item['rationale'] ?? '' ),
 			);
+
+			if ( isset( $item['post_id'] ) ) {
+				$enriched[] = array_merge(
+					array( 'post_id' => (int) $item['post_id'] ),
+					$base,
+					array( 'cross_site' => false )
+				);
+			} elseif ( ! empty( $item['url'] ) && is_string( $item['url'] ) ) {
+				$enriched[] = array_merge(
+					array( 'url' => $item['url'] ),
+					$base,
+					array( 'cross_site' => true )
+				);
+			}
 		}
 
 		return $enriched;

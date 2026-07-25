@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.24.2
+Stable tag: 4.25.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,13 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.25.0 =
+* New: Cross-Site Linking — configure owned/partner domains (Settings → SEO → Cross-Site Linking) and the internal-link engines suggest links to those sites' posts. Each domain's public post inventory is fetched over the WordPress REST API and cached daily.
+* New: cross-site suggestions appear in the Internal Links metabox with a domain badge, and Deep Analysis (AI) scores them alongside same-site candidates with suggested anchor text.
+* New: existing links to owned domains in post content are now detected and shown as cross-site links instead of being ignored by the link graph.
+* New: swps_canonical_url filter over the resolved canonical URL, so themes with custom pagination params can self-canonicalize paginated archives.
+* New: swps_meta_description filter over the resolved meta description.
 
 = 4.24.2 =
 * Fixed: on hosts whose firewall blocks URLs containing "shell" (a common webshell-scanner WAF rule), the admin shell stylesheet and script (shell.css / shell.js) were served as 403, collapsing the entire admin panel layout and killing the top-bar controls. The files are renamed to admin-ui.css / admin-ui.js so the URLs no longer trip those rules.
