@@ -338,4 +338,105 @@ class SiteCrawlerTest extends TestCase {
 		$types = array_column( $rows, 'type' );
 		$this->assertNotContains( 'noindex_in_sitemap', $types );
 	}
+
+	// -------------------------------------------------------------------------
+	// resolve_url — scheme handling and relative resolution
+	// -------------------------------------------------------------------------
+
+	public function test_resolve_url_passes_through_absolute(): void {
+		$result = SWPS_Site_Crawler::resolve_url( 'https://other.com/page', 'https://example.com/' );
+		$this->assertSame( 'https://other.com/page', $result );
+	}
+
+	public function test_resolve_url_skips_mailto(): void {
+		$result = SWPS_Site_Crawler::resolve_url( 'mailto:someone@example.com', 'https://example.com/blog/' );
+		$this->assertSame( '', $result );
+	}
+
+	public function test_resolve_url_skips_tel(): void {
+		$result = SWPS_Site_Crawler::resolve_url( 'tel:+15551234567', 'https://example.com/contact/' );
+		$this->assertSame( '', $result );
+	}
+
+	public function test_resolve_url_skips_javascript(): void {
+		$result = SWPS_Site_Crawler::resolve_url( 'javascript:void(0)', 'https://example.com/' );
+		$this->assertSame( '', $result );
+	}
+
+	public function test_resolve_url_root_relative(): void {
+		$result = SWPS_Site_Crawler::resolve_url( '/blog/post/', 'https://example.com/old-slug/' );
+		$this->assertSame( 'https://example.com/blog/post/', $result );
+	}
+
+	public function test_resolve_url_protocol_relative(): void {
+		$result = SWPS_Site_Crawler::resolve_url( '//cdn.example.com/a.js', 'https://example.com/' );
+		$this->assertSame( 'https://cdn.example.com/a.js', $result );
+	}
+
+	public function test_resolve_url_walks_parent_segments(): void {
+		$result = SWPS_Site_Crawler::resolve_url( '../other', 'https://example.com/section/page' );
+		$this->assertSame( 'https://example.com/other', $result );
+	}
+
+	public function test_parse_html_does_not_fabricate_links_from_mailto(): void {
+		$html   = '<html><body>'
+			. '<a href="mailto:someone@example.com">mail</a>'
+			. '<a href="tel:+15551234567">call</a>'
+			. '<a href="/real-page/">real</a>'
+			. '</body></html>';
+		$result = SWPS_Site_Crawler::parse_html( $html, 'https://example.com/blog/' );
+		$this->assertContains( 'https://example.com/real-page/', $result['links'] );
+		$this->assertNotContains( 'https://example.com/blog/mailto:someone@example.com', $result['links'] );
+		$this->assertCount( 1, $result['links'] );
+	}
+
+	// -------------------------------------------------------------------------
+	// classify — canonical compared against the post-redirect URL
+	// -------------------------------------------------------------------------
+
+	public function test_classify_no_canonical_mismatch_when_redirect_target_self_canonicalizes(): void {
+		// /old 301s to /new; /new declares itself canonical. That is the
+		// redirect working, not a mismatch.
+		$fetch = array(
+			'url'       => 'https://example.com/old',
+			'status'    => 200,
+			'found_on'  => 'https://example.com/',
+			'hops'      => array(
+				array( 'url' => 'https://example.com/old', 'status' => 301 ),
+			),
+			'loop'      => false,
+			'final_url' => 'https://example.com/new/',
+		);
+		$page  = array( 'links' => array(), 'images' => array(), 'canonical' => 'https://example.com/new/', 'h1_count' => 1, 'has_noindex' => false, 'mixed' => array() );
+		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
+		$types = array_column( $rows, 'type' );
+		$this->assertNotContains( 'canonical_mismatch', $types );
+	}
+
+	public function test_classify_canonical_mismatch_against_final_url(): void {
+		// The redirect target itself declares a DIFFERENT canonical — real issue.
+		$fetch = array(
+			'url'       => 'https://example.com/old',
+			'status'    => 200,
+			'found_on'  => 'https://example.com/',
+			'hops'      => array(
+				array( 'url' => 'https://example.com/old', 'status' => 301 ),
+			),
+			'loop'      => false,
+			'final_url' => 'https://example.com/new/',
+		);
+		$page  = array( 'links' => array(), 'images' => array(), 'canonical' => 'https://example.com/elsewhere/', 'h1_count' => 1, 'has_noindex' => false, 'mixed' => array() );
+		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
+		$types = array_column( $rows, 'type' );
+		$this->assertContains( 'canonical_mismatch', $types );
+	}
+
+	public function test_classify_canonical_falls_back_to_url_without_final_url(): void {
+		// Legacy fetch arrays without final_url keep the old comparison.
+		$fetch = array( 'url' => 'https://example.com/page?utm_source=x', 'status' => 200, 'found_on' => 'https://example.com/', 'hops' => array() );
+		$page  = array( 'links' => array(), 'images' => array(), 'canonical' => 'https://example.com/page', 'h1_count' => 1, 'has_noindex' => false, 'mixed' => array() );
+		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
+		$types = array_column( $rows, 'type' );
+		$this->assertContains( 'canonical_mismatch', $types );
+	}
 }

@@ -191,6 +191,71 @@ class SWPS_Site_Crawler {
 	}
 
 	/**
+	 * Resolve a potentially relative href/src/Location value to an absolute URL.
+	 *
+	 * Only http(s) targets are resolvable: any other scheme (mailto:, tel:,
+	 * javascript:, data:, ftp:, …) returns '' — resolving those as relative
+	 * paths would fabricate URLs like /blog/mailto:user@host that 404.
+	 *
+	 * @param string $href     Raw attribute or header value.
+	 * @param string $base_url Absolute URL the value was found on.
+	 * @return string Absolute URL, or '' when non-resolvable.
+	 */
+	public static function resolve_url( string $href, string $base_url ): string {
+		$href = trim( $href );
+		if ( '' === $href || str_starts_with( $href, '#' ) ) {
+			return '';
+		}
+
+		// Already absolute.
+		if ( preg_match( '/^https?:\/\//i', $href ) ) {
+			return $href;
+		}
+
+		$base_parts = wp_parse_url( $base_url );
+		if ( ! is_array( $base_parts ) ) {
+			return '';
+		}
+
+		// Protocol-relative.
+		if ( str_starts_with( $href, '//' ) ) {
+			return ( $base_parts['scheme'] ?? 'https' ) . ':' . $href;
+		}
+
+		// Any other scheme is not crawlable.
+		if ( preg_match( '/^[a-z][a-z0-9+.\-]*:/i', $href ) ) {
+			return '';
+		}
+
+		$scheme = $base_parts['scheme'] ?? 'https';
+		$host   = $base_parts['host'] ?? '';
+
+		// Root-relative.
+		if ( str_starts_with( $href, '/' ) ) {
+			return $scheme . '://' . $host . $href;
+		}
+
+		// Relative: resolve against the base path directory.
+		$base_dir = isset( $base_parts['path'] )
+			? rtrim( dirname( $base_parts['path'] ), '/' )
+			: '';
+
+		// Walk ../ segments.
+		$path     = $base_dir . '/' . $href;
+		$segments = explode( '/', $path );
+		$resolved = array();
+		foreach ( $segments as $seg ) {
+			if ( '..' === $seg ) {
+				array_pop( $resolved );
+			} elseif ( '.' !== $seg ) {
+				$resolved[] = $seg;
+			}
+		}
+
+		return $scheme . '://' . $host . implode( '/', $resolved );
+	}
+
+	/**
 	 * Extract candidate links, assets, and meta signals from an HTML string.
 	 *
 	 * Uses DOMDocument with libxml_use_internal_errors so malformed HTML is
@@ -220,56 +285,8 @@ class SWPS_Site_Crawler {
 		libxml_clear_errors();
 		libxml_use_internal_errors( $prev );
 
-		$base_parts = wp_parse_url( $base_url );
-
-		/**
-		 * Resolve a potentially relative href/src to an absolute URL.
-		 *
-		 * @param string $href Raw value from the attribute.
-		 * @return string Absolute URL, or '' when non-resolvable.
-		 */
-		$resolve = static function ( string $href ) use ( $base_parts ): string {
-			$href = trim( $href );
-			if ( '' === $href || str_starts_with( $href, '#' ) ) {
-				return '';
-			}
-
-			// Already absolute.
-			if ( preg_match( '/^https?:\/\//i', $href ) ) {
-				return $href;
-			}
-
-			// Protocol-relative.
-			if ( str_starts_with( $href, '//' ) ) {
-				return ( $base_parts['scheme'] ?? 'https' ) . ':' . $href;
-			}
-
-			$scheme = $base_parts['scheme'] ?? 'https';
-			$host   = $base_parts['host'] ?? '';
-
-			// Root-relative.
-			if ( str_starts_with( $href, '/' ) ) {
-				return $scheme . '://' . $host . $href;
-			}
-
-			// Relative: resolve against the base path directory.
-			$base_dir = isset( $base_parts['path'] )
-				? rtrim( dirname( $base_parts['path'] ), '/' )
-				: '';
-
-			// Walk ../ segments.
-			$path     = $base_dir . '/' . $href;
-			$segments = explode( '/', $path );
-			$resolved = array();
-			foreach ( $segments as $seg ) {
-				if ( '..' === $seg ) {
-					array_pop( $resolved );
-				} elseif ( '.' !== $seg ) {
-					$resolved[] = $seg;
-				}
-			}
-
-			return $scheme . '://' . $host . implode( '/', $resolved );
+		$resolve = static function ( string $href ) use ( $base_url ): string {
+			return self::resolve_url( $href, $base_url );
 		};
 
 		// <a href>.
@@ -343,7 +360,8 @@ class SWPS_Site_Crawler {
 	 * Classify a fetched URL result into issue rows.
 	 *
 	 * @param array  $fetch     Fetch result: keys url (string), status (int), found_on (string),
-	 *                          hops (array of 3xx responses), loop (bool, MAX_HOPS exceeded).
+	 *                          hops (array of 3xx responses), loop (bool, MAX_HOPS exceeded),
+	 *                          final_url (string, post-redirect URL; falls back to url).
 	 * @param array  $page      Result of parse_html() on the response body. The caller may
 	 *                          enrich it with post_id (int) and sitemap_excluded (bool) for
 	 *                          the noindex-in-sitemap check (pure callers pass fixtures).
@@ -401,10 +419,13 @@ class SWPS_Site_Crawler {
 		}
 
 		// Canonical mismatch: page declares a canonical that differs from the
-		// fetched URL (after normalisation).
+		// URL that actually served the response (after normalisation). Using
+		// the post-redirect URL matters: a link that 301s to a page with a
+		// correct self-canonical is the redirect working, not a mismatch.
 		$canonical = $page['canonical'] ?? null;
 		if ( null !== $canonical ) {
-			$norm_fetched = self::normalize_url( $url, $home_host );
+			$final_url    = (string) ( $fetch['final_url'] ?? $url );
+			$norm_fetched = self::normalize_url( $final_url, $home_host );
 			$norm_canon   = self::normalize_url( $canonical, $home_host );
 			if ( '' !== $norm_fetched && '' !== $norm_canon && $norm_fetched !== $norm_canon ) {
 				$issues[] = array(
@@ -590,8 +611,8 @@ class SWPS_Site_Crawler {
 		 *
 		 * @param int $delay_us Microseconds to sleep between fetches.
 		 */
-		$delay_us = max( 0, (int) apply_filters( 'swps_crawl_delay_us', (int) ( $state['delay_us'] ?? self::DEFAULT_DELAY_US ) ) );
-		$queue_table  = $wpdb->prefix . SWPS_Crawl_Issues::TABLE_QUEUE;
+		$delay_us    = max( 0, (int) apply_filters( 'swps_crawl_delay_us', (int) ( $state['delay_us'] ?? self::DEFAULT_DELAY_US ) ) );
+		$queue_table = $wpdb->prefix . SWPS_Crawl_Issues::TABLE_QUEUE;
 
 		// Fetch next $n pending items.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -639,7 +660,9 @@ class SWPS_Site_Crawler {
 			);
 
 			if ( ! empty( $fetch['body'] ) && $fetch['status'] < 400 ) {
-				$page = self::parse_html( $fetch['body'], $url );
+				// Parse against the post-redirect URL so relative hrefs on a
+				// redirect destination resolve against the right base.
+				$page = self::parse_html( $fetch['body'], (string) ( $fetch['final_url'] ?? $url ) );
 			}
 
 			// Enrich with WP lookups for the noindex-in-sitemap check
@@ -741,11 +764,13 @@ class SWPS_Site_Crawler {
 	 *
 	 * The returned 'hops' array contains every 3xx response observed (one
 	 * entry per redirect, {url, status}); the final non-3xx response is NOT
-	 * included. 'loop' is true when MAX_HOPS was exceeded without reaching a
-	 * non-3xx response.
+	 * included. 'final_url' is the URL that produced the final response (equal
+	 * to 'url' when no redirect occurred). 'loop' is true only when MAX_HOPS
+	 * was exceeded without reaching a non-3xx response; a 3xx with a missing
+	 * or unresolvable Location header returns status 0 (dead redirect).
 	 *
 	 * @param string $url Starting URL.
-	 * @return array{url:string,status:int,body:string,found_on:string,hops:array,loop:bool}
+	 * @return array{url:string,status:int,body:string,found_on:string,hops:array,loop:bool,final_url:string}
 	 */
 	private function fetch_url( string $url ): array {
 		$hops    = array();
@@ -764,12 +789,13 @@ class SWPS_Site_Crawler {
 
 			if ( is_wp_error( $response ) ) {
 				return array(
-					'url'      => $url,
-					'status'   => 0,
-					'body'     => '',
-					'found_on' => '',
-					'hops'     => $hops,
-					'loop'     => false,
+					'url'       => $url,
+					'status'    => 0,
+					'body'      => '',
+					'found_on'  => '',
+					'hops'      => $hops,
+					'loop'      => false,
+					'final_url' => $current,
 				);
 			}
 
@@ -777,15 +803,25 @@ class SWPS_Site_Crawler {
 
 			if ( $status >= 300 && $status < 400 ) {
 				$location = wp_remote_retrieve_header( $response, 'location' );
-				if ( empty( $location ) ) {
-					// Redirect with no Location header — dead end.
-					break;
+				// RFC 7231 allows relative Location values; resolve against
+				// the URL that answered. Missing/unresolvable = dead redirect.
+				$next = is_string( $location ) ? self::resolve_url( $location, $current ) : '';
+				if ( '' === $next ) {
+					return array(
+						'url'       => $url,
+						'status'    => 0,
+						'body'      => '',
+						'found_on'  => '',
+						'hops'      => $hops,
+						'loop'      => false,
+						'final_url' => $current,
+					);
 				}
 				$hops[]  = array(
 					'url'    => $current,
 					'status' => $status,
 				);
-				$current = $location;
+				$current = $next;
 				continue;
 			}
 
@@ -795,23 +831,25 @@ class SWPS_Site_Crawler {
 			}
 
 			return array(
-				'url'      => $url,
-				'status'   => $status,
-				'body'     => $body,
-				'found_on' => '',
-				'hops'     => $hops,
-				'loop'     => false,
+				'url'       => $url,
+				'status'    => $status,
+				'body'      => $body,
+				'found_on'  => '',
+				'hops'      => $hops,
+				'loop'      => false,
+				'final_url' => $current,
 			);
 		}
 
-		// Exceeded MAX_HOPS (or 3xx without Location) — redirect loop.
+		// Exceeded MAX_HOPS — redirect loop.
 		return array(
-			'url'      => $url,
-			'status'   => 0,
-			'body'     => '',
-			'found_on' => '',
-			'hops'     => $hops,
-			'loop'     => true,
+			'url'       => $url,
+			'status'    => 0,
+			'body'      => '',
+			'found_on'  => '',
+			'hops'      => $hops,
+			'loop'      => true,
+			'final_url' => $current,
 		);
 	}
 
@@ -923,6 +961,7 @@ class SWPS_Site_Crawler {
 			'completed_at'     => gmdate( 'Y-m-d H:i:s' ),
 			'crawled'          => SWPS_Crawl_Issues::crawled_count( $run_id ),
 			'issue_counts'     => SWPS_Crawl_Issues::issue_counts( $run_id ),
+			'severity_counts'  => SWPS_Crawl_Issues::severity_counts( $run_id ),
 			'external_checked' => (int) ( $state['external_checked'] ?? 0 ),
 		);
 

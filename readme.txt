@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.25.0
+Stable tag: 4.25.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,13 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.25.1 =
+* Fixed: the site crawler resolved mailto:/tel:/javascript: hrefs as relative paths, fabricating internal URLs (e.g. /blog/mailto:user@host) that were then reported as broken links. Non-http(s) schemes are now skipped.
+* Fixed: redirects answering with a relative Location header (allowed by RFC 7231) failed the follow-up fetch and were reported as broken links with no status. Relative Location values are now resolved against the redirecting URL.
+* Fixed: canonical mismatches were evaluated against the pre-redirect URL, so every internal link that 301s to a correctly self-canonicalized page was flagged. The canonical is now compared against the URL that actually served the response.
+* Fixed: a 3xx response with no Location header was misreported as a redirect loop; it is now reported as a broken (dead) redirect. Redirect-destination HTML is also parsed against the post-redirect URL so its relative links resolve correctly.
+* Fixed: the Site Crawl audit score charged error-level points (10) for warning-severity issues, including external links behind bot-walls (e.g. LinkedIn's HTTP 999). The score now follows the crawler's own severity split: errors cost 10, warnings 2.
 
 = 4.25.0 =
 * New: Cross-Site Linking — configure owned/partner domains (Settings → SEO → Cross-Site Linking) and the internal-link engines suggest links to those sites' posts. Each domain's public post inventory is fetched over the WordPress REST API and cached daily.
