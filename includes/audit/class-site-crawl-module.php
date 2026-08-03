@@ -92,6 +92,11 @@ class SWPS_Site_Crawl_Module extends SWPS_Audit_Module {
 		$errors = 0;
 		$issues = array();
 
+		// Prefer the stored severity split (present since 4.25.1): the crawler
+		// already downgrades external bot-walls etc. to warnings, and those
+		// must not cost error-level points.
+		$severity_counts = (array) ( $summary['severity_counts'] ?? array() );
+
 		$labels = array(
 			'broken_link'        => __( 'broken links', 'stratawp-seo' ),
 			'redirect_chain'     => __( 'redirect chains', 'stratawp-seo' ),
@@ -125,8 +130,12 @@ class SWPS_Site_Crawl_Module extends SWPS_Audit_Module {
 			);
 		}
 
-		// Score: start at 100, broken links cost 10 each, other issues 2 each
-		// (capped at 0). Mirrors the severity split used by the crawler.
+		// Score: start at 100, error-severity issues cost 10 each, warnings 2
+		// each (capped at 0). Legacy summaries without a severity split fall
+		// back to counting broken links + redirect loops as errors by type.
+		if ( array() !== $severity_counts ) {
+			$errors = (int) ( $severity_counts['error'] ?? 0 );
+		}
 		$others = max( 0, $total - $errors );
 		$score  = max( 0, 100 - ( $errors * 10 ) - ( $others * 2 ) );
 
