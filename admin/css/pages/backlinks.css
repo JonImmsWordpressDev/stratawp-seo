@@ -2,7 +2,7 @@
 
 .swps-bl-stats {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 16px;
 }
@@ -92,6 +92,7 @@
 .swps-bl-status.is-live    { background: rgba(16,185,129,.15); color: #059669; }
 .swps-bl-status.is-lost    { background: rgba(245,158,11,.15); color: #b45309; }
 .swps-bl-status.is-broken  { background: rgba(239,68,68,.15);  color: #b91c1c; }
+.swps-bl-status.is-blocked { background: rgba(99,102,241,.15);  color: #4f46e5; }
 .swps-bl-status.is-pending { background: rgba(107,114,128,.15); color: #4b5563; }
 
 .swps-bl-verify, .swps-bl-delete {

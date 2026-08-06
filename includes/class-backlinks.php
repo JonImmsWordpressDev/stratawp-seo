@@ -30,6 +30,27 @@ class SWPS_Backlinks {
 	public const DB_VERSION   = '1';
 	public const OPT_DB_VER   = 'swps_backlinks_db_version';
 
+	/**
+	 * HTTP codes that mean "the site refused the automated request" (bot
+	 * protection, auth, rate limiting), not "the page is gone". 999 is
+	 * LinkedIn's non-standard bot-rejection code.
+	 */
+	private const BLOCKED_HTTP_CODES = array( 401, 403, 429, 999 );
+
+	/**
+	 * Hosts that serve a login wall to anonymous requests: the page returns
+	 * 200 but post content (and any link in it) is never in the HTML, so a
+	 * missing link proves nothing.
+	 */
+	private const AUTHWALLED_HOSTS = array(
+		'linkedin.com',
+		'facebook.com',
+		'instagram.com',
+		'x.com',
+		'twitter.com',
+		'threads.net',
+	);
+
 	public function __construct() {
 		// Runtime upgrade: ensure the table exists on existing installs that
 		// didn't run the activation hook (i.e. plugin updated, not reactivated).
@@ -396,6 +417,46 @@ class SWPS_Backlinks {
 
 	// ---------- Verify ----------
 
+	/**
+	 * Map a verification fetch result to a backlink status.
+	 *
+	 * @param int    $http_code   HTTP response code (0 if the request failed).
+	 * @param bool   $link_found  Whether a link to this site was found in the body.
+	 * @param string $source_host Host of the source page.
+	 * @return string One of 'live', 'lost', 'blocked', 'broken'.
+	 */
+	public static function classify_check( int $http_code, bool $link_found, string $source_host ): string {
+		if ( in_array( $http_code, self::BLOCKED_HTTP_CODES, true ) ) {
+			return 'blocked';
+		}
+		if ( $http_code < 200 || $http_code >= 400 ) {
+			return 'broken';
+		}
+		if ( $link_found ) {
+			return 'live';
+		}
+		if ( self::is_authwalled_host( $source_host ) ) {
+			return 'blocked';
+		}
+		return 'lost';
+	}
+
+	/**
+	 * Whether $host is (a subdomain of) a platform that login-walls
+	 * anonymous requests.
+	 *
+	 * @param string $host Host of the source page.
+	 */
+	private static function is_authwalled_host( string $host ): bool {
+		$host = strtolower( $host );
+		foreach ( self::AUTHWALLED_HOSTS as $walled ) {
+			if ( $host === $walled || str_ends_with( $host, '.' . $walled ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public function verify_one( int $id ): array {
 		$row = $this->get_row( $id );
 		if ( ! $row ) {
@@ -427,24 +488,31 @@ class SWPS_Backlinks {
 		} else {
 			$code                  = (int) wp_remote_retrieve_response_code( $resp );
 			$update['http_status'] = $code;
-			if ( $code < 200 || $code >= 400 ) {
-				$update['notes'] = sprintf( /* translators: %d HTTP status */ __( 'HTTP %d', 'stratawp-seo' ), $code );
-			} else {
-				$body  = (string) wp_remote_retrieve_body( $resp );
-				$found = $this->find_link( $body );
-				if ( $found ) {
-					$update['status']      = 'live';
-					$update['anchor_text'] = '' !== ( $found['anchor'] ?? '' ) ? $found['anchor'] : $row['anchor_text'];
-					$update['target_url']  = '' !== ( $found['href'] ?? '' ) ? $found['href'] : $row['target_url'];
-					$update['notes']       = '';
-					if ( empty( $row['first_seen'] ) ) {
-						$update['first_seen'] = $now;
-					}
-					$update['last_seen'] = $now;
-				} else {
-					$update['status'] = 'lost';
-					$update['notes']  = __( 'Page loaded but contained no link to this site.', 'stratawp-seo' );
+
+			$found = null;
+			if ( $code >= 200 && $code < 400 ) {
+				$found = $this->find_link( (string) wp_remote_retrieve_body( $resp ) );
+			}
+
+			$status           = self::classify_check( $code, null !== $found, $this->host_of( $source ) );
+			$update['status'] = $status;
+
+			if ( 'live' === $status ) {
+				$update['anchor_text'] = '' !== ( $found['anchor'] ?? '' ) ? $found['anchor'] : $row['anchor_text'];
+				$update['target_url']  = '' !== ( $found['href'] ?? '' ) ? $found['href'] : $row['target_url'];
+				$update['notes']       = '';
+				if ( empty( $row['first_seen'] ) ) {
+					$update['first_seen'] = $now;
 				}
+				$update['last_seen'] = $now;
+			} elseif ( 'blocked' === $status ) {
+				$update['notes'] = in_array( $code, self::BLOCKED_HTTP_CODES, true )
+					? sprintf( /* translators: %d HTTP status */ __( 'Site blocks automated link checkers (HTTP %d) — verify manually.', 'stratawp-seo' ), $code )
+					: __( 'Site shows a login wall to automated checkers — verify manually.', 'stratawp-seo' );
+			} elseif ( 'lost' === $status ) {
+				$update['notes'] = __( 'Page loaded but contained no link to this site.', 'stratawp-seo' );
+			} else {
+				$update['notes'] = sprintf( /* translators: %d HTTP status */ __( 'HTTP %d', 'stratawp-seo' ), $code );
 			}
 		}
 
@@ -591,6 +659,7 @@ class SWPS_Backlinks {
 			'live'    => 0,
 			'lost'    => 0,
 			'broken'  => 0,
+			'blocked' => 0,
 			'pending' => 0,
 		);
 		foreach ( $by_status as $r ) {

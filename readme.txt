@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.25.0
+Stable tag: 4.26.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,10 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.26.0 =
+* Fixed: backlinks on bot-protected sites (Medium behind Cloudflare, LinkedIn's login wall, etc.) were falsely reported as Broken or Lost. Verification now distinguishes a refused automated request from a genuinely dead page: HTTP 401/403/429/999 responses and login-walled platforms get a new "Blocked" status with a "verify manually" note instead of inflating the Broken/Lost counts (and the weekly digest's broken-backlink attention item).
+* New: Blocked stat tile and status pill on the Backlinks page.
 
 = 4.25.0 =
 * New: Cross-Site Linking — configure owned/partner domains (Settings → SEO → Cross-Site Linking) and the internal-link engines suggest links to those sites' posts. Each domain's public post inventory is fetched over the WordPress REST API and cached daily.

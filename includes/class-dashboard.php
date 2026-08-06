@@ -431,6 +431,7 @@ class SWPS_Dashboard {
 					'live'           => 0,
 					'lost'           => 0,
 					'broken'         => 0,
+					'blocked'        => 0,
 					'new_30d'        => 0,
 					'lost_30d'       => 0,
 					'unique_domains' => 0,
