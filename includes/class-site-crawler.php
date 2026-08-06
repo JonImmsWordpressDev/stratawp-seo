@@ -662,7 +662,7 @@ class SWPS_Site_Crawler {
 			if ( ! empty( $fetch['body'] ) && $fetch['status'] < 400 ) {
 				// Parse against the post-redirect URL so relative hrefs on a
 				// redirect destination resolve against the right base.
-				$page = self::parse_html( $fetch['body'], (string) ( $fetch['final_url'] ?? $url ) );
+				$page = self::parse_html( $fetch['body'], (string) $fetch['final_url'] );
 			}
 
 			// Enrich with WP lookups for the noindex-in-sitemap check
