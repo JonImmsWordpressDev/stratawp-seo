@@ -10,12 +10,14 @@
         $('#swps-bl-stat-live').text((stats.live || 0).toLocaleString());
         $('#swps-bl-stat-lost').text((stats.lost || 0).toLocaleString());
         $('#swps-bl-stat-broken').text((stats.broken || 0).toLocaleString());
+        $('#swps-bl-stat-blocked').text((stats.blocked || 0).toLocaleString());
     }
 
     function statusPill(row) {
         var cls = 'is-' + row.status;
         var label = row.status.charAt(0).toUpperCase() + row.status.slice(1);
-        var http = (row.status === 'broken' && row.http_status > 0)
+        var http = ((row.status === 'broken' && row.http_status > 0) ||
+                    (row.status === 'blocked' && row.http_status >= 400))
             ? ' <small>(' + row.http_status + ')</small>'
             : '';
         return '<span class="swps-bl-status ' + cls + '">' + label + http + '</span>';

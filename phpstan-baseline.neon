@@ -41,16 +41,6 @@ parameters:
 			path: includes/class-background-processor.php
 
 		-
-			message: "#^Offset 'anchor' on array\\{href\\: string, anchor\\: string\\} on left side of \\?\\? always exists and is not nullable\\.$#"
-			count: 1
-			path: includes/class-backlinks.php
-
-		-
-			message: "#^Offset 'href' on array\\{href\\: string, anchor\\: string\\} on left side of \\?\\? always exists and is not nullable\\.$#"
-			count: 1
-			path: includes/class-backlinks.php
-
-		-
 			message: "#^Ternary operator condition is always true\\.$#"
 			count: 1
 			path: includes/class-backlinks.php

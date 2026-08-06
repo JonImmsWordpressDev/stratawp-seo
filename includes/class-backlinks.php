@@ -27,14 +27,39 @@ class SWPS_Backlinks {
 	public const CRON_HOOK    = 'swps_backlinks_daily_verify';
 	public const HTTP_TIMEOUT = 12;
 	public const VERIFY_BATCH = 25;
-	public const DB_VERSION   = '1';
+	public const DB_VERSION   = '2';
 	public const OPT_DB_VER   = 'swps_backlinks_db_version';
+
+	/**
+	 * HTTP codes that mean "the site refused the automated request" (bot
+	 * protection, auth, rate limiting), not "the page is gone". 999 is
+	 * LinkedIn's non-standard bot-rejection code.
+	 */
+	private const BLOCKED_HTTP_CODES = array( 401, 403, 429, 999 );
+
+	/**
+	 * Hosts that serve a login wall to anonymous requests: the page returns
+	 * 200 but post content (and any link in it) is never in the HTML, so a
+	 * missing link proves nothing.
+	 */
+	private const AUTHWALLED_HOSTS = array(
+		'linkedin.com',
+		'facebook.com',
+		'instagram.com',
+		'x.com',
+		'twitter.com',
+		'threads.net',
+	);
 
 	public function __construct() {
 		// Runtime upgrade: ensure the table exists on existing installs that
 		// didn't run the activation hook (i.e. plugin updated, not reactivated).
 		if ( self::DB_VERSION !== get_option( self::OPT_DB_VER ) ) {
+			// v2 adds a unique index on source_url; exact duplicates must go
+			// first or the ALTER fails and leaves the table unprotected.
+			self::dedupe_existing();
 			self::create_tables();
+			self::ensure_unique_index();
 			update_option( self::OPT_DB_VER, self::DB_VERSION );
 		}
 
@@ -77,6 +102,7 @@ class SWPS_Backlinks {
             notes        TEXT         NULL,
             created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
+            UNIQUE KEY source_url (source_url(191)),
             KEY status (status),
             KEY source_host (source_host),
             KEY last_checked (last_checked)
@@ -84,6 +110,40 @@ class SWPS_Backlinks {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
+	}
+
+	/**
+	 * Remove exact-duplicate source_url rows, keeping the oldest (lowest id).
+	 * Runs before the v2 unique index is added; near-duplicates (www/scheme/
+	 * slash variants) are left alone — only code-level checks catch those.
+	 */
+	public static function dedupe_existing(): void {
+		global $wpdb;
+		$table = self::table_name();
+        // phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
+			return;
+		}
+		$wpdb->query( "DELETE a FROM {$table} a INNER JOIN {$table} b ON a.source_url = b.source_url AND a.id > b.id" );
+        // phpcs:enable
+	}
+
+	/**
+	 * dbDelta silently skips an ALTER that fails (e.g. duplicates present when
+	 * adding the unique key), so verify the index exists and retry if not.
+	 */
+	public static function ensure_unique_index(): void {
+		global $wpdb;
+		$table = self::table_name();
+        // phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
+			return;
+		}
+		$exists = $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'source_url'" );
+		if ( empty( $exists ) ) {
+			$wpdb->query( "ALTER TABLE {$table} ADD UNIQUE KEY source_url (source_url(191))" );
+		}
+        // phpcs:enable
 	}
 
 	public static function schedule_cron(): void {
@@ -177,6 +237,19 @@ class SWPS_Backlinks {
 
 		if ( '' === $source || ! preg_match( '#^https?://#i', $source ) ) {
 			wp_send_json_error( array( 'message' => __( 'Please enter a valid http(s) URL.', 'stratawp-seo' ) ) );
+		}
+
+		$dupe_id = $this->find_duplicate_id( $source, $id );
+		if ( $dupe_id > 0 ) {
+			wp_send_json_error(
+				array(
+					'message' => sprintf(
+						/* translators: %d: id of the existing backlink row */
+						__( 'Already tracking this source URL (entry #%d).', 'stratawp-seo' ),
+						$dupe_id
+					),
+				)
+			);
 		}
 
 		if ( $id > 0 ) {
@@ -323,14 +396,19 @@ class SWPS_Backlinks {
 	 *   - Generic source_url[,target_url[,anchor_text]] CSV
 	 *   - One URL per line
 	 *
-	 * Returns count of newly inserted rows. Existing source_urls are skipped.
+	 * Returns count of newly inserted rows. Existing source_urls are skipped,
+	 * compared in normalized form so www/scheme/trailing-slash variants of an
+	 * already-tracked URL don't create near-duplicate rows.
 	 */
 	public function import_csv( string $raw ): int {
 		$raw   = str_replace( array( "\r\n", "\r" ), "\n", $raw );
 		$lines = array_filter( array_map( 'trim', explode( "\n", $raw ) ) );
 
-		$existing = array_flip( $this->get_all_source_urls() );
-		$count    = 0;
+		$existing = array();
+		foreach ( $this->get_all_source_urls() as $url ) {
+			$existing[ self::normalize_source_url( $url ) ] = true;
+		}
+		$count = 0;
 
 		foreach ( $lines as $i => $line ) {
 			// Skip header rows (first non-URL row).
@@ -353,7 +431,8 @@ class SWPS_Backlinks {
 					continue;
 				}
 			}
-			if ( isset( $existing[ $source ] ) ) {
+			$norm = self::normalize_source_url( $source );
+			if ( isset( $existing[ $norm ] ) ) {
 				continue;
 			}
 			$target = isset( $cols[1] ) ? trim( (string) $cols[1] ) : '';
@@ -370,7 +449,7 @@ class SWPS_Backlinks {
 				)
 			);
 			if ( $id ) {
-				$existing[ $source ] = true;
+				$existing[ $norm ] = true;
 				++$count;
 			}
 		}
@@ -395,6 +474,46 @@ class SWPS_Backlinks {
 	}
 
 	// ---------- Verify ----------
+
+	/**
+	 * Map a verification fetch result to a backlink status.
+	 *
+	 * @param int    $http_code   HTTP response code (0 if the request failed).
+	 * @param bool   $link_found  Whether a link to this site was found in the body.
+	 * @param string $source_host Host of the source page.
+	 * @return string One of 'live', 'lost', 'blocked', 'broken'.
+	 */
+	public static function classify_check( int $http_code, bool $link_found, string $source_host ): string {
+		if ( in_array( $http_code, self::BLOCKED_HTTP_CODES, true ) ) {
+			return 'blocked';
+		}
+		if ( $http_code < 200 || $http_code >= 400 ) {
+			return 'broken';
+		}
+		if ( $link_found ) {
+			return 'live';
+		}
+		if ( self::is_authwalled_host( $source_host ) ) {
+			return 'blocked';
+		}
+		return 'lost';
+	}
+
+	/**
+	 * Whether $host is (a subdomain of) a platform that login-walls
+	 * anonymous requests.
+	 *
+	 * @param string $host Host of the source page.
+	 */
+	private static function is_authwalled_host( string $host ): bool {
+		$host = strtolower( $host );
+		foreach ( self::AUTHWALLED_HOSTS as $walled ) {
+			if ( $host === $walled || str_ends_with( $host, '.' . $walled ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 	public function verify_one( int $id ): array {
 		$row = $this->get_row( $id );
@@ -427,24 +546,31 @@ class SWPS_Backlinks {
 		} else {
 			$code                  = (int) wp_remote_retrieve_response_code( $resp );
 			$update['http_status'] = $code;
-			if ( $code < 200 || $code >= 400 ) {
-				$update['notes'] = sprintf( /* translators: %d HTTP status */ __( 'HTTP %d', 'stratawp-seo' ), $code );
-			} else {
-				$body  = (string) wp_remote_retrieve_body( $resp );
-				$found = $this->find_link( $body );
-				if ( $found ) {
-					$update['status']      = 'live';
-					$update['anchor_text'] = '' !== ( $found['anchor'] ?? '' ) ? $found['anchor'] : $row['anchor_text'];
-					$update['target_url']  = '' !== ( $found['href'] ?? '' ) ? $found['href'] : $row['target_url'];
-					$update['notes']       = '';
-					if ( empty( $row['first_seen'] ) ) {
-						$update['first_seen'] = $now;
-					}
-					$update['last_seen'] = $now;
-				} else {
-					$update['status'] = 'lost';
-					$update['notes']  = __( 'Page loaded but contained no link to this site.', 'stratawp-seo' );
+
+			$found = null;
+			if ( $code >= 200 && $code < 400 ) {
+				$found = $this->find_link( (string) wp_remote_retrieve_body( $resp ) );
+			}
+
+			$status           = self::classify_check( $code, null !== $found, $this->host_of( $source ) );
+			$update['status'] = $status;
+
+			if ( 'live' === $status ) {
+				$update['anchor_text'] = '' !== ( $found['anchor'] ?? '' ) ? $found['anchor'] : $row['anchor_text'];
+				$update['target_url']  = '' !== ( $found['href'] ?? '' ) ? $found['href'] : $row['target_url'];
+				$update['notes']       = '';
+				if ( empty( $row['first_seen'] ) ) {
+					$update['first_seen'] = $now;
 				}
+				$update['last_seen'] = $now;
+			} elseif ( 'blocked' === $status ) {
+				$update['notes'] = in_array( $code, self::BLOCKED_HTTP_CODES, true )
+					? sprintf( /* translators: %d HTTP status */ __( 'Site blocks automated link checkers (HTTP %d) — verify manually.', 'stratawp-seo' ), $code )
+					: __( 'Site shows a login wall to automated checkers — verify manually.', 'stratawp-seo' );
+			} elseif ( 'lost' === $status ) {
+				$update['notes'] = __( 'Page loaded but contained no link to this site.', 'stratawp-seo' );
+			} else {
+				$update['notes'] = sprintf( /* translators: %d HTTP status */ __( 'HTTP %d', 'stratawp-seo' ), $code );
 			}
 		}
 
@@ -556,6 +682,59 @@ class SWPS_Backlinks {
 		return array_map( 'strval', (array) $wpdb->get_col( "SELECT source_url FROM {$table}" ) );
 	}
 
+	/**
+	 * Reduce a URL to its dedupe identity: host + path (+ query), with the
+	 * scheme, www. prefix, fragment, and trailing slash stripped, so
+	 * http://www.example.com/page/ and https://example.com/page count as the
+	 * same backlink. Path and query casing are preserved (case-sensitive
+	 * servers exist); hosts are not.
+	 */
+	public static function normalize_source_url( string $url ): string {
+		$url   = trim( $url );
+		$parts = wp_parse_url( $url );
+		if ( empty( $parts['host'] ) ) {
+			return strtolower( rtrim( $url, '/' ) );
+		}
+		$host = strtolower( (string) $parts['host'] );
+		$host = preg_replace( '/^www\./', '', $host ) ?: $host;
+		if ( ! empty( $parts['port'] ) ) {
+			$host .= ':' . (int) $parts['port'];
+		}
+		$norm = $host . rtrim( (string) ( $parts['path'] ?? '' ), '/' );
+		if ( ! empty( $parts['query'] ) ) {
+			$norm .= '?' . $parts['query'];
+		}
+		return $norm;
+	}
+
+	/**
+	 * Id of an existing row tracking the same source URL (in normalized form),
+	 * or 0 if none. $exclude_id skips the row being edited so updating a row
+	 * without changing its URL doesn't match itself.
+	 */
+	public function find_duplicate_id( string $source_url, int $exclude_id = 0 ): int {
+		$norm = self::normalize_source_url( $source_url );
+		if ( '' === $norm ) {
+			return 0;
+		}
+		global $wpdb;
+		$table = self::table_name();
+		// Normalization can't be expressed as an index lookup; the table is a
+		// hand-curated list (tens to hundreds of rows), so scan it.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		$rows = $wpdb->get_results( "SELECT id, source_url FROM {$table}", ARRAY_A );
+		foreach ( (array) $rows as $row ) {
+			$row_id = (int) $row['id'];
+			if ( $row_id === $exclude_id ) {
+				continue;
+			}
+			if ( self::normalize_source_url( (string) $row['source_url'] ) === $norm ) {
+				return $row_id;
+			}
+		}
+		return 0;
+	}
+
 	public function get_ids_for_verify( int $offset, int $limit ): array {
 		global $wpdb;
 		$table  = self::table_name();
@@ -591,6 +770,7 @@ class SWPS_Backlinks {
 			'live'    => 0,
 			'lost'    => 0,
 			'broken'  => 0,
+			'blocked' => 0,
 			'pending' => 0,
 		);
 		foreach ( $by_status as $r ) {

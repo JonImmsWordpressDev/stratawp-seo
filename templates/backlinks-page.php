@@ -93,6 +93,13 @@ $home_host = wp_parse_url( home_url(), PHP_URL_HOST );
 				<?php esc_html_e( 'Source page returns an error', 'stratawp-seo' ); ?>
 			</div>
 		</div>
+		<div class="swps-tile">
+			<div class="swps-tile-h"><?php esc_html_e( 'Blocked', 'stratawp-seo' ); ?></div>
+			<div class="swps-tile-stat" id="swps-bl-stat-blocked" style="color:#6366f1"><?php echo number_format( (int) ( $stats['blocked'] ?? 0 ) ); ?></div>
+			<div class="swps-tile-trend" style="color:var(--swps-text-faint)">
+				<?php esc_html_e( 'Site blocks automated checkers', 'stratawp-seo' ); ?>
+			</div>
+		</div>
 	</div>
 
 	<!-- Add + import row -->
@@ -168,7 +175,7 @@ $home_host = wp_parse_url( home_url(), PHP_URL_HOST );
 							<td>
 								<span class="swps-bl-status is-<?php echo esc_attr( $status ); ?>">
 									<?php echo esc_html( ucfirst( $status ) ); ?>
-									<?php if ( (int) $row['http_status'] > 0 && in_array( $status, array( 'broken' ), true ) ) : ?>
+									<?php if ( ( 'broken' === $status && (int) $row['http_status'] > 0 ) || ( 'blocked' === $status && (int) $row['http_status'] >= 400 ) ) : ?>
 										<small>(<?php echo (int) $row['http_status']; ?>)</small>
 									<?php endif; ?>
 								</span>

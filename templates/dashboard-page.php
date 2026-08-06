@@ -555,7 +555,7 @@ $welcome_msg = sprintf(
 				<div class="swps-dash-list">
 					<?php
 					foreach ( $bl_recent as $bl ) :
-						$status_color = 'live' === $bl['status'] ? '#10b981' : ( 'lost' === $bl['status'] ? '#f59e0b' : ( 'broken' === $bl['status'] ? '#ef4444' : '#6b7280' ) );
+						$status_color = 'live' === $bl['status'] ? '#10b981' : ( 'lost' === $bl['status'] ? '#f59e0b' : ( 'broken' === $bl['status'] ? '#ef4444' : ( 'blocked' === $bl['status'] ? '#6366f1' : '#6b7280' ) ) );
 						?>
 						<div class="swps-dash-list-row">
 							<div class="swps-dash-list-main">
