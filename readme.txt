@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.26.0
+Stable tag: 4.26.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,9 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.26.1 =
+* Fixed: the Backlinks tracker could store the same source URL twice — saving never checked for an existing row (a double-clicked Save silently created identical entries), and CSV import only skipped exact string matches. Saves now report the already-tracked entry instead of duplicating it, imports skip www/scheme/trailing-slash variants of tracked URLs, and the table gains a unique index on source_url. Existing exact-duplicate rows are removed automatically on upgrade (keeping the oldest).
 
 = 4.26.0 =
 * Fixed: backlinks on bot-protected sites (Medium behind Cloudflare, LinkedIn's login wall, etc.) were falsely reported as Broken or Lost. Verification now distinguishes a refused automated request from a genuinely dead page: HTTP 401/403/429/999 responses and login-walled platforms get a new "Blocked" status with a "verify manually" note instead of inflating the Broken/Lost counts (and the weekly digest's broken-backlink attention item).
