@@ -429,6 +429,13 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 * Fixed: backlinks on bot-protected sites (Medium behind Cloudflare, LinkedIn's login wall, etc.) were falsely reported as Broken or Lost. Verification now distinguishes a refused automated request from a genuinely dead page: HTTP 401/403/429/999 responses and login-walled platforms get a new "Blocked" status with a "verify manually" note instead of inflating the Broken/Lost counts (and the weekly digest's broken-backlink attention item).
 * New: Blocked stat tile and status pill on the Backlinks page.
 
+= 4.25.1 =
+* Fixed: the site crawler resolved mailto:/tel:/javascript: hrefs as relative paths, fabricating internal URLs (e.g. /blog/mailto:user@host) that were then reported as broken links. Non-http(s) schemes are now skipped.
+* Fixed: redirects answering with a relative Location header (allowed by RFC 7231) failed the follow-up fetch and were reported as broken links with no status. Relative Location values are now resolved against the redirecting URL.
+* Fixed: canonical mismatches were evaluated against the pre-redirect URL, so every internal link that 301s to a correctly self-canonicalized page was flagged. The canonical is now compared against the URL that actually served the response.
+* Fixed: a 3xx response with no Location header was misreported as a redirect loop; it is now reported as a broken (dead) redirect. Redirect-destination HTML is also parsed against the post-redirect URL so its relative links resolve correctly.
+* Fixed: the Site Crawl audit score charged error-level points (10) for warning-severity issues, including external links behind bot-walls (e.g. LinkedIn's HTTP 999). The score now follows the crawler's own severity split: errors cost 10, warnings 2.
+
 = 4.25.0 =
 * New: Cross-Site Linking — configure owned/partner domains (Settings → SEO → Cross-Site Linking) and the internal-link engines suggest links to those sites' posts. Each domain's public post inventory is fetched over the WordPress REST API and cached daily.
 * New: cross-site suggestions appear in the Internal Links metabox with a domain badge, and Deep Analysis (AI) scores them alongside same-site candidates with suggested anchor text.

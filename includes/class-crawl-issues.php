@@ -241,6 +241,41 @@ class SWPS_Crawl_Issues {
 	}
 
 	/**
+	 * Return issue counts grouped by severity for the given run.
+	 *
+	 * @param int $run_id Target run ID.
+	 * @return array{error:int,warning:int}
+	 */
+	public static function severity_counts( int $run_id ): array {
+		global $wpdb;
+
+		$table = $wpdb->prefix . self::TABLE_ISSUES;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = (array) $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT severity, COUNT(*) AS cnt FROM {$table} WHERE run_id = %d GROUP BY severity",
+				$run_id
+			),
+			ARRAY_A
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		$counts = array(
+			'error'   => 0,
+			'warning' => 0,
+		);
+		foreach ( $rows as $row ) {
+			$severity = (string) ( $row['severity'] ?? '' );
+			if ( isset( $counts[ $severity ] ) ) {
+				$counts[ $severity ] = (int) $row['cnt'];
+			}
+		}
+
+		return $counts;
+	}
+
+	/**
 	 * Return all issue rows for a run, detail JSON decoded, grouped by type.
 	 *
 	 * Each row gains an 'is_new' flag: true when first_seen_run equals the
