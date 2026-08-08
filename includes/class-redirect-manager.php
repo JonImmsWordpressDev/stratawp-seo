@@ -262,6 +262,24 @@ class SWPS_Redirect_Manager {
 	}
 
 	/**
+	 * Prepend https:// to scheme-less input whose first segment looks like a
+	 * hostname ("jonimms.com/tag/foo"), so wp_parse_url() sees a host instead
+	 * of treating the whole string as a path.
+	 */
+	private function maybe_add_scheme( string $url ): string {
+		if ( '' === $url || '/' === $url[0] || wp_parse_url( $url, PHP_URL_SCHEME ) ) {
+			return $url;
+		}
+
+		$first_segment = explode( '/', $url, 2 )[0];
+		if ( preg_match( '/^([a-z0-9-]+\.)+[a-z]{2,}(:\d+)?$/i', $first_segment ) || 'localhost' === strtolower( $first_segment ) ) {
+			return 'https://' . $url;
+		}
+
+		return $url;
+	}
+
+	/**
 	 * Normalize a source URL to the path format used during request matching.
 	 */
 	private function normalize_source_url( string $source, bool $is_regex ): string {
@@ -271,9 +289,11 @@ class SWPS_Redirect_Manager {
 			return $source;
 		}
 
+		$source = $this->maybe_add_scheme( $source );
+
 		$path = wp_parse_url( $source, PHP_URL_PATH );
 		if ( ! is_string( $path ) || '' === $path ) {
-			$path = $source;
+			$path = wp_parse_url( $source, PHP_URL_HOST ) ? '/' : $source;
 		}
 
 		$path = '/' . ltrim( $path, '/' );
@@ -294,6 +314,8 @@ class SWPS_Redirect_Manager {
 		if ( '' === $target ) {
 			return '';
 		}
+
+		$target = $this->maybe_add_scheme( $target );
 
 		$scheme = wp_parse_url( $target, PHP_URL_SCHEME );
 		if ( $scheme && ! in_array( strtolower( $scheme ), array( 'http', 'https' ), true ) ) {

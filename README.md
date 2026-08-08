@@ -1711,6 +1711,10 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 
 ## Changelog
 
+### v4.26.2 — August 2026
+- **Redirects screen fixed** — the whole page was non-functional: adding a redirect always failed with "Error adding redirect", and the redirect list and 404 log rendered empty even though 404s were being recorded in the database. The page script read its security nonce from a JavaScript global that was never defined (`swps_admin` instead of `swpsAdmin`), so WordPress rejected every AJAX request the page made
+- **Scheme-less URLs handled** — a source entered as `example.com/old-page/` (no `https://`) used to store a redirect that could never match; it's now reduced to its path (`/old-page`). A scheme-less target like `example.com/new-page/` gets `https://` prepended instead of becoming a broken relative path
+
 ### v4.22.2 — July 2026
 - **"Received empty response from Claude" on Sonnet 5+ fixed** — Claude Sonnet 5 and newer models run adaptive thinking by default, so their responses open with a `thinking` content block before the `text` block. The provider read only the first block's text, so every response looked empty. Text is now collected from all text blocks in the response
 - **Clearer truncation error** — when a thinking-enabled model spends the entire `max_tokens` budget on reasoning before emitting any text, the error now says the token budget ran out (actionable) instead of "empty response"
