@@ -33,6 +33,47 @@ if ( ! function_exists( 'esc_url_raw' ) ) {
 	}
 }
 
+if ( ! function_exists( 'is_wp_error' ) ) {
+	function is_wp_error( $thing ) {
+		return $thing instanceof WP_Error;
+	}
+}
+
+if ( ! function_exists( 'delete_transient' ) ) {
+	function delete_transient( $transient ) {
+		return true;
+	}
+}
+
+if ( ! function_exists( 'current_time' ) ) {
+	function current_time( $type ) {
+		return '2026-08-08 00:00:00';
+	}
+}
+
+if ( ! function_exists( '__' ) ) {
+	function __( $text, $domain = 'default' ) {
+		return $text;
+	}
+}
+
+if ( ! class_exists( 'SWPS_Test_Redirects_WPDB' ) ) {
+	/**
+	 * Captures insert() payloads so tests can assert on what gets stored.
+	 */
+	class SWPS_Test_Redirects_WPDB {
+		public string $prefix = 'wp_';
+		public int $insert_id = 0;
+		public array $inserts = array();
+
+		public function insert( $table, $data, $format = null ) {
+			$this->inserts[] = $data;
+			$this->insert_id = count( $this->inserts );
+			return 1;
+		}
+	}
+}
+
 require_once __DIR__ . '/../../includes/class-redirect-manager.php';
 
 /**
@@ -79,6 +120,34 @@ class RedirectNormalizeTest extends TestCase {
 
 	public function test_regex_source_is_untouched(): void {
 		$this->assertSame( '^/tag/(.*)$', $this->invoke( 'normalize_source_url', '^/tag/(.*)$', true ) );
+	}
+
+	public function test_regex_source_backslash_sequences_are_preserved(): void {
+		// Regression: wp_unslash() inside normalize_source_url() stripped the
+		// backslash from \d for input not slashed by WP (programmatic callers),
+		// storing a pattern that never matches. Unslashing belongs at the
+		// $_POST boundary, which every AJAX handler already does.
+		$this->assertSame(
+			'^/category/([^/]+)(?:/page/\d+)?$',
+			$this->invoke( 'normalize_source_url', '^/category/([^/]+)(?:/page/\d+)?$', true )
+		);
+	}
+
+	// -------------------------------------------------------------------------
+	// add_redirect (storage)
+	// -------------------------------------------------------------------------
+
+	public function test_add_redirect_stores_regex_backslash_verbatim(): void {
+		global $wpdb;
+		$wpdb = new SWPS_Test_Redirects_WPDB();
+
+		$ref      = new ReflectionClass( SWPS_Redirect_Manager::class );
+		$instance = $ref->newInstanceWithoutConstructor();
+
+		$id = $instance->add_redirect( '^/foo/(\d+)$', '/bar/$1', 301, true );
+
+		$this->assertSame( 1, $id );
+		$this->assertSame( '^/foo/(\d+)$', $wpdb->inserts[0]['source_url'] );
 	}
 
 	// -------------------------------------------------------------------------

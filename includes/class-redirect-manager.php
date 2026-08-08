@@ -281,9 +281,13 @@ class SWPS_Redirect_Manager {
 
 	/**
 	 * Normalize a source URL to the path format used during request matching.
+	 *
+	 * Input must already be unslashed — callers reading $_POST are responsible
+	 * for wp_unslash() at that boundary. Unslashing here would corrupt regex
+	 * escape sequences (\d, \w) passed in by programmatic callers.
 	 */
 	private function normalize_source_url( string $source, bool $is_regex ): string {
-		$source = trim( wp_unslash( $source ) );
+		$source = trim( $source );
 
 		if ( $is_regex ) {
 			return $source;
@@ -310,7 +314,7 @@ class SWPS_Redirect_Manager {
 			return '';
 		}
 
-		$target = trim( wp_unslash( $target ) );
+		$target = trim( $target );
 		if ( '' === $target ) {
 			return '';
 		}

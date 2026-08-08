@@ -1711,6 +1711,9 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 
 ## Changelog
 
+### v4.26.3 — August 2026
+- **Regex redirects no longer lose their backslashes** — a pattern like `^/category/([^/]+)(?:/page/\d+)?$` added via WP-CLI, the add-redirect ability, or a migration import was silently stored as `…(?:/page/d+)?$` and never matched. The redirect manager stripped slashes from its input a second time even though every form/AJAX entry point had already unslashed it; the double-unslash is gone and patterns are stored verbatim
+
 ### v4.26.2 — August 2026
 - **Redirects screen fixed** — the whole page was non-functional: adding a redirect always failed with "Error adding redirect", and the redirect list and 404 log rendered empty even though 404s were being recorded in the database. The page script read its security nonce from a JavaScript global that was never defined (`swps_admin` instead of `swpsAdmin`), so WordPress rejected every AJAX request the page made
 - **Scheme-less URLs handled** — a source entered as `example.com/old-page/` (no `https://`) used to store a redirect that could never match; it's now reduced to its path (`/old-page`). A scheme-less target like `example.com/new-page/` gets `https://` prepended instead of becoming a broken relative path

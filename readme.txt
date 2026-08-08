@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.26.2
+Stable tag: 4.26.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,9 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.26.3 =
+* Fixed: regex redirects created programmatically (WP-CLI, the add-redirect ability, or a redirect importer) had their backslashes stripped before storage — a pattern like `^/foo/(\d+)$` was silently saved as `^/foo/(d+)$` and never matched a request. The redirect manager unslashed its input a second time even though every admin form and AJAX entry point had already done so; unslashing now happens only at the form boundary, and the programmatic API stores patterns exactly as given.
 
 = 4.26.2 =
 * Fixed: the entire Redirects screen was non-functional — adding a redirect always failed with "Error adding redirect", and the redirect list and 404 log always appeared empty even though 404s were being recorded. The page script read its security nonce from a JavaScript global that was never defined (`swps_admin` instead of `swpsAdmin`), so WordPress rejected every request the page made.
