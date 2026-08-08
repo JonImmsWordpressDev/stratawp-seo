@@ -4,7 +4,7 @@
 (function () {
     'use strict';
 
-    const nonce = typeof swps_admin !== 'undefined' ? swps_admin.nonce : '';
+    const nonce = typeof swpsAdmin !== 'undefined' ? swpsAdmin.nonce : '';
     const ajaxUrl = typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php';
 
     // -------------------------------------------------------------------------
