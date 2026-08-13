@@ -19,7 +19,7 @@ class SWPS_Search_Appearance {
 	/**
 	 * Supported template variables.
 	 */
-	private const VARIABLES = array(
+	public const VARIABLES = array(
 		'%%title%%',
 		'%%sitename%%',
 		'%%sep%%',
@@ -33,6 +33,33 @@ class SWPS_Search_Appearance {
 		'%%pt_single%%',
 		'%%pt_plural%%',
 	);
+
+	/**
+	 * Yoast-style variable names mapped to their StrataWP equivalents.
+	 *
+	 * Templates imported from Yoast (and older migrations that stored Yoast
+	 * names verbatim) use these; without aliasing they hit the unknown-variable
+	 * strip in resolve_variables() and vanish from rendered titles — every tag
+	 * archive ends up titled just "Archives – Site".
+	 */
+	private const LEGACY_ALIASES = array(
+		'%%term_title%%'       => '%%title%%',
+		'%%archive_title%%'    => '%%title%%',
+		'%%name%%'             => '%%author%%',
+		'%%primary_category%%' => '%%category%%',
+		'%%pagenumber%%'       => '%%page%%',
+	);
+
+	/**
+	 * Rewrite legacy (Yoast-style) variable names to supported ones.
+	 */
+	public static function normalize_legacy_vars( string $template ): string {
+		return str_replace(
+			array_keys( self::LEGACY_ALIASES ),
+			array_values( self::LEGACY_ALIASES ),
+			$template
+		);
+	}
 
 	public function __construct() {
 		if ( is_admin() ) {
@@ -471,6 +498,8 @@ class SWPS_Search_Appearance {
 	 * Resolve template variables to their current values.
 	 */
 	public function resolve_variables( string $template ): string {
+		$template = self::normalize_legacy_vars( $template );
+
 		$sep      = get_option( 'swps_title_separator', '-' );
 		$sitename = get_bloginfo( 'name' );
 

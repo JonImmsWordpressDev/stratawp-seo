@@ -161,11 +161,6 @@ parameters:
 			path: includes/class-schema.php
 
 		-
-			message: "#^Constant SWPS_Search_Appearance\\:\\:VARIABLES is unused\\.$#"
-			count: 1
-			path: includes/class-search-appearance.php
-
-		-
 			message: "#^Parameter \\#2 \\$user_id of function get_the_author_meta expects int\\|false, string given\\.$#"
 			count: 1
 			path: includes/class-search-appearance.php
