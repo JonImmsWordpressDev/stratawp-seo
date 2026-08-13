@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.26.3
+Stable tag: 4.26.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,10 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.26.4 =
+* Fixed: paginated archive views (`/blog/page/2/` and beyond) repeated page 1's meta description verbatim, tripping duplicate-description flags in site audits. Page 2+ now omits the meta description; each page keeps its self-referencing canonical.
+* Fixed: title templates imported from Yoast SEO kept Yoast's variable names (`%%term_title%%`, `%%name%%`, `%%archive_title%%`), which StrataWP SEO doesn't recognize — the renderer stripped them silently, so every tag, category, and author archive shared a generic title like "Archives – Site". The migration now rewrites Yoast and Rank Math variable names onto the supported set and drops anything unsupported instead of storing it, and the frontend renderer aliases the common legacy names so already-migrated sites get correct archive titles without re-running the migration.
 
 = 4.26.3 =
 * Fixed: regex redirects created programmatically (WP-CLI, the add-redirect ability, or a redirect importer) had their backslashes stripped before storage — a pattern like `^/foo/(\d+)$` was silently saved as `^/foo/(d+)$` and never matched a request. The redirect manager unslashed its input a second time even though every admin form and AJAX entry point had already done so; unslashing now happens only at the form boundary, and the programmatic API stores patterns exactly as given.

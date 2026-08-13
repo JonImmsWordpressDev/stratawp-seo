@@ -64,29 +64,29 @@ class SWPS_Migration {
 	private const RM_VAR_MAP = array(
 		'%title%'            => '%%title%%',
 		'%sitename%'         => '%%sitename%%',
-		'%sitedesc%'         => '%%sitedesc%%',
+		'%sitedesc%'         => '',
 		'%sep%'              => '%%sep%%',
 		'%excerpt%'          => '%%excerpt%%',
 		'%excerpt_only%'     => '%%excerpt%%',
 		'%page%'             => '%%page%%',
-		'%pagenumber%'       => '%%pagenumber%%',
-		'%pagetotal%'        => '%%pagetotal%%',
+		'%pagenumber%'       => '%%page%%',
+		'%pagetotal%'        => '',
 		'%category%'         => '%%category%%',
 		'%tag%'              => '%%tag%%',
-		'%term%'             => '%%term_title%%',
-		'%term_title%'       => '%%term_title%%',
+		'%term%'             => '%%title%%',
+		'%term_title%'       => '%%title%%',
 		'%date%'             => '%%date%%',
-		'%modified%'         => '%%modified%%',
+		'%modified%'         => '%%date%%',
 		'%search_query%'     => '%%searchphrase%%',
-		'%name%'             => '%%name%%',
-		'%user_description%' => '%%user_description%%',
+		'%name%'             => '%%author%%',
+		'%user_description%' => '',
 		'%pt_plural%'        => '%%pt_plural%%',
 		'%pt_single%'        => '%%pt_single%%',
-		'%currenttime%'      => '%%currenttime%%',
-		'%currentdate%'      => '%%currentdate%%',
-		'%currentyear%'      => '%%currentyear%%',
-		'%currentmonth%'     => '%%currentmonth%%',
-		'%currentday%'       => '%%currentday%%',
+		'%currenttime%'      => '',
+		'%currentdate%'      => '',
+		'%currentyear%'      => '',
+		'%currentmonth%'     => '',
+		'%currentday%'       => '',
 	);
 
 	public function __construct() {
@@ -423,7 +423,7 @@ class SWPS_Migration {
 				if ( ! is_string( $val ) || '' === $val ) {
 					continue;
 				}
-				$rewritten = $this->rewrite_template_vars( $val, 'yoast' );
+				$rewritten = self::rewrite_template_vars( $val, 'yoast' );
 
 				if ( 'title-author-wpseo' === $key ) {
 					$out['swps_title_template_author'] = $rewritten;
@@ -480,7 +480,7 @@ class SWPS_Migration {
 				if ( ! is_string( $val ) || '' === $val ) {
 					continue;
 				}
-				$rewritten = $this->rewrite_template_vars( $val, 'rank_math' );
+				$rewritten = self::rewrite_template_vars( $val, 'rank_math' );
 
 				if ( preg_match( '/^pt_(.+)_title$/', $key, $m ) ) {
 					$out[ "swps_title_template_{$m[1]}" ] = $rewritten;
@@ -512,8 +512,14 @@ class SWPS_Migration {
 
 	/**
 	 * Rewrite source-plugin template variables to StrataWP %%var%% syntax.
+	 *
+	 * Yoast shares the %%var%% delimiters but not the variable names
+	 * (%%term_title%%, %%name%%, ...), so both sources need their names
+	 * mapped onto the supported set. Anything still unsupported afterwards
+	 * is dropped here rather than stored, since the renderer would strip
+	 * it silently at output time (leaving titles like "Archives – Site").
 	 */
-	private function rewrite_template_vars( string $template, string $source ): string {
+	public static function rewrite_template_vars( string $template, string $source ): string {
 		if ( 'rank_math' === $source ) {
 			// Sort keys by length descending so longer matches replace first.
 			$keys = array_keys( self::RM_VAR_MAP );
@@ -522,8 +528,17 @@ class SWPS_Migration {
 				$template = str_replace( $k, self::RM_VAR_MAP[ $k ], $template );
 			}
 		}
-		// Yoast already uses %%var%% so no rewriting needed.
-		return $template;
+
+		$template = SWPS_Search_Appearance::normalize_legacy_vars( $template );
+
+		// Drop any variable the renderer doesn't support.
+		$template = (string) preg_replace_callback(
+			'/%%\w+%%/',
+			static fn( $m ) => in_array( $m[0], SWPS_Search_Appearance::VARIABLES, true ) ? $m[0] : '',
+			$template
+		);
+
+		return trim( (string) preg_replace( '/\s+/', ' ', $template ) );
 	}
 
 	/**
