@@ -423,6 +423,7 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 == Changelog ==
 
 = 4.26.4 =
+* Fixed: paginated archive views (`/blog/page/2/` and beyond) repeated page 1's meta description verbatim, tripping duplicate-description flags in site audits. Page 2+ now omits the meta description; each page keeps its self-referencing canonical.
 * Fixed: title templates imported from Yoast SEO kept Yoast's variable names (`%%term_title%%`, `%%name%%`, `%%archive_title%%`), which StrataWP SEO doesn't recognize — the renderer stripped them silently, so every tag, category, and author archive shared a generic title like "Archives – Site". The migration now rewrites Yoast and Rank Math variable names onto the supported set and drops anything unsupported instead of storing it, and the frontend renderer aliases the common legacy names so already-migrated sites get correct archive titles without re-running the migration.
 
 = 4.26.3 =

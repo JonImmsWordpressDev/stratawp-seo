@@ -125,6 +125,13 @@ class SWPS_Search_Appearance {
 	 * Singular pages are handled by SWPS_Meta_Editor.
 	 */
 	public function output_meta_description(): void {
+		// Paginated archive views (page 2+) would repeat page 1's description
+		// verbatim — a duplicate-description flag in every crawler. Each page
+		// already carries a self-referencing canonical, so omit it instead.
+		if ( ! is_singular() && (int) get_query_var( 'paged' ) > 1 ) {
+			return;
+		}
+
 		// Singular pages: only output if Meta Editor hasn't set one.
 		if ( is_singular() ) {
 			$post_desc = get_post_meta( get_the_ID(), '_swps_meta_description', true );
