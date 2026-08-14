@@ -163,6 +163,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-aggregate.php
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-crawl-score.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawler.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawl-admin.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-site-audit-screen.php';
 require_once SWPS_PLUGIN_DIR . 'includes/audit/class-site-crawl-module.php';
 
 // Backlinks (v4.2.2) — manual/CSV-import backlink tracker with health monitor.
@@ -297,6 +298,7 @@ final class StrataWP_SEO {
 	public SWPS_Crawl_Budget_Report  $crawl_budget_report;
 	public SWPS_Site_Crawler $site_crawler;
 	public SWPS_Site_Crawl_Admin $site_crawl_admin;
+	public SWPS_Site_Audit_Screen $site_audit_screen;
 	public SWPS_Backlinks $backlinks;
 	public SWPS_Autopilot_Guardian $autopilot_guardian;
 	public SWPS_Digest $digest;
@@ -476,6 +478,7 @@ final class StrataWP_SEO {
 		SWPS_Crawl_Issues::maybe_upgrade();
 		$this->site_crawler         = new SWPS_Site_Crawler();
 		$this->site_crawl_admin     = new SWPS_Site_Crawl_Admin( $this->site_crawler );
+		$this->site_audit_screen    = new SWPS_Site_Audit_Screen( $this->site_crawler );
 		add_filter( 'swps_audit_modules', array( 'SWPS_Site_Crawl_Module', 'register' ) );
 		add_filter( 'swps_audit_modules', array( 'SWPS_Schema_Audit_Module', 'register' ) );
 		$this->backlinks            = new SWPS_Backlinks();

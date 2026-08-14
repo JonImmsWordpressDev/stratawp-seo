@@ -459,6 +459,32 @@ class SWPS_Crawl_Issues {
 	}
 
 	/**
+	 * Return the most recent distinct run IDs, newest first.
+	 *
+	 * Used by the Site Audit dashboard to locate the previous run (for triage
+	 * deltas) and to build the trend strip.
+	 *
+	 * @param int $limit Maximum number of run IDs to return. Default 5.
+	 * @return int[] Run IDs, newest first.
+	 */
+	public static function latest_run_ids( int $limit = 5 ): array {
+		global $wpdb;
+
+		$table = $wpdb->prefix . self::TABLE_QUEUE;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT DISTINCT run_id FROM {$table} ORDER BY run_id DESC LIMIT %d",
+				$limit
+			)
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		return array_map( 'intval', $ids );
+	}
+
+	/**
 	 * Return the crawled-URL count for the given run.
 	 *
 	 * @param int $run_id Target run ID.

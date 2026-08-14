@@ -74,6 +74,15 @@ class SWPS_Settings {
 
 		add_submenu_page(
 			'stratawp-seo',
+			__( 'Site Audit', 'stratawp-seo' ),
+			__( 'Site Audit', 'stratawp-seo' ),
+			'manage_options',
+			'swps-site-audit',
+			array( stratawp_seo()->site_audit_screen, 'render' )
+		);
+
+		add_submenu_page(
+			'stratawp-seo',
 			__( 'Redirects', 'stratawp-seo' ),
 			__( 'Redirects', 'stratawp-seo' ),
 			'manage_options',

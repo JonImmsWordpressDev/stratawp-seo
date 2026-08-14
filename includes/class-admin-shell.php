@@ -48,6 +48,7 @@ class SWPS_Admin_Shell {
 		'swps-image-seo',
 		'swps-crawl-files',
 		'swps-backlinks',
+		'swps-site-audit',
 	);
 
 	private SWPS_User_Prefs $prefs;
@@ -321,6 +322,10 @@ class SWPS_Admin_Shell {
 				array(
 					'slug'  => 'swps-seo-audit',
 					'label' => __( 'Audit', 'stratawp-seo' ),
+				),
+				array(
+					'slug'  => 'swps-site-audit',
+					'label' => __( 'Site Audit', 'stratawp-seo' ),
 				),
 				array(
 					'slug'  => 'swps-search-appearance',
