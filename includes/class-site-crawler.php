@@ -263,19 +263,40 @@ class SWPS_Site_Crawler {
 	 *
 	 * @param string $html     Full HTML source of the page.
 	 * @param string $base_url Absolute URL used to resolve relative hrefs.
-	 * @return array{links:string[],images:string[],canonical:?string,h1_count:int,has_noindex:bool,mixed:string[]}
+	 * @return array{links:string[],images:string[],canonical:?string,h1_count:int,has_noindex:bool,mixed:string[],title:string,meta_desc:string,has_viewport:bool,has_doctype:bool,has_charset:bool,has_lang:bool,word_count:int,text_bytes:int,script_srcs:string[],style_hrefs:string[],images_missing_alt:string[],hreflangs:array,has_schema:bool,nofollow_internal:string[],is_challenge:bool,is_archive:bool,is_paginated:bool}
 	 */
 	public static function parse_html( string $html, string $base_url ): array {
 		$result = array(
-			'links'       => array(),
-			'images'      => array(),
-			'canonical'   => null,
-			'h1_count'    => 0,
-			'has_noindex' => false,
-			'mixed'       => array(),
+			'links'              => array(),
+			'images'             => array(),
+			'canonical'          => null,
+			'h1_count'           => 0,
+			'has_noindex'        => false,
+			'mixed'              => array(),
+			'title'              => '',
+			'meta_desc'          => '',
+			'has_viewport'       => false,
+			'has_doctype'        => false,
+			'has_charset'        => false,
+			'has_lang'           => false,
+			'word_count'         => 0,
+			'text_bytes'         => 0,
+			'script_srcs'        => array(),
+			'style_hrefs'        => array(),
+			'images_missing_alt' => array(),
+			'hreflangs'          => array(),
+			'has_schema'         => false,
+			'nofollow_internal'  => array(),
+			'is_challenge'       => false,
+			'is_archive'         => false,
+			'is_paginated'       => false,
 		);
 
 		$is_https = str_starts_with( strtolower( $base_url ), 'https://' );
+
+		// Raw-string facts, computed before DOMDocument normalizes the markup.
+		$result['has_doctype']  = 0 === strncasecmp( ltrim( $html ), '<!doctype', 9 );
+		$result['is_paginated'] = (bool) preg_match( '#/page/\d+/?$#', (string) wp_parse_url( $base_url, PHP_URL_PATH ) );
 
 		$prev = libxml_use_internal_errors( true );
 
@@ -289,16 +310,41 @@ class SWPS_Site_Crawler {
 			return self::resolve_url( $href, $base_url );
 		};
 
+		// <title>.
+		$titles = $dom->getElementsByTagName( 'title' );
+		if ( $titles->length > 0 ) {
+			$result['title'] = trim( (string) preg_replace( '/\s+/', ' ', $titles->item( 0 )->textContent ) );
+		}
+
+		// <html lang>.
+		$html_el = $dom->getElementsByTagName( 'html' );
+		if ( $html_el->length > 0 && $html_el->item( 0 ) instanceof DOMElement && '' !== trim( $html_el->item( 0 )->getAttribute( 'lang' ) ) ) {
+			$result['has_lang'] = true;
+		}
+
+		// <body class> archive marker.
+		$body = $dom->getElementsByTagName( 'body' );
+		if ( $body->length > 0 && $body->item( 0 ) instanceof DOMElement ) {
+			$classes = preg_split( '/\s+/', strtolower( $body->item( 0 )->getAttribute( 'class' ) ) );
+			if ( false === $classes ) {
+				$classes = array();
+			}
+			$result['is_archive'] = in_array( 'archive', $classes, true );
+		}
+
 		// <a href>.
 		foreach ( $dom->getElementsByTagName( 'a' ) as $a ) {
 			// Loop variable is a DOMElement anchor node.
 			$abs = $resolve( $a->getAttribute( 'href' ) );
 			if ( '' !== $abs ) {
 				$result['links'][] = $abs;
+				if ( preg_match( '/\bnofollow\b/i', $a->getAttribute( 'rel' ) ) ) {
+					$result['nofollow_internal'][] = $abs;
+				}
 			}
 		}
 
-		// <img src> — also checked for mixed content.
+		// <img src> — also checked for mixed content and missing alt.
 		foreach ( $dom->getElementsByTagName( 'img' ) as $img ) {
 			// Loop variable is a DOMElement image node.
 			$abs = $resolve( $img->getAttribute( 'src' ) );
@@ -307,23 +353,34 @@ class SWPS_Site_Crawler {
 				if ( $is_https && str_starts_with( strtolower( $abs ), 'http://' ) ) {
 					$result['mixed'][] = $abs;
 				}
+				if ( ! $img->hasAttribute( 'alt' ) ) {
+					$result['images_missing_alt'][] = $abs;
+				}
 			}
 		}
 
-		// <script src> — mixed-content only.
+		// <script src> — mixed-content, script_srcs, and JSON-LD schema detection.
 		foreach ( $dom->getElementsByTagName( 'script' ) as $el ) {
 			// Loop variable is a DOMElement script node.
+			if ( 'application/ld+json' === strtolower( $el->getAttribute( 'type' ) ) ) {
+				$result['has_schema'] = true;
+			}
+
 			$src = $el->getAttribute( 'src' );
 			if ( '' === $src ) {
 				continue;
 			}
 			$abs = $resolve( $src );
-			if ( '' !== $abs && $is_https && str_starts_with( strtolower( $abs ), 'http://' ) ) {
+			if ( '' === $abs ) {
+				continue;
+			}
+			$result['script_srcs'][] = $abs;
+			if ( $is_https && str_starts_with( strtolower( $abs ), 'http://' ) ) {
 				$result['mixed'][] = $abs;
 			}
 		}
 
-		// <link href> — canonical + mixed-content.
+		// <link href> — canonical, stylesheets, hreflang, and mixed-content.
 		foreach ( $dom->getElementsByTagName( 'link' ) as $el ) {
 			// Loop variable is a DOMElement link node.
 			$rel = strtolower( $el->getAttribute( 'rel' ) );
@@ -334,24 +391,73 @@ class SWPS_Site_Crawler {
 				continue;
 			}
 
+			if ( 'stylesheet' === $rel && '' !== $abs ) {
+				$result['style_hrefs'][] = $abs;
+			}
+
+			if ( 'alternate' === $rel && '' !== $abs && '' !== trim( $el->getAttribute( 'hreflang' ) ) ) {
+				$result['hreflangs'][] = array(
+					'lang' => $el->getAttribute( 'hreflang' ),
+					'href' => $abs,
+				);
+			}
+
 			if ( '' !== $abs && $is_https && str_starts_with( strtolower( $abs ), 'http://' ) ) {
 				$result['mixed'][] = $abs;
 			}
 		}
 
-		// <meta name="robots">.
+		// <meta name="robots"> + viewport, description, charset, and refresh-challenge signal.
 		foreach ( $dom->getElementsByTagName( 'meta' ) as $meta ) {
 			// Loop variable is a DOMElement meta node.
-			if ( 'robots' !== strtolower( $meta->getAttribute( 'name' ) ) ) {
-				continue;
-			}
-			if ( str_contains( strtolower( $meta->getAttribute( 'content' ) ), 'noindex' ) ) {
+			$name = strtolower( $meta->getAttribute( 'name' ) );
+			if ( 'robots' === $name && str_contains( strtolower( $meta->getAttribute( 'content' ) ), 'noindex' ) ) {
 				$result['has_noindex'] = true;
+			}
+			if ( 'viewport' === $name && '' !== trim( $meta->getAttribute( 'content' ) ) ) {
+				$result['has_viewport'] = true;
+			}
+			if ( 'description' === $name ) {
+				$result['meta_desc'] = trim( $meta->getAttribute( 'content' ) );
+			}
+			if ( '' !== $meta->getAttribute( 'charset' ) ) {
+				$result['has_charset'] = true;
+			}
+			if ( 'content-type' === strtolower( $meta->getAttribute( 'http-equiv' ) )
+				&& false !== stripos( $meta->getAttribute( 'content' ), 'charset' ) ) {
+				$result['has_charset'] = true;
+			}
+			// Challenge signal 1: meta-refresh into a challenge/captcha path.
+			if ( 'refresh' === strtolower( $meta->getAttribute( 'http-equiv' ) )
+				&& preg_match( '#(sgcaptcha|captcha|challenge|cdn-cgi)#i', $meta->getAttribute( 'content' ) ) ) {
+				$result['is_challenge'] = true;
 			}
 		}
 
 		// <h1> count.
 		$result['h1_count'] = $dom->getElementsByTagName( 'h1' )->length;
+
+		// Text metrics: body text nodes, excluding <script>/<style>/<a> content
+		// (link labels and boilerplate would otherwise inflate the count).
+		$xpath      = new DOMXPath( $dom );
+		$text_nodes = $xpath->query( '//body//text()[not(ancestor::script) and not(ancestor::style) and not(ancestor::a)]' );
+		$parts      = array();
+		if ( false !== $text_nodes ) {
+			foreach ( $text_nodes as $node ) {
+				$piece = trim( $node->textContent ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMText native property, not a WP object.
+				if ( '' !== $piece ) {
+					$parts[] = $piece;
+				}
+			}
+		}
+		$text                 = trim( (string) preg_replace( '/\s+/', ' ', implode( ' ', $parts ) ) );
+		$result['text_bytes'] = strlen( $text );
+		$result['word_count'] = '' === $text ? 0 : count( preg_split( '/\s+/', $text ) );
+
+		// Challenge signal 2: bare head — no title, no viewport, no doctype together.
+		if ( '' === $result['title'] && ! $result['has_viewport'] && ! $result['has_doctype'] ) {
+			$result['is_challenge'] = true;
+		}
 
 		return $result;
 	}
