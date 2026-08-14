@@ -150,10 +150,16 @@ class SWPS_Site_Audit_Screen {
 			wp_die( esc_html__( 'Insufficient permissions.', 'stratawp-seo' ) );
 		}
 
-		$this->crawler->start_run();
+		// Don't start a second run on top of one already in progress — the
+		// crawler is a single-run state machine (SWPS_Site_Crawler::get_state()),
+		// so a concurrent start_run() would clobber its state option mid-crawl.
+		$state = SWPS_Site_Crawler::get_state();
+		if ( 'running' !== ( $state['status'] ?? '' ) ) {
+			$this->crawler->start_run();
 
-		if ( ! wp_next_scheduled( SWPS_Site_Crawler::CRON_HOOK ) ) {
-			wp_schedule_single_event( time() + 1, SWPS_Site_Crawler::CRON_HOOK );
+			if ( ! wp_next_scheduled( SWPS_Site_Crawler::CRON_HOOK ) ) {
+				wp_schedule_single_event( time() + 1, SWPS_Site_Crawler::CRON_HOOK );
+			}
 		}
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG ) );
@@ -162,6 +168,10 @@ class SWPS_Site_Audit_Screen {
 
 	/**
 	 * Toggle a check ID's membership in the excluded-checks option.
+	 *
+	 * The posted check_id is validated against the real check catalog (the
+	 * same set render() builds) before being stored — sanitize_key() alone
+	 * only guarantees a safe string, not a check id that actually exists.
 	 */
 	public function handle_exclude(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -170,7 +180,7 @@ class SWPS_Site_Audit_Screen {
 		check_admin_referer( self::NONCE_EXCLUDE );
 
 		$check_id = isset( $_POST['check_id'] ) ? sanitize_key( wp_unslash( $_POST['check_id'] ) ) : '';
-		if ( '' !== $check_id ) {
+		if ( '' !== $check_id && array_key_exists( $check_id, $this->check_catalog() ) ) {
 			$excluded = (array) get_option( SWPS_Crawl_Check_Registry::OPT_EXCLUDED, array() );
 			if ( in_array( $check_id, $excluded, true ) ) {
 				$excluded = array_values( array_diff( $excluded, array( $check_id ) ) );
@@ -183,6 +193,24 @@ class SWPS_Site_Audit_Screen {
 		$referer = wp_get_referer();
 		wp_safe_redirect( $referer ? $referer : admin_url( 'admin.php?page=' . self::SLUG ) );
 		exit;
+	}
+
+	/**
+	 * Build the check catalog keyed by id (title, how_to_fix, severity).
+	 *
+	 * Uses `all( array() )` — an explicit empty exclusion list, not the
+	 * option-driven default — so currently-excluded checks are still
+	 * present (render() needs their titles for the footer strip, and
+	 * handle_exclude() needs the full id set to validate against).
+	 *
+	 * @return array<string, SWPS_Crawl_Check> Check id => instance.
+	 */
+	private function check_catalog(): array {
+		$catalog = array();
+		foreach ( SWPS_Crawl_Check_Registry::all( array() ) as $check ) {
+			$catalog[ $check->id() ] = $check;
+		}
+		return $catalog;
 	}
 
 	// =========================================================================
@@ -204,10 +232,7 @@ class SWPS_Site_Audit_Screen {
 
 		// Check catalog keyed by id (title, how_to_fix, severity) — includes
 		// excluded checks so their rows can render in the footer strip.
-		$catalog = array();
-		foreach ( SWPS_Crawl_Check_Registry::all( array() ) as $check ) {
-			$catalog[ $check->id() ] = $check;
-		}
+		$catalog = $this->check_catalog();
 
 		// Newest-first run IDs. While a run is in progress it is the newest
 		// entry but has no summary yet, so the dashboard body displays the
