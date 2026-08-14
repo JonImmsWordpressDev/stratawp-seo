@@ -295,6 +295,33 @@ class SiteCrawlerTest extends TestCase {
 		$this->assertEmpty( $rows );
 	}
 
+	/**
+	 * A non-HTML resource (bare 6-key fallback facts, as process_chunk()
+	 * builds for a 2xx response whose content-type is not text/html) must
+	 * never trigger the falsy-default content checks. Without the
+	 * content-type gate, missing_meta_description/low_word_count/
+	 * missing_schema/uncompressed_page would all fire on the absent keys.
+	 */
+	public function test_classify_skips_page_checks_for_non_html_content_type(): void {
+		$fetch = array( 'url' => 'https://example.com/image.png', 'status' => 200, 'found_on' => 'https://example.com/', 'hops' => array() );
+		$page  = array(
+			'links'        => array(),
+			'images'       => array(),
+			'canonical'    => null,
+			'h1_count'     => 0,
+			'has_noindex'  => false,
+			'mixed'        => array(),
+			'content_type' => 'application/octet-stream',
+		);
+		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
+		$this->assertEmpty( $rows );
+		$types = array_column( $rows, 'type' );
+		$this->assertNotContains( 'missing_meta_description', $types );
+		$this->assertNotContains( 'low_word_count', $types );
+		$this->assertNotContains( 'missing_schema', $types );
+		$this->assertNotContains( 'uncompressed_page', $types );
+	}
+
 	// -------------------------------------------------------------------------
 	// classify — noindex_in_sitemap (caller injects post_id + sitemap_excluded)
 	// -------------------------------------------------------------------------

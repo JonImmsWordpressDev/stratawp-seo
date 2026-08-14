@@ -746,6 +746,16 @@ class SWPS_Site_Crawler {
 				$page['unminified_assets'] = $this->sample_unminified_assets( $assets, $home_host, $state );
 				$page['html_bytes']        = strlen( (string) $fetch['body'] );
 				$page['is_compressed']     = ! empty( $fetch['is_compressed'] );
+			} elseif ( ! $is_broken && '' === $content_type ) {
+				// A live (non-broken) response with a missing/empty
+				// Content-Type header is not identifiably HTML, but an
+				// empty string is indistinguishable from "key never set"
+				// to classify()'s backward-compat gate (which treats an
+				// absent content_type as HTML to preserve old fixtures).
+				// Substitute an explicit non-HTML sentinel so that gate
+				// always sees a definite type here and still skips page
+				// checks against these bare fallback facts.
+				$content_type = 'application/octet-stream';
 			}
 
 			// Carries through to classify()'s $facts merge regardless of
@@ -991,14 +1001,26 @@ class SWPS_Site_Crawler {
 	 * given asset is only ever fetched once per run regardless of how many
 	 * pages reference it.
 	 *
+	 * Bounded to a 15-second wall-clock budget per call: once elapsed, the
+	 * loop stops fetching further assets for this page and returns whatever
+	 * verdicts it has. This is a per-page cap, not a per-run one — an asset
+	 * left unsampled here simply isn't reported as unminified for this page;
+	 * because verdicts are cached by URL in $state['asset_verdicts'], a later
+	 * page that references the same asset can still pick up its verdict for
+	 * free, or sample it fresh if it was never reached.
+	 *
 	 * @param string[] $urls      Absolute asset URLs (scripts + styles).
 	 * @param string   $home_host Home host.
 	 * @param array    $state     Run state (asset_verdicts cache lives here), passed by reference.
 	 * @return string[] Asset URLs that look unminified.
 	 */
 	private function sample_unminified_assets( array $urls, string $home_host, array &$state ): array {
-		$bad = array();
+		$bad      = array();
+		$deadline = microtime( true ) + 15;
 		foreach ( array_slice( array_unique( $urls ), 0, 20 ) as $url ) {
+			if ( microtime( true ) >= $deadline ) {
+				break;
+			}
 			if ( ! self::is_internal( $url, $home_host ) ) {
 				continue;
 			}
@@ -1007,7 +1029,7 @@ class SWPS_Site_Crawler {
 				$resp = wp_remote_get(
 					$url,
 					array(
-						'timeout' => 10,
+						'timeout' => 5,
 						'headers' => array( 'Range' => 'bytes=0-20479' ),
 					)
 				);
