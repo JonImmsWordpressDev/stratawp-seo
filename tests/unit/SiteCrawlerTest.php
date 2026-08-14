@@ -286,6 +286,10 @@ class SiteCrawlerTest extends TestCase {
 			'has_charset'   => true,
 			'has_lang'      => true,
 			'is_challenge'  => false,
+			'meta_desc'     => 'A perfectly reasonable meta description for this clean test page.',
+			'word_count'    => 900,
+			'has_schema'    => true,
+			'is_compressed' => true,
 		);
 		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
 		$this->assertEmpty( $rows );

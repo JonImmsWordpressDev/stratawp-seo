@@ -36,7 +36,18 @@ class SWPS_Crawl_Check_Registry {
 		SWPS_Check_Missing_Charset::class,
 		SWPS_Check_Missing_Lang::class,
 		SWPS_Check_Challenge_Page::class,
-		// Tasks 6-8 add more checks.
+		// Task 6: content + asset checks.
+		SWPS_Check_Missing_Meta_Description::class,
+		SWPS_Check_Desc_Too_Long::class,
+		SWPS_Check_Low_Word_Count::class,
+		SWPS_Check_Low_Text_Html_Ratio::class,
+		SWPS_Check_Image_Missing_Alt::class,
+		SWPS_Check_Hreflang_Invalid::class,
+		SWPS_Check_Missing_Schema::class,
+		SWPS_Check_Nofollow_Internal::class,
+		SWPS_Check_Uncompressed_Page::class,
+		SWPS_Check_Unminified_Assets::class,
+		// Tasks 7-8 add more checks.
 	);
 
 	/**
