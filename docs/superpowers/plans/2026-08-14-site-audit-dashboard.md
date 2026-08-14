@@ -1167,7 +1167,9 @@ git add includes/crawl-checks/ tests/unit/CrawlChecksContentTest.php tests/unit/
 git commit -m "Site audit: content and asset checks + minify heuristic"
 ```
 
----### Task 7: Crawler wiring — pages rows, asset sampling, compression, UA, seeding
+---
+
+### Task 7: Crawler wiring — pages rows, asset sampling, compression, UA, seeding
 
 **Files:**
 - Modify: `includes/class-site-crawler.php` (`process_chunk()` ~line 589, `fetch_url()` ~line 775, `get_seed_urls()` ~line 995)
