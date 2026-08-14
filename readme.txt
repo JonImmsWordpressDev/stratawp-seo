@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.26.4
+Stable tag: 4.26.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,9 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.26.5 =
+* Improved: the frontend analytics tracker script now ships and serves a minified build (55% smaller), following the WordPress `SCRIPT_DEBUG` convention — the readable source is served when `SCRIPT_DEBUG` is enabled.
 
 = 4.26.4 =
 * Fixed: paginated archive views (`/blog/page/2/` and beyond) repeated page 1's meta description verbatim, tripping duplicate-description flags in site audits. Page 2+ now omits the meta description; each page keeps its self-referencing canonical.
