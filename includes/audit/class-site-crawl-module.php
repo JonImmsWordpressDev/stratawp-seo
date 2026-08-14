@@ -1,11 +1,14 @@
 <?php
 /**
- * Site Crawl audit module — READ-ONLY view of the latest stored crawl run.
+ * Site Crawl audit module — READ-ONLY summary card for the latest stored
+ * crawl run.
  *
  * Never crawls. run() reads the swps_crawl_last_summary option written by
- * SWPS_Site_Crawler::finish_run() and converts the per-type issue counts to
- * the standard audit-result contract. SWPS_SEO_Audit::run_all() is synchronous,
- * so anything slower than an option read here would block the audit page.
+ * SWPS_Site_Crawler::finish_run() and converts it to the standard
+ * audit-result contract. SWPS_SEO_Audit::run_all() is synchronous, so
+ * anything slower than an option read here would block the audit page. The
+ * full per-issue breakdown, triage, and drill-downs live on the Site Audit
+ * dashboard (swps-site-audit); this module just scores and links to it.
  *
  * Registered via the swps_audit_modules filter (see register()).
  *
@@ -50,7 +53,7 @@ class SWPS_Site_Crawl_Module extends SWPS_Audit_Module {
 	}
 
 	/**
-	 * This module is informational; fixes happen on the Site Crawl page.
+	 * This module is informational; fixes happen on the Site Audit dashboard.
 	 */
 	public function can_auto_fix(): bool {
 		return false;
@@ -59,12 +62,15 @@ class SWPS_Site_Crawl_Module extends SWPS_Audit_Module {
 	/**
 	 * Read the latest stored crawl summary; never crawls.
 	 *
+	 * Renders as a summary card only — the full per-issue breakdown, triage,
+	 * and drill-downs live on the Site Audit dashboard (swps-site-audit).
+	 *
 	 * @return array { score, status, issues, summary } per the base contract.
 	 */
 	public function run(): array {
 		$summary = get_option( SWPS_Site_Crawler::OPT_LAST_SUMMARY, array() );
 
-		$crawl_page = admin_url( 'admin.php?page=swps-site-crawl' );
+		$audit_page = admin_url( 'admin.php?page=swps-site-audit' );
 
 		if ( empty( $summary ) || empty( $summary['run_id'] ) ) {
 			return array(
@@ -74,79 +80,53 @@ class SWPS_Site_Crawl_Module extends SWPS_Audit_Module {
 					array(
 						'post_id' => null,
 						'message' => sprintf(
-							/* translators: %s: Site Crawl admin page URL */
-							__( 'No crawl has run yet. Start one from the Site Crawl page: %s', 'stratawp-seo' ),
-							$crawl_page
+							/* translators: %s: Site Audit dashboard URL */
+							__( 'No crawl has run yet. Start one from the Site Audit dashboard: %s', 'stratawp-seo' ),
+							$audit_page
 						),
 						'fixable' => false,
 					),
 				),
-				'summary' => __( 'No crawl results yet — run a site crawl to populate this check.', 'stratawp-seo' ),
+				'summary' => __( 'No crawl results yet — run a site audit to populate this check.', 'stratawp-seo' ),
 			);
 		}
 
-		$counts  = (array) ( $summary['issue_counts'] ?? array() );
 		$crawled = (int) ( $summary['crawled'] ?? 0 );
 
-		$total  = 0;
-		$errors = 0;
-		$issues = array();
-
-		// Prefer the stored severity split (present since 4.25.1): the crawler
-		// already downgrades external bot-walls etc. to warnings, and those
-		// must not cost error-level points.
+		// Severity split has been stored since 4.25.1: the crawler already
+		// downgrades external bot-walls etc. to warnings, so error-level
+		// points only come from genuine errors.
 		$severity_counts = (array) ( $summary['severity_counts'] ?? array() );
+		$errors          = (int) ( $severity_counts['error'] ?? 0 );
+		$warnings        = (int) ( $severity_counts['warning'] ?? 0 );
+		$notices         = (int) ( $severity_counts['notice'] ?? 0 );
 
-		$labels = array(
-			'broken_link'        => __( 'broken links', 'stratawp-seo' ),
-			'redirect_chain'     => __( 'redirect chains', 'stratawp-seo' ),
-			'redirect_loop'      => __( 'redirect loops', 'stratawp-seo' ),
-			'canonical_mismatch' => __( 'canonical mismatches', 'stratawp-seo' ),
-			'missing_h1'         => __( 'pages missing an H1', 'stratawp-seo' ),
-			'duplicate_h1'       => __( 'pages with duplicate H1s', 'stratawp-seo' ),
-			'mixed_content'      => __( 'mixed-content assets', 'stratawp-seo' ),
-			'noindex_in_sitemap' => __( 'noindexed URLs still in the sitemap', 'stratawp-seo' ),
-		);
-
-		foreach ( $counts as $row ) {
-			$type   = (string) ( $row['type'] ?? '' );
-			$cnt    = (int) ( $row['cnt'] ?? 0 );
-			$total += $cnt;
-
-			if ( in_array( $type, array( 'broken_link', 'redirect_loop' ), true ) ) {
-				$errors += $cnt;
-			}
-
-			$issues[] = array(
-				'post_id' => null,
-				'message' => sprintf(
-					/* translators: 1: issue count, 2: issue-type label, 3: Site Crawl admin page URL */
-					__( '%1$d %2$s found — review and fix on the Site Crawl page: %3$s', 'stratawp-seo' ),
-					$cnt,
-					$labels[ $type ] ?? $type,
-					$crawl_page
-				),
-				'fixable' => false,
-			);
-		}
-
-		// Score: start at 100, error-severity issues cost 10 each, warnings 2
-		// each (capped at 0). Legacy summaries without a severity split fall
-		// back to counting broken links + redirect loops as errors by type.
-		if ( array() !== $severity_counts ) {
-			$errors = (int) ( $severity_counts['error'] ?? 0 );
-		}
-		$others = max( 0, $total - $errors );
+		// Score: start at 100, error-severity issues cost 10 each, warnings
+		// and notices 2 each (capped at 0).
+		$others = $warnings + $notices;
 		$score  = max( 0, 100 - ( $errors * 10 ) - ( $others * 2 ) );
 
 		return array(
 			'score'   => $score,
 			'status'  => $this->status_from_score( $score ),
-			'issues'  => $issues,
+			'issues'  => array(
+				array(
+					'post_id' => null,
+					'message' => sprintf(
+						/* translators: 1: error count, 2: warning count, 3: notice count, 4: Site Audit dashboard URL */
+						__( '%1$d errors, %2$d warnings, %3$d notices from the latest crawl. View full Site Audit → %4$s', 'stratawp-seo' ),
+						$errors,
+						$warnings,
+						$notices,
+						$audit_page
+					),
+					'fixable' => false,
+				),
+			),
 			'summary' => sprintf(
-				/* translators: 1: total issue count, 2: crawled page count */
-				__( '%1$d issues across %2$d crawled pages (latest run).', 'stratawp-seo' ),
-				$total,
+				/* translators: 1: 0-100 health score, 2: crawled page count */
+				__( 'Site Audit score: %1$d/100 across %2$d crawled pages.', 'stratawp-seo' ),
+				$score,
 				$crawled
 			),
 		);
