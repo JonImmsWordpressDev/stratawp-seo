@@ -65,4 +65,14 @@ final class SiteCrawlerExtractionTest extends TestCase {
 		$r = SWPS_Site_Crawler::parse_html( $this->full_page(), 'https://example.com/blog/page/2/' );
 		$this->assertTrue( $r['is_paginated'] );
 	}
+
+	public function test_internal_links_filtered_and_normalized(): void {
+		// normalize_url() ignores the fragment entirely, so the third link
+		// (a fragment-only variant of the first) normalizes to the same key
+		// and is deduped; it does NOT strip query strings, so a variant with
+		// a query would NOT collapse into the same entry.
+		$links = array( 'https://example.com/a/', 'https://other.test/b/', 'https://example.com/a/#frag' );
+		$out   = SWPS_Site_Crawler::internal_links_normalized( $links, 'example.com' );
+		$this->assertSame( array( '//example.com/a' ), array_values( array_unique( $out ) ) );
+	}
 }

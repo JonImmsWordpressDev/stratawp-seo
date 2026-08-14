@@ -199,6 +199,26 @@ class SWPS_Site_Crawler {
 	}
 
 	/**
+	 * Filter a list of links down to internal ones, normalized and deduplicated.
+	 *
+	 * @param string[] $links     Absolute URLs (as extracted by parse_html()).
+	 * @param string   $home_host Registrable home hostname, lower-case, no www.
+	 * @return string[] Deduplicated, normalized (scheme-relative) internal links.
+	 */
+	public static function internal_links_normalized( array $links, string $home_host ): array {
+		$out = array();
+		foreach ( $links as $link ) {
+			if ( self::is_internal( $link, $home_host ) ) {
+				$norm = self::normalize_url( $link, $home_host );
+				if ( '' !== $norm ) {
+					$out[ $norm ] = true;
+				}
+			}
+		}
+		return array_keys( $out );
+	}
+
+	/**
 	 * Resolve a potentially relative href/src/Location value to an absolute URL.
 	 *
 	 * Only http(s) targets are resolvable: any other scheme (mailto:, tel:,
@@ -478,7 +498,10 @@ class SWPS_Site_Crawler {
 	 *                          final_url (string, post-redirect URL; falls back to url).
 	 * @param array  $page      Result of parse_html() on the response body. The caller may
 	 *                          enrich it with post_id (int) and sitemap_excluded (bool) for
-	 *                          the noindex-in-sitemap check (pure callers pass fixtures).
+	 *                          the noindex-in-sitemap check (pure callers pass fixtures), and
+	 *                          should carry the response content_type (string) through so
+	 *                          page-level checks are skipped for non-HTML resources; an absent
+	 *                          content_type key is treated as HTML for backward compatibility.
 	 * @param string $home_host Registrable home hostname, lower-case, no www.
 	 * @return array[] Issue rows; each has keys: type, url, detail (array), severity.
 	 */
@@ -509,6 +532,18 @@ class SWPS_Site_Crawler {
 			}
 		}
 
+		// Non-HTML resources (images, PDFs, etc.) that resolve to a non-broken
+		// response carry no real HTML facts — running content checks against
+		// their necessarily-absent/falsy defaults (missing_meta_description,
+		// low_word_count, missing_schema, uncompressed_page, ...) would be a
+		// false positive, so page-level checks are skipped entirely once the
+		// content type is known and is not HTML. An absent content_type key
+		// (every pre-existing caller/fixture) preserves prior behaviour.
+		$content_type = strtolower( (string) ( $facts['content_type'] ?? '' ) );
+		if ( '' !== $content_type && ! str_contains( $content_type, 'text/html' ) ) {
+			return $issues;
+		}
+
 		$page_checks = array_filter(
 			SWPS_Crawl_Check_Registry::all( array() ),
 			static fn( SWPS_Crawl_Check $c ) => ! in_array( $c->id(), array( 'redirect_loop', 'broken_link', 'redirect_chain' ), true )
@@ -524,7 +559,7 @@ class SWPS_Site_Crawler {
 	/**
 	 * Start a new crawl run.
 	 *
-	 * Seeds the queue from sitemap post URLs (capped to swps_crawl_internal_cap)
+	 * Seeds the queue from get_seed_urls() (capped to swps_crawl_internal_cap)
 	 * and persists the run state to a WP option.
 	 *
 	 * @param array $opts Run options: internal_cap (int), external_cap (int), delay_us (int), ignore_hosts (string).
@@ -683,20 +718,39 @@ class SWPS_Site_Crawler {
 				'mixed'       => array(),
 			);
 
-			if ( ! empty( $fetch['body'] ) && $fetch['status'] < 400 ) {
+			// HTML-only gate: page facts (and the checks that depend on them)
+			// only ever come from a fully-formed 2xx HTML response. Broken
+			// responses (>=400 or 0) and non-HTML resources (images, PDFs,
+			// ...) never reach parse_html(), so $page stays the minimal
+			// fallback above — classify()'s own content-type gate then keeps
+			// page-level checks from running against those absent facts.
+			$content_type = strtolower( (string) $fetch['content_type'] );
+			$is_broken    = $fetch['status'] >= 400 || 0 === $fetch['status'];
+			$is_html      = ! $is_broken && ! empty( $fetch['body'] ) && str_contains( $content_type, 'text/html' );
+
+			if ( $is_html ) {
 				// Parse against the post-redirect URL so relative hrefs on a
 				// redirect destination resolve against the right base.
 				$page = self::parse_html( $fetch['body'], (string) $fetch['final_url'] );
+
+				// Enrich with WP lookups for the noindex-in-sitemap check
+				// (classify() itself stays pure).
+				if ( ! empty( $page['has_noindex'] ) ) {
+					$page_post_id             = url_to_postid( $url );
+					$page['post_id']          = $page_post_id;
+					$page['sitemap_excluded'] = $page_post_id > 0
+						&& (bool) get_post_meta( $page_post_id, '_swps_sitemap_exclude', true );
+				}
+
+				$assets                    = array_merge( $page['script_srcs'], $page['style_hrefs'] );
+				$page['unminified_assets'] = $this->sample_unminified_assets( $assets, $home_host, $state );
+				$page['html_bytes']        = strlen( (string) $fetch['body'] );
+				$page['is_compressed']     = ! empty( $fetch['is_compressed'] );
 			}
 
-			// Enrich with WP lookups for the noindex-in-sitemap check
-			// (classify() itself stays pure).
-			if ( ! empty( $page['has_noindex'] ) ) {
-				$page_post_id             = url_to_postid( $url );
-				$page['post_id']          = $page_post_id;
-				$page['sitemap_excluded'] = $page_post_id > 0
-					&& (bool) get_post_meta( $page_post_id, '_swps_sitemap_exclude', true );
-			}
+			// Carries through to classify()'s $facts merge regardless of
+			// branch, so its content-type gate always has a real value.
+			$page['content_type'] = $content_type;
 
 			// Classify and store issues.
 			foreach ( self::classify( $fetch, $page, $home_host ) as $issue ) {
@@ -706,6 +760,41 @@ class SWPS_Site_Crawler {
 					(string) $issue['url'],
 					(array) ( $issue['detail'] ?? array() ),
 					(string) ( $issue['severity'] ?? 'warning' )
+				);
+			}
+
+			// Page-facts row: full row for parsed HTML, minimal (url +
+			// status_code only) row for broken responses so the dashboard
+			// can still count them, and no row at all for non-HTML 2xx
+			// resources — there are no page facts to record for those.
+			if ( $is_html ) {
+				SWPS_Crawl_Issues::insert_page(
+					$run_id,
+					array(
+						'url'               => $url,
+						'status_code'       => (int) $fetch['status'],
+						'content_type'      => $content_type,
+						'title'             => $page['title'],
+						'title_hash'        => md5( strtolower( trim( $page['title'] ) ) ),
+						'meta_desc_hash'    => '' === trim( $page['meta_desc'] ) ? '' : md5( strtolower( trim( $page['meta_desc'] ) ) ),
+						'desc_length'       => strlen( $page['meta_desc'] ),
+						'flags'             => SWPS_Crawl_Page_Flags::pack( $page ),
+						'word_count'        => (int) $page['word_count'],
+						'html_bytes'        => (int) $page['html_bytes'],
+						'text_bytes'        => (int) $page['text_bytes'],
+						'h1_count'          => (int) $page['h1_count'],
+						'canonical'         => $page['canonical'],
+						'internal_links'    => self::internal_links_normalized( $page['links'], $home_host ),
+						'unminified_assets' => $page['unminified_assets'],
+					)
+				);
+			} elseif ( $is_broken ) {
+				SWPS_Crawl_Issues::insert_page(
+					$run_id,
+					array(
+						'url'         => $url,
+						'status_code' => (int) $fetch['status'],
+					)
 				);
 			}
 
@@ -794,11 +883,18 @@ class SWPS_Site_Crawler {
 	 * or unresolvable Location header returns status 0 (dead redirect).
 	 *
 	 * @param string $url Starting URL.
-	 * @return array{url:string,status:int,body:string,found_on:string,hops:array,loop:bool,final_url:string}
+	 * @return array{url:string,status:int,body:string,found_on:string,hops:array,loop:bool,final_url:string,content_type:string,is_compressed:bool}
 	 */
 	private function fetch_url( string $url ): array {
 		$hops    = array();
 		$current = $url;
+
+		/**
+		 * Filter the crawler's User-Agent string.
+		 *
+		 * @param string $user_agent Default: "StrataWP-SEO-Audit/{version}; +{home_url}".
+		 */
+		$user_agent = apply_filters( 'swps_crawl_user_agent', 'StrataWP-SEO-Audit/' . SWPS_VERSION . '; +' . home_url( '/' ) );
 
 		for ( $i = 0; $i <= self::MAX_HOPS; $i++ ) {
 			$response = wp_remote_get(
@@ -806,20 +902,23 @@ class SWPS_Site_Crawler {
 				array(
 					'timeout'     => 10,
 					'redirection' => 0,
-					'user-agent'  => 'StrataWP-SEO/' . SWPS_VERSION . ' (+https://stratawpseo.com; site-crawler)',
+					'user-agent'  => $user_agent,
+					'headers'     => array( 'Accept-Encoding' => 'gzip, deflate' ),
 					'sslverify'   => false,
 				)
 			);
 
 			if ( is_wp_error( $response ) ) {
 				return array(
-					'url'       => $url,
-					'status'    => 0,
-					'body'      => '',
-					'found_on'  => '',
-					'hops'      => $hops,
-					'loop'      => false,
-					'final_url' => $current,
+					'url'           => $url,
+					'status'        => 0,
+					'body'          => '',
+					'found_on'      => '',
+					'hops'          => $hops,
+					'loop'          => false,
+					'final_url'     => $current,
+					'content_type'  => '',
+					'is_compressed' => false,
 				);
 			}
 
@@ -832,13 +931,15 @@ class SWPS_Site_Crawler {
 				$next = is_string( $location ) ? self::resolve_url( $location, $current ) : '';
 				if ( '' === $next ) {
 					return array(
-						'url'       => $url,
-						'status'    => 0,
-						'body'      => '',
-						'found_on'  => '',
-						'hops'      => $hops,
-						'loop'      => false,
-						'final_url' => $current,
+						'url'           => $url,
+						'status'        => 0,
+						'body'          => '',
+						'found_on'      => '',
+						'hops'          => $hops,
+						'loop'          => false,
+						'final_url'     => $current,
+						'content_type'  => '',
+						'is_compressed' => false,
 					);
 				}
 				$hops[]  = array(
@@ -855,26 +956,70 @@ class SWPS_Site_Crawler {
 			}
 
 			return array(
-				'url'       => $url,
-				'status'    => $status,
-				'body'      => $body,
-				'found_on'  => '',
-				'hops'      => $hops,
-				'loop'      => false,
-				'final_url' => $current,
+				'url'           => $url,
+				'status'        => $status,
+				'body'          => $body,
+				'found_on'      => '',
+				'hops'          => $hops,
+				'loop'          => false,
+				'final_url'     => $current,
+				'content_type'  => (string) wp_remote_retrieve_header( $response, 'content-type' ),
+				'is_compressed' => '' !== (string) wp_remote_retrieve_header( $response, 'content-encoding' ),
 			);
 		}
 
 		// Exceeded MAX_HOPS — redirect loop.
 		return array(
-			'url'       => $url,
-			'status'    => 0,
-			'body'      => '',
-			'found_on'  => '',
-			'hops'      => $hops,
-			'loop'      => true,
-			'final_url' => $current,
+			'url'           => $url,
+			'status'        => 0,
+			'body'          => '',
+			'found_on'      => '',
+			'hops'          => $hops,
+			'loop'          => true,
+			'final_url'     => $current,
+			'content_type'  => '',
+			'is_compressed' => false,
 		);
+	}
+
+	/**
+	 * Sample first-party assets for minification; verdicts cached per run.
+	 *
+	 * Fetches at most the first 20 unique candidate URLs, skipping any whose
+	 * host is not internal, and caches the minified/not-minified verdict per
+	 * asset URL (query string stripped) in $state['asset_verdicts'] so a
+	 * given asset is only ever fetched once per run regardless of how many
+	 * pages reference it.
+	 *
+	 * @param string[] $urls      Absolute asset URLs (scripts + styles).
+	 * @param string   $home_host Home host.
+	 * @param array    $state     Run state (asset_verdicts cache lives here), passed by reference.
+	 * @return string[] Asset URLs that look unminified.
+	 */
+	private function sample_unminified_assets( array $urls, string $home_host, array &$state ): array {
+		$bad = array();
+		foreach ( array_slice( array_unique( $urls ), 0, 20 ) as $url ) {
+			if ( ! self::is_internal( $url, $home_host ) ) {
+				continue;
+			}
+			$key = md5( strtok( $url, '?' ) );
+			if ( ! isset( $state['asset_verdicts'][ $key ] ) ) {
+				$resp = wp_remote_get(
+					$url,
+					array(
+						'timeout' => 10,
+						'headers' => array( 'Range' => 'bytes=0-20479' ),
+					)
+				);
+				$body = is_wp_error( $resp ) ? '' : (string) wp_remote_retrieve_body( $resp );
+				// Empty/failed fetch counts as minified (no false positives).
+				$state['asset_verdicts'][ $key ] = SWPS_Minify_Heuristic::looks_minified( $body );
+			}
+			if ( false === $state['asset_verdicts'][ $key ] ) {
+				$bad[] = strtok( $url, '?' );
+			}
+		}
+		return $bad;
 	}
 
 	/**
@@ -1012,38 +1157,66 @@ class SWPS_Site_Crawler {
 	}
 
 	/**
-	 * Get seed URLs from published sitemap-eligible posts.
+	 * Get seed URLs covering the whole public site: every published post of
+	 * every public post type, every public taxonomy term archive, every
+	 * author archive with published posts, and the blog index.
+	 *
+	 * Deliberately broader than the XML sitemap (no sitemap-exclusion or
+	 * per-post noindex filtering): the crawler's job is to independently
+	 * discover and audit URLs, including ones the sitemap itself omits.
+	 * Deeper pagination is not guessed here — it is discovered by following
+	 * links during the crawl.
 	 *
 	 * @return string[] Array of absolute URLs.
 	 */
 	private function get_seed_urls(): array {
+		$urls = array( home_url( '/' ) );
+
 		$posts = get_posts(
 			array(
 				'post_type'      => get_post_types( array( 'public' => true ) ),
 				'post_status'    => 'publish',
-				'posts_per_page' => self::DEFAULT_INTERNAL_CAP * 2,
-				'orderby'        => 'date',
-				'order'          => 'DESC',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
 				'no_found_rows'  => true,
-				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-					array(
-						'key'     => '_swps_sitemap_exclude',
-						'compare' => 'NOT EXISTS',
-					),
-				),
 			)
 		);
-
-		$urls = array( home_url( '/' ) );
-
-		foreach ( $posts as $post ) {
-			$permalink = get_permalink( $post );
+		foreach ( $posts as $post_id ) {
+			$permalink = get_permalink( $post_id );
 			if ( ! empty( $permalink ) ) {
 				$urls[] = $permalink;
 			}
 		}
 
-		return array_unique( $urls );
+		$terms = get_terms(
+			array(
+				'taxonomy'   => get_taxonomies( array( 'public' => true ) ),
+				'hide_empty' => true,
+			)
+		);
+		if ( ! is_wp_error( $terms ) ) {
+			foreach ( $terms as $term ) {
+				$link = get_term_link( $term );
+				if ( ! is_wp_error( $link ) ) {
+					$urls[] = $link;
+				}
+			}
+		}
+
+		$authors = get_users( array( 'has_published_posts' => true ) );
+		foreach ( $authors as $author ) {
+			$urls[] = get_author_posts_url( (int) $author->ID );
+		}
+
+		$page_for_posts = (int) get_option( 'page_for_posts' );
+		if ( $page_for_posts > 0 ) {
+			$permalink = get_permalink( $page_for_posts );
+			if ( ! empty( $permalink ) ) {
+				$urls[] = $permalink;
+			}
+		}
+
+		return array_values( array_unique( array_filter( $urls ) ) );
 	}
 
 	/**
