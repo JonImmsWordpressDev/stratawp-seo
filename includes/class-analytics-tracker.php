@@ -112,9 +112,11 @@ class SWPS_Analytics_Tracker {
 
 		$post_id = is_singular() ? get_the_ID() : 0;
 
+		$suffix = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? '' : '.min';
+
 		wp_enqueue_script(
 			'swps-analytics-tracker',
-			SWPS_PLUGIN_URL . 'admin/js/analytics-tracker.js',
+			SWPS_PLUGIN_URL . "admin/js/analytics-tracker{$suffix}.js",
 			array(),
 			SWPS_VERSION,
 			array(
