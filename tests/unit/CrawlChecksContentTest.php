@@ -11,6 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/../../includes/crawl-checks/class-crawl-check.php';
 require_once __DIR__ . '/../../includes/crawl-checks/class-checks-content.php';
+require_once __DIR__ . '/../../includes/class-site-crawler.php';
 
 /**
  * @covers SWPS_Check_Missing_Meta_Description
@@ -90,6 +91,37 @@ final class CrawlChecksContentTest extends TestCase {
 		$this->assertNull( $check->check_page( $this->facts( array( 'nofollow_internal' => array( 'https://elsewhere.test/x' ) ) ) ) );
 		$issue = $check->check_page( $this->facts( array( 'nofollow_internal' => array( 'https://x.test/about/' ) ) ) );
 		$this->assertSame( array( 'https://x.test/about/' ), $issue['detail']['links'] );
+	}
+
+	public function test_nofollow_internal_matches_www_and_case_variants(): void {
+		// SWPS_Site_Crawler::is_internal() strips a leading "www." and
+		// lower-cases the host before comparing — a manual host === $home_host
+		// comparison misses both, letting www./mixed-case internal nofollow
+		// links slip through unflagged.
+		$check = new SWPS_Check_Nofollow_Internal();
+		$issue = $check->check_page( $this->facts( array( 'nofollow_internal' => array( 'https://www.x.test/about/' ) ) ) );
+		$this->assertNotNull( $issue );
+		$this->assertSame( array( 'https://www.x.test/about/' ), $issue['detail']['links'] );
+
+		$issue_case = $check->check_page( $this->facts( array( 'nofollow_internal' => array( 'https://X.TEST/about/' ) ) ) );
+		$this->assertNotNull( $issue_case );
+	}
+
+	public function test_desc_too_long_counts_characters_not_bytes(): void {
+		$check = new SWPS_Check_Desc_Too_Long();
+
+		// 160 characters (157 'a's + 3 em-dashes) but 166 bytes in UTF-8 —
+		// byte-based strlen() would wrongly flag this as too long.
+		$desc = str_repeat( 'a', 157 ) . str_repeat( '—', 3 );
+		$this->assertSame( 160, mb_strlen( $desc ) );
+		$this->assertNull( $check->check_page( $this->facts( array( 'meta_desc' => $desc ) ) ) );
+
+		// 161 characters — genuinely too long, and the detail carries a
+		// character-based (not byte-based) length.
+		$too_long = str_repeat( 'a', 158 ) . str_repeat( '—', 3 );
+		$issue    = $check->check_page( $this->facts( array( 'meta_desc' => $too_long ) ) );
+		$this->assertNotNull( $issue );
+		$this->assertSame( 161, $issue['detail']['length'] );
 	}
 
 	public function test_remaining_simple_checks(): void {

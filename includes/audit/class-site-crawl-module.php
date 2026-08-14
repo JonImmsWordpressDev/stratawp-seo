@@ -101,10 +101,11 @@ class SWPS_Site_Crawl_Module extends SWPS_Audit_Module {
 		$warnings        = (int) ( $severity_counts['warning'] ?? 0 );
 		$notices         = (int) ( $severity_counts['notice'] ?? 0 );
 
-		// Score: start at 100, error-severity issues cost 10 each, warnings
-		// and notices 2 each (capped at 0).
-		$others = $warnings + $notices;
-		$score  = max( 0, 100 - ( $errors * 10 ) - ( $others * 2 ) );
+		// Use the same health score the Site Audit dashboard shows, rather
+		// than a second, cruder formula: with the full check suite this
+		// legacy 100 - errors*10 - others*2 calculation floors at 0 almost
+		// immediately, contradicting the real score shown one click away.
+		$score = $this->real_score( (int) ( $summary['run_id'] ?? 0 ), $severity_counts, $crawled );
 
 		// A clean crawl (0/0/0) must report no issues — otherwise every
 		// passing module still shows a "1 issue" badge and toggle on the
@@ -137,5 +138,39 @@ class SWPS_Site_Crawl_Module extends SWPS_Audit_Module {
 				$crawled
 			),
 		);
+	}
+
+	/**
+	 * Resolve the same health score the Site Audit dashboard shows for a run.
+	 *
+	 * Prefers, in order:
+	 * 1. The current crawl state's stored summary (SWPS_Site_Crawler::get_state()),
+	 *    when it belongs to the same run as swps_crawl_last_summary — the
+	 *    authoritative value finish_run() computed via SWPS_Crawl_Score::calculate().
+	 * 2. The matching entry in the rolling swps_crawl_run_summaries option,
+	 *    for the (common) case where a newer run has since started and reset
+	 *    the crawl state before this module read it.
+	 * 3. A last-resort recompute from the severity counts already available
+	 *    here, using the crawled-page count as a stand-in for the run's page
+	 *    total (both options are populated together by finish_run(), so this
+	 *    tier should only ever be hit on data from before either existed).
+	 *
+	 * @param int   $run_id          Run ID the summary belongs to.
+	 * @param array $severity_counts Severity counts keyed by error/warning/notice.
+	 * @param int   $crawled         Crawled-page count for the run.
+	 * @return int Score in [0, 100].
+	 */
+	private function real_score( int $run_id, array $severity_counts, int $crawled ): int {
+		$state = SWPS_Site_Crawler::get_state();
+		if ( (int) ( $state['run_id'] ?? 0 ) === $run_id && isset( $state['summary']['score'] ) ) {
+			return (int) $state['summary']['score'];
+		}
+
+		$summaries = get_option( 'swps_crawl_run_summaries', array() );
+		if ( isset( $summaries[ $run_id ]['score'] ) ) {
+			return (int) $summaries[ $run_id ]['score'];
+		}
+
+		return SWPS_Crawl_Score::calculate( $severity_counts, max( 1, $crawled ) );
 	}
 }

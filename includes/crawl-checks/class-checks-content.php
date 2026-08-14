@@ -103,7 +103,7 @@ class SWPS_Check_Desc_Too_Long extends SWPS_Crawl_Check {
 	 */
 	public function check_page( array $page ): ?array {
 		$meta_desc = (string) ( $page['meta_desc'] ?? '' );
-		$length    = strlen( $meta_desc );
+		$length    = mb_strlen( $meta_desc );
 		if ( $length > 160 ) {
 			return $this->issue(
 				$page['url'],
@@ -453,8 +453,9 @@ class SWPS_Check_Nofollow_Internal extends SWPS_Crawl_Check {
 
 		$matches = array();
 		foreach ( $urls as $url ) {
-			$host = wp_parse_url( (string) $url, PHP_URL_HOST );
-			if ( '' !== $home_host && $host === $home_host ) {
+			// SWPS_Site_Crawler::is_internal() handles the www./case
+			// variants a manual host === comparison misses.
+			if ( '' !== $home_host && SWPS_Site_Crawler::is_internal( (string) $url, $home_host ) ) {
 				$matches[] = $url;
 			}
 		}

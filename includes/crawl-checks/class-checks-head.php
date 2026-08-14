@@ -99,7 +99,7 @@ class SWPS_Check_Title_Too_Long extends SWPS_Crawl_Check {
 	 */
 	public function check_page( array $page ): ?array {
 		$title  = (string) ( $page['title'] ?? '' );
-		$length = strlen( $title );
+		$length = mb_strlen( $title );
 		if ( $length > 60 ) {
 			return $this->issue(
 				$page['url'],
@@ -154,7 +154,7 @@ class SWPS_Check_Title_Too_Short extends SWPS_Crawl_Check {
 	 */
 	public function check_page( array $page ): ?array {
 		$title  = (string) ( $page['title'] ?? '' );
-		$length = strlen( $title );
+		$length = mb_strlen( $title );
 		// Only flag if non-empty and shorter than 15 characters.
 		// Empty titles are missing_title's job.
 		if ( $length > 0 && $length < 15 ) {

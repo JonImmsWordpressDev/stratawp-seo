@@ -55,6 +55,25 @@ final class CrawlChecksHeadTest extends TestCase {
 		$this->assertNull( $short->check_page( $this->facts( array( 'title' => '' ) ) ) ); // missing_title's job
 	}
 
+	public function test_title_length_counts_characters_not_bytes(): void {
+		$long  = new SWPS_Check_Title_Too_Long();
+		$short = new SWPS_Check_Title_Too_Short();
+
+		// 60 characters (57 'a's + 3 em-dashes) but 66 bytes in UTF-8 —
+		// byte-based strlen() would wrongly flag this as too long.
+		$sixty_chars = str_repeat( 'a', 57 ) . str_repeat( '—', 3 );
+		$this->assertSame( 60, mb_strlen( $sixty_chars ) );
+		$this->assertNull( $long->check_page( $this->facts( array( 'title' => $sixty_chars ) ) ) );
+
+		// 5 em-dash characters: 5 chars (too short, <15) but 15 bytes in
+		// UTF-8 — byte-based strlen() would wrongly consider this long enough.
+		$five_chars = str_repeat( '—', 5 );
+		$this->assertSame( 5, mb_strlen( $five_chars ) );
+		$issue = $short->check_page( $this->facts( array( 'title' => $five_chars ) ) );
+		$this->assertNotNull( $issue );
+		$this->assertSame( 5, $issue['detail']['length'] );
+	}
+
 	public function test_flag_checks_fire_when_flag_absent(): void {
 		$this->assertSame( 'missing_viewport', ( new SWPS_Check_Missing_Viewport() )->check_page( $this->facts( array( 'has_viewport' => false ) ) )['type'] );
 		$this->assertSame( 'missing_doctype', ( new SWPS_Check_Missing_Doctype() )->check_page( $this->facts( array( 'has_doctype' => false ) ) )['type'] );

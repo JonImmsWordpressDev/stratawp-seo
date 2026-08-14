@@ -505,9 +505,12 @@ class SWPS_Site_Crawler {
 	 *                          page-level checks are skipped for non-HTML resources; an absent
 	 *                          content_type key is treated as HTML for backward compatibility.
 	 * @param string $home_host Registrable home hostname, lower-case, no www.
+	 * @param array  $excluded  Check IDs to skip (from SWPS_Crawl_Check_Registry::OPT_EXCLUDED).
+	 *                          Defaults to none excluded, preserving prior behaviour for callers
+	 *                          that don't pass this.
 	 * @return array[] Issue rows; each has keys: type, url, detail (array), severity.
 	 */
-	public static function classify( array $fetch, array $page, string $home_host ): array {
+	public static function classify( array $fetch, array $page, string $home_host, array $excluded = array() ): array {
 		$facts = array_merge(
 			$page,
 			array(
@@ -547,7 +550,7 @@ class SWPS_Site_Crawler {
 		}
 
 		$page_checks = array_filter(
-			SWPS_Crawl_Check_Registry::all( array() ),
+			SWPS_Crawl_Check_Registry::all( $excluded ),
 			static fn( SWPS_Crawl_Check $c ) => ! in_array( $c->id(), array( 'redirect_loop', 'broken_link', 'redirect_chain' ), true )
 		);
 
@@ -664,6 +667,10 @@ class SWPS_Site_Crawler {
 		$home_host    = self::get_home_host();
 		$internal_cap = (int) ( $state['internal_cap'] ?? self::DEFAULT_INTERNAL_CAP );
 
+		// Resolved once per chunk (not per URL) so a mid-run settings change
+		// takes effect on the next chunk without extra option reads per fetch.
+		$excluded_checks = (array) get_option( SWPS_Crawl_Check_Registry::OPT_EXCLUDED, array() );
+
 		/**
 		 * Filter the politeness delay (µs) between crawler fetches.
 		 *
@@ -765,7 +772,7 @@ class SWPS_Site_Crawler {
 			$page['content_type'] = $content_type;
 
 			// Classify and store issues.
-			foreach ( self::classify( $fetch, $page, $home_host ) as $issue ) {
+			foreach ( self::classify( $fetch, $page, $home_host, $excluded_checks ) as $issue ) {
 				SWPS_Crawl_Issues::insert_issue(
 					$run_id,
 					(string) $issue['type'],

@@ -483,4 +483,30 @@ class SiteCrawlerTest extends TestCase {
 		$types = array_column( $rows, 'type' );
 		$this->assertContains( 'canonical_mismatch', $types );
 	}
+
+	// -------------------------------------------------------------------------
+	// classify — excluded-check filtering
+	// -------------------------------------------------------------------------
+
+	public function test_classify_excludes_page_checks_by_id(): void {
+		// Page facts that trigger missing_viewport (no has_viewport key/false).
+		$fetch = array( 'url' => 'https://example.com/page', 'status' => 200, 'found_on' => 'https://example.com/', 'hops' => array() );
+		$page  = array(
+			'links'        => array(),
+			'images'       => array(),
+			'canonical'    => null,
+			'h1_count'     => 1,
+			'has_noindex'  => false,
+			'mixed'        => array(),
+			'has_viewport' => false,
+		);
+
+		// Without an exclusion list, the check fires as usual.
+		$rows_default = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
+		$this->assertContains( 'missing_viewport', array_column( $rows_default, 'type' ) );
+
+		// With missing_viewport excluded, it must not appear.
+		$rows_excluded = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com', array( 'missing_viewport' ) );
+		$this->assertNotContains( 'missing_viewport', array_column( $rows_excluded, 'type' ) );
+	}
 }

@@ -64,13 +64,24 @@ class SWPS_Crawl_Link_Graph {
 	 * Walk every row's internal_links list, counting references to each URL.
 	 * Self-links are ignored.
 	 *
+	 * The internal_links entries are already stored in normalize_url()'s
+	 * scheme-relative format ('//host/path', via internal_links_normalized()
+	 * at crawl time), so $counts ends up keyed the same way. A row's own
+	 * 'url' column, by contrast, is the absolute URL it was fetched at — it
+	 * must be run through the same normalize_url() before comparing it
+	 * against $target, otherwise a page that links to itself is never
+	 * recognised as a self-link and inflates its own incoming count.
+	 * normalize_url()'s $home_host parameter is unused by the function
+	 * itself (kept only for API symmetry), so an empty string is safe here
+	 * and keeps this helper free of any WP/home-URL dependency.
+	 *
 	 * @param array $rows Page rows (see SWPS_Crawl_Issues::pages_for_run()).
 	 * @return array<string, int> URL => incoming-link count.
 	 */
 	public static function incoming_counts( array $rows ): array {
 		$counts = array();
 		foreach ( $rows as $row ) {
-			$self = (string) ( $row['url'] ?? '' );
+			$self = SWPS_Site_Crawler::normalize_url( (string) ( $row['url'] ?? '' ), '' );
 			foreach ( (array) ( $row['internal_links'] ?? array() ) as $target ) {
 				$target = (string) $target;
 				if ( '' === $target || $target === $self ) {
@@ -80,6 +91,28 @@ class SWPS_Crawl_Link_Graph {
 			}
 		}
 		return $counts;
+	}
+
+	/**
+	 * Look up a page row's incoming-link count by its own absolute URL.
+	 *
+	 * $counts (from incoming_counts()) is keyed by normalize_url()'s
+	 * scheme-relative format, since that's what internal_links entries are
+	 * stored in. A page row's 'url' column is absolute, so it must be
+	 * normalized the same way before it can be used as a lookup key —
+	 * comparing the two formats directly always misses, which previously
+	 * made almost every page look orphaned and single_incoming_link never
+	 * fire. Shared by SWPS_Check_Orphan_Page and
+	 * SWPS_Check_Single_Incoming_Link so both apply the same normalization.
+	 *
+	 * @param array<string, int> $counts    Result of incoming_counts().
+	 * @param string             $url       Page row's absolute URL.
+	 * @param string             $home_host Registrable home hostname.
+	 * @return int Incoming-link count for the URL (0 when not found).
+	 */
+	public static function count_for_url( array $counts, string $url, string $home_host ): int {
+		$key = SWPS_Site_Crawler::normalize_url( $url, $home_host );
+		return (int) ( $counts[ $key ] ?? 0 );
 	}
 }
 
@@ -245,9 +278,10 @@ class SWPS_Check_Orphan_Page extends SWPS_Crawl_Check {
 	 * @return array[] Issue rows.
 	 */
 	public function check_run( int $run_id ): array {
-		$rows   = SWPS_Crawl_Issues::pages_for_run( $run_id );
-		$counts = SWPS_Crawl_Link_Graph::incoming_counts( $rows );
-		$home   = self::normalize_for_compare( home_url( '/' ) );
+		$rows      = SWPS_Crawl_Issues::pages_for_run( $run_id );
+		$counts    = SWPS_Crawl_Link_Graph::incoming_counts( $rows );
+		$home      = self::normalize_for_compare( home_url( '/' ) );
+		$home_host = SWPS_Site_Crawler::get_home_host();
 
 		$issues = array();
 		foreach ( $rows as $row ) {
@@ -261,7 +295,7 @@ class SWPS_Check_Orphan_Page extends SWPS_Crawl_Check {
 			if ( self::normalize_for_compare( $url ) === $home ) {
 				continue;
 			}
-			if ( ( $counts[ $url ] ?? 0 ) > 0 ) {
+			if ( SWPS_Crawl_Link_Graph::count_for_url( $counts, $url, $home_host ) > 0 ) {
 				continue;
 			}
 			$issues[] = $this->issue( $url );
@@ -321,8 +355,9 @@ class SWPS_Check_Single_Incoming_Link extends SWPS_Crawl_Check {
 	 * @return array[] Issue rows.
 	 */
 	public function check_run( int $run_id ): array {
-		$rows   = SWPS_Crawl_Issues::pages_for_run( $run_id );
-		$counts = SWPS_Crawl_Link_Graph::incoming_counts( $rows );
+		$rows      = SWPS_Crawl_Issues::pages_for_run( $run_id );
+		$counts    = SWPS_Crawl_Link_Graph::incoming_counts( $rows );
+		$home_host = SWPS_Site_Crawler::get_home_host();
 
 		$issues = array();
 		foreach ( $rows as $row ) {
@@ -333,7 +368,7 @@ class SWPS_Check_Single_Incoming_Link extends SWPS_Crawl_Check {
 				continue;
 			}
 			$url = (string) ( $row['url'] ?? '' );
-			if ( 1 === ( $counts[ $url ] ?? 0 ) ) {
+			if ( 1 === SWPS_Crawl_Link_Graph::count_for_url( $counts, $url, $home_host ) ) {
 				$issues[] = $this->issue( $url );
 			}
 		}
