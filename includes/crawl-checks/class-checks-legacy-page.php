@@ -10,11 +10,46 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Flags a page whose declared canonical differs from the URL that actually
+ * served the response.
+ */
 class SWPS_Check_Canonical_Mismatch extends SWPS_Crawl_Check {
-	public function id(): string { return 'canonical_mismatch'; }
-	public function severity(): string { return 'warning'; }
-	public function title(): string { return __( 'Canonical mismatches', 'stratawp-seo' ); }
-	public function how_to_fix(): string { return __( 'The page declares a canonical URL that differs from the URL that actually served the response. Point the canonical tag at the final (post-redirect) URL, or fix the redirect.', 'stratawp-seo' ); }
+
+	/**
+	 * Unique check identifier.
+	 */
+	public function id(): string {
+		return 'canonical_mismatch';
+	}
+
+	/**
+	 * Severity level.
+	 */
+	public function severity(): string {
+		return 'warning';
+	}
+
+	/**
+	 * Human-readable title.
+	 */
+	public function title(): string {
+		return __( 'Canonical mismatches', 'stratawp-seo' );
+	}
+
+	/**
+	 * Short remediation guidance shown in the dashboard drill-down.
+	 */
+	public function how_to_fix(): string {
+		return __( 'The page declares a canonical URL that differs from the URL that actually served the response. Point the canonical tag at the final (post-redirect) URL, or fix the redirect.', 'stratawp-seo' );
+	}
+
+	/**
+	 * Per-page check. $page is the merged fact array (fetch + parse_html facts).
+	 *
+	 * @param array $page Merged fact array.
+	 * @return array|null Issue row or null.
+	 */
 	public function check_page( array $page ): ?array {
 		$canonical = $page['canonical'] ?? null;
 		if ( null === $canonical ) {
@@ -37,11 +72,45 @@ class SWPS_Check_Canonical_Mismatch extends SWPS_Crawl_Check {
 	}
 }
 
+/**
+ * Flags a page with no H1 heading.
+ */
 class SWPS_Check_Missing_H1 extends SWPS_Crawl_Check {
-	public function id(): string { return 'missing_h1'; }
-	public function severity(): string { return 'warning'; }
-	public function title(): string { return __( 'Missing H1 headings', 'stratawp-seo' ); }
-	public function how_to_fix(): string { return __( 'The page has no H1 heading. Add exactly one H1 that describes the page content.', 'stratawp-seo' ); }
+
+	/**
+	 * Unique check identifier.
+	 */
+	public function id(): string {
+		return 'missing_h1';
+	}
+
+	/**
+	 * Severity level.
+	 */
+	public function severity(): string {
+		return 'warning';
+	}
+
+	/**
+	 * Human-readable title.
+	 */
+	public function title(): string {
+		return __( 'Missing H1 headings', 'stratawp-seo' );
+	}
+
+	/**
+	 * Short remediation guidance shown in the dashboard drill-down.
+	 */
+	public function how_to_fix(): string {
+		return __( 'The page has no H1 heading. Add exactly one H1 that describes the page content.', 'stratawp-seo' );
+	}
+
+	/**
+	 * Per-page check. $page is the merged fact array (fetch + parse_html facts).
+	 *
+	 * @param array $page Merged fact array.
+	 * @return array|null Issue row or null.
+	 */
 	public function check_page( array $page ): ?array {
 		$h1_count = (int) ( $page['h1_count'] ?? 0 );
 		if ( 0 !== $h1_count ) {
@@ -51,11 +120,45 @@ class SWPS_Check_Missing_H1 extends SWPS_Crawl_Check {
 	}
 }
 
+/**
+ * Flags a page with more than one H1 heading.
+ */
 class SWPS_Check_Duplicate_H1 extends SWPS_Crawl_Check {
-	public function id(): string { return 'duplicate_h1'; }
-	public function severity(): string { return 'warning'; }
-	public function title(): string { return __( 'Duplicate H1 headings', 'stratawp-seo' ); }
-	public function how_to_fix(): string { return __( 'The page has more than one H1 heading. Keep a single H1 and demote the rest to H2/H3.', 'stratawp-seo' ); }
+
+	/**
+	 * Unique check identifier.
+	 */
+	public function id(): string {
+		return 'duplicate_h1';
+	}
+
+	/**
+	 * Severity level.
+	 */
+	public function severity(): string {
+		return 'warning';
+	}
+
+	/**
+	 * Human-readable title.
+	 */
+	public function title(): string {
+		return __( 'Duplicate H1 headings', 'stratawp-seo' );
+	}
+
+	/**
+	 * Short remediation guidance shown in the dashboard drill-down.
+	 */
+	public function how_to_fix(): string {
+		return __( 'The page has more than one H1 heading. Keep a single H1 and demote the rest to H2/H3.', 'stratawp-seo' );
+	}
+
+	/**
+	 * Per-page check. $page is the merged fact array (fetch + parse_html facts).
+	 *
+	 * @param array $page Merged fact array.
+	 * @return array|null Issue row or null.
+	 */
 	public function check_page( array $page ): ?array {
 		$h1_count = (int) ( $page['h1_count'] ?? 0 );
 		if ( $h1_count <= 1 ) {
@@ -71,11 +174,46 @@ class SWPS_Check_Duplicate_H1 extends SWPS_Crawl_Check {
 	}
 }
 
+/**
+ * Flags a page that loads one or more assets over insecure HTTP. One issue
+ * per page, with the full list of offending assets in detail['assets'].
+ */
 class SWPS_Check_Mixed_Content extends SWPS_Crawl_Check {
-	public function id(): string { return 'mixed_content'; }
-	public function severity(): string { return 'warning'; }
-	public function title(): string { return __( 'Mixed content', 'stratawp-seo' ); }
-	public function how_to_fix(): string { return __( 'The page loads one or more assets over insecure HTTP. Update the asset URLs to HTTPS.', 'stratawp-seo' ); }
+
+	/**
+	 * Unique check identifier.
+	 */
+	public function id(): string {
+		return 'mixed_content';
+	}
+
+	/**
+	 * Severity level.
+	 */
+	public function severity(): string {
+		return 'warning';
+	}
+
+	/**
+	 * Human-readable title.
+	 */
+	public function title(): string {
+		return __( 'Mixed content', 'stratawp-seo' );
+	}
+
+	/**
+	 * Short remediation guidance shown in the dashboard drill-down.
+	 */
+	public function how_to_fix(): string {
+		return __( 'The page loads one or more assets over insecure HTTP. Update the asset URLs to HTTPS.', 'stratawp-seo' );
+	}
+
+	/**
+	 * Per-page check. $page is the merged fact array (fetch + parse_html facts).
+	 *
+	 * @param array $page Merged fact array.
+	 * @return array|null Issue row or null.
+	 */
 	public function check_page( array $page ): ?array {
 		$mixed = $page['mixed'] ?? array();
 		if ( empty( $mixed ) ) {
@@ -91,11 +229,47 @@ class SWPS_Check_Mixed_Content extends SWPS_Crawl_Check {
 	}
 }
 
+/**
+ * Flags a post that declares meta-robots noindex but is not excluded from
+ * the sitemap. The caller injects post_id + sitemap_excluded (WP lookups)
+ * into the page facts before classify() runs.
+ */
 class SWPS_Check_Noindex_In_Sitemap extends SWPS_Crawl_Check {
-	public function id(): string { return 'noindex_in_sitemap'; }
-	public function severity(): string { return 'warning'; }
-	public function title(): string { return __( 'Noindexed pages still in the sitemap', 'stratawp-seo' ); }
-	public function how_to_fix(): string { return __( 'The page declares meta-robots noindex but is not excluded from the sitemap. Either remove noindex or exclude the post from the sitemap.', 'stratawp-seo' ); }
+
+	/**
+	 * Unique check identifier.
+	 */
+	public function id(): string {
+		return 'noindex_in_sitemap';
+	}
+
+	/**
+	 * Severity level.
+	 */
+	public function severity(): string {
+		return 'warning';
+	}
+
+	/**
+	 * Human-readable title.
+	 */
+	public function title(): string {
+		return __( 'Noindexed pages still in the sitemap', 'stratawp-seo' );
+	}
+
+	/**
+	 * Short remediation guidance shown in the dashboard drill-down.
+	 */
+	public function how_to_fix(): string {
+		return __( 'The page declares meta-robots noindex but is not excluded from the sitemap. Either remove noindex or exclude the post from the sitemap.', 'stratawp-seo' );
+	}
+
+	/**
+	 * Per-page check. $page is the merged fact array (fetch + parse_html facts).
+	 *
+	 * @param array $page Merged fact array.
+	 * @return array|null Issue row or null.
+	 */
 	public function check_page( array $page ): ?array {
 		if ( empty( $page['has_noindex'] ) ) {
 			return null;
