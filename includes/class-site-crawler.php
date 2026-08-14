@@ -19,6 +19,7 @@ require_once __DIR__ . '/crawl-checks/class-crawl-check.php';
 require_once __DIR__ . '/crawl-checks/class-crawl-check-registry.php';
 require_once __DIR__ . '/crawl-checks/class-checks-fetch.php';
 require_once __DIR__ . '/crawl-checks/class-checks-legacy-page.php';
+require_once __DIR__ . '/crawl-checks/class-checks-head.php';
 
 /**
  * Site Crawler — HTML parsing helpers and chunked crawl state machine.

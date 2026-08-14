@@ -67,9 +67,7 @@ final class CrawlCheckRegistryTest extends TestCase {
 
 	public function test_excluded_ids_are_filtered(): void {
 		$all = SWPS_Crawl_Check_Registry::all( array() );
-		if ( array() === $all ) {
-			$this->markTestSkipped( 'registry empty until checks land' ); // Removed in Task 5.
-		}
+		$this->assertNotEmpty( $all, 'registry should contain checks' );
 		$filtered = SWPS_Crawl_Check_Registry::all( array( $all[0]->id() ) );
 		$this->assertCount( count( $all ) - 1, $filtered );
 	}
@@ -93,15 +91,14 @@ final class CrawlCheckRegistryTest extends TestCase {
 		$this->assertSame( array(), $issues );
 	}
 
-	public function test_page_check_ids_empty_registry(): void {
-		if ( array() !== SWPS_Crawl_Check_Registry::all( array() ) ) {
-			// Task 4 populated CHECKS with 8 classes that all override check_page();
-			// this "empty registry" assumption no longer holds. Superseded by
-			// Task 5/6 coverage. Removed in Task 5.
-			$this->markTestSkipped( 'registry populated as of Task 4' );
-		}
+	public function test_page_check_ids_populated(): void {
 		$ids = SWPS_Crawl_Check_Registry::page_check_ids();
-		$this->assertSame( array(), $ids );
+		// Task 5 added missing_title and challenge_page_detected; Task 6 will add more.
+		// Assert that our known Task 5 checks are present to allow Task 6 to extend.
+		$this->assertContains( 'missing_title', $ids );
+		$this->assertContains( 'challenge_page_detected', $ids );
+		// Aggregate checks are not yet populated (Task 8).
+		$this->assertSame( array(), SWPS_Crawl_Check_Registry::aggregate_check_ids() );
 	}
 
 	public function test_aggregate_check_ids_empty_registry(): void {

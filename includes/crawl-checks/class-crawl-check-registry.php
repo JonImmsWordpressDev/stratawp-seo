@@ -27,7 +27,16 @@ class SWPS_Crawl_Check_Registry {
 		SWPS_Check_Duplicate_H1::class,
 		SWPS_Check_Mixed_Content::class,
 		SWPS_Check_Noindex_In_Sitemap::class,
-		// Tasks 5-6 add per-page checks, Task 8 adds aggregate checks.
+		// Task 5: head-integrity + challenge checks.
+		SWPS_Check_Missing_Title::class,
+		SWPS_Check_Title_Too_Long::class,
+		SWPS_Check_Title_Too_Short::class,
+		SWPS_Check_Missing_Viewport::class,
+		SWPS_Check_Missing_Doctype::class,
+		SWPS_Check_Missing_Charset::class,
+		SWPS_Check_Missing_Lang::class,
+		SWPS_Check_Challenge_Page::class,
+		// Tasks 6-8 add more checks.
 	);
 
 	/**

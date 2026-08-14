@@ -273,7 +273,20 @@ class SiteCrawlerTest extends TestCase {
 
 	public function test_classify_no_issues_for_clean_page(): void {
 		$fetch = array( 'url' => 'https://example.com/page', 'status' => 200, 'found_on' => 'https://example.com/', 'hops' => array() );
-		$page  = array( 'links' => array(), 'images' => array(), 'canonical' => 'https://example.com/page', 'h1_count' => 1, 'has_noindex' => false, 'mixed' => array() );
+		$page  = array(
+			'links'         => array(),
+			'images'        => array(),
+			'canonical'     => 'https://example.com/page',
+			'h1_count'      => 1,
+			'has_noindex'   => false,
+			'mixed'         => array(),
+			'title'         => 'This is an example page title',
+			'has_viewport'  => true,
+			'has_doctype'   => true,
+			'has_charset'   => true,
+			'has_lang'      => true,
+			'is_challenge'  => false,
+		);
 		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
 		$this->assertEmpty( $rows );
 	}

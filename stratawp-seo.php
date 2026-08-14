@@ -156,6 +156,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-crawl-check.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-crawl-check-registry.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-fetch.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-legacy-page.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-head.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawler.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawl-admin.php';
 require_once SWPS_PLUGIN_DIR . 'includes/audit/class-site-crawl-module.php';
