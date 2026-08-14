@@ -22,9 +22,10 @@ class SWPS_Crawl_Issues {
 	/** Custom-table name (without prefix). */
 	public const TABLE_ISSUES = 'swps_crawl_issues';
 	public const TABLE_QUEUE  = 'swps_crawl_queue';
+	public const TABLE_PAGES  = 'swps_crawl_pages';
 
 	/** Current schema version; bump whenever the DDL changes. */
-	public const DB_VERSION = '1';
+	public const DB_VERSION = '2';
 
 	/** Option key holding the installed schema version. */
 	public const OPT_DB_VER = 'swps_crawl_db_version';
@@ -62,6 +63,7 @@ class SWPS_Crawl_Issues {
 		$charset = $wpdb->get_charset_collate();
 		$queue   = $wpdb->prefix . self::TABLE_QUEUE;
 		$issues  = $wpdb->prefix . self::TABLE_ISSUES;
+		$pages   = $wpdb->prefix . self::TABLE_PAGES;
 
 		$sql_queue = "CREATE TABLE {$queue} (
 			id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -91,9 +93,34 @@ class SWPS_Crawl_Issues {
 			KEY idx_type   (type)
 		) {$charset};";
 
+		$sql_pages = "CREATE TABLE {$pages} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			run_id BIGINT UNSIGNED NOT NULL,
+			url VARCHAR(500) NOT NULL,
+			status_code SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			content_type VARCHAR(100) NOT NULL DEFAULT '',
+			title TEXT,
+			title_hash CHAR(32) NOT NULL DEFAULT '',
+			meta_desc_hash CHAR(32) NOT NULL DEFAULT '',
+			desc_length SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			flags INT UNSIGNED NOT NULL DEFAULT 0,
+			word_count INT UNSIGNED NOT NULL DEFAULT 0,
+			html_bytes INT UNSIGNED NOT NULL DEFAULT 0,
+			text_bytes INT UNSIGNED NOT NULL DEFAULT 0,
+			h1_count SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			canonical VARCHAR(500) DEFAULT NULL,
+			internal_links LONGTEXT,
+			unminified_assets TEXT,
+			PRIMARY KEY  (id),
+			KEY idx_run (run_id),
+			KEY idx_run_title (run_id, title_hash),
+			KEY idx_run_desc (run_id, meta_desc_hash)
+		) {$charset};";
+
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql_queue );
 		dbDelta( $sql_issues );
+		dbDelta( $sql_pages );
 	}
 
 	// =========================================================================
@@ -140,6 +167,81 @@ class SWPS_Crawl_Issues {
 			array( '%d', '%s', '%s', '%s', '%s', null === $post_id ? null : '%d', '%d' )
 		);
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+	}
+
+	/**
+	 * Insert one crawled-page facts row.
+	 *
+	 * @param int   $run_id Current run ID.
+	 * @param array $row    Page row with keys: url, status_code, content_type, title, title_hash,
+	 *                       meta_desc_hash, desc_length, flags, word_count, html_bytes, text_bytes,
+	 *                       h1_count, canonical, internal_links (array→JSON), unminified_assets (array→JSON).
+	 */
+	public static function insert_page( int $run_id, array $row ): void {
+		global $wpdb;
+		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$wpdb->prefix . self::TABLE_PAGES,
+			array(
+				'run_id'            => $run_id,
+				'url'               => substr( (string) ( $row['url'] ?? '' ), 0, 500 ),
+				'status_code'       => (int) ( $row['status_code'] ?? 0 ),
+				'content_type'      => substr( (string) ( $row['content_type'] ?? '' ), 0, 100 ),
+				'title'             => (string) ( $row['title'] ?? '' ),
+				'title_hash'        => (string) ( $row['title_hash'] ?? '' ),
+				'meta_desc_hash'    => (string) ( $row['meta_desc_hash'] ?? '' ),
+				'desc_length'       => (int) ( $row['desc_length'] ?? 0 ),
+				'flags'             => (int) ( $row['flags'] ?? 0 ),
+				'word_count'        => (int) ( $row['word_count'] ?? 0 ),
+				'html_bytes'        => (int) ( $row['html_bytes'] ?? 0 ),
+				'text_bytes'        => (int) ( $row['text_bytes'] ?? 0 ),
+				'h1_count'          => (int) ( $row['h1_count'] ?? 0 ),
+				'canonical'         => isset( $row['canonical'] ) ? substr( (string) $row['canonical'], 0, 500 ) : null,
+				'internal_links'    => wp_json_encode( array_values( $row['internal_links'] ?? array() ) ),
+				'unminified_assets' => wp_json_encode( array_values( $row['unminified_assets'] ?? array() ) ),
+			)
+		);
+	}
+
+	/**
+	 * All page rows for a run, JSON columns decoded.
+	 *
+	 * @param int $run_id Target run ID.
+	 * @return array[] Page rows with JSON columns decoded back to arrays.
+	 */
+	public static function pages_for_run( int $run_id ): array {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE_PAGES;
+		$rows  = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$wpdb->prepare( "SELECT * FROM {$table} WHERE run_id = %d ORDER BY url ASC", $run_id ), // phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching
+			ARRAY_A
+		);
+		foreach ( $rows as &$row ) {
+			$row['internal_links']    = json_decode( (string) $row['internal_links'], true ) ?: array();
+			$row['unminified_assets'] = json_decode( (string) $row['unminified_assets'], true ) ?: array();
+			$row['flags']             = (int) $row['flags'];
+			$row['status_code']       = (int) $row['status_code'];
+		}
+		return $rows;
+	}
+
+	/**
+	 * Total / healthy (2xx, zero issues) / broken (>=400 or 0) page counts.
+	 *
+	 * @param int $run_id Target run ID.
+	 * @return array{total:int, healthy:int, broken:int} Page counts.
+	 */
+	public static function page_counts( int $run_id ): array {
+		global $wpdb;
+		$pages  = $wpdb->prefix . self::TABLE_PAGES;
+		$issues = $wpdb->prefix . self::TABLE_ISSUES;
+		$total  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$pages} WHERE run_id = %d", $run_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$broken = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$pages} WHERE run_id = %d AND (status_code >= 400 OR status_code = 0)", $run_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$with_issues = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(DISTINCT p.url) FROM {$pages} p INNER JOIN {$issues} i ON i.run_id = p.run_id AND i.url = p.url WHERE p.run_id = %d", $run_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return array(
+			'total'   => $total,
+			'healthy' => max( 0, $total - $with_issues ),
+			'broken'  => $broken,
+		);
 	}
 
 	// =========================================================================
@@ -347,6 +449,7 @@ class SWPS_Crawl_Issues {
 
 		$queue_table  = $wpdb->prefix . self::TABLE_QUEUE;
 		$issues_table = $wpdb->prefix . self::TABLE_ISSUES;
+		$pages_table  = $wpdb->prefix . self::TABLE_PAGES;
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$old_runs = $wpdb->get_col(
@@ -367,6 +470,7 @@ class SWPS_Crawl_Issues {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$queue_table} WHERE run_id IN ({$placeholders})", ...$old_runs ) );
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$issues_table} WHERE run_id IN ({$placeholders})", ...$old_runs ) );
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$pages_table} WHERE run_id IN ({$placeholders})", ...$old_runs ) );
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 	}
 }
