@@ -106,23 +106,30 @@ class SWPS_Site_Crawl_Module extends SWPS_Audit_Module {
 		$others = $warnings + $notices;
 		$score  = max( 0, 100 - ( $errors * 10 ) - ( $others * 2 ) );
 
+		// A clean crawl (0/0/0) must report no issues — otherwise every
+		// passing module still shows a "1 issue" badge and toggle on the
+		// legacy SEO Audit screen, which is wrong for a module with nothing
+		// to report.
+		$issues = array();
+		if ( $errors > 0 || $warnings > 0 || $notices > 0 ) {
+			$issues[] = array(
+				'post_id' => null,
+				'message' => sprintf(
+					/* translators: 1: error count, 2: warning count, 3: notice count, 4: Site Audit dashboard URL */
+					__( '%1$d errors, %2$d warnings, %3$d notices from the latest crawl. View full Site Audit → %4$s', 'stratawp-seo' ),
+					$errors,
+					$warnings,
+					$notices,
+					$audit_page
+				),
+				'fixable' => false,
+			);
+		}
+
 		return array(
 			'score'   => $score,
 			'status'  => $this->status_from_score( $score ),
-			'issues'  => array(
-				array(
-					'post_id' => null,
-					'message' => sprintf(
-						/* translators: 1: error count, 2: warning count, 3: notice count, 4: Site Audit dashboard URL */
-						__( '%1$d errors, %2$d warnings, %3$d notices from the latest crawl. View full Site Audit → %4$s', 'stratawp-seo' ),
-						$errors,
-						$warnings,
-						$notices,
-						$audit_page
-					),
-					'fixable' => false,
-				),
-			),
+			'issues'  => $issues,
 			'summary' => sprintf(
 				/* translators: 1: 0-100 health score, 2: crawled page count */
 				__( 'Site Audit score: %1$d/100 across %2$d crawled pages.', 'stratawp-seo' ),
