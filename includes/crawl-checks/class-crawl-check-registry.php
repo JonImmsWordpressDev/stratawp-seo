@@ -47,7 +47,11 @@ class SWPS_Crawl_Check_Registry {
 		SWPS_Check_Nofollow_Internal::class,
 		SWPS_Check_Uncompressed_Page::class,
 		SWPS_Check_Unminified_Assets::class,
-		// Tasks 7-8 add more checks.
+		// Task 8: aggregate checks.
+		SWPS_Check_Duplicate_Title::class,
+		SWPS_Check_Duplicate_Description::class,
+		SWPS_Check_Orphan_Page::class,
+		SWPS_Check_Single_Incoming_Link::class,
 	);
 
 	/**

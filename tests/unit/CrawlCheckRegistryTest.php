@@ -97,13 +97,20 @@ final class CrawlCheckRegistryTest extends TestCase {
 		// Assert that our known Task 5 checks are present to allow Task 6 to extend.
 		$this->assertContains( 'missing_title', $ids );
 		$this->assertContains( 'challenge_page_detected', $ids );
-		// Aggregate checks are not yet populated (Task 8).
-		$this->assertSame( array(), SWPS_Crawl_Check_Registry::aggregate_check_ids() );
+		// Task 8 populated the aggregate checks.
+		$aggregate_ids = SWPS_Crawl_Check_Registry::aggregate_check_ids();
+		$this->assertContains( 'duplicate_title', $aggregate_ids );
+		$this->assertContains( 'duplicate_meta_description', $aggregate_ids );
+		$this->assertContains( 'orphan_page', $aggregate_ids );
+		$this->assertContains( 'single_incoming_link', $aggregate_ids );
 	}
 
-	public function test_aggregate_check_ids_empty_registry(): void {
+	public function test_aggregate_check_ids_populated(): void {
 		$ids = SWPS_Crawl_Check_Registry::aggregate_check_ids();
-		$this->assertSame( array(), $ids );
+		$this->assertContains( 'duplicate_title', $ids );
+		$this->assertContains( 'duplicate_meta_description', $ids );
+		$this->assertContains( 'orphan_page', $ids );
+		$this->assertContains( 'single_incoming_link', $ids );
 	}
 
 	public function test_partition_logic_with_fake_checks(): void {

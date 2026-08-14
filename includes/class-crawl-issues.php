@@ -391,7 +391,7 @@ class SWPS_Crawl_Issues {
 	 * Return issue counts grouped by severity for the given run.
 	 *
 	 * @param int $run_id Target run ID.
-	 * @return array{error:int,warning:int}
+	 * @return array{error:int,warning:int,notice:int}
 	 */
 	public static function severity_counts( int $run_id ): array {
 		global $wpdb;
@@ -411,6 +411,7 @@ class SWPS_Crawl_Issues {
 		$counts = array(
 			'error'   => 0,
 			'warning' => 0,
+			'notice'  => 0,
 		);
 		foreach ( $rows as $row ) {
 			$severity = (string) ( $row['severity'] ?? '' );

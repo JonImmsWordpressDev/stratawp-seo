@@ -22,6 +22,8 @@ require_once __DIR__ . '/crawl-checks/class-checks-legacy-page.php';
 require_once __DIR__ . '/crawl-checks/class-checks-head.php';
 require_once __DIR__ . '/crawl-checks/class-minify-heuristic.php';
 require_once __DIR__ . '/crawl-checks/class-checks-content.php';
+require_once __DIR__ . '/crawl-checks/class-checks-aggregate.php';
+require_once __DIR__ . '/crawl-checks/class-crawl-score.php';
 
 /**
  * Site Crawler — HTML parsing helpers and chunked crawl state machine.
@@ -1147,12 +1149,38 @@ class SWPS_Site_Crawler {
 	private function finish_run( array &$state ): void {
 		$run_id = (int) $state['run_id'];
 
+		foreach ( SWPS_Crawl_Check_Registry::all() as $check ) {
+			try {
+				foreach ( $check->check_run( $run_id ) as $issue ) {
+					SWPS_Crawl_Issues::insert_issue( $run_id, $issue['type'], $issue['url'], $issue['detail'], $issue['severity'] );
+				}
+			} catch ( \Throwable $e ) {
+				error_log( 'SWPS crawl aggregate check ' . $check->id() . ' failed: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			}
+		}
+
+		$severity     = SWPS_Crawl_Issues::severity_counts( $run_id );
+		$pages        = SWPS_Crawl_Issues::page_counts( $run_id );
+		$issue_counts = SWPS_Crawl_Issues::issue_counts( $run_id );
+
+		$state['summary'] = array(
+			'score'        => SWPS_Crawl_Score::calculate( $severity, $pages['total'] ),
+			'severity'     => $severity,
+			'pages'        => $pages,
+			'issue_counts' => $issue_counts,
+		);
+
+		// Rolling window of the last 5 run summaries, for Task 9's trend view.
+		$summaries            = get_option( 'swps_crawl_run_summaries', array() );
+		$summaries[ $run_id ] = $state['summary'];
+		update_option( 'swps_crawl_run_summaries', array_slice( $summaries, -5, null, true ), false );
+
 		$summary = array(
 			'run_id'           => $run_id,
 			'completed_at'     => gmdate( 'Y-m-d H:i:s' ),
 			'crawled'          => SWPS_Crawl_Issues::crawled_count( $run_id ),
-			'issue_counts'     => SWPS_Crawl_Issues::issue_counts( $run_id ),
-			'severity_counts'  => SWPS_Crawl_Issues::severity_counts( $run_id ),
+			'issue_counts'     => $issue_counts,
+			'severity_counts'  => $severity,
 			'external_checked' => (int) ( $state['external_checked'] ?? 0 ),
 		);
 
