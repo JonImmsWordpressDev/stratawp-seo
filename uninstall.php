@@ -110,6 +110,7 @@ $swps_tables = array(
 	'swps_metric_history',
 	'swps_crawl_queue',
 	'swps_crawl_issues',
+	'swps_crawl_pages',
 	'swps_cannibalization',
 	'swps_ability_log',
 );

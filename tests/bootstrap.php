@@ -49,6 +49,12 @@ if ( ! function_exists( 'wp_parse_url' ) ) {
     }
 }
 
+if ( ! function_exists( '__' ) ) {
+    function __( $text, $domain = 'default' ) {
+        return $text;
+    }
+}
+
 if ( ! class_exists( 'WP_Error' ) ) {
     class WP_Error {
         private string $code;

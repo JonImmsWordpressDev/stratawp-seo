@@ -1,0 +1,307 @@
+/**
+ * Site Audit dashboard — score gauge, triage cards, issue drill-downs, trend strip.
+ *
+ * @package StrataWP_SEO
+ */
+
+.swps-site-audit .swps-audit-header {
+	display: flex;
+	align-items: center;
+	gap: 32px;
+	flex-wrap: wrap;
+}
+
+/* Score gauge (CSS conic-gradient, no JS charting). */
+.swps-site-audit .swps-audit-gauge {
+	--swps-audit-score: 0;
+	--swps-audit-gauge-color: var(--swps-accent-1);
+	width: 96px;
+	height: 96px;
+	border-radius: 50%;
+	background: conic-gradient(var(--swps-audit-gauge-color) calc(var(--swps-audit-score) * 3.6deg), var(--swps-border) 0deg);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.swps-site-audit .swps-audit-gauge-inner {
+	width: 76px;
+	height: 76px;
+	border-radius: 50%;
+	background: var(--swps-bg-surface);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+}
+
+.swps-site-audit .swps-audit-gauge-num {
+	font-size: 22px;
+	font-weight: 700;
+	color: var(--swps-text-primary);
+}
+
+.swps-site-audit .swps-audit-gauge-suffix {
+	font-size: 11px;
+	color: var(--swps-text-muted);
+}
+
+.swps-site-audit .swps-audit-header-stats {
+	display: flex;
+	gap: 32px;
+	flex: 1 1 auto;
+}
+
+.swps-site-audit .swps-audit-stat {
+	display: flex;
+	flex-direction: column;
+}
+
+.swps-site-audit .swps-audit-stat-num {
+	font-size: 20px;
+	font-weight: 600;
+	color: var(--swps-text-primary);
+}
+
+.swps-site-audit .swps-audit-stat-label {
+	font-size: 12px;
+	color: var(--swps-text-muted);
+}
+
+.swps-site-audit .swps-audit-run-btn {
+	margin-left: auto;
+}
+
+/* Progress bar (shown while a run is active). */
+.swps-site-audit .swps-audit-progress {
+	width: 100%;
+}
+
+.swps-site-audit .swps-audit-progress-label {
+	margin: 0 0 8px;
+	color: var(--swps-text-body);
+}
+
+.swps-site-audit .swps-audit-bar-track {
+	width: 100%;
+	height: 10px;
+	border-radius: var(--swps-radius-pill);
+	background: var(--swps-bg-input);
+	overflow: hidden;
+}
+
+.swps-site-audit .swps-audit-bar {
+	height: 100%;
+	background: var(--swps-accent-grad);
+	transition: width var(--swps-transition);
+}
+
+.swps-site-audit .swps-audit-count {
+	margin-top: 6px;
+	font-size: 12px;
+	color: var(--swps-text-muted);
+}
+
+/* Triage cards. */
+.swps-site-audit .swps-audit-triage {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+	gap: 16px;
+	margin-top: 24px;
+}
+
+.swps-site-audit .swps-audit-triage-card {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	border-left: 4px solid var(--swps-border);
+}
+
+.swps-site-audit .swps-audit-triage-card.is-error {
+	border-left-color: var(--swps-crit);
+}
+
+.swps-site-audit .swps-audit-triage-card.is-warning {
+	border-left-color: var(--swps-warn);
+}
+
+.swps-site-audit .swps-audit-triage-card.is-notice {
+	border-left-color: var(--swps-info);
+}
+
+.swps-site-audit .swps-audit-triage-label {
+	font-size: 12px;
+	color: var(--swps-text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.swps-site-audit .swps-audit-triage-num {
+	font-size: 26px;
+	font-weight: 700;
+	color: var(--swps-text-primary);
+}
+
+/* Delta chips. */
+.swps-site-audit .swps-audit-delta {
+	display: inline-block;
+	font-size: 12px;
+	font-weight: 600;
+	width: fit-content;
+	padding: 1px 8px;
+	border-radius: var(--swps-radius-pill);
+}
+
+.swps-site-audit .swps-audit-delta.is-up {
+	color: var(--swps-crit);
+	background: var(--swps-crit-bg);
+}
+
+.swps-site-audit .swps-audit-delta.is-down {
+	color: var(--swps-success);
+	background: var(--swps-success-bg);
+}
+
+.swps-site-audit .swps-audit-delta.is-flat {
+	color: var(--swps-text-muted);
+	background: var(--swps-bg-input);
+}
+
+/* Issue groups. */
+.swps-site-audit .swps-audit-issue-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.swps-site-audit .swps-audit-issue-group {
+	padding: 0;
+}
+
+.swps-site-audit .swps-audit-issue-summary {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	cursor: pointer;
+	padding: 16px 20px;
+	list-style: none;
+}
+
+.swps-site-audit .swps-audit-issue-summary::-webkit-details-marker {
+	display: none;
+}
+
+.swps-site-audit .swps-audit-issue-title {
+	flex: 1 1 auto;
+	color: var(--swps-text-primary);
+	font-weight: 600;
+}
+
+.swps-site-audit .swps-audit-issue-count {
+	color: var(--swps-text-muted);
+}
+
+.swps-site-audit .swps-audit-badge-error {
+	background: var(--swps-crit-bg);
+	color: var(--swps-crit);
+}
+
+.swps-site-audit .swps-audit-badge-warning {
+	background: var(--swps-warn-bg);
+	color: var(--swps-warn);
+}
+
+.swps-site-audit .swps-audit-badge-notice {
+	background: var(--swps-info-bg);
+	color: var(--swps-info);
+}
+
+.swps-site-audit .swps-audit-issue-body {
+	padding: 0 20px 20px;
+	border-top: 1px solid var(--swps-border);
+}
+
+.swps-site-audit .swps-audit-how-to {
+	color: var(--swps-text-body);
+}
+
+.swps-site-audit .swps-audit-issue-actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin: 12px 0;
+}
+
+.swps-site-audit .swps-audit-exclude-form {
+	margin: 0;
+}
+
+.swps-site-audit .swps-audit-page-list {
+	margin-top: 8px;
+}
+
+.swps-site-audit .swps-audit-page-list-note {
+	margin: 8px 0 0;
+	font-size: 12px;
+	color: var(--swps-text-muted);
+}
+
+.swps-site-audit .swps-audit-detail-assets {
+	word-break: break-all;
+}
+
+.swps-site-audit .swps-audit-empty {
+	text-align: center;
+	padding: 48px 24px;
+	color: var(--swps-text-muted);
+}
+
+/* Excluded checks footer strip. */
+.swps-site-audit .swps-audit-excluded-strip {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.swps-site-audit .swps-audit-excluded-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 8px 0;
+	border-bottom: 1px solid var(--swps-border);
+}
+
+.swps-site-audit .swps-audit-excluded-row:last-child {
+	border-bottom: none;
+}
+
+.swps-site-audit .swps-audit-excluded-row form {
+	margin: 0;
+}
+
+/* Trend strip. */
+.swps-site-audit .swps-audit-trend {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.swps-site-audit .swps-audit-trend-row {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.swps-site-audit .swps-audit-trend-label {
+	width: 80px;
+	flex-shrink: 0;
+	font-size: 12px;
+	color: var(--swps-text-muted);
+}
+
+.swps-site-audit .swps-audit-spark {
+	display: block;
+}

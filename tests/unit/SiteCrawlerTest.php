@@ -273,9 +273,53 @@ class SiteCrawlerTest extends TestCase {
 
 	public function test_classify_no_issues_for_clean_page(): void {
 		$fetch = array( 'url' => 'https://example.com/page', 'status' => 200, 'found_on' => 'https://example.com/', 'hops' => array() );
-		$page  = array( 'links' => array(), 'images' => array(), 'canonical' => 'https://example.com/page', 'h1_count' => 1, 'has_noindex' => false, 'mixed' => array() );
+		$page  = array(
+			'links'         => array(),
+			'images'        => array(),
+			'canonical'     => 'https://example.com/page',
+			'h1_count'      => 1,
+			'has_noindex'   => false,
+			'mixed'         => array(),
+			'title'         => 'This is an example page title',
+			'has_viewport'  => true,
+			'has_doctype'   => true,
+			'has_charset'   => true,
+			'has_lang'      => true,
+			'is_challenge'  => false,
+			'meta_desc'     => 'A perfectly reasonable meta description for this clean test page.',
+			'word_count'    => 900,
+			'has_schema'    => true,
+			'is_compressed' => true,
+		);
 		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
 		$this->assertEmpty( $rows );
+	}
+
+	/**
+	 * A non-HTML resource (bare 6-key fallback facts, as process_chunk()
+	 * builds for a 2xx response whose content-type is not text/html) must
+	 * never trigger the falsy-default content checks. Without the
+	 * content-type gate, missing_meta_description/low_word_count/
+	 * missing_schema/uncompressed_page would all fire on the absent keys.
+	 */
+	public function test_classify_skips_page_checks_for_non_html_content_type(): void {
+		$fetch = array( 'url' => 'https://example.com/image.png', 'status' => 200, 'found_on' => 'https://example.com/', 'hops' => array() );
+		$page  = array(
+			'links'        => array(),
+			'images'       => array(),
+			'canonical'    => null,
+			'h1_count'     => 0,
+			'has_noindex'  => false,
+			'mixed'        => array(),
+			'content_type' => 'application/octet-stream',
+		);
+		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
+		$this->assertEmpty( $rows );
+		$types = array_column( $rows, 'type' );
+		$this->assertNotContains( 'missing_meta_description', $types );
+		$this->assertNotContains( 'low_word_count', $types );
+		$this->assertNotContains( 'missing_schema', $types );
+		$this->assertNotContains( 'uncompressed_page', $types );
 	}
 
 	// -------------------------------------------------------------------------
@@ -438,5 +482,31 @@ class SiteCrawlerTest extends TestCase {
 		$rows  = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
 		$types = array_column( $rows, 'type' );
 		$this->assertContains( 'canonical_mismatch', $types );
+	}
+
+	// -------------------------------------------------------------------------
+	// classify — excluded-check filtering
+	// -------------------------------------------------------------------------
+
+	public function test_classify_excludes_page_checks_by_id(): void {
+		// Page facts that trigger missing_viewport (no has_viewport key/false).
+		$fetch = array( 'url' => 'https://example.com/page', 'status' => 200, 'found_on' => 'https://example.com/', 'hops' => array() );
+		$page  = array(
+			'links'        => array(),
+			'images'       => array(),
+			'canonical'    => null,
+			'h1_count'     => 1,
+			'has_noindex'  => false,
+			'mixed'        => array(),
+			'has_viewport' => false,
+		);
+
+		// Without an exclusion list, the check fires as usual.
+		$rows_default = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com' );
+		$this->assertContains( 'missing_viewport', array_column( $rows_default, 'type' ) );
+
+		// With missing_viewport excluded, it must not appear.
+		$rows_excluded = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com', array( 'missing_viewport' ) );
+		$this->assertNotContains( 'missing_viewport', array_column( $rows_excluded, 'type' ) );
 	}
 }

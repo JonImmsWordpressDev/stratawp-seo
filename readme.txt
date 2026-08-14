@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.26.5
+Stable tag: 4.27.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,9 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.27.0 =
+* New: Site Audit dashboard — a crawl-based audit of the rendered site with ~25 checks (missing/duplicate titles and descriptions, viewport/doctype/charset/lang, bot-challenge detection, unminified assets, word count, hreflang, orphan pages, and more), a 0-100 health score, error/warning/notice triage with per-page drill-downs and fix guidance, and crawl-over-crawl trends. The crawler now covers every public URL including term archives and pagination, and noindexed pages are audited for head integrity.
 
 = 4.26.5 =
 * Improved: the frontend analytics tracker script now ships and serves a minified build (55% smaller), following the WordPress `SCRIPT_DEBUG` convention — the readable source is served when `SCRIPT_DEBUG` is enabled.
