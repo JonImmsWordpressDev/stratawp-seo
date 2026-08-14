@@ -92,4 +92,54 @@ final class CrawlCheckRegistryTest extends TestCase {
 		);
 		$this->assertSame( array(), $issues );
 	}
+
+	public function test_page_check_ids_empty_registry(): void {
+		$ids = SWPS_Crawl_Check_Registry::page_check_ids();
+		$this->assertSame( array(), $ids );
+	}
+
+	public function test_aggregate_check_ids_empty_registry(): void {
+		$ids = SWPS_Crawl_Check_Registry::aggregate_check_ids();
+		$this->assertSame( array(), $ids );
+	}
+
+	public function test_partition_logic_with_fake_checks(): void {
+		// Verify that RegistryFakeAlpha (which overrides check_page) would be
+		// partitioned as a page check, and RegistryFakeChallenge (which also
+		// overrides check_page) would also be a page check. This direct test
+		// verifies the reflection logic works correctly without needing to
+		// populate the registry's CHECKS constant.
+		$alpha = new RegistryFakeAlpha();
+		$challenge = new RegistryFakeChallenge();
+
+		// Both override check_page, so both should partition as per-page checks.
+		$alpha_method = new ReflectionMethod( $alpha, 'check_page' );
+		$challenge_method = new ReflectionMethod( $challenge, 'check_page' );
+
+		$this->assertNotSame(
+			'SWPS_Crawl_Check',
+			$alpha_method->getDeclaringClass()->getName(),
+			'RegistryFakeAlpha should override check_page'
+		);
+		$this->assertNotSame(
+			'SWPS_Crawl_Check',
+			$challenge_method->getDeclaringClass()->getName(),
+			'RegistryFakeChallenge should override check_page'
+		);
+
+		// Neither override check_run, so both should NOT partition as aggregate checks.
+		$alpha_run = new ReflectionMethod( $alpha, 'check_run' );
+		$challenge_run = new ReflectionMethod( $challenge, 'check_run' );
+
+		$this->assertSame(
+			'SWPS_Crawl_Check',
+			$alpha_run->getDeclaringClass()->getName(),
+			'RegistryFakeAlpha should NOT override check_run'
+		);
+		$this->assertSame(
+			'SWPS_Crawl_Check',
+			$challenge_run->getDeclaringClass()->getName(),
+			'RegistryFakeChallenge should NOT override check_run'
+		);
+	}
 }

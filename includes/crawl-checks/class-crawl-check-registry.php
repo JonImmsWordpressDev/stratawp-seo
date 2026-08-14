@@ -91,7 +91,7 @@ class SWPS_Crawl_Check_Registry {
 		foreach ( self::all( array() ) as $check ) {
 			try {
 				$method = new ReflectionMethod( $check, 'check_page' );
-				if ( 'SWPS_Crawl_Check' !== $method->getDeclaringClass()->getName() ) {
+				if ( SWPS_Crawl_Check::class !== $method->getDeclaringClass()->getName() ) {
 					$ids[] = $check->id();
 				}
 			} catch ( ReflectionException $e ) {
@@ -112,7 +112,7 @@ class SWPS_Crawl_Check_Registry {
 		foreach ( self::all( array() ) as $check ) {
 			try {
 				$method = new ReflectionMethod( $check, 'check_run' );
-				if ( 'SWPS_Crawl_Check' !== $method->getDeclaringClass()->getName() ) {
+				if ( SWPS_Crawl_Check::class !== $method->getDeclaringClass()->getName() ) {
 					$ids[] = $check->id();
 				}
 			} catch ( ReflectionException $e ) {
