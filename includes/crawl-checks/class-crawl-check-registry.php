@@ -18,8 +18,16 @@ class SWPS_Crawl_Check_Registry {
 	 * for display. Empty entries are skipped defensively.
 	 */
 	private const CHECKS = array(
-		// Task 4 adds migrated checks, Tasks 5-6 add per-page checks,
-		// Task 8 adds aggregate checks.
+		// Task 4: migrated checks.
+		SWPS_Check_Redirect_Loop::class,
+		SWPS_Check_Broken_Link::class,
+		SWPS_Check_Redirect_Chain::class,
+		SWPS_Check_Canonical_Mismatch::class,
+		SWPS_Check_Missing_H1::class,
+		SWPS_Check_Duplicate_H1::class,
+		SWPS_Check_Mixed_Content::class,
+		SWPS_Check_Noindex_In_Sitemap::class,
+		// Tasks 5-6 add per-page checks, Task 8 adds aggregate checks.
 	);
 
 	/**
@@ -33,7 +41,6 @@ class SWPS_Crawl_Check_Registry {
 			$excluded = (array) get_option( self::OPT_EXCLUDED, array() );
 		}
 		$out = array();
-		/** @phpstan-ignore-next-line Empty until checks are added in later tasks. */
 		foreach ( self::CHECKS as $class ) {
 			if ( ! class_exists( $class ) ) {
 				continue;

@@ -15,6 +15,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once __DIR__ . '/crawl-checks/class-crawl-check.php';
+require_once __DIR__ . '/crawl-checks/class-crawl-check-registry.php';
+require_once __DIR__ . '/crawl-checks/class-checks-fetch.php';
+require_once __DIR__ . '/crawl-checks/class-checks-legacy-page.php';
+
 /**
  * Site Crawler — HTML parsing helpers and chunked crawl state machine.
  */
@@ -475,128 +480,38 @@ class SWPS_Site_Crawler {
 	 * @return array[] Issue rows; each has keys: type, url, detail (array), severity.
 	 */
 	public static function classify( array $fetch, array $page, string $home_host ): array {
-		$issues   = array();
-		$url      = $fetch['url'] ?? '';
-		$status   = (int) ( $fetch['status'] ?? 0 );
-		$found_on = $fetch['found_on'] ?? '';
-		$hops     = $fetch['hops'] ?? array();
+		$facts = array_merge(
+			$page,
+			array(
+				'url'         => $fetch['url'] ?? '',
+				'status_code' => (int) ( $fetch['status'] ?? 0 ),
+				'found_on'    => $fetch['found_on'] ?? '',
+				'hops'        => $fetch['hops'] ?? array(),
+				'loop'        => ! empty( $fetch['loop'] ),
+				'final_url'   => (string) ( $fetch['final_url'] ?? ( $fetch['url'] ?? '' ) ),
+				'home_host'   => $home_host,
+			)
+		);
 
-		// Redirect loop: MAX_HOPS exceeded without reaching a final response.
-		if ( ! empty( $fetch['loop'] ) ) {
-			$issues[] = array(
-				'type'     => 'redirect_loop',
-				'url'      => $url,
-				'detail'   => array(
-					'hops'     => $hops,
-					'found_on' => $found_on,
-				),
-				'severity' => 'error',
-			);
-			// A looping URL has no final response to evaluate further.
-			return $issues;
-		}
-
-		// Broken link: 4xx / 5xx / connection error.
-		if ( $status >= 400 || 0 === $status ) {
-			$issues[] = array(
-				'type'     => 'broken_link',
-				'url'      => $url,
-				'detail'   => array(
-					'status'   => $status,
-					'found_on' => $found_on,
-				),
-				'severity' => 'error',
-			);
-			// No further checks make sense for broken resources.
-			return $issues;
-		}
-
-		// Redirect chain: 2+ hops to reach the final destination.
-		if ( count( $hops ) >= 2 ) {
-			$issues[] = array(
-				'type'     => 'redirect_chain',
-				'url'      => $url,
-				'detail'   => array(
-					'hops'     => $hops,
-					'found_on' => $found_on,
-				),
-				'severity' => 'warning',
-			);
-		}
-
-		// Canonical mismatch: page declares a canonical that differs from the
-		// URL that actually served the response (after normalisation). Using
-		// the post-redirect URL matters: a link that 301s to a page with a
-		// correct self-canonical is the redirect working, not a mismatch.
-		$canonical = $page['canonical'] ?? null;
-		if ( null !== $canonical ) {
-			$final_url    = (string) ( $fetch['final_url'] ?? $url );
-			$norm_fetched = self::normalize_url( $final_url, $home_host );
-			$norm_canon   = self::normalize_url( $canonical, $home_host );
-			if ( '' !== $norm_fetched && '' !== $norm_canon && $norm_fetched !== $norm_canon ) {
-				$issues[] = array(
-					'type'     => 'canonical_mismatch',
-					'url'      => $url,
-					'detail'   => array(
-						'canonical' => $canonical,
-						'found_on'  => $found_on,
-					),
-					'severity' => 'warning',
-				);
+		// Fetch-level checks always run; loop and broken results end evaluation.
+		$fetch_checks = array( new SWPS_Check_Redirect_Loop(), new SWPS_Check_Broken_Link(), new SWPS_Check_Redirect_Chain() );
+		$issues       = array();
+		foreach ( $fetch_checks as $check ) {
+			$issue = $check->check_page( $facts );
+			if ( null !== $issue ) {
+				$issues[] = $issue;
+				if ( in_array( $check->id(), array( 'redirect_loop', 'broken_link' ), true ) ) {
+					return $issues;
+				}
 			}
 		}
 
-		// Missing / duplicate H1.
-		$h1_count = (int) ( $page['h1_count'] ?? 0 );
-		if ( 0 === $h1_count ) {
-			$issues[] = array(
-				'type'     => 'missing_h1',
-				'url'      => $url,
-				'detail'   => array( 'found_on' => $found_on ),
-				'severity' => 'warning',
-			);
-		} elseif ( $h1_count > 1 ) {
-			$issues[] = array(
-				'type'     => 'duplicate_h1',
-				'url'      => $url,
-				'detail'   => array(
-					'h1_count' => $h1_count,
-					'found_on' => $found_on,
-				),
-				'severity' => 'warning',
-			);
-		}
+		$page_checks = array_filter(
+			SWPS_Crawl_Check_Registry::all( array() ),
+			static fn( SWPS_Crawl_Check $c ) => ! in_array( $c->id(), array( 'redirect_loop', 'broken_link', 'redirect_chain' ), true )
+		);
 
-		// Mixed content.
-		foreach ( ( $page['mixed'] ?? array() ) as $asset_url ) {
-			$issues[] = array(
-				'type'     => 'mixed_content',
-				'url'      => $url,
-				'detail'   => array(
-					'asset'    => $asset_url,
-					'found_on' => $found_on,
-				),
-				'severity' => 'warning',
-			);
-		}
-
-		// Noindexed URL that is presumably still in the sitemap: the page
-		// declares meta-robots noindex, maps to a post, and that post does
-		// NOT carry the _swps_sitemap_exclude meta. The caller injects
-		// post_id + sitemap_excluded (WP lookups) into $page before calling.
-		if ( ! empty( $page['has_noindex'] ) ) {
-			$post_id = (int) ( $page['post_id'] ?? 0 );
-			if ( $post_id > 0 && empty( $page['sitemap_excluded'] ) ) {
-				$issues[] = array(
-					'type'     => 'noindex_in_sitemap',
-					'url'      => $url,
-					'detail'   => array( 'post_id' => $post_id ),
-					'severity' => 'warning',
-				);
-			}
-		}
-
-		return $issues;
+		return array_merge( $issues, SWPS_Crawl_Check_Registry::run_page_checks( $facts, array_values( $page_checks ) ) );
 	}
 
 	// =========================================================================

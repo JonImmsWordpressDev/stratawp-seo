@@ -151,6 +151,11 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-budget-report.php';
 
 // Site crawler (v4.19) — background broken-link / issues audit.
 require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-issues.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-crawl-page-flags.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-crawl-check.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-crawl-check-registry.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-fetch.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-legacy-page.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawler.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawl-admin.php';
 require_once SWPS_PLUGIN_DIR . 'includes/audit/class-site-crawl-module.php';
