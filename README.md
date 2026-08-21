@@ -361,7 +361,7 @@ Fixable issue groups get a one-click path from "found" to "fixed," right on the 
 3. **AI-drafted fixes** — for missing, duplicate, too-long, and too-short meta titles and descriptions, click **✨ Fix with AI**. It drafts replacements for the whole group in chunks (you'll see a live "Drafting… (n)" count), then opens a **review table** listing each page's **current** value next to the **proposed** one, with a checkbox per row (all checked by default)
 4. Uncheck anything you don't want, then click **Apply selected** to write the accepted drafts — or **Dismiss all** to discard the batch without applying it
 5. **Mechanical fixes** — mixed-content URLs, internal nofollow links, missing image alt text, and noindexed-but-sitemapped pages don't need review; click **Fix now** on the group and it applies to every fixable row in the group immediately
-6. Every applied fix snapshots the previous value first, so it can be undone — nothing is destructive
+6. Every applied fix snapshots the previous value first: fixed rows show a ✓ marker with an **Undo** button that restores the previous value, so nothing is destructive
 7. Once a group has fixes applied, the dashboard shows a **projected health score** for the next crawl; click **Run audit now** again to re-crawl and confirm the real score
 8. Rows with no linked post or term (e.g. a category archive issue with nothing to edit) are called out as not auto-fixable — fix those by hand using the issue's **How to fix** note
 
