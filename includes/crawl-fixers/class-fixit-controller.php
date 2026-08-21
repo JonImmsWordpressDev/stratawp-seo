@@ -139,10 +139,13 @@ class SWPS_Fixit_Controller {
 	 */
 	private function respond( array $result ): void {
 		if ( isset( $result['error'] ) ) {
-			wp_send_json_error(
-				array( 'message' => (string) $result['error'] ),
-				(int) ( $result['http_status'] ?? 400 )
-			);
+			$data = array( 'message' => (string) $result['error'] );
+			foreach ( $result as $key => $value ) {
+				if ( ! in_array( $key, array( 'error', 'http_status' ), true ) ) {
+					$data[ $key ] = $value;
+				}
+			}
+			wp_send_json_error( $data, (int) ( $result['http_status'] ?? 400 ) );
 		}
 		wp_send_json_success( $result );
 	}
@@ -169,7 +172,7 @@ class SWPS_Fixit_Controller {
 		}
 
 		$limiter = new SWPS_Rate_Limiter();
-		if ( ! $limiter->can_generate() ) {
+		if ( 0 === $offset && ! $limiter->can_generate() ) {
 			return array(
 				'error'       => sprintf(
 					/* translators: %d: seconds until the rate limit clears */
@@ -177,6 +180,7 @@ class SWPS_Fixit_Controller {
 					$limiter->get_remaining_seconds()
 				),
 				'http_status' => 429,
+				'retry_after' => $limiter->get_remaining_seconds(),
 			);
 		}
 
@@ -202,7 +206,13 @@ class SWPS_Fixit_Controller {
 				'proposed' => (string) $out['proposed'],
 			);
 		}
-		$limiter->lock();
+
+		// Lock only once the whole drafting session has finished — a
+		// per-chunk lock stranded chunk 2+ of any multi-chunk session with
+		// a permanent 429 (the button had no path to recovery).
+		if ( 0 === $partition['remaining'] ) {
+			$limiter->lock();
+		}
 
 		return array(
 			'drafted'   => $drafted,

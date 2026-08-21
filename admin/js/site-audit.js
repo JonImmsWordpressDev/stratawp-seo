@@ -54,11 +54,31 @@
 			if ( 'draft' === btn.dataset.kind ) {
 				var offset = 0;
 				var drafted = 0;
-				( function chunk() {
+
+				// Counts down a rate-limit cooldown in the button label, then
+				// retries the SAME chunk (offset unchanged) — a per-chunk
+				// lock would otherwise strand chunk 2+ with a dead 429.
+				var countdown = function ( seconds ) {
+					btn.textContent = 'Rate limited — retrying in ' + seconds + 's';
+					window.setTimeout( function () {
+						if ( seconds > 1 ) {
+							countdown( seconds - 1 );
+						} else {
+							chunk();
+						}
+					}, 1000 );
+				};
+
+				var chunk = function () {
 					btn.textContent = 'Drafting… (' + drafted + ')';
 					post( 'swps_fixit_draft_chunk', Object.assign( { offset: offset }, base ) )
 						.then( function ( res ) {
 							if ( ! res.success ) {
+								if ( res.data && 'number' === typeof res.data.retry_after && res.data.retry_after > 0 ) {
+									countdown( res.data.retry_after );
+									return;
+								}
+								btn.disabled = false;
 								btn.textContent = res.data && res.data.message ? res.data.message : 'Error';
 								return;
 							}
@@ -70,7 +90,8 @@
 								window.location.reload();
 							}
 						} );
-				}() );
+				};
+				chunk();
 				return;
 			}
 
