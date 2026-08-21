@@ -772,13 +772,16 @@ class SWPS_Site_Crawler {
 			$page['content_type'] = $content_type;
 
 			// Classify and store issues.
+			$target = SWPS_Crawl_Target::resolve( $url );
 			foreach ( self::classify( $fetch, $page, $home_host, $excluded_checks ) as $issue ) {
 				SWPS_Crawl_Issues::insert_issue(
 					$run_id,
 					(string) $issue['type'],
 					(string) $issue['url'],
 					(array) ( $issue['detail'] ?? array() ),
-					(string) ( $issue['severity'] ?? 'warning' )
+					(string) ( $issue['severity'] ?? 'warning' ),
+					null,
+					$target
 				);
 			}
 
@@ -1105,7 +1108,9 @@ class SWPS_Site_Crawler {
 						'status'   => $status,
 						'external' => true,
 					),
-					$severity
+					$severity,
+					null,
+					SWPS_Crawl_Target::resolve( (string) $link )
 				);
 			}
 
@@ -1159,7 +1164,15 @@ class SWPS_Site_Crawler {
 		foreach ( SWPS_Crawl_Check_Registry::all() as $check ) {
 			try {
 				foreach ( $check->check_run( $run_id ) as $issue ) {
-					SWPS_Crawl_Issues::insert_issue( $run_id, $issue['type'], $issue['url'], $issue['detail'], $issue['severity'] );
+					SWPS_Crawl_Issues::insert_issue(
+						$run_id,
+						$issue['type'],
+						$issue['url'],
+						$issue['detail'],
+						$issue['severity'],
+						null,
+						SWPS_Crawl_Target::resolve( (string) $issue['url'] )
+					);
 				}
 			} catch ( \Throwable $e ) {
 				error_log( 'SWPS crawl aggregate check ' . $check->id() . ' failed: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
