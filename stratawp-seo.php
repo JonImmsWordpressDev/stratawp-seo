@@ -162,6 +162,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-minify-heuristic.php
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-content.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-aggregate.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-crawl-score.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-target.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawler.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawl-admin.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-audit-screen.php';
