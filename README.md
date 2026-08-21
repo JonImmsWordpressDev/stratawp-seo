@@ -344,7 +344,7 @@ Crawls your own site the way a search engine would and queues fixable issues.
 
 ### Site Audit (`StrataWP SEO → Site Audit`) ★ v4.27
 
-![Site Crawl](screenshots/swps-site-crawl.png)
+![Site Audit dashboard](screenshots/swps-site-audit.png)
 
 A crawl-based audit of your rendered site — ~25 checks (missing/duplicate titles and descriptions, viewport/doctype/charset/lang, bot-challenge detection, unminified assets, word count, hreflang, orphan pages, mixed content, internal nofollow links, missing image alt text, noindexed-but-sitemapped pages, and more) rolled up into a 0-100 health score, with error/warning/notice triage and crawl-over-crawl trends.
 
