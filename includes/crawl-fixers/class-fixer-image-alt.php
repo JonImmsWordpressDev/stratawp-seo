@@ -115,7 +115,7 @@ class SWPS_Fixer_Image_Alt extends SWPS_Crawl_Fixer {
 			}
 
 			delete_post_meta( $attachment_id, '_wp_attachment_image_alt' );
-			SWPS_Fixit_Store::clear_snapshot( 'post', $attachment_id );
+			SWPS_Fixit_Store::remove_snapshot_field( 'post', $attachment_id, 'image_alt' );
 			$done = true;
 		}
 		return $done;

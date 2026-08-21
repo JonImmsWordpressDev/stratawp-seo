@@ -30,6 +30,9 @@ class SWPS_Fixit_Controller {
 	/** Drafts older than this are swept. */
 	private const DRAFT_TTL = 7 * DAY_IN_SECONDS;
 
+	/** Undo snapshots older than this are swept. */
+	private const SNAPSHOT_TTL = 30 * DAY_IN_SECONDS;
+
 	/**
 	 * Wire AJAX + sweep cron.
 	 */
@@ -160,7 +163,7 @@ class SWPS_Fixit_Controller {
 	 * @param int    $run_id   Crawl run id.
 	 * @param string $check_id Check id.
 	 * @param int    $offset   Cursor into the group's fixable rows.
-	 * @return array {drafted: array, remaining: int, errors: array} or {error, http_status}.
+	 * @return array {drafted: array, remaining: int, errors: array, cost: float} or {error, http_status}.
 	 */
 	public function do_draft_chunk( int $run_id, string $check_id, int $offset ): array {
 		$fixer = SWPS_Crawl_Fixer_Registry::for_check( $check_id );
@@ -187,8 +190,12 @@ class SWPS_Fixit_Controller {
 		$rows      = $this->fixable_rows( $run_id, $check_id, $fixer );
 		$partition = self::partition_rows( $rows, $offset, self::DRAFT_CHUNK );
 
-		$drafted = array();
-		$errors  = array();
+		$cost_tracker = new SWPS_Cost_Tracker();
+		$model        = (string) get_option( 'swps_model', '' );
+
+		$drafted    = array();
+		$errors     = array();
+		$chunk_cost = 0.0;
 		foreach ( $partition['batch'] as $issue ) {
 			$out = $fixer->draft( $issue );
 			if ( is_wp_error( $out ) ) {
@@ -205,6 +212,17 @@ class SWPS_Fixit_Controller {
 				'current'  => (string) $out['current'],
 				'proposed' => (string) $out['proposed'],
 			);
+
+			// Drafting spends AI money invisibly otherwise — track and
+			// surface it the same way SWPS_Generator does for full generations.
+			$usage = is_array( $out['usage'] ?? null ) ? $out['usage'] : array();
+			if ( array() !== $usage ) {
+				$input_tokens  = (int) ( $usage['input_tokens'] ?? 0 );
+				$output_tokens = (int) ( $usage['output_tokens'] ?? 0 );
+				$post_id       = 'post' === (string) $issue['object_type'] ? (int) $issue['object_id'] : 0;
+				$cost_tracker->track( $model, $input_tokens, $output_tokens, $post_id );
+				$chunk_cost += $cost_tracker->calculate_cost( $model, $input_tokens, $output_tokens );
+			}
 		}
 
 		// Lock only once the whole drafting session has finished — a
@@ -218,6 +236,7 @@ class SWPS_Fixit_Controller {
 			'drafted'   => $drafted,
 			'errors'    => $errors,
 			'remaining' => $partition['remaining'],
+			'cost'      => round( $chunk_cost, 6 ),
 		);
 	}
 
@@ -354,7 +373,7 @@ class SWPS_Fixit_Controller {
 	 * @param int    $run_id   Crawl run id.
 	 * @param string $check_id Check id.
 	 * @param array  $rows     The group's decoded rows.
-	 * @return array issue_id => {current, proposed}
+	 * @return array issue_id => {current, proposed, usage}
 	 */
 	public function drafts_for_group( int $run_id, string $check_id, array $rows ): array {
 		$field = $this->field_for_check( $check_id );
@@ -374,6 +393,7 @@ class SWPS_Fixit_Controller {
 				$out[ (int) $row['id'] ] = array(
 					'current'  => $drafts[ $field ]['current'],
 					'proposed' => $drafts[ $field ]['proposed'],
+					'usage'    => $drafts[ $field ]['usage'],
 				);
 			}
 		}
@@ -382,19 +402,22 @@ class SWPS_Fixit_Controller {
 	}
 
 	/**
-	 * Weekly sweep: delete drafts older than DRAFT_TTL across posts and
-	 * terms (direct meta query on the two meta tables).
+	 * Weekly sweep: delete drafts older than DRAFT_TTL and undo snapshots
+	 * older than SNAPSHOT_TTL, across posts and terms (direct meta query
+	 * on the two meta tables).
 	 */
 	public function sweep_drafts(): void {
 		global $wpdb;
 
-		$cutoff = time() - self::DRAFT_TTL;
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		foreach ( array(
+		$targets = array(
 			array( $wpdb->postmeta, 'post_id', 'delete_post_meta' ),
 			array( $wpdb->termmeta, 'term_id', 'delete_term_meta' ),
-		) as list( $table, $id_col, $deleter ) ) {
+		);
+
+		$draft_cutoff = time() - self::DRAFT_TTL;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		foreach ( $targets as list( $table, $id_col, $deleter ) ) {
 			$ids = (array) $wpdb->get_col(
 				$wpdb->prepare(
 					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -405,13 +428,35 @@ class SWPS_Fixit_Controller {
 			foreach ( $ids as $id ) {
 				$otype  = 'delete_term_meta' === $deleter ? 'term' : 'post';
 				$drafts = SWPS_Fixit_Store::get_drafts( $otype, (int) $id );
-				$kept   = array_filter( $drafts, static fn( $d ) => $d['drafted_at'] >= $cutoff );
+				$kept   = array_filter( $drafts, static fn( $d ) => $d['drafted_at'] >= $draft_cutoff );
 				if ( count( $kept ) === count( $drafts ) ) {
 					continue;
 				}
 				call_user_func( $deleter, (int) $id, SWPS_Fixit_Store::META_DRAFTS );
 				foreach ( $kept as $field => $draft ) {
 					SWPS_Fixit_Store::put_draft( $otype, (int) $id, (string) $field, $draft );
+				}
+			}
+		}
+
+		$snapshot_cutoff = time() - self::SNAPSHOT_TTL;
+
+		foreach ( $targets as list( $table, $id_col, $deleter ) ) {
+			$ids = (array) $wpdb->get_col(
+				$wpdb->prepare(
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					"SELECT {$id_col} FROM {$table} WHERE meta_key = %s",
+					SWPS_Fixit_Store::META_SNAPSHOT
+				)
+			);
+			foreach ( $ids as $id ) {
+				$otype = 'delete_term_meta' === $deleter ? 'term' : 'post';
+				$snap  = SWPS_Fixit_Store::get_snapshot( $otype, (int) $id );
+				if ( array() === $snap ) {
+					continue;
+				}
+				if ( (int) ( $snap['taken_at'] ?? 0 ) < $snapshot_cutoff ) {
+					call_user_func( $deleter, (int) $id, SWPS_Fixit_Store::META_SNAPSHOT );
 				}
 			}
 		}

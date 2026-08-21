@@ -126,7 +126,7 @@ class SWPS_Fixer_Mixed_Content extends SWPS_Crawl_Fixer {
 				'post_content' => wp_slash( (string) $snap['fields']['post_content'] ),
 			)
 		);
-		SWPS_Fixit_Store::clear_snapshot( 'post', $oid );
+		SWPS_Fixit_Store::remove_snapshot_field( 'post', $oid, 'post_content' );
 
 		return true;
 	}

@@ -54,6 +54,15 @@
 			if ( 'draft' === btn.dataset.kind ) {
 				var offset = 0;
 				var drafted = 0;
+				var totalCost = 0;
+
+				var label = function () {
+					var text = 'Drafting… (' + drafted + ')';
+					if ( totalCost > 0 ) {
+						text += ' — $' + totalCost.toFixed( 2 );
+					}
+					return text;
+				};
 
 				// Counts down a rate-limit cooldown in the button label, then
 				// retries the SAME chunk (offset unchanged) — a per-chunk
@@ -70,7 +79,7 @@
 				};
 
 				var chunk = function () {
-					btn.textContent = 'Drafting… (' + drafted + ')';
+					btn.textContent = label();
 					post( 'swps_fixit_draft_chunk', Object.assign( { offset: offset }, base ) )
 						.then( function ( res ) {
 							if ( ! res.success ) {
@@ -83,6 +92,7 @@
 								return;
 							}
 							drafted += res.data.drafted.length;
+							totalCost += Number( res.data.cost || 0 );
 							offset  += res.data.drafted.length + res.data.errors.length;
 							if ( res.data.remaining > 0 ) {
 								chunk();

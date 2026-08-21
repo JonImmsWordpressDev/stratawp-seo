@@ -56,6 +56,25 @@ class SWPS_Fixit_Store {
 	}
 
 	/**
+	 * Remove one field from a decoded snapshot, keeping the rest intact.
+	 * Pure; the caller decides whether an emptied 'fields' map means the
+	 * whole meta entry should be deleted.
+	 *
+	 * @param array  $snapshot Decoded snapshot ({fields, taken_at}) or empty.
+	 * @param string $field    Field to remove.
+	 * @return array {fields: array, taken_at: int}
+	 */
+	public static function without_field( array $snapshot, string $field ): array {
+		$fields = is_array( $snapshot['fields'] ?? null ) ? $snapshot['fields'] : array();
+		unset( $fields[ $field ] );
+
+		return array(
+			'fields'   => $fields,
+			'taken_at' => (int) ( $snapshot['taken_at'] ?? time() ),
+		);
+	}
+
+	/**
 	 * Validate and normalize a draft array. Null for garbage.
 	 *
 	 * @param mixed $draft Candidate draft.
@@ -169,12 +188,43 @@ class SWPS_Fixit_Store {
 	/**
 	 * Delete the snapshot after a successful undo.
 	 *
+	 * Callers that own the *whole* snapshot (i.e. they know no other field
+	 * on this object still needs its pre-change value preserved) may use
+	 * this directly. Fixers that only own one field of the snapshot must
+	 * use remove_snapshot_field() instead, or they will destroy sibling
+	 * fields' undo data.
+	 *
 	 * @param string $otype Object type ('post' or 'term').
 	 * @param int    $oid   Object ID.
 	 * @return void
 	 */
 	public static function clear_snapshot( string $otype, int $oid ): void {
 		self::meta_delete( $otype, $oid, self::META_SNAPSHOT );
+	}
+
+	/**
+	 * Remove one field from the object's snapshot after that field's undo
+	 * has been applied, preserving any other fields still snapshotted on
+	 * the same object. Deletes the meta entirely once no fields remain.
+	 *
+	 * @param string $otype Object type ('post' or 'term').
+	 * @param int    $oid   Object ID.
+	 * @param string $field Field to remove.
+	 * @return void
+	 */
+	public static function remove_snapshot_field( string $otype, int $oid, string $field ): void {
+		$existing = self::get_snapshot( $otype, $oid );
+		if ( array() === $existing ) {
+			return;
+		}
+
+		$updated = self::without_field( $existing, $field );
+		if ( array() === $updated['fields'] ) {
+			self::meta_delete( $otype, $oid, self::META_SNAPSHOT );
+			return;
+		}
+
+		self::meta_set( $otype, $oid, self::META_SNAPSHOT, wp_slash( (string) wp_json_encode( $updated ) ) );
 	}
 
 	// =========================================================================

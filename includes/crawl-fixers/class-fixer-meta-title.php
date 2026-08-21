@@ -134,7 +134,7 @@ class SWPS_Fixer_Meta_Title extends SWPS_Crawl_Fixer {
 
 		$draft = array(
 			'check_id'   => (string) $issue['type'],
-			'run_id'     => (int) $issue['run_id'],
+			'run_id'     => (int) ( $issue['run_id'] ?? 0 ),
 			'current'    => $ctx['current'],
 			'proposed'   => $proposed,
 			'drafted_at' => time(),
@@ -306,6 +306,8 @@ class SWPS_Fixer_Meta_Title extends SWPS_Crawl_Fixer {
 		} else {
 			update_post_meta( $oid, static::META_KEY, $this->sanitize( $original ) );
 		}
+
+		SWPS_Fixit_Store::remove_snapshot_field( $otype, $oid, static::FIELD );
 
 		return true;
 	}

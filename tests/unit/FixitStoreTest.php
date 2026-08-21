@@ -34,6 +34,39 @@ final class FixitStoreTest extends TestCase {
 		$this->assertIsInt( $merged['taken_at'] );
 	}
 
+	public function test_without_field_keeps_sibling_fields(): void {
+		$snapshot = array(
+			'fields'   => array(
+				'meta_title'       => 'Original title',
+				'meta_description' => 'Original description',
+			),
+			'taken_at' => 100,
+		);
+		$out = SWPS_Fixit_Store::without_field( $snapshot, 'meta_title' );
+		$this->assertSame( array( 'meta_description' => 'Original description' ), $out['fields'] );
+		$this->assertSame( 100, $out['taken_at'] );
+	}
+
+	public function test_without_field_empties_when_last_field_removed(): void {
+		$snapshot = array(
+			'fields'   => array( 'meta_title' => 'Original title' ),
+			'taken_at' => 100,
+		);
+		$out = SWPS_Fixit_Store::without_field( $snapshot, 'meta_title' );
+		$this->assertSame( array(), $out['fields'] );
+		$this->assertSame( 100, $out['taken_at'] );
+	}
+
+	public function test_without_field_is_noop_for_missing_field(): void {
+		$snapshot = array(
+			'fields'   => array( 'post_content' => '<p>Original</p>' ),
+			'taken_at' => 100,
+		);
+		$out = SWPS_Fixit_Store::without_field( $snapshot, 'image_alt' );
+		$this->assertSame( $snapshot['fields'], $out['fields'] );
+		$this->assertSame( 100, $out['taken_at'] );
+	}
+
 	public function test_normalize_draft_accepts_valid_shape(): void {
 		$draft = array(
 			'check_id'   => 'missing_title',

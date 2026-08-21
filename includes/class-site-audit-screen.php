@@ -586,7 +586,7 @@ class SWPS_Site_Audit_Screen {
 	 * @param string $type   Check id.
 	 * @param int    $run_id Displayed run id.
 	 * @param array  $rows   The group's decoded issue rows.
-	 * @param array  $drafts issue_id => {current, proposed}.
+	 * @param array  $drafts issue_id => {current, proposed, usage}.
 	 */
 	private function render_review_table( string $type, int $run_id, array $rows, array $drafts ): void {
 		$by_id = array();
@@ -596,8 +596,32 @@ class SWPS_Site_Audit_Screen {
 
 		$nonce = wp_create_nonce( SWPS_Fixit_Controller::NONCE_ACTION );
 
+		$cost_tracker = new SWPS_Cost_Tracker();
+		$model        = (string) get_option( 'swps_model', '' );
+		$total_cost   = 0.0;
+		foreach ( $drafts as $draft ) {
+			$usage = is_array( $draft['usage'] ?? null ) ? $draft['usage'] : array();
+			if ( array() === $usage ) {
+				continue;
+			}
+			$total_cost += $cost_tracker->calculate_cost(
+				$model,
+				(int) ( $usage['input_tokens'] ?? 0 ),
+				(int) ( $usage['output_tokens'] ?? 0 )
+			);
+		}
+
 		echo '<div class="swps-audit-review" data-swps-review="' . esc_attr( $type ) . '" data-run="' . (int) $run_id . '" data-nonce="' . esc_attr( $nonce ) . '">';
 		echo '<h4>' . esc_html__( 'Review drafts', 'stratawp-seo' ) . '</h4>';
+		if ( $total_cost > 0 ) {
+			echo '<p class="swps-audit-review-cost">' . esc_html(
+				sprintf(
+					/* translators: %s: estimated cost in USD, e.g. 0.0123 */
+					__( 'Estimated drafting cost: $%s', 'stratawp-seo' ),
+					number_format( $total_cost, 4 )
+				)
+			) . '</p>';
+		}
 		echo '<table class="widefat swps-audit-review-table"><thead><tr>';
 		echo '<th class="check-column"><input type="checkbox" checked data-swps-review-all /></th>';
 		echo '<th>' . esc_html__( 'Page', 'stratawp-seo' ) . '</th>';
