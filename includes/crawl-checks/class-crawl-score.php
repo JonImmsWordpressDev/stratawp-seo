@@ -30,4 +30,24 @@ class SWPS_Crawl_Score {
 		$max      = 5 * max( 1, $pages );
 		return (int) round( max( 0.0, 100 * ( 1 - $weighted / $max ) ) );
 	}
+
+	/**
+	 * Score the run would have if the fixed issues vanish. Display-only —
+	 * the real score always comes from the next crawl.
+	 *
+	 * @param array $severity_counts Current counts keyed by severity.
+	 * @param array $fixed_counts    Fixed-issue counts keyed by severity.
+	 * @param int   $pages           Total pages in the run.
+	 * @return int Projected score clamped to [0, 100].
+	 */
+	public static function project( array $severity_counts, array $fixed_counts, int $pages ): int {
+		$remaining = array();
+		foreach ( array( 'error', 'warning', 'notice' ) as $sev ) {
+			$remaining[ $sev ] = max(
+				0,
+				(int) ( $severity_counts[ $sev ] ?? 0 ) - (int) ( $fixed_counts[ $sev ] ?? 0 )
+			);
+		}
+		return self::calculate( $remaining, $pages );
+	}
 }

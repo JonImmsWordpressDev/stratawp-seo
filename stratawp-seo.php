@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.27.1
+ * Version: 4.28.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.27.1' );
+define( 'SWPS_VERSION', '4.28.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -162,6 +162,17 @@ require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-minify-heuristic.php
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-content.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-aggregate.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-crawl-score.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-target.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-crawl-fixer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixit-store.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixer-meta-title.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixer-meta-description.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixer-image-alt.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixer-mixed-content.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixer-nofollow.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixer-sitemap-exclude.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-crawl-fixer-registry.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixit-controller.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawler.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawl-admin.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-audit-screen.php';
@@ -300,6 +311,7 @@ final class StrataWP_SEO {
 	public SWPS_Site_Crawler $site_crawler;
 	public SWPS_Site_Crawl_Admin $site_crawl_admin;
 	public SWPS_Site_Audit_Screen $site_audit_screen;
+	public SWPS_Fixit_Controller $fixit_controller;
 	public SWPS_Backlinks $backlinks;
 	public SWPS_Autopilot_Guardian $autopilot_guardian;
 	public SWPS_Digest $digest;
@@ -479,7 +491,8 @@ final class StrataWP_SEO {
 		SWPS_Crawl_Issues::maybe_upgrade();
 		$this->site_crawler         = new SWPS_Site_Crawler();
 		$this->site_crawl_admin     = new SWPS_Site_Crawl_Admin( $this->site_crawler );
-		$this->site_audit_screen    = new SWPS_Site_Audit_Screen( $this->site_crawler );
+		$this->fixit_controller     = new SWPS_Fixit_Controller();
+		$this->site_audit_screen    = new SWPS_Site_Audit_Screen( $this->site_crawler, $this->fixit_controller );
 		add_filter( 'swps_audit_modules', array( 'SWPS_Site_Crawl_Module', 'register' ) );
 		add_filter( 'swps_audit_modules', array( 'SWPS_Schema_Audit_Module', 'register' ) );
 		$this->backlinks            = new SWPS_Backlinks();
@@ -1508,6 +1521,7 @@ function swps_deactivate(): void {
 	wp_unschedule_hook( 'swps_send_digest' );
 	wp_unschedule_hook( SWPS_Site_Crawler::CRON_HOOK );
 	SWPS_Site_Crawler::unschedule_weekly_cron();
+	wp_unschedule_hook( SWPS_Fixit_Controller::SWEEP_HOOK );
 	wp_clear_scheduled_hook( SWPS_IndexNow::CRON_HOOK );
 	flush_rewrite_rules();
 }

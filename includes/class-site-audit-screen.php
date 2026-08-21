@@ -45,15 +45,25 @@ class SWPS_Site_Audit_Screen {
 	private SWPS_Site_Crawler $crawler;
 
 	/**
+	 * Fix-It controller: drafts_for_group() for the review table, plus the
+	 * nonce action shared with the JS driver's AJAX calls.
+	 *
+	 * @var SWPS_Fixit_Controller
+	 */
+	private SWPS_Fixit_Controller $fixit;
+
+	/**
 	 * Wire assets + AJAX + admin-post hooks.
 	 *
 	 * Menu registration lives in SWPS_Settings::register_menu() (mirrors the
 	 * Search Appearance submenu), not here.
 	 *
-	 * @param SWPS_Site_Crawler $crawler Crawler instance.
+	 * @param SWPS_Site_Crawler     $crawler Crawler instance.
+	 * @param SWPS_Fixit_Controller $fixit   Fix-It controller.
 	 */
-	public function __construct( SWPS_Site_Crawler $crawler ) {
+	public function __construct( SWPS_Site_Crawler $crawler, SWPS_Fixit_Controller $fixit ) {
 		$this->crawler = $crawler;
+		$this->fixit   = $fixit;
 
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'wp_ajax_swps_site_audit_progress', array( $this, 'ajax_progress' ) );
@@ -274,11 +284,11 @@ class SWPS_Site_Audit_Screen {
 
 		echo '<div class="wrap swps-site-audit">';
 
-		$this->render_header( $running, $score, $page_counts, $last_summary );
+		$this->render_header( $running, $score, $severity_counts, $page_counts, $last_summary, $issues_by_type );
 
 		if ( ! $running || $display_run_id ) {
 			$this->render_triage_cards( $severity_counts, $baseline_severity );
-			$this->render_issue_groups( $issues_by_type, $catalog, $excluded, $baseline_issue_counts );
+			$this->render_issue_groups( $issues_by_type, $catalog, $excluded, $baseline_issue_counts, $display_run_id );
 			$this->render_excluded_footer( $excluded, $catalog );
 			$this->render_trend_strip( $run_summaries );
 		}
@@ -289,12 +299,14 @@ class SWPS_Site_Audit_Screen {
 	/**
 	 * Header row: score gauge + stats, or a progress bar while a run is active.
 	 *
-	 * @param bool  $running      Whether a crawl is currently in progress.
-	 * @param int   $score        Health score for the displayed run.
-	 * @param array $page_counts  {total, healthy, broken} for the displayed run.
-	 * @param array $last_summary The OPT_LAST_SUMMARY option value.
+	 * @param bool  $running         Whether a crawl is currently in progress.
+	 * @param int   $score           Health score for the displayed run.
+	 * @param array $severity_counts {error, warning, notice} for the displayed run.
+	 * @param array $page_counts     {total, healthy, broken} for the displayed run.
+	 * @param array $last_summary    The OPT_LAST_SUMMARY option value.
+	 * @param array $issues_by_type  Decoded issue rows keyed by check id, for the projected-score calc.
 	 */
-	private function render_header( bool $running, int $score, array $page_counts, array $last_summary ): void {
+	private function render_header( bool $running, int $score, array $severity_counts, array $page_counts, array $last_summary, array $issues_by_type ): void {
 		$start_url     = wp_nonce_url(
 			admin_url( 'admin-ajax.php?action=swps_site_audit_start' ),
 			self::NONCE_START
@@ -324,6 +336,13 @@ class SWPS_Site_Audit_Screen {
 			echo '<div class="swps-audit-gauge" style="--swps-audit-score:' . esc_attr( (string) $score ) . ';--swps-audit-gauge-color:' . esc_attr( $gauge_color ) . '">';
 			echo '<div class="swps-audit-gauge-inner"><span class="swps-audit-gauge-num">' . esc_html( (string) $score ) . '</span><span class="swps-audit-gauge-suffix">/100</span></div>';
 			echo '</div>';
+
+			$fixed_by_sev = $this->fixed_severity_counts( $issues_by_type );
+			if ( array_sum( $fixed_by_sev ) > 0 ) {
+				$projected = SWPS_Crawl_Score::project( $severity_counts, $fixed_by_sev, (int) ( $page_counts['total'] ?? 0 ) );
+				/* translators: %d: projected health score */
+				echo '<span class="swps-audit-projected">' . esc_html( sprintf( __( '→ projected %d after re-crawl', 'stratawp-seo' ), $projected ) ) . '</span>';
+			}
 
 			echo '<div class="swps-audit-header-stats">';
 			echo '<div class="swps-audit-stat"><span class="swps-audit-stat-num">' . esc_html( number_format_i18n( (int) ( $page_counts['total'] ?? 0 ) ) ) . '</span><span class="swps-audit-stat-label">' . esc_html__( 'Pages crawled', 'stratawp-seo' ) . '</span></div>';
@@ -369,8 +388,9 @@ class SWPS_Site_Audit_Screen {
 	 * @param array $catalog               Check id => SWPS_Crawl_Check instance.
 	 * @param array $excluded              Currently-excluded check ids.
 	 * @param array $baseline_issue_counts Check id => count, for the previous run.
+	 * @param int   $run_id                Displayed run id (decoded rows carry no run_id of their own).
 	 */
-	private function render_issue_groups( array $issues_by_type, array $catalog, array $excluded, array $baseline_issue_counts ): void {
+	private function render_issue_groups( array $issues_by_type, array $catalog, array $excluded, array $baseline_issue_counts, int $run_id ): void {
 		$types = array_keys( $issues_by_type );
 		foreach ( $types as $type ) {
 			if ( in_array( $type, $excluded, true ) ) {
@@ -408,7 +428,7 @@ class SWPS_Site_Audit_Screen {
 			$count    = count( $rows );
 			$delta    = $count - (int) ( $baseline_issue_counts[ $type ] ?? 0 );
 
-			$this->render_issue_group( $type, $title, $severity, $how_to, $rows, $count, $delta );
+			$this->render_issue_group( $type, $title, $severity, $how_to, $rows, $count, $delta, $run_id );
 		}
 		echo '</div>';
 	}
@@ -439,8 +459,9 @@ class SWPS_Site_Audit_Screen {
 	 * @param array  $rows     Issue rows for this check.
 	 * @param int    $count    Total row count.
 	 * @param int    $delta    Delta vs the previous run.
+	 * @param int    $run_id   Displayed run id (decoded rows carry no run_id of their own).
 	 */
-	private function render_issue_group( string $type, string $title, string $severity, string $how_to, array $rows, int $count, int $delta ): void {
+	private function render_issue_group( string $type, string $title, string $severity, string $how_to, array $rows, int $count, int $delta, int $run_id ): void {
 		$shown      = array_slice( $rows, 0, self::PAGE_LIST_CAP );
 		$urls       = wp_list_pluck( $shown, 'url' );
 		$copy_value = implode( '|', array_map( 'esc_url', $urls ) );
@@ -468,6 +489,38 @@ class SWPS_Site_Audit_Screen {
 		wp_nonce_field( self::NONCE_EXCLUDE );
 		echo '<button type="submit" class="swps-btn swps-btn-secondary">' . esc_html__( 'Exclude this check', 'stratawp-seo' ) . '</button>';
 		echo '</form>';
+
+		$kind = SWPS_Crawl_Fixer_Registry::kind_of( $type );
+		if ( null !== $kind ) {
+			$fixer   = SWPS_Crawl_Fixer_Registry::for_check( $type );
+			$fixable = array_values( array_filter( $rows, static fn( $r ) => empty( $r['detail']['fixed_at'] ) && $fixer->can_fix( (array) $r ) ) );
+			$fixed_n = count( array_filter( $rows, static fn( $r ) => ! empty( $r['detail']['fixed_at'] ) ) );
+			$nonce   = wp_create_nonce( SWPS_Fixit_Controller::NONCE_ACTION );
+			$fix_ids = wp_json_encode( wp_list_pluck( $fixable, 'id' ) );
+
+			if ( array() !== $fixable ) {
+				$label = 'draft' === $kind ? __( '✨ Fix with AI', 'stratawp-seo' ) : __( 'Fix now', 'stratawp-seo' );
+				printf(
+					'<button type="button" class="swps-btn swps-btn-primary" data-swps-fixit="%s" data-kind="%s" data-check="%s" data-run="%d" data-nonce="%s" data-ids="%s">%s</button>',
+					esc_attr( $type ),
+					esc_attr( $kind ),
+					esc_attr( $type ),
+					(int) $run_id,
+					esc_attr( $nonce ),
+					esc_attr( (string) $fix_ids ),
+					esc_html( $label )
+				);
+			}
+			$not_fixable = $count - count( $fixable ) - $fixed_n;
+			if ( $not_fixable > 0 && array() !== $fixable ) {
+				/* translators: %d: rows without a resolvable WordPress object */
+				echo '<span class="swps-audit-fixit-note">' . esc_html( sprintf( __( '%d not auto-fixable (no linked post/term).', 'stratawp-seo' ), $not_fixable ) ) . '</span>';
+			}
+			if ( $fixed_n > 0 ) {
+				/* translators: %d: fixed issue count */
+				echo '<span class="swps-audit-fixit-fixed">' . esc_html( sprintf( __( '%d fixed — re-run the audit to verify.', 'stratawp-seo' ), $fixed_n ) ) . '</span>';
+			}
+		}
 		echo '</div>';
 
 		echo '<table class="widefat swps-audit-page-list"><thead><tr>';
@@ -480,11 +533,25 @@ class SWPS_Site_Audit_Screen {
 			$url        = (string) ( $row['url'] ?? '' );
 			$first_seen = (int) ( $row['first_seen_run'] ?? 0 );
 			$first_date = $first_seen > 0 ? date_i18n( get_option( 'date_format' ), $first_seen ) : '';
+			$issue_id   = (int) ( $row['id'] ?? 0 );
+			$fixed_at   = (int) ( $row['detail']['fixed_at'] ?? 0 );
+
+			$detail_html = $this->render_issue_detail( (array) ( $row['detail'] ?? array() ) );
+			if ( $fixed_at > 0 ) {
+				$undo_nonce   = wp_create_nonce( SWPS_Fixit_Controller::NONCE_ACTION );
+				$detail_html .= ' <span class="swps-audit-fixed-marker" title="' . esc_attr__( 'Fixed — pending re-crawl', 'stratawp-seo' ) . '">&#10003;</span> ' . sprintf(
+					'<button type="button" class="swps-btn-link" data-swps-fixit-undo="%d" data-run="%d" data-nonce="%s">%s</button>',
+					$issue_id,
+					(int) $run_id,
+					esc_attr( $undo_nonce ),
+					esc_html__( 'Undo', 'stratawp-seo' )
+				);
+			}
 
 			echo '<tr>';
 			echo '<td><a href="' . esc_url( $url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $url ) . '</a></td>';
 			echo '<td>' . esc_html( $first_date ) . '</td>';
-			echo '<td>' . $this->render_issue_detail( (array) ( $row['detail'] ?? array() ) ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from esc_html()/esc_url() in render_issue_detail().
+			echo '<td>' . $detail_html . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from esc_html()/esc_url()/esc_attr() in render_issue_detail() and above.
 			echo '</tr>';
 		}
 		echo '</tbody></table>';
@@ -500,8 +567,85 @@ class SWPS_Site_Audit_Screen {
 			) . '</p>';
 		}
 
+		if ( 'draft' === ( $kind ?? null ) ) {
+			$drafts = $this->fixit->drafts_for_group( $run_id, $type, $rows );
+			if ( array() !== $drafts ) {
+				$this->render_review_table( $type, $run_id, $rows, $drafts );
+			}
+		}
+
 		echo '</div>'; // .swps-audit-issue-body
 		echo '</details>';
+	}
+
+	/**
+	 * Review table for stored AI drafts: current vs proposed with per-row
+	 * accept checkboxes. Server-rendered; the JS driver applies selections
+	 * via swps_fixit_apply and reloads.
+	 *
+	 * @param string $type   Check id.
+	 * @param int    $run_id Displayed run id.
+	 * @param array  $rows   The group's decoded issue rows.
+	 * @param array  $drafts issue_id => {current, proposed, usage}.
+	 */
+	private function render_review_table( string $type, int $run_id, array $rows, array $drafts ): void {
+		$by_id = array();
+		foreach ( $rows as $row ) {
+			$by_id[ (int) $row['id'] ] = $row;
+		}
+
+		$nonce = wp_create_nonce( SWPS_Fixit_Controller::NONCE_ACTION );
+
+		$cost_tracker = new SWPS_Cost_Tracker();
+		$model        = (string) get_option( 'swps_model', '' );
+		$total_cost   = 0.0;
+		foreach ( $drafts as $draft ) {
+			$usage = is_array( $draft['usage'] ?? null ) ? $draft['usage'] : array();
+			if ( array() === $usage ) {
+				continue;
+			}
+			$total_cost += $cost_tracker->calculate_cost(
+				$model,
+				(int) ( $usage['input_tokens'] ?? 0 ),
+				(int) ( $usage['output_tokens'] ?? 0 )
+			);
+		}
+
+		echo '<div class="swps-audit-review" data-swps-review="' . esc_attr( $type ) . '" data-run="' . (int) $run_id . '" data-nonce="' . esc_attr( $nonce ) . '">';
+		echo '<h4>' . esc_html__( 'Review drafts', 'stratawp-seo' ) . '</h4>';
+		if ( $total_cost > 0 ) {
+			echo '<p class="swps-audit-review-cost">' . esc_html(
+				sprintf(
+					/* translators: %s: estimated cost in USD, e.g. 0.0123 */
+					__( 'Estimated drafting cost: $%s', 'stratawp-seo' ),
+					number_format( $total_cost, 4 )
+				)
+			) . '</p>';
+		}
+		echo '<table class="widefat swps-audit-review-table"><thead><tr>';
+		echo '<th class="check-column"><input type="checkbox" checked data-swps-review-all /></th>';
+		echo '<th>' . esc_html__( 'Page', 'stratawp-seo' ) . '</th>';
+		echo '<th>' . esc_html__( 'Current', 'stratawp-seo' ) . '</th>';
+		echo '<th>' . esc_html__( 'Proposed', 'stratawp-seo' ) . '</th>';
+		echo '</tr></thead><tbody>';
+
+		foreach ( $drafts as $issue_id => $draft ) {
+			$url = (string) ( $by_id[ $issue_id ]['url'] ?? '' );
+			echo '<tr>';
+			echo '<td><input type="checkbox" checked value="' . (int) $issue_id . '" data-swps-review-row /></td>';
+			echo '<td><a href="' . esc_url( $url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $url ) . '</a></td>';
+			echo '<td>' . ( '' !== $draft['current'] ? esc_html( $draft['current'] ) : '<em>' . esc_html__( '(empty)', 'stratawp-seo' ) . '</em>' ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- ternary branches are pre-escaped.
+			echo '<td>' . esc_html( $draft['proposed'] ) . '</td>';
+			echo '</tr>';
+		}
+
+		echo '</tbody></table>';
+		echo '<div class="swps-audit-review-actions">';
+		echo '<button type="button" class="swps-btn swps-btn-primary" data-swps-review-apply>' . esc_html__( 'Apply selected', 'stratawp-seo' ) . '</button>';
+		echo '<button type="button" class="swps-btn swps-btn-secondary" data-swps-review-dismiss>' . esc_html__( 'Dismiss all', 'stratawp-seo' ) . '</button>';
+		echo '<span class="swps-audit-review-status" aria-live="polite"></span>';
+		echo '</div>';
+		echo '</div>';
 	}
 
 	/**
@@ -513,6 +657,10 @@ class SWPS_Site_Audit_Screen {
 	 * @return string Escaped HTML.
 	 */
 	private function render_issue_detail( array $detail ): string {
+		// fixed_at is rendered separately as a ✓ marker + Undo control, not
+		// as a generic detail pair.
+		unset( $detail['fixed_at'] );
+
 		if ( ! empty( $detail['assets'] ) && is_array( $detail['assets'] ) ) {
 			$items = array_map( 'esc_html', array_map( 'strval', $detail['assets'] ) );
 			return '<span class="swps-audit-detail-assets">' . implode( ', ', $items ) . '</span>';
@@ -655,6 +803,31 @@ class SWPS_Site_Audit_Screen {
 			esc_attr( implode( ' ', $points ) ),
 			esc_attr( $stroke )
 		);
+	}
+
+	/**
+	 * Severity counts of issues stamped fixed_at in the displayed run.
+	 *
+	 * @param array $issues_by_type Decoded rows grouped by check id.
+	 * @return array {error: int, warning: int, notice: int}
+	 */
+	private function fixed_severity_counts( array $issues_by_type ): array {
+		$counts = array(
+			'error'   => 0,
+			'warning' => 0,
+			'notice'  => 0,
+		);
+		foreach ( $issues_by_type as $rows ) {
+			foreach ( (array) $rows as $row ) {
+				if ( ! empty( $row['detail']['fixed_at'] ) ) {
+					$sev = (string) ( $row['severity'] ?? 'warning' );
+					if ( isset( $counts[ $sev ] ) ) {
+						++$counts[ $sev ];
+					}
+				}
+			}
+		}
+		return $counts;
 	}
 
 	/**

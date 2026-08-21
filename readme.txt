@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.27.1
+Stable tag: 4.28.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,10 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.28.0 =
+* New: Site Audit Fix-It engine — audit findings are now one-click fixable. Missing, duplicate, too-long and too-short meta titles and descriptions get AI-drafted replacements you review and apply (and can undo) right on the audit dashboard; mixed-content URLs, internal nofollow links, missing image alt text, and noindexed-but-sitemapped pages are fixed mechanically with one click. Every fix snapshots the previous value for undo, fixed issues show a projected health score, and the next crawl verifies the real one.
+* New: crawl issues now record which post, term, or author archive each affected URL belongs to.
 
 = 4.27.1 =
 * Fixed: posts whose featured image was uploaded as WebP (or AVIF) shipped that file as the og:image, and LinkedIn's crawler does not render WebP — shares showed no preview card image. Open Graph and Twitter Card output now resolves the featured image through a social-safe picker that prefers JPEG/PNG/GIF renditions and, when only WebP/AVIF exists, converts one to a JPEG copy (created once, cached in attachment meta and reused).

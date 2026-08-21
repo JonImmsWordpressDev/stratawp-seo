@@ -342,6 +342,29 @@ Crawls your own site the way a search engine would and queues fixable issues.
 4. Use the **one-click fixes** on each row: **Create redirect** (broken internal links), **Exclude from sitemap** (noindexed pages), or **Ignore host** (external false positives)
 5. The latest run also appears as a read-only **Site Crawl** module inside the SEO Audit, so crawl health counts toward your site score
 
+### Site Audit (`StrataWP SEO → Site Audit`) ★ v4.27
+
+![Site Audit dashboard](screenshots/swps-site-audit.png)
+
+A crawl-based audit of your rendered site — ~25 checks (missing/duplicate titles and descriptions, viewport/doctype/charset/lang, bot-challenge detection, unminified assets, word count, hreflang, orphan pages, mixed content, internal nofollow links, missing image alt text, noindexed-but-sitemapped pages, and more) rolled up into a 0-100 health score, with error/warning/notice triage and crawl-over-crawl trends.
+
+**How to use it:**
+1. Click **Run audit now** — the crawler covers every public URL, including term archives and pagination, and audits noindexed pages for head integrity
+2. Each issue group shows its severity, affected page count, and a **How to fix** note; every affected row records which post, term, or author archive it belongs to
+
+#### Fix-It: fix issues without leaving the dashboard
+
+![Fix-It review](screenshots/swps-fixit-review.png)
+
+Fixable issue groups get a one-click path from "found" to "fixed," right on the audit dashboard:
+
+3. **AI-drafted fixes** — for missing, duplicate, too-long, and too-short meta titles and descriptions, click **✨ Fix with AI**. It drafts replacements for the whole group in chunks (you'll see a live "Drafting… (n)" count), then opens a **review table** listing each page's **current** value next to the **proposed** one, with a checkbox per row (all checked by default)
+4. Uncheck anything you don't want, then click **Apply selected** to write the accepted drafts — or **Dismiss all** to discard the batch without applying it
+5. **Mechanical fixes** — mixed-content URLs, internal nofollow links, missing image alt text, and noindexed-but-sitemapped pages don't need review; click **Fix now** on the group and it applies to every fixable row in the group immediately
+6. Every applied fix snapshots the previous value first: fixed rows show a ✓ marker with an **Undo** button that restores the previous value, so nothing is destructive
+7. Once a group has fixes applied, the dashboard shows a **projected health score** for the next crawl; click **Run audit now** again to re-crawl and confirm the real score
+8. Rows with no linked post or term (e.g. a category archive issue with nothing to edit) are called out as not auto-fixable — fix those by hand using the issue's **How to fix** note
+
 ### Search Appearance (`StrataWP SEO → Search Appearance`)
 
 ![Search Appearance](screenshots/swps-search-appearance.png)
@@ -847,6 +870,7 @@ A **Send test digest** link in the section header emails the current report to y
 | Generate Content | `swps-generate` | One-off post generation UI |
 | Voice Profiles | `swps-voice-profiles` | Manage reusable personas |
 | SEO Audit | `swps-seo-audit` | 10-module audit results + auto-fix |
+| Site Audit | `swps-site-audit` | Crawl-based check suite (~25 checks) + health score + Fix-It engine (AI-drafted and mechanical one-click fixes) |
 | Site Crawl | `swps-site-crawl` | Politeness-capped self-crawl with issue queue + one-click fixes |
 | Search Appearance | `swps-search-appearance` | Title/description templates |
 | Redirects | `swps-redirects` | Redirect manager + 404 log |

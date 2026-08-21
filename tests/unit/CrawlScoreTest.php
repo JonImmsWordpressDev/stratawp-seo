@@ -21,4 +21,22 @@ final class CrawlScoreTest extends TestCase {
 		$this->assertSame( 0, SWPS_Crawl_Score::calculate( array( 'error' => 999, 'warning' => 0, 'notice' => 0 ), 10 ) );
 		$this->assertSame( 100, SWPS_Crawl_Score::calculate( array( 'error' => 0, 'warning' => 0, 'notice' => 0 ), 0 ) );
 	}
+	public function test_project_subtracts_fixed_counts(): void {
+		$base = SWPS_Crawl_Score::calculate( array( 'error' => 2, 'warning' => 10 ), 10 );
+		$proj = SWPS_Crawl_Score::project(
+			array( 'error' => 2, 'warning' => 10 ),
+			array( 'warning' => 6 ),
+			10
+		);
+		$this->assertGreaterThan( $base, $proj );
+		$this->assertSame( SWPS_Crawl_Score::calculate( array( 'error' => 2, 'warning' => 4 ), 10 ), $proj );
+	}
+	public function test_project_clamps_negative_counts(): void {
+		$proj = SWPS_Crawl_Score::project(
+			array( 'error' => 1 ),
+			array( 'error' => 5, 'warning' => 5 ),
+			10
+		);
+		$this->assertSame( SWPS_Crawl_Score::calculate( array(), 10 ), $proj );
+	}
 }
