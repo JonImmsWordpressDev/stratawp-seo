@@ -172,6 +172,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixer-mixed-content.
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixer-nofollow.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixer-sitemap-exclude.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-crawl-fixer-registry.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixit-controller.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawler.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-crawl-admin.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-site-audit-screen.php';
@@ -310,6 +311,7 @@ final class StrataWP_SEO {
 	public SWPS_Site_Crawler $site_crawler;
 	public SWPS_Site_Crawl_Admin $site_crawl_admin;
 	public SWPS_Site_Audit_Screen $site_audit_screen;
+	public SWPS_Fixit_Controller $fixit_controller;
 	public SWPS_Backlinks $backlinks;
 	public SWPS_Autopilot_Guardian $autopilot_guardian;
 	public SWPS_Digest $digest;
@@ -490,6 +492,7 @@ final class StrataWP_SEO {
 		$this->site_crawler         = new SWPS_Site_Crawler();
 		$this->site_crawl_admin     = new SWPS_Site_Crawl_Admin( $this->site_crawler );
 		$this->site_audit_screen    = new SWPS_Site_Audit_Screen( $this->site_crawler );
+		$this->fixit_controller     = new SWPS_Fixit_Controller();
 		add_filter( 'swps_audit_modules', array( 'SWPS_Site_Crawl_Module', 'register' ) );
 		add_filter( 'swps_audit_modules', array( 'SWPS_Schema_Audit_Module', 'register' ) );
 		$this->backlinks            = new SWPS_Backlinks();
@@ -1518,6 +1521,7 @@ function swps_deactivate(): void {
 	wp_unschedule_hook( 'swps_send_digest' );
 	wp_unschedule_hook( SWPS_Site_Crawler::CRON_HOOK );
 	SWPS_Site_Crawler::unschedule_weekly_cron();
+	wp_unschedule_hook( SWPS_Fixit_Controller::SWEEP_HOOK );
 	wp_clear_scheduled_hook( SWPS_IndexNow::CRON_HOOK );
 	flush_rewrite_rules();
 }
