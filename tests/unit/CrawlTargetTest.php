@@ -39,6 +39,13 @@ final class CrawlTargetTest extends TestCase {
 		);
 	}
 
+	public function test_normalize_preserves_port(): void {
+		$this->assertSame(
+			'https://example.com:8080/blog/',
+			SWPS_Crawl_Target::normalize( 'https://example.com:8080/blog/page/3/' )
+		);
+	}
+
 	public function test_match_finds_post(): void {
 		$maps = array(
 			'posts' => array( 'https://example.com/hello-world/' => 7 ),

@@ -69,7 +69,11 @@ class SWPS_Crawl_Target {
 			$path .= '/';
 		}
 
-		$rebuilt = ( $parts['scheme'] ?? 'https' ) . '://' . $parts['host'] . $path;
+		$rebuilt = ( $parts['scheme'] ?? 'https' ) . '://' . $parts['host'];
+		if ( ! empty( $parts['port'] ) ) {
+			$rebuilt .= ':' . $parts['port'];
+		}
+		$rebuilt .= $path;
 		if ( ! empty( $parts['query'] ) ) {
 			$rebuilt .= '?' . $parts['query'];
 		}
