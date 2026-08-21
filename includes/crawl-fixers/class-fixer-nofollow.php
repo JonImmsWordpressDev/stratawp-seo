@@ -52,6 +52,7 @@ class SWPS_Fixer_Nofollow extends SWPS_Crawl_Fixer {
 			static function ( array $m ) use ( &$changed, $home_host ): string {
 				$tag = $m[0];
 
+				// Check for nofollow rel attribute.
 				if ( ! preg_match( '#\brel\s*=\s*("|\')(.*?)\1#is', $tag, $rel ) ) {
 					return $tag;
 				}
@@ -59,16 +60,30 @@ class SWPS_Fixer_Nofollow extends SWPS_Crawl_Fixer {
 					return $tag;
 				}
 
-				// Internal-only: relative href, or matching host.
-				if ( preg_match( '#\bhref\s*=\s*("|\')(.*?)\1#is', $tag, $href ) ) {
-					$url  = trim( $href[2] );
-					$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
-					$host = preg_replace( '/^www\./', '', $host );
-					if ( '' !== $host && $host !== $home_host ) {
-						return $tag;
-					}
+				// Check for href attribute; if missing, tag is not internal.
+				if ( ! preg_match( '#\bhref\s*=\s*("|\')(.*?)\1#is', $tag, $href ) ) {
+					return $tag;
 				}
 
+				$url    = trim( $href[2] );
+				$parsed = wp_parse_url( $url );
+				$scheme = $parsed['scheme'] ?? '';
+				$host   = isset( $parsed['host'] ) ? strtolower( (string) $parsed['host'] ) : '';
+
+				// Remove www prefix for comparison.
+				$host = preg_replace( '/^www\./', '', $host );
+
+				// Internal link is:
+				// - has no scheme and no host (relative URL like /contact/)
+				// OR
+				// - has a host that matches home_host (www-insensitive).
+				$is_internal = ( '' === $scheme && '' === $host ) || ( '' !== $host && $host === $home_host );
+
+				if ( ! $is_internal ) {
+					return $tag;
+				}
+
+				// Strip nofollow and clean up.
 				$rest = trim( (string) preg_replace( '#\bnofollow\b#i', '', $rel[2] ) );
 				$rest = (string) preg_replace( '/\s{2,}/', ' ', $rest );
 				++$changed;

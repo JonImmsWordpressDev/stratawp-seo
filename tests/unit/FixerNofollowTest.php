@@ -59,4 +59,18 @@ final class FixerNofollowTest extends TestCase {
 		);
 		$this->assertSame( 1, $out['changed'] );
 	}
+
+	public function test_anchor_without_href_untouched(): void {
+		$html = '<a rel="nofollow">no href</a>';
+		$out  = SWPS_Fixer_Nofollow::strip( $html, 'example.com' );
+		$this->assertSame( $html, $out['content'] );
+		$this->assertSame( 0, $out['changed'] );
+	}
+
+	public function test_mailto_links_untouched(): void {
+		$html = '<a href="mailto:test@example.com" rel="nofollow">mail</a>';
+		$out  = SWPS_Fixer_Nofollow::strip( $html, 'example.com' );
+		$this->assertSame( $html, $out['content'] );
+		$this->assertSame( 0, $out['changed'] );
+	}
 }
