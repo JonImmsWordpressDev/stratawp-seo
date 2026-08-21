@@ -491,8 +491,8 @@ final class StrataWP_SEO {
 		SWPS_Crawl_Issues::maybe_upgrade();
 		$this->site_crawler         = new SWPS_Site_Crawler();
 		$this->site_crawl_admin     = new SWPS_Site_Crawl_Admin( $this->site_crawler );
-		$this->site_audit_screen    = new SWPS_Site_Audit_Screen( $this->site_crawler );
 		$this->fixit_controller     = new SWPS_Fixit_Controller();
+		$this->site_audit_screen    = new SWPS_Site_Audit_Screen( $this->site_crawler, $this->fixit_controller );
 		add_filter( 'swps_audit_modules', array( 'SWPS_Site_Crawl_Module', 'register' ) );
 		add_filter( 'swps_audit_modules', array( 'SWPS_Schema_Audit_Module', 'register' ) );
 		$this->backlinks            = new SWPS_Backlinks();
