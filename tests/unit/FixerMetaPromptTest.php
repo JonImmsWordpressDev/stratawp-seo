@@ -31,6 +31,8 @@ final class FixerMetaPromptTest extends TestCase {
 	}
 
 	public function test_prompt_lists_siblings_for_duplicate_checks(): void {
+		// Siblings are resolved text values (meta key content or title/name fallback),
+		// not URLs. The AI must differentiate from these actual competing values.
 		$prompt = SWPS_Fixer_Meta_Title::build_prompt(
 			array(
 				'kind'       => 'title',

@@ -120,14 +120,14 @@ class SWPS_Fixer_Meta_Title extends SWPS_Crawl_Fixer {
 		$api     = SWPS_Provider_Factory::create_ai_provider();
 		$decoded = $api->chat_json(
 			'You are an SEO copywriting expert. Return only valid JSON.',
-			self::build_prompt( $ctx ),
+			static::build_prompt( $ctx ),
 			512
 		);
 		if ( is_wp_error( $decoded ) ) {
 			return $decoded;
 		}
 
-		$proposed = self::normalize_response( $decoded, static::RESPONSE_KEY, static::MAX_LEN );
+		$proposed = static::normalize_response( $decoded, static::RESPONSE_KEY, static::MAX_LEN );
 		if ( null === $proposed ) {
 			return new WP_Error( 'swps_fixit_bad_response', __( 'The AI response was empty or malformed.', 'stratawp-seo' ) );
 		}
@@ -151,6 +151,55 @@ class SWPS_Fixer_Meta_Title extends SWPS_Crawl_Fixer {
 	}
 
 	/**
+	 * Resolve duplicate URLs to their live text values for the AI prompt.
+	 *
+	 * @param array $urls Sibling page URLs (from issue['detail']['duplicate_of']).
+	 * @return array Unique non-empty text values (meta key content or title/name fallback).
+	 */
+	protected function sibling_values( array $urls ): array {
+		$values = array();
+		$count  = 0;
+
+		foreach ( $urls as $url ) {
+			if ( $count >= 5 ) {
+				break; // Cap at 5 siblings.
+			}
+
+			$target = SWPS_Crawl_Target::resolve( (string) $url );
+			$otype  = (string) $target['object_type'];
+			$oid    = (int) $target['object_id'];
+
+			// Skip unresolved URLs.
+			if ( 'none' === $otype || 'user' === $otype || $oid <= 0 ) {
+				continue;
+			}
+
+			$value = '';
+			if ( 'term' === $otype ) {
+				$value = (string) get_term_meta( $oid, static::META_KEY, true );
+				// Fallback to term name only for titles, not descriptions.
+				if ( '' === $value && 'title' === static::RESPONSE_KEY ) {
+					$term  = get_term( $oid );
+					$value = $term && ! is_wp_error( $term ) ? (string) $term->name : '';
+				}
+			} else {
+				$value = (string) get_post_meta( $oid, static::META_KEY, true );
+				// Fallback to post title only for titles, not descriptions.
+				if ( '' === $value && 'title' === static::RESPONSE_KEY ) {
+					$value = (string) get_the_title( $oid );
+				}
+			}
+
+			if ( '' !== $value ) {
+				$values[ $value ] = true; // Track uniqueness.
+				++$count;
+			}
+		}
+
+		return array_keys( $values );
+	}
+
+	/**
 	 * Gather generation context from the target post or term.
 	 *
 	 * @param string $otype 'post' | 'term'.
@@ -159,7 +208,7 @@ class SWPS_Fixer_Meta_Title extends SWPS_Crawl_Fixer {
 	 * @return array|WP_Error {kind, page_title, excerpt, keyword, min, max, siblings, current}
 	 */
 	protected function context_for( string $otype, int $oid, array $issue ): array|WP_Error {
-		$siblings = array_map( 'strval', (array) ( $issue['detail']['duplicate_of'] ?? array() ) );
+		$siblings = $this->sibling_values( array_map( 'strval', (array) ( $issue['detail']['duplicate_of'] ?? array() ) ) );
 
 		if ( 'term' === $otype ) {
 			$term = get_term( $oid );
