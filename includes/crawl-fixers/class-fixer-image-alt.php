@@ -46,7 +46,8 @@ class SWPS_Fixer_Image_Alt extends SWPS_Crawl_Fixer {
 	/**
 	 * Generate + store alt text for each library image on the page that
 	 * lacks one. detail['images'] holds rendered absolute URLs; non-library
-	 * images are skipped and reported.
+	 * images are skipped and reported. Snapshots the prior alt value before
+	 * each write to enable precise undo.
 	 *
 	 * @param array $issue    Decoded issue row.
 	 * @param array $accepted Unused.
@@ -68,7 +69,8 @@ class SWPS_Fixer_Image_Alt extends SWPS_Crawl_Fixer {
 				continue;
 			}
 			if ( '' !== (string) get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) ) {
-				continue; // Already fixed via another page's issue row.
+				++$skipped; // Already fixed via another page's issue row.
+				continue;
 			}
 
 			$alt = stratawp_seo()->image_seo->generate_alt_for( $attachment_id );
@@ -77,6 +79,7 @@ class SWPS_Fixer_Image_Alt extends SWPS_Crawl_Fixer {
 				continue;
 			}
 
+			SWPS_Fixit_Store::snapshot_fields( 'post', $attachment_id, array( 'image_alt' => '' ) );
 			update_post_meta( $attachment_id, '_wp_attachment_image_alt', sanitize_text_field( $alt ) );
 			++$fixed;
 		}
@@ -93,8 +96,8 @@ class SWPS_Fixer_Image_Alt extends SWPS_Crawl_Fixer {
 	}
 
 	/**
-	 * Alt-text writes are additive to previously-empty fields; undo clears
-	 * the generated alt on this page's library images.
+	 * Undo restores from snapshots only — reverts only alt text that apply()
+	 * actually wrote. Images that already had alt text are untouched.
 	 *
 	 * @param array $issue Decoded issue row.
 	 */
@@ -102,10 +105,18 @@ class SWPS_Fixer_Image_Alt extends SWPS_Crawl_Fixer {
 		$done = false;
 		foreach ( array_map( 'strval', (array) ( $issue['detail']['images'] ?? array() ) ) as $url ) {
 			$attachment_id = attachment_url_to_postid( self::strip_size_suffix( $url ) );
-			if ( $attachment_id > 0 ) {
-				delete_post_meta( $attachment_id, '_wp_attachment_image_alt' );
-				$done = true;
+			if ( 0 === $attachment_id ) {
+				continue;
 			}
+
+			$snap = SWPS_Fixit_Store::get_snapshot( 'post', $attachment_id );
+			if ( ! array_key_exists( 'image_alt', $snap['fields'] ?? array() ) ) {
+				continue; // Not snapshotted, so apply() didn't write to it.
+			}
+
+			delete_post_meta( $attachment_id, '_wp_attachment_image_alt' );
+			SWPS_Fixit_Store::clear_snapshot( 'post', $attachment_id );
+			$done = true;
 		}
 		return $done;
 	}
