@@ -25,7 +25,7 @@ class SWPS_Crawl_Issues {
 	public const TABLE_PAGES  = 'swps_crawl_pages';
 
 	/** Current schema version; bump whenever the DDL changes. */
-	public const DB_VERSION = '3';
+	public const DB_VERSION = '4';
 
 	/** Option key holding the installed schema version. */
 	public const OPT_DB_VER = 'swps_crawl_db_version';
@@ -122,6 +122,8 @@ class SWPS_Crawl_Issues {
 			detail         LONGTEXT        NOT NULL DEFAULT '',
 			severity       VARCHAR(10)     NOT NULL DEFAULT 'warning',
 			post_id        BIGINT UNSIGNED             DEFAULT NULL,
+			object_type    VARCHAR(10)                 DEFAULT NULL,
+			object_id      BIGINT UNSIGNED             DEFAULT NULL,
 			first_seen_run BIGINT UNSIGNED NOT NULL,
 			PRIMARY KEY (id),
 			KEY idx_run_id (run_id),
@@ -169,12 +171,13 @@ class SWPS_Crawl_Issues {
 	 *
 	 * Looks up (or creates) the first_seen_run value automatically.
 	 *
-	 * @param int      $run_id  Current run ID.
-	 * @param string   $type    Issue type key (e.g. 'broken_link').
-	 * @param string   $url     The URL that has the issue.
-	 * @param array    $detail  Arbitrary details; JSON-encoded before storage.
-	 * @param string   $severity 'error' | 'warning'.
-	 * @param int|null $post_id WordPress post ID when the URL maps to a post.
+	 * @param int        $run_id  Current run ID.
+	 * @param string     $type    Issue type key (e.g. 'broken_link').
+	 * @param string     $url     The URL that has the issue.
+	 * @param array      $detail  Arbitrary details; JSON-encoded before storage.
+	 * @param string     $severity 'error' | 'warning'.
+	 * @param int|null   $post_id WordPress post ID when the URL maps to a post.
+	 * @param array|null $target Polymorphic object target: array{object_type: string, object_id: int}.
 	 */
 	public static function insert_issue(
 		int $run_id,
@@ -182,12 +185,24 @@ class SWPS_Crawl_Issues {
 		string $url,
 		array $detail,
 		string $severity = 'warning',
-		?int $post_id = null
+		?int $post_id = null,
+		?array $target = null
 	): void {
 		global $wpdb;
 
 		$first_seen = self::get_first_seen_run( $type, $url, $run_id );
 		$table      = $wpdb->prefix . self::TABLE_ISSUES;
+
+		$object_type = null;
+		$object_id   = null;
+		if ( is_array( $target ) && ! empty( $target['object_type'] ) && 'none' !== $target['object_type'] ) {
+			$object_type = (string) $target['object_type'];
+			$object_id   = (int) ( $target['object_id'] ?? 0 );
+			// Back-fill the legacy column so older readers keep working.
+			if ( 'post' === $object_type && null === $post_id ) {
+				$post_id = $object_id;
+			}
+		}
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->insert(
@@ -199,9 +214,21 @@ class SWPS_Crawl_Issues {
 				'detail'         => wp_json_encode( $detail ),
 				'severity'       => $severity,
 				'post_id'        => $post_id,
+				'object_type'    => $object_type,
+				'object_id'      => $object_id,
 				'first_seen_run' => $first_seen,
 			),
-			array( '%d', '%s', '%s', '%s', '%s', null === $post_id ? null : '%d', '%d' )
+			array(
+				'%d',
+				'%s',
+				'%s',
+				'%s',
+				'%s',
+				null === $post_id ? null : '%d',
+				null === $object_type ? null : '%s',
+				null === $object_id ? null : '%d',
+				'%d',
+			)
 		);
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 	}
@@ -277,10 +304,10 @@ class SWPS_Crawl_Issues {
 	 */
 	public static function page_counts( int $run_id ): array {
 		global $wpdb;
-		$pages  = $wpdb->prefix . self::TABLE_PAGES;
-		$issues = $wpdb->prefix . self::TABLE_ISSUES;
-		$total  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$pages} WHERE run_id = %d", $run_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$broken = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$pages} WHERE run_id = %d AND (status_code >= 400 OR status_code = 0)", $run_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$pages       = $wpdb->prefix . self::TABLE_PAGES;
+		$issues      = $wpdb->prefix . self::TABLE_ISSUES;
+		$total       = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$pages} WHERE run_id = %d", $run_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$broken      = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$pages} WHERE run_id = %d AND (status_code >= 400 OR status_code = 0)", $run_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$with_issues = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(DISTINCT p.url) FROM {$pages} p INNER JOIN {$issues} i ON i.run_id = p.run_id AND i.url = p.url WHERE p.run_id = %d", $run_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		return array(
 			'total'   => $total,
@@ -440,7 +467,7 @@ class SWPS_Crawl_Issues {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$rows = (array) $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT id, type, url, detail, severity, post_id, first_seen_run FROM {$table} WHERE run_id = %d ORDER BY type, id",
+				"SELECT id, type, url, detail, severity, post_id, object_type, object_id, first_seen_run FROM {$table} WHERE run_id = %d ORDER BY type, id",
 				$run_id
 			),
 			ARRAY_A
@@ -451,11 +478,44 @@ class SWPS_Crawl_Issues {
 		foreach ( $rows as $row ) {
 			$detail                    = json_decode( (string) $row['detail'], true );
 			$row['detail']             = is_array( $detail ) ? $detail : array();
+			$row['object_type']        = (string) ( $row['object_type'] ?? '' );
+			$row['object_id']          = (int) ( $row['object_id'] ?? 0 );
 			$row['is_new']             = (int) $row['first_seen_run'] === $run_id;
 			$grouped[ $row['type'] ][] = $row;
 		}
 
 		return $grouped;
+	}
+
+	/**
+	 * Stamp an issue row's detail JSON with fixed_at so the dashboard can
+	 * render it as resolved-pending-recrawl. The row itself is kept — the
+	 * next crawl is the source of truth.
+	 *
+	 * @param int $issue_id Issue row ID.
+	 */
+	public static function mark_fixed( int $issue_id ): void {
+		global $wpdb;
+
+		$table = $wpdb->prefix . self::TABLE_ISSUES;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$raw = $wpdb->get_var( $wpdb->prepare( "SELECT detail FROM {$table} WHERE id = %d", $issue_id ) );
+		if ( null === $raw ) {
+			return;
+		}
+
+		$detail             = is_array( json_decode( (string) $raw, true ) ) ? json_decode( (string) $raw, true ) : array();
+		$detail['fixed_at'] = time();
+
+		$wpdb->update(
+			$table,
+			array( 'detail' => wp_json_encode( $detail ) ),
+			array( 'id' => $issue_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	}
 
 	/**
