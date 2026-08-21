@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.27.0
+Stable tag: 4.27.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,10 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.27.1 =
+* Fixed: posts whose featured image was uploaded as WebP (or AVIF) shipped that file as the og:image, and LinkedIn's crawler does not render WebP — shares showed no preview card image. Open Graph and Twitter Card output now resolves the featured image through a social-safe picker that prefers JPEG/PNG/GIF renditions and, when only WebP/AVIF exists, converts one to a JPEG copy (created once, cached in attachment meta and reused).
+* New: og:image:width and og:image:height are emitted whenever the image dimensions are known, so the first share of a URL renders its preview image immediately instead of waiting for the scraper's second pass.
 
 = 4.27.0 =
 * New: Site Audit dashboard — a crawl-based audit of the rendered site with ~25 checks (missing/duplicate titles and descriptions, viewport/doctype/charset/lang, bot-challenge detection, unminified assets, word count, hreflang, orphan pages, and more), a 0-100 health score, error/warning/notice triage with per-page drill-downs and fix guidance, and crawl-over-crawl trends. The crawler now covers every public URL including term archives and pagination, and noindexed pages are audited for head integrity.

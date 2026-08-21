@@ -127,6 +127,7 @@ class SWPS_OpenGraph_Module extends SWPS_Audit_Module {
 		$url         = get_permalink( $post );
 		$site_name   = get_bloginfo( 'name' );
 		$image       = self::get_og_image( $post );
+		$dimensions  = self::get_og_image_dimensions( $post, $image );
 
 		// OG tags. Posts are articles; pages and other singulars are websites.
 		printf( '<meta property="og:type" content="%s" />' . "\n", esc_attr( is_singular( 'post' ) ? 'article' : 'website' ) );
@@ -137,6 +138,10 @@ class SWPS_OpenGraph_Module extends SWPS_Audit_Module {
 
 		if ( $image ) {
 			printf( '<meta property="og:image" content="%s" />' . "\n", esc_url( $image ) );
+			if ( $dimensions ) {
+				printf( '<meta property="og:image:width" content="%d" />' . "\n", $dimensions['width'] );
+				printf( '<meta property="og:image:height" content="%d" />' . "\n", $dimensions['height'] );
+			}
 		}
 
 		// Twitter Card tags.
@@ -190,9 +195,15 @@ class SWPS_OpenGraph_Module extends SWPS_Audit_Module {
 	 * Priority: featured image → first content image → site icon.
 	 */
 	private static function get_og_image( WP_Post $post ): string {
-		// Featured image.
+		// Featured image — resolved via SWPS_Social_Image so WebP/AVIF
+		// uploads fall back to a JPEG copy LinkedIn's crawler can render.
 		$thumb_id = get_post_thumbnail_id( $post->ID );
 		if ( $thumb_id ) {
+			$resolved = SWPS_Social_Image::get( (int) $thumb_id );
+			if ( null !== $resolved ) {
+				return $resolved['url'];
+			}
+
 			$img = wp_get_attachment_image_src( $thumb_id, 'large' );
 			if ( $img ) {
 				return $img[0];
@@ -203,6 +214,45 @@ class SWPS_OpenGraph_Module extends SWPS_Audit_Module {
 		if ( preg_match( '/<img[^>]+src=["\']([^"\']+)/i', $post->post_content, $matches ) ) {
 			return $matches[1];
 		}
+
+		return self::get_site_icon_fallback();
+	}
+
+	/**
+	 * Dimensions for the emitted og:image, when they are knowable.
+	 *
+	 * Only the featured-image path (resolved through SWPS_Social_Image)
+	 * carries dimensions; content-scraped images and icons return null.
+	 *
+	 * @param WP_Post $post  Queried post.
+	 * @param string  $image The URL get_og_image() returned.
+	 * @return array{width: int, height: int}|null
+	 */
+	private static function get_og_image_dimensions( WP_Post $post, string $image ): ?array {
+		if ( '' === $image ) {
+			return null;
+		}
+
+		$thumb_id = get_post_thumbnail_id( $post->ID );
+		if ( ! $thumb_id ) {
+			return null;
+		}
+
+		$resolved = SWPS_Social_Image::get( (int) $thumb_id );
+		if ( null !== $resolved && $resolved['url'] === $image && $resolved['width'] > 0 && $resolved['height'] > 0 ) {
+			return array(
+				'width'  => $resolved['width'],
+				'height' => $resolved['height'],
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Site icon fallback for get_og_image().
+	 */
+	private static function get_site_icon_fallback(): string {
 
 		// Site icon.
 		$icon_id = get_option( 'site_icon' );

@@ -614,6 +614,49 @@ class SWPS_Meta_Editor {
 	}
 
 	/**
+	 * Resolve the social image for a post.
+	 *
+	 * A manual Social Image override wins as-is. Featured images go through
+	 * SWPS_Social_Image so WebP/AVIF uploads resolve to a JPEG copy
+	 * (LinkedIn's crawler skips WebP) and dimensions become available.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return array{url: string, width: int, height: int} Empty url when no image exists.
+	 */
+	private function get_social_image( int $post_id ): array {
+		$manual = (string) get_post_meta( $post_id, '_swps_social_image', true );
+		if ( '' !== $manual ) {
+			return array(
+				'url'    => $manual,
+				'width'  => 0,
+				'height' => 0,
+			);
+		}
+
+		$thumb_id = get_post_thumbnail_id( $post_id );
+		if ( $thumb_id ) {
+			$resolved = SWPS_Social_Image::get( (int) $thumb_id );
+			if ( null !== $resolved ) {
+				return array(
+					'url'    => $resolved['url'],
+					'width'  => $resolved['width'],
+					'height' => $resolved['height'],
+				);
+			}
+		}
+
+		$fallback = (string) get_the_post_thumbnail_url( $post_id, 'large' )
+				?: (string) get_option( 'swps_schema_logo', '' )
+				?: (string) get_site_icon_url( 512 );
+
+		return array(
+			'url'    => $fallback,
+			'width'  => 0,
+			'height' => 0,
+		);
+	}
+
+	/**
 	 * Output Open Graph tags.
 	 */
 	private function output_og_tags( int $post_id ): void {
@@ -625,18 +668,19 @@ class SWPS_Meta_Editor {
 			?: get_post_meta( $post_id, '_swps_meta_description', true )
 			?: get_the_excerpt( $post_id );
 
-		$image = get_post_meta( $post_id, '_swps_social_image', true )
-				?: get_the_post_thumbnail_url( $post_id, 'large' )
-				?: (string) get_option( 'swps_schema_logo', '' )
-				?: (string) get_site_icon_url( 512 );
+		$image = $this->get_social_image( $post_id );
 
 		// Posts are articles; the front page and other pages are websites.
 		printf( '<meta property="og:type" content="%s" />' . "\n", esc_attr( is_singular( 'post' ) ? 'article' : 'website' ) );
 		printf( '<meta property="og:title" content="%s" />' . "\n", esc_attr( $title ) );
 		printf( '<meta property="og:description" content="%s" />' . "\n", esc_attr( $desc ) );
 		printf( '<meta property="og:url" content="%s" />' . "\n", esc_url( get_permalink( $post_id ) ) );
-		if ( $image ) {
-			printf( '<meta property="og:image" content="%s" />' . "\n", esc_url( $image ) );
+		if ( $image['url'] ) {
+			printf( '<meta property="og:image" content="%s" />' . "\n", esc_url( $image['url'] ) );
+			if ( $image['width'] > 0 && $image['height'] > 0 ) {
+				printf( '<meta property="og:image:width" content="%d" />' . "\n", $image['width'] );
+				printf( '<meta property="og:image:height" content="%d" />' . "\n", $image['height'] );
+			}
 		}
 		printf( '<meta property="og:site_name" content="%s" />' . "\n", esc_attr( get_bloginfo( 'name' ) ) );
 	}
@@ -653,16 +697,13 @@ class SWPS_Meta_Editor {
 			?: get_post_meta( $post_id, '_swps_meta_description', true )
 			?: get_the_excerpt( $post_id );
 
-		$image = get_post_meta( $post_id, '_swps_social_image', true )
-				?: get_the_post_thumbnail_url( $post_id, 'large' )
-				?: (string) get_option( 'swps_schema_logo', '' )
-				?: (string) get_site_icon_url( 512 );
+		$image = $this->get_social_image( $post_id );
 
-		printf( '<meta name="twitter:card" content="%s" />' . "\n", $image ? 'summary_large_image' : 'summary' );
+		printf( '<meta name="twitter:card" content="%s" />' . "\n", $image['url'] ? 'summary_large_image' : 'summary' );
 		printf( '<meta name="twitter:title" content="%s" />' . "\n", esc_attr( $title ) );
 		printf( '<meta name="twitter:description" content="%s" />' . "\n", esc_attr( $desc ) );
-		if ( $image ) {
-			printf( '<meta name="twitter:image" content="%s" />' . "\n", esc_url( $image ) );
+		if ( $image['url'] ) {
+			printf( '<meta name="twitter:image" content="%s" />' . "\n", esc_url( $image['url'] ) );
 		}
 	}
 }
