@@ -10,9 +10,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Meta description draft fixer.
+ * Meta description draft fixer. Inherits generation from SWPS_Fixer_Meta_Title;
+ * overrides constants and sanitizer for description-specific handling.
  */
-class SWPS_Fixer_Meta_Description extends SWPS_Crawl_Fixer {
+class SWPS_Fixer_Meta_Description extends SWPS_Fixer_Meta_Title {
+
+	protected const FIELD        = 'meta_description';
+	protected const META_KEY     = '_swps_meta_description';
+	protected const RESPONSE_KEY = 'description';
+	protected const MIN_LEN      = 120;
+	protected const MAX_LEN      = 160;
 
 	/**
 	 * Check ids this fixer handles.
@@ -20,40 +27,15 @@ class SWPS_Fixer_Meta_Description extends SWPS_Crawl_Fixer {
 	 * @return string[]
 	 */
 	public function check_ids(): array {
-		return array(
-			'missing_meta_description',
-			'desc_too_long',
-			'duplicate_meta_description',
-		);
+		return array( 'missing_meta_description', 'desc_too_long', 'duplicate_meta_description' );
 	}
 
 	/**
-	 * Fixer kind.
+	 * Descriptions are textarea-sanitized (multi-sentence).
 	 *
-	 * @return string
+	 * @param string $value Raw value.
 	 */
-	public function kind(): string {
-		return 'draft';
-	}
-
-	/**
-	 * Apply the fix.
-	 *
-	 * @param array $issue    Decoded issue row.
-	 * @param array $accepted User-accepted draft.
-	 * @return array|WP_Error
-	 */
-	public function apply( array $issue, array $accepted ): array|WP_Error {
-		return new WP_Error( 'swps_not_implemented', 'Not implemented' );
-	}
-
-	/**
-	 * Undo the fix.
-	 *
-	 * @param array $issue Decoded issue row.
-	 * @return bool
-	 */
-	public function undo( array $issue ): bool {
-		return false;
+	protected function sanitize( string $value ): string {
+		return sanitize_textarea_field( $value );
 	}
 }
