@@ -54,4 +54,17 @@ final class FixerMixedContentTest extends TestCase {
 		$this->assertSame( $html, $out['content'] );
 		$this->assertSame( 0, $out['changed'] );
 	}
+
+	public function test_hyphen_suffixed_attributes_untouched(): void {
+		$html = '<img data-original-src="http://example.com/a.jpg" background-src="http://example.com/b.jpg">';
+		$out  = SWPS_Fixer_Mixed_Content::rewrite( $html );
+		$this->assertSame( $html, $out['content'] );
+		$this->assertSame( 0, $out['changed'] );
+
+		// Verify data-src itself still gets rewritten.
+		$html2 = '<img data-src="http://example.com/c.jpg">';
+		$out2  = SWPS_Fixer_Mixed_Content::rewrite( $html2 );
+		$this->assertSame( '<img data-src="https://example.com/c.jpg">', $out2['content'] );
+		$this->assertSame( 1, $out2['changed'] );
+	}
 }

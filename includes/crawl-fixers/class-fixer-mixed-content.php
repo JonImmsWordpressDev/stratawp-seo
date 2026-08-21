@@ -52,7 +52,7 @@ class SWPS_Fixer_Mixed_Content extends SWPS_Crawl_Fixer {
 		$attrs   = implode( '|', self::ASSET_ATTRS );
 
 		$content = (string) preg_replace_callback(
-			'#\b(' . $attrs . ')\s*=\s*("|\')(.*?)\2#is',
+			'#(?<![\w-])(' . $attrs . ')\s*=\s*("|\')(.*?)\2#is',
 			static function ( array $m ) use ( &$changed ): string {
 				$value    = preg_replace( '#\bhttp://#i', 'https://', $m[3], -1, $count );
 				$changed += (int) $count;
