@@ -519,6 +519,37 @@ class SWPS_Crawl_Issues {
 	}
 
 	/**
+	 * Remove the fixed_at stamp from an issue row's detail JSON — used when
+	 * an applied fix is undone, so the dashboard stops rendering the row as
+	 * resolved.
+	 *
+	 * @param int $issue_id Issue row ID.
+	 */
+	public static function unmark_fixed( int $issue_id ): void {
+		global $wpdb;
+
+		$table = $wpdb->prefix . self::TABLE_ISSUES;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$raw = $wpdb->get_var( $wpdb->prepare( "SELECT detail FROM {$table} WHERE id = %d", $issue_id ) );
+		if ( null === $raw ) {
+			return;
+		}
+
+		$detail = is_array( json_decode( (string) $raw, true ) ) ? json_decode( (string) $raw, true ) : array();
+		unset( $detail['fixed_at'] );
+
+		$wpdb->update(
+			$table,
+			array( 'detail' => wp_json_encode( $detail ) ),
+			array( 'id' => $issue_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
 	 * Return the most recent distinct run IDs, newest first.
 	 *
 	 * Used by the Site Audit dashboard to locate the previous run (for triage

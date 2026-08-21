@@ -151,4 +151,23 @@
 			}( ids ) );
 		} );
 	} );
+
+	// Undo one applied fix.
+	document.querySelectorAll( '[data-swps-fixit-undo]' ).forEach( function ( btn ) {
+		btn.addEventListener( 'click', function () {
+			btn.disabled = true;
+			post( 'swps_fixit_undo', {
+				nonce: btn.dataset.nonce,
+				run_id: btn.dataset.run,
+				issue_id: btn.dataset.swpsFixitUndo
+			} ).then( function ( res ) {
+				if ( ! res.success ) {
+					btn.disabled = false;
+					btn.textContent = res.data && res.data.message ? res.data.message : 'Error';
+					return;
+				}
+				window.location.reload();
+			} );
+		} );
+	} );
 }() );

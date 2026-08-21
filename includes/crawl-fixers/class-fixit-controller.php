@@ -301,7 +301,12 @@ class SWPS_Fixit_Controller {
 			);
 		}
 
-		return array( 'undone' => $fixer->undo( $issue ) );
+		$undone = $fixer->undo( $issue );
+		if ( $undone ) {
+			SWPS_Crawl_Issues::unmark_fixed( $issue_id );
+		}
+
+		return array( 'undone' => $undone );
 	}
 
 	/**

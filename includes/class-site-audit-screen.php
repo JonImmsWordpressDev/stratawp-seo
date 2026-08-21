@@ -533,11 +533,25 @@ class SWPS_Site_Audit_Screen {
 			$url        = (string) ( $row['url'] ?? '' );
 			$first_seen = (int) ( $row['first_seen_run'] ?? 0 );
 			$first_date = $first_seen > 0 ? date_i18n( get_option( 'date_format' ), $first_seen ) : '';
+			$issue_id   = (int) ( $row['id'] ?? 0 );
+			$fixed_at   = (int) ( $row['detail']['fixed_at'] ?? 0 );
+
+			$detail_html = $this->render_issue_detail( (array) ( $row['detail'] ?? array() ) );
+			if ( $fixed_at > 0 ) {
+				$undo_nonce   = wp_create_nonce( SWPS_Fixit_Controller::NONCE_ACTION );
+				$detail_html .= ' <span class="swps-audit-fixed-marker" title="' . esc_attr__( 'Fixed — pending re-crawl', 'stratawp-seo' ) . '">&#10003;</span> ' . sprintf(
+					'<button type="button" class="swps-btn-link" data-swps-fixit-undo="%d" data-run="%d" data-nonce="%s">%s</button>',
+					$issue_id,
+					(int) $run_id,
+					esc_attr( $undo_nonce ),
+					esc_html__( 'Undo', 'stratawp-seo' )
+				);
+			}
 
 			echo '<tr>';
 			echo '<td><a href="' . esc_url( $url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $url ) . '</a></td>';
 			echo '<td>' . esc_html( $first_date ) . '</td>';
-			echo '<td>' . $this->render_issue_detail( (array) ( $row['detail'] ?? array() ) ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from esc_html()/esc_url() in render_issue_detail().
+			echo '<td>' . $detail_html . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from esc_html()/esc_url()/esc_attr() in render_issue_detail() and above.
 			echo '</tr>';
 		}
 		echo '</tbody></table>';
@@ -619,6 +633,10 @@ class SWPS_Site_Audit_Screen {
 	 * @return string Escaped HTML.
 	 */
 	private function render_issue_detail( array $detail ): string {
+		// fixed_at is rendered separately as a ✓ marker + Undo control, not
+		// as a generic detail pair.
+		unset( $detail['fixed_at'] );
+
 		if ( ! empty( $detail['assets'] ) && is_array( $detail['assets'] ) ) {
 			$items = array_map( 'esc_html', array_map( 'strval', $detail['assets'] ) );
 			return '<span class="swps-audit-detail-assets">' . implode( ', ', $items ) . '</span>';
