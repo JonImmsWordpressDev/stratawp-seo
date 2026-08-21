@@ -164,6 +164,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-aggregate.php
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-crawl-score.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-target.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-crawl-fixer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixit-store.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixer-meta-title.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixer-meta-description.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-fixers/class-fixer-image-alt.php';
