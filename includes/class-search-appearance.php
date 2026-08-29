@@ -94,9 +94,56 @@ class SWPS_Search_Appearance {
 	}
 
 	/**
+	 * Apply a stored posts-page meta title to core's title parts.
+	 *
+	 * Split out as a pure static so the precedence is unit-testable without
+	 * loading WordPress. An empty or whitespace-only stored title leaves the
+	 * parts untouched so the template path can take over.
+	 *
+	 * @param array  $title_parts Core's title parts.
+	 * @param string $meta_title  Stored _swps_meta_title for the posts page.
+	 * @return array
+	 */
+	public static function apply_posts_page_title( array $title_parts, string $meta_title ): array {
+		$meta_title = trim( $meta_title );
+
+		if ( '' === $meta_title ) {
+			return $title_parts;
+		}
+
+		$title_parts['title'] = $meta_title;
+
+		// The stored title is the complete tag; core would otherwise append
+		// the site name a second time.
+		unset( $title_parts['site'], $title_parts['tagline'] );
+
+		return $title_parts;
+	}
+
+	/**
 	 * Filter the document title parts array.
 	 */
 	public function filter_title_parts( array $title_parts ): array {
+		// Posts page: an explicit per-page meta title wins, mirroring how
+		// resolve_description() sources the posts-page description. The Meta
+		// Editor cannot cover this -- its title filters gate on is_singular(),
+		// which the posts page never satisfies, so a title set on the page
+		// assigned to "Posts page" was stored and shown in the editor but
+		// never rendered.
+		if ( is_home() && ! is_front_page() ) {
+			$posts_page = (int) get_option( 'page_for_posts' );
+
+			if ( $posts_page ) {
+				$meta_title = (string) get_post_meta( $posts_page, '_swps_meta_title', true );
+				$meta_title = (string) SWPS_Hooks::filter_meta_title( $meta_title, $posts_page );
+				$applied    = self::apply_posts_page_title( $title_parts, $meta_title );
+
+				if ( $applied !== $title_parts ) {
+					return $applied;
+				}
+			}
+		}
+
 		$template = $this->get_title_template();
 
 		if ( empty( $template ) ) {
@@ -387,6 +434,13 @@ class SWPS_Search_Appearance {
 			return get_option( 'swps_title_template_homepage', '%%sitename%%' );
 		}
 
+		// Posts page on a site with a static front page. Without this branch
+		// the posts page matched nothing and fell through to the empty return,
+		// leaving WordPress's untemplated default.
+		if ( is_home() ) {
+			return get_option( 'swps_title_template_home', '%%title%% %%sep%% %%sitename%%' );
+		}
+
 		if ( is_singular() ) {
 			$post_type = get_post_type();
 			return get_option( "swps_title_template_{$post_type}", '%%title%% %%sep%% %%sitename%%' );
@@ -530,6 +584,14 @@ class SWPS_Search_Appearance {
 
 				$tags                    = get_the_tags( $post->ID );
 				$replacements['%%tag%%'] = ! empty( $tags ) ? $tags[0]->name : '';
+			}
+		} elseif ( is_home() && ! is_front_page() ) {
+			// %%title%% on the posts page is the title of the page assigned to
+			// it; without this the variable resolved to nothing and was then
+			// stripped, collapsing the template to just the site name.
+			$posts_page = (int) get_option( 'page_for_posts' );
+			if ( $posts_page ) {
+				$replacements['%%title%%'] = get_the_title( $posts_page );
 			}
 		} elseif ( is_category() || is_tag() || is_tax() ) {
 			$term = get_queried_object();

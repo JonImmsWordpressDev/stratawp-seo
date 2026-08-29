@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.28.0
+Stable tag: 4.28.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,9 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.28.1 =
+* Fixed: a meta title set on the page assigned to "Posts page" was stored and shown in the editor but never rendered — the blog index kept WordPress's untemplated default. The Meta Editor's title filters gate on is_singular(), which the posts page never satisfies, and Search Appearance had no is_home() branch, so the posts page matched no title template at all. Titles now resolve there the same way descriptions already did, and %%title%% on the posts page resolves to that page's title instead of being stripped as an empty variable.
 
 = 4.28.0 =
 * New: Site Audit Fix-It engine — audit findings are now one-click fixable. Missing, duplicate, too-long and too-short meta titles and descriptions get AI-drafted replacements you review and apply (and can undo) right on the audit dashboard; mixed-content URLs, internal nofollow links, missing image alt text, and noindexed-but-sitemapped pages are fixed mechanically with one click. Every fix snapshots the previous value for undo, fixed issues show a projected health score, and the next crawl verifies the real one.
