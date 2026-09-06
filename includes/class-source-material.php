@@ -286,4 +286,185 @@ class SWPS_Source_Material {
 	private static function fence_close( int $n ): string {
 		return "--- END SOURCE {$n} ---\n";
 	}
+
+	/**
+	 * Fetch each URL and reduce it to readable text.
+	 *
+	 * Requests run in parallel via WordPress' bundled Requests library so five
+	 * slow hosts cost one timeout, not five. Unsafe URLs (private/loopback
+	 * hosts, non-http schemes) are rejected before any request is made.
+	 * Results are cached per URL for CACHE_TTL so Preview then Generate
+	 * fetches once.
+	 *
+	 * @param string[] $urls Parsed URLs (already capped).
+	 * @return array<int, array{url: string, ok: bool, title: string, text: string, error: string}>
+	 */
+	public static function fetch( array $urls ): array {
+		$results  = array();
+		$requests = array();
+
+		foreach ( $urls as $i => $url ) {
+			$cached = get_transient( self::cache_key( $url ) );
+			if ( is_array( $cached ) && isset( $cached['ok'] ) ) {
+				$results[ $i ] = $cached;
+				continue;
+			}
+
+			if ( ! wp_http_validate_url( $url ) ) {
+				$results[ $i ] = self::failure( $url, __( 'URL rejected (private, local or malformed address).', 'stratawp-seo' ) );
+				continue;
+			}
+
+			$requests[ $i ] = array(
+				'url'     => $url,
+				'type'    => 'GET',
+				'headers' => array(
+					'Accept'     => 'text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1',
+					'User-Agent' => 'StrataWP-SEO/' . ( defined( 'SWPS_VERSION' ) ? SWPS_VERSION : 'dev' ) . ' (+source-material)',
+				),
+				'options' => array(
+					'timeout'          => self::FETCH_TIMEOUT,
+					'connect_timeout'  => 5,
+					'redirects'        => 3,
+					'max_bytes'        => self::MAX_BODY_BYTES,
+					'verify'           => true,
+					'follow_redirects' => true,
+				),
+			);
+		}
+
+		if ( ! empty( $requests ) ) {
+			$responses = \WpOrg\Requests\Requests::request_multiple( $requests );
+
+			foreach ( $requests as $i => $request ) {
+				$url      = $request['url'];
+				$response = $responses[ $i ] ?? null;
+
+				if ( ! ( $response instanceof \WpOrg\Requests\Response ) ) {
+					$message       = $response instanceof \Throwable ? $response->getMessage() : __( 'No response.', 'stratawp-seo' );
+					$results[ $i ] = self::failure( $url, self::humanize_error( $message ) );
+					continue;
+				}
+
+				if ( $response->status_code < 200 || $response->status_code >= 300 ) {
+					$results[ $i ] = self::failure( $url, sprintf( 'HTTP %d', $response->status_code ) );
+					continue;
+				}
+
+				$type = strtolower( (string) $response->headers['content-type'] );
+				if ( '' !== $type && ! str_contains( $type, 'html' ) && ! str_contains( $type, 'text/plain' ) && ! str_contains( $type, 'xml' ) ) {
+					$results[ $i ] = self::failure( $url, __( 'Not an HTML or text page.', 'stratawp-seo' ) );
+					continue;
+				}
+
+				$body = (string) $response->body;
+				if ( strlen( $body ) > self::MAX_BODY_BYTES ) {
+					$body = substr( $body, 0, self::MAX_BODY_BYTES );
+				}
+
+				$extracted = self::extract_text( $body );
+				if ( '' === $extracted['text'] ) {
+					$results[ $i ] = self::failure( $url, __( 'No readable text found.', 'stratawp-seo' ) );
+					continue;
+				}
+
+				$results[ $i ] = array(
+					'url'   => $url,
+					'ok'    => true,
+					'title' => $extracted['title'],
+					'text'  => $extracted['text'],
+					'error' => '',
+				);
+				set_transient( self::cache_key( $url ), $results[ $i ], self::CACHE_TTL );
+			}
+		}
+
+		ksort( $results );
+		return array_values( $results );
+	}
+
+	/**
+	 * Parse, fetch and render in one call for the generator.
+	 *
+	 * @param string $sanitized Sanitized textarea value ('' for none).
+	 * @return array{block: string, report: array<int, array{url: string, ok: bool, error: string}>, dropped_urls: string[]}
+	 */
+	public static function prepare( string $sanitized ): array {
+		$empty = array(
+			'block'        => '',
+			'report'       => array(),
+			'dropped_urls' => array(),
+		);
+
+		if ( '' === trim( $sanitized ) ) {
+			return $empty;
+		}
+
+		$parsed  = self::parse( $sanitized );
+		$fetched = empty( $parsed['urls'] ) ? array() : self::fetch( $parsed['urls'] );
+
+		$report = array_map(
+			static function ( array $item ): array {
+				return array(
+					'url'   => $item['url'],
+					'ok'    => (bool) $item['ok'],
+					'error' => (string) $item['error'],
+				);
+			},
+			$fetched
+		);
+
+		return array(
+			'block'        => self::to_prompt_block( $fetched, $parsed['notes'] ),
+			'report'       => $report,
+			'dropped_urls' => $parsed['dropped_urls'],
+		);
+	}
+
+	/**
+	 * Uniform failure record.
+	 *
+	 * @param string $url   URL.
+	 * @param string $error Human-readable reason.
+	 * @return array{url: string, ok: bool, title: string, text: string, error: string}
+	 */
+	private static function failure( string $url, string $error ): array {
+		return array(
+			'url'   => $url,
+			'ok'    => false,
+			'title' => '',
+			'text'  => '',
+			'error' => $error,
+		);
+	}
+
+	/**
+	 * Shorten common transport errors for the result panel.
+	 *
+	 * @param string $message Raw exception message.
+	 * @return string
+	 */
+	private static function humanize_error( string $message ): string {
+		$lower = strtolower( $message );
+		if ( str_contains( $lower, 'timed out' ) || str_contains( $lower, 'timeout' ) ) {
+			return __( 'timed out', 'stratawp-seo' );
+		}
+		if ( str_contains( $lower, 'resolve host' ) || str_contains( $lower, 'could not resolve' ) ) {
+			return __( 'host not found', 'stratawp-seo' );
+		}
+		if ( str_contains( $lower, 'ssl' ) || str_contains( $lower, 'certificate' ) ) {
+			return __( 'SSL certificate problem', 'stratawp-seo' );
+		}
+		return self::shorten( $message, 80 );
+	}
+
+	/**
+	 * Transient key for one URL.
+	 *
+	 * @param string $url URL.
+	 * @return string
+	 */
+	private static function cache_key( string $url ): string {
+		return 'swps_src_' . md5( $url );
+	}
 }
