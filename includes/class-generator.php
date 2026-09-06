@@ -385,6 +385,11 @@ class SWPS_Generator {
 
 	/**
 	 * Build the system prompt for Claude.
+	 *
+	 * @param string $tone         Tone setting or brief override.
+	 * @param string $style        Writing style setting.
+	 * @param string $content_type post|page.
+	 * @return string
 	 */
 	private function build_system_prompt( string $tone, string $style, string $content_type = SWPS_Templates::TYPE_POST ): string {
 		if ( SWPS_Templates::TYPE_PAGE === $content_type ) {
@@ -539,6 +544,24 @@ PROMPT;
 
 	/**
 	 * Build the user prompt with site context and preferences.
+	 *
+	 * @param string $topic              Topic, or empty to let the AI choose.
+	 * @param string $site_context       Rendered site-context block.
+	 * @param string $links_context      Rendered internal-linking block.
+	 * @param string $niche              Site niche setting.
+	 * @param string $keywords           Target keywords setting.
+	 * @param int    $min_words          Minimum word count.
+	 * @param int    $max_words          Maximum word count.
+	 * @param int    $min_links          Minimum internal links.
+	 * @param int    $max_links          Maximum internal links.
+	 * @param bool   $include_faq        Whether to request a FAQ section.
+	 * @param bool   $include_toc        Whether to request a table of contents (posts only).
+	 * @param bool   $include_takeaways  Whether to request key takeaways (posts only).
+	 * @param int    $takeaways_count    Number of key takeaways to request.
+	 * @param array  $brief              Normalized content brief (may be empty).
+	 * @param string $content_type       post|page.
+	 * @param string $sources_block      Rendered source-material block, or empty when no sources were supplied.
+	 * @return string
 	 */
 	private function build_user_prompt(
 		string $topic,
