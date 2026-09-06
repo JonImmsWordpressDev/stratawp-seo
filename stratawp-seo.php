@@ -1097,14 +1097,19 @@ final class StrataWP_SEO {
 	 * @param array $post_data The WordPress post data.
 	 */
 	public function schedule_image_jobs( int $post_id, array $ai_result, array $post_data ): void {
-		if ( get_option( 'swps_featured_images', 1 ) ) {
+		// A per-run plan saved by the generator wins; otherwise the global options apply.
+		$plan     = SWPS_Image_Plan::for_post( $post_id );
+		$featured = null !== $plan ? $plan['featured'] : (bool) get_option( 'swps_featured_images', 1 );
+		$content  = null !== $plan ? $plan['content_count'] > 0 : (bool) get_option( 'swps_insert_content_images', 0 );
+
+		if ( $featured ) {
 			$focus = (string) get_post_meta( $post_id, '_swps_focus_keyword', true );
 			$query = '' !== $focus ? $focus : (string) ( $ai_result['title'] ?? '' );
 			$query = SWPS_Hooks::filter_image_query( $query, $post_id );
 			$this->background_processor->schedule_featured_image( $post_id, $query );
 		}
 
-		if ( get_option( 'swps_insert_content_images', 0 ) ) {
+		if ( $content ) {
 			$this->background_processor->schedule_content_image( $post_id );
 		}
 	}

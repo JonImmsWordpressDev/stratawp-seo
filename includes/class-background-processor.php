@@ -135,7 +135,12 @@ class SWPS_Background_Processor {
 	 * @param int $attempt Retry attempt counter for the current position.
 	 */
 	public function run_content_image( int $post_id, int $attempt = 0 ): void {
-		if ( ! get_option( 'swps_insert_content_images', 0 ) ) {
+		$plan      = SWPS_Image_Plan::for_post( $post_id );
+		$requested = null !== $plan
+			? $plan['content_count']
+			: ( get_option( 'swps_insert_content_images', 0 ) ? (int) get_option( 'swps_content_images_count', 2 ) : 0 );
+
+		if ( $requested < 1 ) {
 			return;
 		}
 		$post = get_post( $post_id );
@@ -145,7 +150,7 @@ class SWPS_Background_Processor {
 
 		$inserter = new SWPS_Image_Inserter( SWPS_Provider_Factory::create_image_provider() );
 		$eligible = $inserter->eligible_section_count( $post_id );
-		$target   = min( (int) get_option( 'swps_content_images_count', 2 ), $eligible );
+		$target   = min( $requested, $eligible );
 
 		if ( $target < 1 ) {
 			return; // Too few sections — nothing to do.
