@@ -2931,3 +2931,43 @@ git push -u origin feat/generate-pages-images-sources
 ```
 
 Then open the PR with `gh pr create --title "Pages, per-run images, source material and tone on Generate Content (4.31.0)" --body-file <(a body summarising the four features and the smoke results)`; no AI attribution in the body, per the repo's `CLAUDE.md`. Merging to `main` triggers the release workflow.
+
+---
+
+### Task 12: README overhaul and fresh screenshots (added 2026-09-06 at Jon's request)
+
+**Files:**
+- Modify: `README.md` (badges 24-28; Feature Tour "The AI Content Engine" 72-99; Quick Start 235-258; "Generate Content" how-to 294-310; "Voice Profiles" 311-322 only where it mentions tone; Configuration Guide "Writing Preferences" 693-701, "Content Settings" 702-714, "Featured Images" 715-724; REST API table 941-978; Developer Reference filters/actions where `swps_user_prompt`, `swps_post_created`, `swps_image_query` are described; Architecture "File Map" 1184-1369 (add the two new classes); "Content Generation Pipeline" 1414-1428)
+- Replace: `screenshots/swps-generate.png` (new capture of the finished Generate Content screen, Blog post selected)
+- Create: `screenshots/swps-generate-page.png` (same screen with Page selected, showing page templates, Parent page, Images row and Source material filled in)
+- Create: `screenshots/swps-generate-result.png` (the result panel after a page generation, showing the Sources report)
+
+**Interfaces:**
+- Consumes: the finished UI from Tasks 8-9 and the behaviour from Tasks 1-7. Screenshots are captured by the controller via browser automation on `http://jonimms.local/wp-admin/admin.php?page=swps-generate` at 1440px wide, PNG, then handed to the README implementer as file paths.
+
+- [ ] **Step 1: Controller captures screenshots** (before dispatching the README implementer): log in to jonimms.local wp-admin, open the Generate Content page, capture (a) default state, (b) Page selected with the Omaha-style brief, a source URL, Parent page chosen, Featured on, In-content 2, Tone "Friendly & Approachable", (c) the result card after a real page generation. Save to the three paths above. Verify each file is a valid PNG under 1.5 MB (`file screenshots/*.png`, `ls -la screenshots/`).
+
+- [ ] **Step 2: Rewrite the content-generation sections**
+
+Requirements for the rewrite (the implementer reads the current README sections, the spec at `docs/superpowers/specs/2026-09-06-generate-pages-images-sources-design.md`, and `templates/generate-page.php` for the exact labels):
+- Version badge → `4.31.0`.
+- "The AI Content Engine" feature tour: describe the screen as it is now, in this order: content type toggle, brief + helper + Improve my brief, source material, title/topic, Template + Tone + Bulk / Parent page, Images row, "What happens when you generate" summary, Generate / Preview / Bulk / Analyze. Embed `swps-generate.png` and `swps-generate-page.png`.
+- "Generate Content" how-to: a numbered walkthrough matching the on-screen labels exactly; a short "Pages vs posts" table (templates, word ranges, FAQ, taxonomy, parent, bulk/cron availability); a "Source material" subsection (limits: 5 URLs, 12,000 characters, 6,000 per source, 20,000 total; fetch rules: 10 s timeout, private/local addresses rejected, 1.5 MB cap, one-hour cache; what the AI is told); an "Images per run" subsection; embed `swps-generate-result.png` with a caption about the Sources report.
+- Configuration Guide: state that Featured Images settings are the defaults for the per-run controls; Writing Preferences: tone can be overridden per run from the Generate form.
+- REST API table: `/generate` row lists every param; `/score/{id}` row says posts and pages.
+- File Map: add `class-image-plan.php` and `class-source-material.php` with one-line responsibilities, in alphabetical position.
+- Content Generation Pipeline: add the source-fetch step before the AI call and the image-plan meta write before `swps_post_created`.
+- Remove or rewrite any sentence that says only posts are generated, that images are settings-only, or that tone lives in the helper panel. `grep -n "blog post" README.md` and check each hit in the affected sections.
+- Keep every section outside the listed ranges untouched.
+- No em dashes in new prose (Jon's writing rule); keep existing ★ version markers convention (★ v4.31 on new items).
+
+- [ ] **Step 3: Verify**
+
+Run: `grep -n "4\.20\.0\|swps-brief-tone\|Help me write my brief.*tone" README.md` → no hits in the rewritten sections; `ls screenshots/swps-generate*.png` shows three files; every `![...](screenshots/...)` path in README.md resolves (`grep -o 'screenshots/[^)]*' README.md | sort -u | while read f; do [ -f "$f" ] || echo "MISSING $f"; done`).
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add README.md screenshots/swps-generate.png screenshots/swps-generate-page.png screenshots/swps-generate-result.png
+git commit -m "README: document pages, per-run images, source material and tone; refresh Generate Content screenshots"
+```
