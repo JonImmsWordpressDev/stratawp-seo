@@ -38,6 +38,9 @@ class SWPS_Source_Material {
 	/** Maximum length of the rendered prompt block. */
 	public const MAX_TOTAL = 20000;
 
+	/** Maximum characters of owner notes kept in the prompt block. */
+	public const MAX_NOTES = 8000;
+
 	/** Fetch timeout in seconds per URL. */
 	public const FETCH_TIMEOUT = 10;
 
@@ -143,6 +146,7 @@ class SWPS_Source_Material {
 		if ( preg_match( '#<title[^>]*>(.*?)</title>#is', $html, $m ) ) {
 			$title = trim( html_entity_decode( strip_tags( $m[1] ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags -- title text only.
 			$title = (string) preg_replace( '/\s+/u', ' ', $title );
+			$title = self::shorten( $title, 200 );
 		}
 
 		$region = $html;
@@ -154,6 +158,8 @@ class SWPS_Source_Material {
 		}
 
 		// Drop non-content elements wholesale (greedy per element, nested ok for these tags).
+		// Note: these are regex matches, not a DOM parse, so same-tag self-nesting anywhere
+		// in this method (e.g. an <article> inside another <article> above) isn't handled.
 		$region = (string) preg_replace( '#<(script|style|noscript|nav|header|footer|aside|form|iframe|svg)[\s>].*?</\1>#is', '', $region );
 		$region = (string) preg_replace( '#<!--.*?-->#s', '', $region );
 
@@ -196,6 +202,12 @@ class SWPS_Source_Material {
 	/**
 	 * Render fetched sources and notes as the prompt block.
 	 *
+	 * The rendered block is guaranteed not to exceed MAX_TOTAL by construction:
+	 * titles are capped to 200 characters in extract_text(), each fence label
+	 * (title + url) is capped to 300 characters here, and owner notes are
+	 * capped to MAX_NOTES characters — bounding the fixed overhead so the
+	 * per-source budget floor can never push the total past the ceiling.
+	 *
 	 * @param array<int, array{url: string, ok: bool, title: string, text: string, error: string}> $fetched Fetch results.
 	 * @param string                                                                               $notes   Owner notes.
 	 * @return string Empty string when nothing is usable.
@@ -209,7 +221,7 @@ class SWPS_Source_Material {
 				}
 			)
 		);
-		$notes  = trim( $notes );
+		$notes  = self::shorten( trim( $notes ), self::MAX_NOTES );
 
 		if ( empty( $usable ) && '' === $notes ) {
 			return '';
@@ -261,6 +273,7 @@ class SWPS_Source_Material {
 		$url   = (string) ( $item['url'] ?? '' );
 		$title = trim( (string) ( $item['title'] ?? '' ) );
 		$label = '' !== $title ? $title . ' (' . $url . ')' : $url;
+		$label = self::shorten( $label, 300 );
 		return "--- SOURCE {$n}: {$label} ---\n";
 	}
 

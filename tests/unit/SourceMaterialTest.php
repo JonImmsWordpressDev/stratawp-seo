@@ -172,6 +172,26 @@ final class SourceMaterialTest extends TestCase {
 		}
 	}
 
+	public function test_prompt_block_total_is_capped_even_with_long_titles_and_notes(): void {
+		$fetched = array();
+		for ( $i = 1; $i <= 5; $i++ ) {
+			$fetched[] = array(
+				'url'   => "https://example.com/s{$i}",
+				'ok'    => true,
+				'title' => str_repeat( "title{$i} ", 500 ), // ~5,000 chars.
+				'text'  => str_repeat( "sentence {$i} ", 600 ), // ~6,600 chars each.
+				'error' => '',
+			);
+		}
+		$notes = str_repeat( 'note ', 2400 ); // ~12,000 chars.
+
+		$block = SWPS_Source_Material::to_prompt_block( $fetched, $notes );
+
+		$this->assertLessThanOrEqual( SWPS_Source_Material::MAX_TOTAL, mb_strlen( $block ) );
+		$this->assertStringContainsString( '--- SOURCE 5:', $block );
+		$this->assertStringContainsString( '--- OWNER NOTES ---', $block );
+	}
+
 	public function test_shorten_cuts_at_a_word_boundary(): void {
 		$this->assertSame( 'alpha beta', SWPS_Source_Material::shorten( 'alpha beta gamma', 12 ) );
 		$this->assertSame( 'short', SWPS_Source_Material::shorten( 'short', 12 ) );
