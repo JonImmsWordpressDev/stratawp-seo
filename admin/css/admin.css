@@ -687,6 +687,134 @@
     margin-top: 10px;
 }
 
+/* --- Generate page: content type segmented control --- */
+.swps-segmented {
+    display: inline-flex;
+    gap: 0;
+    margin: 0 0 20px;
+    padding: 0;
+    border: 1px solid #c3c4c7;
+    border-radius: 6px;
+    background: #f6f7f7;
+    overflow: hidden;
+}
+
+.swps-segmented-legend {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+}
+
+.swps-segmented-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-weight: 500;
+    color: #1d2327;
+    border-right: 1px solid #c3c4c7;
+    transition: background 120ms ease;
+}
+
+.swps-segmented-option:last-child {
+    border-right: 0;
+}
+
+.swps-segmented-option input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.swps-segmented-option:has(input:checked) {
+    background: #1d2327;
+    color: #fff;
+}
+
+.swps-segmented-option:has(input:focus-visible) {
+    outline: 2px solid #2271b1;
+    outline-offset: -2px;
+}
+
+/* Fallback for browsers without :has() support — JS toggles .is-selected. */
+.swps-segmented-option.is-selected {
+    background: #1d2327;
+    color: #fff;
+}
+
+.swps-segmented-option.is-selected:focus-within {
+    outline: 2px solid #2271b1;
+    outline-offset: -2px;
+}
+
+.swps-segmented[disabled] .swps-segmented-option {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* --- Generate page: source material --- */
+.swps-sources-group {
+    margin-top: 16px;
+}
+
+.swps-sources-textarea {
+    font-family: Menlo, Consolas, monospace;
+    font-size: 12.5px;
+}
+
+/* --- Generate page: per-run images --- */
+.swps-images-row {
+    align-items: flex-end;
+    flex-wrap: wrap;
+    padding: 12px 14px;
+    border: 1px dashed #c3c4c7;
+    border-radius: 6px;
+    background: #fbfbfc;
+}
+
+.swps-images-row .swps-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    padding-bottom: 6px;
+}
+
+.swps-images-note {
+    flex-basis: 100%;
+    margin: 6px 0 0;
+}
+
+/* --- Generate page: result sources list --- */
+.swps-result-sources {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.swps-result-sources li {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 0 0 4px;
+    word-break: break-all;
+}
+
+.swps-result-sources .dashicons {
+    flex: 0 0 auto;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.swps-source-ok .dashicons { color: #00a32a; }
+.swps-source-failed .dashicons { color: #d63638; }
+.swps-source-failed em { color: #646970; }
+
 /* Rate limit indicator */
 .swps-rate-limit {
     display: flex;

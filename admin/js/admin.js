@@ -39,6 +39,18 @@
     const $briefReject     = $('#swps-brief-reject');
     const BRIEF_DRAFT_KEY  = 'swpsBriefDraft';
 
+    // --- Generate page: content type, sources, parent, images ---
+    const $contentTypeRadios = $('#swps-content-type input[name="swps_content_type"]');
+    const $sourcesInput      = $('#swps-sources');
+    const $sourcesCount      = $('#swps-sources-count');
+    const $parentGroup       = $('#swps-parent-group');
+    const $parentSelect      = $('#swps-parent');
+    const $bulkGroup         = $('#swps-bulk-group');
+    const $featuredImage     = $('#swps-featured-image');
+    const $contentImages     = $('#swps-content-images');
+    const $toneSelect        = $('#swps-tone');
+    const $generateBtnLabel  = $('#swps-generate-btn-label');
+
     // --- Settings page elements ---
     const $aiProvider     = $('select[name="swps_ai_provider"]');
     const $imageProvider  = $('select[name="swps_image_provider"]');
@@ -287,7 +299,18 @@
         stopProgress();
 
         $('#swps-result-title').text(data.title);
-        $('#swps-result-status').text(data.status === 'draft' ? 'Draft — ready for review' : data.status);
+
+        var type = data.content_type === 'page' ? 'page' : 'post';
+        var $heading = $('#swps-result-heading');
+        if ($heading.length) { $heading.text($heading.data(type)); }
+        $('#swps-result-edit span[data-post], #swps-result-preview span[data-post]').each(function() {
+            $(this).text($(this).data(type));
+        });
+
+        var statusLabel = data.status === 'draft'
+            ? (type === 'page' ? 'Draft page — ready for review' : 'Draft — ready for review')
+            : data.status;
+        $('#swps-result-status').text(statusLabel);
         $('#swps-result-keyword').text(data.focus_keyword || '—');
         $('#swps-result-meta').text(data.meta_description || '—');
         $('#swps-result-words').text(data.word_count ? '~' + data.word_count + ' words' : '—');
@@ -300,6 +323,28 @@
             $('#swps-result-links').text(data.internal_links.length + ' links: ' + linkTexts.join(', '));
         } else {
             $('#swps-result-links').text('None');
+        }
+
+        // Source material report.
+        var $sourcesRow  = $('#swps-result-sources-row');
+        var $sourcesList = $('#swps-result-sources');
+        $sourcesList.empty();
+        var sources = Array.isArray(data.sources) ? data.sources : [];
+        var dropped = Array.isArray(data.dropped_sources) ? data.dropped_sources : [];
+        if (sources.length || dropped.length) {
+            sources.forEach(function(s) {
+                var $li = $('<li>').addClass(s.ok ? 'swps-source-ok' : 'swps-source-failed');
+                $li.append($('<span>').addClass('dashicons').addClass(s.ok ? 'dashicons-yes' : 'dashicons-warning'));
+                $li.append($('<span>').text(s.url));
+                if (!s.ok) { $li.append($('<em>').text(' — could not fetch (' + (s.error || 'unknown error') + ')')); }
+                $sourcesList.append($li);
+            });
+            dropped.forEach(function(url) {
+                $sourcesList.append($('<li>').addClass('swps-source-failed').append($('<span>').addClass('dashicons dashicons-dismiss')).append($('<span>').text(url + ' — over the 5 URL limit, not used')));
+            });
+            $sourcesRow.show();
+        } else {
+            $sourcesRow.hide();
         }
 
         // Cost info.
@@ -359,6 +404,85 @@
         return data;
     }
 
+    function getContentType() {
+        var checked = $contentTypeRadios.filter(':checked').val();
+        return checked === 'page' ? 'page' : 'post';
+    }
+
+    /**
+     * Collect the non-brief generation options. Image keys are always sent so
+     * the server applies exactly what the form shows.
+     */
+    function getGenerateOptions() {
+        var data = { content_type: getContentType() };
+        if ($sourcesInput.length) { data.sources = $sourcesInput.val() || ''; }
+        if ($parentSelect.length) { data.parent_id = data.content_type === 'page' ? ($parentSelect.val() || '0') : '0'; }
+        if ($featuredImage.length) { data.featured_image = $featuredImage.is(':checked') ? '1' : '0'; }
+        if ($contentImages.length) { data.content_images = String(parseInt($contentImages.val(), 10) || 0); }
+        return data;
+    }
+
+    /**
+     * Swap the template list for the chosen content type, keeping the
+     * selection when the slug exists in both lists.
+     */
+    function populateTemplates(type) {
+        if (!$templateSelect.length) return;
+        var options = type === 'page' ? (swpsAdmin.page_templates || {}) : (swpsAdmin.templates || {});
+        var current = $templateSelect.val();
+        $templateSelect.empty();
+        Object.keys(options).forEach(function(slug) {
+            $templateSelect.append($('<option>').val(slug).text(options[slug]));
+        });
+        if (options[current]) {
+            $templateSelect.val(current);
+        }
+    }
+
+    function applyContentType() {
+        var type = getContentType();
+        populateTemplates(type);
+        $parentGroup.prop('hidden', type !== 'page');
+        $bulkGroup.prop('hidden', type === 'page');
+        $bulkBtn.toggle(type !== 'page');
+        if ($generateBtnLabel.length) {
+            $generateBtnLabel.text(type === 'page' ? 'Generate Page' : 'Generate Post');
+        }
+        var $lands = $('#swps-summary-lands');
+        if ($lands.length) {
+            $lands.text($lands.data(type) || $lands.text());
+        }
+        // Fallback for browsers without :has() support — see the CSS below.
+        $contentTypeRadios.each(function() {
+            $(this).closest('.swps-segmented-option').toggleClass('is-selected', $(this).is(':checked'));
+        });
+    }
+
+    function updateImageSummary() {
+        if ($featuredImage.length) {
+            $('#swps-summary-featured').text($featuredImage.is(':checked') && !$featuredImage.prop('disabled') ? 'Added automatically' : 'Not added');
+        }
+        if ($contentImages.length) {
+            var n = parseInt($contentImages.val(), 10) || 0;
+            $('#swps-summary-content-images').text(n === 0 ? 'None' : String(n));
+        }
+    }
+
+    function updateToneSummary() {
+        var $cell = $('#swps-summary-tone');
+        if (!$cell.length || !$toneSelect.length) return;
+        var picked = $toneSelect.val();
+        $cell.text(picked ? picked + ' (this run)' : $cell.data('default'));
+    }
+
+    function updateSourcesCount() {
+        if (!$sourcesInput.length || !$sourcesCount.length) return;
+        var max = parseInt(swpsAdmin.sources_max_length, 10) || 12000;
+        var len = ($sourcesInput.val() || '').length;
+        $sourcesCount.text(len ? len.toLocaleString() + ' / ' + max.toLocaleString() : '');
+        $sourcesCount.toggleClass('swps-brief-count--limit', len >= max);
+    }
+
     function briefHasContent() {
         var data = getBriefData();
         return Object.keys(data).some(function(key) {
@@ -378,7 +502,7 @@
     // per-tab and cleared when the tab closes; ignore any storage failure.
     function saveBriefDraft() {
         try {
-            window.sessionStorage.setItem(BRIEF_DRAFT_KEY, JSON.stringify(getBriefData()));
+            window.sessionStorage.setItem(BRIEF_DRAFT_KEY, JSON.stringify($.extend(getBriefData(), getGenerateOptions())));
         } catch (e) { /* storage unavailable — nothing to do */ }
     }
 
@@ -398,6 +522,25 @@
                     $(this).val(data[key]);
                 }
             });
+            if (data.content_type === 'page' || data.content_type === 'post') {
+                $contentTypeRadios.filter('[value="' + data.content_type + '"]').prop('checked', true);
+                applyContentType();
+            }
+            if (data.sources && $sourcesInput.length && !$sourcesInput.val()) {
+                $sourcesInput.val(data.sources);
+                updateSourcesCount();
+            }
+            if (data.parent_id && $parentSelect.length) {
+                $parentSelect.val(String(data.parent_id));
+            }
+            if (typeof data.featured_image !== 'undefined' && $featuredImage.length && !$featuredImage.prop('disabled')) {
+                $featuredImage.prop('checked', data.featured_image === '1');
+            }
+            if (typeof data.content_images !== 'undefined' && $contentImages.length && !$contentImages.prop('disabled')) {
+                $contentImages.val(parseInt(data.content_images, 10) || 0);
+            }
+            updateImageSummary();
+            updateToneSummary();
             // Reveal the helper when it holds restored values.
             if ($briefHelper.length && $briefFields.filter(function() { return $(this).val(); }).length) {
                 $briefHelper.prop('open', true);
@@ -428,6 +571,16 @@
     }
 
     if ($briefInput.length) {
+        $contentTypeRadios.on('change', function() { applyContentType(); saveBriefDraft(); });
+        $sourcesInput.on('input', function() { updateSourcesCount(); saveBriefDraft(); });
+        $parentSelect.on('change', saveBriefDraft);
+        $featuredImage.on('change', function() { updateImageSummary(); saveBriefDraft(); });
+        $contentImages.on('input change', function() { updateImageSummary(); saveBriefDraft(); });
+        $toneSelect.on('change', updateToneSummary);
+        applyContentType();
+        updateImageSummary();
+        updateToneSummary();
+        updateSourcesCount();
         restoreBriefDraft();
         updateBriefCount();
 
@@ -510,7 +663,7 @@
         $bulkBtn.prop('disabled', true);
         $improveBriefBtn.prop('disabled', true);
 
-        startProgress();
+        startProgress(getContentType() === 'page' ? 'Generating your page...' : undefined);
 
         $.ajax({
             url: swpsAdmin.ajax_url,
@@ -520,7 +673,7 @@
                 nonce: swpsAdmin.nonce,
                 topic: topic,
                 template: template,
-            }, getBriefData()),
+            }, getBriefData(), getGenerateOptions()),
             timeout: 180000, // 3 minute timeout.
             success: function(response) {
                 if (response.success) {
@@ -574,7 +727,7 @@
                 nonce: swpsAdmin.nonce,
                 topic: topic,
                 template: template,
-            }, getBriefData()),
+            }, getBriefData(), getGenerateOptions()),
             timeout: 180000,
             success: function(response) {
                 stopProgress();
@@ -759,6 +912,8 @@
             $briefInput.val('');
             $briefFields.val('');
             updateBriefCount();
+            if ($sourcesInput.length) { $sourcesInput.val(''); updateSourcesCount(); }
+            updateToneSummary();
             clearBriefDraft();
             hideBriefProposal();
             $briefInput.trigger('focus');
