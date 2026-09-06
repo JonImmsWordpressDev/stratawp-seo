@@ -340,11 +340,13 @@ class SWPS_Schema {
 
 		// Personal-brand sites: describe the human so the entity is unambiguous.
 		// worksFor only points at #localbusiness when that node will actually be
-		// emitted (same gate as add_local_business_node), so the graph never
-		// carries a dangling reference.
+		// in this page's graph — build() adds it on the front page only, and
+		// add_local_business_node() applies the data and filter gates below — so
+		// the graph never carries a dangling reference.
 		if ( 'Person' === $entity_type ) {
 			$local          = (array) get_option( 'swps_local_seo', array() );
-			$emits_business = class_exists( 'SWPS_Local_SEO' )
+			$emits_business = is_front_page()
+				&& class_exists( 'SWPS_Local_SEO' )
 				&& ! empty( $local['enabled'] )
 				&& '' !== trim( (string) ( $local['name'] ?? '' ) )
 				&& '' !== trim( (string) ( $local['locality'] ?? '' ) )
