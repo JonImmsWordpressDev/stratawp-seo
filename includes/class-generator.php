@@ -11,12 +11,46 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * AI content generation engine.
+ *
+ * @package StrataWP_SEO
+ */
 class SWPS_Generator {
 
+	/**
+	 * AI API provider.
+	 *
+	 * @var SWPS_AI_Provider
+	 */
 	private SWPS_AI_Provider $api;
+
+	/**
+	 * Content analyzer.
+	 *
+	 * @var SWPS_Analyzer
+	 */
 	private SWPS_Analyzer $analyzer;
+
+	/**
+	 * Duplicate checker.
+	 *
+	 * @var SWPS_Duplicate_Checker
+	 */
 	private SWPS_Duplicate_Checker $duplicate_checker;
+
+	/**
+	 * Rate limiter.
+	 *
+	 * @var SWPS_Rate_Limiter
+	 */
 	private SWPS_Rate_Limiter $rate_limiter;
+
+	/**
+	 * Cost tracker.
+	 *
+	 * @var SWPS_Cost_Tracker
+	 */
 	private SWPS_Cost_Tracker $cost_tracker;
 
 	/**
@@ -33,6 +67,15 @@ class SWPS_Generator {
 	 */
 	private array $last_dropped_sources = array();
 
+	/**
+	 * Constructor.
+	 *
+	 * @param SWPS_AI_Provider       $api AI API provider.
+	 * @param SWPS_Analyzer          $analyzer Content analyzer.
+	 * @param SWPS_Duplicate_Checker $duplicate_checker Duplicate checker.
+	 * @param SWPS_Rate_Limiter      $rate_limiter Rate limiter.
+	 * @param SWPS_Cost_Tracker      $cost_tracker Cost tracker.
+	 */
 	public function __construct(
 		SWPS_AI_Provider $api,
 		SWPS_Analyzer $analyzer,
@@ -63,6 +106,7 @@ class SWPS_Generator {
 		// Lift PHP execution caps so cron/background jobs don't die mid-download,
 		// leaving posts with no images and an empty debug.log.
 		if ( function_exists( 'set_time_limit' ) ) {
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Suppress timeout warnings during long image processing.
 			@set_time_limit( 0 );
 		}
 		if ( function_exists( 'wp_raise_memory_limit' ) ) {
@@ -85,6 +129,7 @@ class SWPS_Generator {
 			$remaining = $this->rate_limiter->get_remaining_seconds();
 			$error     = new WP_Error(
 				'swps_rate_limited',
+				/* translators: %d: seconds remaining */
 				sprintf( __( 'Rate limited. Please wait %d seconds before generating again.', 'stratawp-seo' ), $remaining )
 			);
 			SWPS_Hooks::do_generation_failed( $error, $topic, $template );
@@ -109,6 +154,7 @@ class SWPS_Generator {
 			if ( false !== $duplicate ) {
 				$error = new WP_Error(
 					'swps_duplicate',
+					/* translators: %1$s: generated title, %2$s: existing title */
 					sprintf( __( 'Duplicate detected: "%1$s" is too similar to existing title "%2$s"', 'stratawp-seo' ), $ai_result['title'], $duplicate )
 				);
 				SWPS_Hooks::do_generation_failed( $error, $topic, $template );
@@ -125,6 +171,7 @@ class SWPS_Generator {
 			if ( empty( $ai_result[ $field ] ) ) {
 				$error = new WP_Error(
 					'swps_missing_field',
+					/* translators: %s: field name */
 					sprintf( __( 'AI response missing required field: %s', 'stratawp-seo' ), $field )
 				);
 				SWPS_Hooks::do_generation_failed( $error, $topic, $template );
@@ -166,6 +213,7 @@ class SWPS_Generator {
 			$remaining = $this->rate_limiter->get_remaining_seconds();
 			return new WP_Error(
 				'swps_rate_limited',
+				/* translators: %d: seconds remaining */
 				sprintf( __( 'Rate limited. Please wait %d seconds.', 'stratawp-seo' ), $remaining )
 			);
 		}
@@ -693,7 +741,7 @@ PROMPT;
 			$cat = get_cat_ID( $ai_result['suggested_category'] );
 			if ( $cat > 0 ) {
 				$category_id = $cat;
-			} elseif ( $category_id === 0 ) {
+			} elseif ( 0 === $category_id ) {
 				$new_cat = wp_create_category( $ai_result['suggested_category'] );
 				if ( ! is_wp_error( $new_cat ) ) {
 					$category_id = $new_cat;
@@ -825,7 +873,7 @@ PROMPT;
 			'content_type'     => $content_type,
 			'parent_id'        => $parent_id,
 			'cost'             => $cost,
-			'content_score'    => $content_score ?: null,
+			'content_score'    => $content_score ? $content_score : null,
 		);
 	}
 
@@ -843,7 +891,7 @@ PROMPT;
 
 		// Find the first <h2> tag — insert before it.
 		$h2_pos = stripos( $content, '<h2' );
-		if ( $h2_pos === false ) {
+		if ( false === $h2_pos ) {
 			// No H2 found — prepend to content.
 			return $takeaways_html . $content;
 		}
@@ -930,7 +978,7 @@ PROMPT;
 			case 'h5':
 			case 'h6':
 				$level = (int) substr( $tag, 1 );
-				$attrs = $level !== 2 ? ' {"level":' . $level . '}' : '';
+				$attrs = 2 !== $level ? ' {"level":' . $level . '}' : '';
 				return "<!-- wp:heading{$attrs} -->\n{$html}\n<!-- /wp:heading -->\n\n";
 
 			case 'p':
@@ -1018,6 +1066,7 @@ PROMPT;
 	 */
 	public static function append_log( string $message ): void {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug logging when WP_DEBUG is enabled.
 			error_log( '[StrataWP SEO] ' . $message );
 		}
 

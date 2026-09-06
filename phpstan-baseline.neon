@@ -199,3 +199,13 @@ parameters:
 			message: "#^Call to static method add_command\\(\\) on an unknown class WP_CLI\\.$#"
 			count: 1
 			path: stratawp-seo.php
+
+		-
+			message: "#^Offset 'featured' on array\\{featured\\: bool, content_count\\: int\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: includes/class-image-plan.php
+
+		-
+			message: "#^Offset 'content_count' on array\\{featured\\: bool, content_count\\: int\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: includes/class-image-plan.php
