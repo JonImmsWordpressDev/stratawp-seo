@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.29.0
+ * Version: 4.30.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.29.0' );
+define( 'SWPS_VERSION', '4.30.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -209,6 +209,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-migration.php';
 // Core classes.
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-analyzer.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-content-brief.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-generator.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-cron.php';
 
@@ -569,6 +570,7 @@ final class StrataWP_SEO {
 		// AJAX handlers — v2.0.
 		add_action( 'wp_ajax_swps_bulk_generate', array( $this, 'ajax_bulk_generate' ) );
 		add_action( 'wp_ajax_swps_preview_post', array( $this, 'ajax_preview_post' ) );
+		add_action( 'wp_ajax_swps_improve_brief', array( $this, 'ajax_improve_brief' ) );
 		add_action( 'wp_ajax_swps_clear_cache', array( $this, 'ajax_clear_cache' ) );
 
 		// Frontend — FAQ / Takeaways schema.
@@ -706,6 +708,8 @@ final class StrataWP_SEO {
 				'rate_limit_remaining' => $this->rate_limiter->get_remaining_seconds(),
 				'min_content_score'    => get_option( 'swps_min_content_score', 0 ),
 				'generate_url'         => admin_url( 'admin.php?page=swps-generate' ),
+				'brief_max_length'     => SWPS_Content_Brief::MAX_BRIEF_LENGTH,
+				'brief_field_max'      => SWPS_Content_Brief::MAX_FIELD_LENGTH,
 			)
 		);
 
@@ -796,8 +800,9 @@ final class StrataWP_SEO {
 
 		$topic    = sanitize_text_field( $_POST['topic'] ?? '' );
 		$template = sanitize_text_field( $_POST['template'] ?? 'auto' );
+		$brief    = $this->read_brief_from_request();
 
-		$result = $this->generator->generate_post( $topic, $template );
+		$result = $this->generator->generate_post( $topic, $template, $brief );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
@@ -862,14 +867,59 @@ final class StrataWP_SEO {
 
 		$topic    = sanitize_text_field( $_POST['topic'] ?? '' );
 		$template = sanitize_text_field( $_POST['template'] ?? 'auto' );
+		$brief    = $this->read_brief_from_request();
 
-		$result = $this->generator->preview_content( $topic, $template );
+		$result = $this->generator->preview_content( $topic, $template, $brief );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
 
 		wp_send_json_success( $result );
+	}
+
+	/**
+	 * AJAX handler: propose a clearer version of the user's content brief.
+	 *
+	 * Makes one extra AI request and returns the proposal only — the brief in
+	 * the form is never replaced server-side; the user accepts it in the UI.
+	 */
+	public function ajax_improve_brief(): void {
+		check_ajax_referer( 'swps_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions.' ) );
+		}
+
+		$result = $this->generator->improve_brief( $this->read_brief_from_request() );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		}
+
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * Read and sanitize the custom content brief fields from the current
+	 * AJAX request.
+	 *
+	 * @return array<string, string> Normalized brief (all keys present).
+	 */
+	private function read_brief_from_request(): array {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- every caller runs check_ajax_referer() first.
+		$keys = array_merge( array( SWPS_Content_Brief::KEY_BRIEF ), SWPS_Content_Brief::guidance_keys() );
+		$raw  = array();
+
+		foreach ( $keys as $key ) {
+			if ( isset( $_POST[ $key ] ) && is_scalar( $_POST[ $key ] ) ) {
+				$raw[ $key ] = wp_unslash( (string) $_POST[ $key ] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitized by SWPS_Content_Brief::from_request().
+			}
+		}
+
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		return SWPS_Content_Brief::from_request( $raw );
 	}
 
 	/**

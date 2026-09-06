@@ -26,6 +26,19 @@
     const $rateLimitBar   = $('#swps-rate-limit');
     const $previewModal   = $('#swps-preview-modal');
 
+    // --- Generate page: custom content brief ---
+    const $briefInput      = $('#swps-brief');
+    const $briefCount      = $('#swps-brief-count');
+    const $briefHelper     = $('#swps-brief-helper');
+    const $briefFields     = $('[data-brief-key]');
+    const $improveBriefBtn = $('#swps-improve-brief-btn');
+    const $briefProposal   = $('#swps-brief-proposal');
+    const $briefProposalText  = $('#swps-brief-proposal-text');
+    const $briefProposalNotes = $('#swps-brief-proposal-notes');
+    const $briefAccept     = $('#swps-brief-accept');
+    const $briefReject     = $('#swps-brief-reject');
+    const BRIEF_DRAFT_KEY  = 'swpsBriefDraft';
+
     // --- Settings page elements ---
     const $aiProvider     = $('select[name="swps_ai_provider"]');
     const $imageProvider  = $('select[name="swps_image_provider"]');
@@ -329,6 +342,161 @@
         return $templateSelect.length ? $templateSelect.val() : 'auto';
     }
 
+    // =====================================================================
+    // Generate page: custom content brief
+    // =====================================================================
+
+    /**
+     * Collect the brief and the optional guidance fields as request data.
+     * Every value is sent as-is (line breaks intact); the server sanitizes
+     * and enforces the length limits.
+     */
+    function getBriefData() {
+        var data = { brief: $briefInput.length ? $briefInput.val() : '' };
+        $briefFields.each(function() {
+            data[$(this).data('briefKey')] = $(this).val() || '';
+        });
+        return data;
+    }
+
+    function briefHasContent() {
+        var data = getBriefData();
+        return Object.keys(data).some(function(key) {
+            return String(data[key] || '').trim() !== '';
+        });
+    }
+
+    function updateBriefCount() {
+        if (!$briefInput.length || !$briefCount.length) return;
+        var max = parseInt(swpsAdmin.brief_max_length, 10) || 4000;
+        var len = ($briefInput.val() || '').length;
+        $briefCount.text(len ? len.toLocaleString() + ' / ' + max.toLocaleString() : '');
+        $briefCount.toggleClass('swps-brief-count--limit', len >= max);
+    }
+
+    // Keep an unsent brief across an accidental reload. sessionStorage is
+    // per-tab and cleared when the tab closes; ignore any storage failure.
+    function saveBriefDraft() {
+        try {
+            window.sessionStorage.setItem(BRIEF_DRAFT_KEY, JSON.stringify(getBriefData()));
+        } catch (e) { /* storage unavailable — nothing to do */ }
+    }
+
+    function restoreBriefDraft() {
+        if (!$briefInput.length) return;
+        try {
+            var raw = window.sessionStorage.getItem(BRIEF_DRAFT_KEY);
+            if (!raw) return;
+            var data = JSON.parse(raw);
+            if (!data || typeof data !== 'object') return;
+            if (data.brief && !$briefInput.val()) {
+                $briefInput.val(data.brief);
+            }
+            $briefFields.each(function() {
+                var key = $(this).data('briefKey');
+                if (data[key] && !$(this).val()) {
+                    $(this).val(data[key]);
+                }
+            });
+            // Reveal the helper when it holds restored values.
+            if ($briefHelper.length && $briefFields.filter(function() { return $(this).val(); }).length) {
+                $briefHelper.prop('open', true);
+            }
+        } catch (e) { /* ignore */ }
+    }
+
+    function clearBriefDraft() {
+        try { window.sessionStorage.removeItem(BRIEF_DRAFT_KEY); } catch (e) { /* ignore */ }
+    }
+
+    function hideBriefProposal() {
+        $briefProposal.prop('hidden', true);
+        $briefProposalText.val('');
+        $briefProposalNotes.empty();
+    }
+
+    function showBriefProposal(data) {
+        $briefProposalText.val(data.improved_brief || '');
+        $briefProposalNotes.empty();
+        if (Array.isArray(data.notes)) {
+            data.notes.forEach(function(note) {
+                $briefProposalNotes.append($('<li>').text(note));
+            });
+        }
+        $briefProposal.prop('hidden', false);
+        $briefProposalText.trigger('focus');
+    }
+
+    if ($briefInput.length) {
+        restoreBriefDraft();
+        updateBriefCount();
+
+        $briefInput.on('input', function() {
+            updateBriefCount();
+            saveBriefDraft();
+        });
+        $briefFields.on('input change', saveBriefDraft);
+
+        $improveBriefBtn.on('click', function() {
+            if (!briefHasContent()) {
+                showError('Write a brief first, then ask for an improved version.');
+                $briefInput.trigger('focus');
+                return;
+            }
+
+            var $btn = $(this);
+            $btn.prop('disabled', true).addClass('swps-is-busy');
+            $error.hide();
+            hideBriefProposal();
+
+            $.ajax({
+                url: swpsAdmin.ajax_url,
+                type: 'POST',
+                data: $.extend({
+                    action: 'swps_improve_brief',
+                    nonce: swpsAdmin.nonce,
+                }, getBriefData()),
+                timeout: 90000,
+                success: function(response) {
+                    if (response.success) {
+                        showBriefProposal(response.data);
+                    } else {
+                        showError(response.data.message || 'Could not improve the brief. Your original text is unchanged.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    if (status === 'timeout') {
+                        showError('The request timed out. Your original brief is unchanged — please try again.');
+                    } else {
+                        showError('Could not improve the brief: ' + (error || 'Unknown error.') + ' Your original text is unchanged.');
+                    }
+                },
+                complete: function() {
+                    $btn.prop('disabled', false).removeClass('swps-is-busy');
+                }
+            });
+        });
+
+        // Accept replaces the brief only on an explicit click; reject discards.
+        $briefAccept.on('click', function() {
+            var proposed = $briefProposalText.val() || '';
+            if (proposed.trim() === '') {
+                hideBriefProposal();
+                return;
+            }
+            $briefInput.val(proposed);
+            updateBriefCount();
+            saveBriefDraft();
+            hideBriefProposal();
+            $briefInput.trigger('focus');
+        });
+
+        $briefReject.on('click', function() {
+            hideBriefProposal();
+            $briefInput.trigger('focus');
+        });
+    }
+
     /**
      * Generate Post button click handler.
      */
@@ -340,21 +508,23 @@
         $analyzeBtn.prop('disabled', true);
         $previewBtn.prop('disabled', true);
         $bulkBtn.prop('disabled', true);
+        $improveBriefBtn.prop('disabled', true);
 
         startProgress();
 
         $.ajax({
             url: swpsAdmin.ajax_url,
             type: 'POST',
-            data: {
+            data: $.extend({
                 action: 'swps_generate_post',
                 nonce: swpsAdmin.nonce,
                 topic: topic,
                 template: template,
-            },
+            }, getBriefData()),
             timeout: 180000, // 3 minute timeout.
             success: function(response) {
                 if (response.success) {
+                    clearBriefDraft();
                     showResult(response.data);
                     // Start rate limit cooldown after successful generation.
                     var cooldown = parseInt(swpsAdmin.rate_limit_remaining, 10) || 60;
@@ -377,6 +547,7 @@
                 $analyzeBtn.prop('disabled', false);
                 $previewBtn.prop('disabled', false);
                 $bulkBtn.prop('disabled', false);
+                $improveBriefBtn.prop('disabled', false);
             }
         });
     });
@@ -398,12 +569,12 @@
         $.ajax({
             url: swpsAdmin.ajax_url,
             type: 'POST',
-            data: {
+            data: $.extend({
                 action: 'swps_preview_post',
                 nonce: swpsAdmin.nonce,
                 topic: topic,
                 template: template,
-            },
+            }, getBriefData()),
             timeout: 180000,
             success: function(response) {
                 stopProgress();
@@ -583,7 +754,17 @@
      */
     $generateAnother.on('click', function() {
         $result.slideUp(200);
-        $topicInput.val('').focus();
+        $topicInput.val('');
+        if ($briefInput.length) {
+            $briefInput.val('');
+            $briefFields.val('');
+            updateBriefCount();
+            clearBriefDraft();
+            hideBriefProposal();
+            $briefInput.trigger('focus');
+        } else {
+            $topicInput.trigger('focus');
+        }
     });
 
     // Allow Enter key in topic field to trigger generation.

@@ -76,6 +76,7 @@ It's designed to **replace** Yoast/RankMath/AIOSEO if you want to, or **coexist*
 #### AI Content Generation
 - **Multi-provider AI** — Anthropic (Claude), OpenAI (GPT), Google (Gemini), xAI (Grok); model lists are discovered live from each provider's API and refreshed daily, with dynamic labels (Most powerful, Cheapest, Costs most, Best value) and a dismissible new-model alert
 - **Site-aware generation** — analyzes existing posts, categories, and internal links before writing
+- **Custom content brief** ★ v4.30 — describe exactly what to write, include, emphasize and avoid; an optional "Help me write my brief" helper (audience, goal, key points, tone, facts, things to avoid, CTA) and an "Improve my brief" review step, all applied within the existing SEO structure
 - **7 content templates** — Auto, Listicle, How-To Guide, Comparison, Case Study, News Analysis, Tutorial
 - **Voice profiles** — reusable writing personas (tone, formality 1-10, sentence length, vocabulary, person, avoid/preferred phrases, sample text)
 - **FAQ, Key Takeaways, TOC** — generated with `FAQPage` / `ItemList` schema and an auto-linked table of contents
@@ -296,11 +297,14 @@ The control panel — split into 7 tabs:
 
 The main AI content generator.
 
-1. Pick a **template** (Auto, Listicle, How-To, Comparison, Case Study, News Analysis, Tutorial)
-2. Enter a **topic** (or leave blank to auto-pick from queue)
-3. Optionally select a **voice profile** to lock the tone
-4. Set **target word count** (or use the global default)
-5. Click **Generate** — it'll analyze your site, draft, score, attach images, and save as a draft
+1. Describe the post in **What would you like to write about?** ★ v4.30 — your topic, who it's for, what to include, tone, real business facts, anything to avoid, and the call to action. Multiline is fine; it's optional, and a blank brief runs the classic topic-or-auto-pick flow.
+2. Optionally expand **Help me write my brief** for structured prompts: Target audience, Content goal, Key points or sections, Tone of voice (same list as Settings; blank keeps your default), Facts or business details, Things to avoid, Desired call to action. Anything you fill in is added to the brief.
+3. Optionally click **Improve my brief** — one extra AI request rewrites the brief for clarity, keeps your intent and facts, never invents details (it inserts `[placeholders]` instead), and shows the proposal for review. Nothing changes until you click **Use this version**; it never writes the article.
+4. Optionally enter a **title or topic** — with a brief, leaving it blank lets the AI derive the title from the brief.
+5. Pick a **template** (Auto, Informational, Listicle, How-To, Comparison, Case Study, News Analysis, Tutorial)
+6. Click **Preview** (no save) or **Generate Post** — it'll analyze your site, draft, score, attach images, and save per your "After writing" setting
+
+The brief steers subject, angle, examples, requested sections, tone and CTA. Precedence is fixed: the response format and app rules first, then the required SEO structure and your generation settings, then the brief and helper fields, then default writing preferences. Briefs are capped at 4,000 characters (1,000 per helper field), HTML is stripped, and the prompt forbids invented facts, statistics, testimonials, pricing or URLs. **Bulk Generate** does not use the brief — each bulk post gets its own AI-chosen topic.
 
 **Tip:** if generation takes >2 min, the post is being processed in the background. Check the Calendar to see status.
 
@@ -940,7 +944,7 @@ All endpoints under `/wp-json/swps/v1/`:
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| `POST` | `/generate` | Generate a post (topic + template) |
+| `POST` | `/generate` | Generate a post (topic + template, plus an optional `brief` and `audience`/`goal`/`key_points`/`tone`/`facts`/`avoid`/`cta` guidance fields ★ v4.30) |
 | `GET` | `/status` | Plugin status |
 | `GET` | `/queue` | List topic queue |
 | `POST` | `/queue` | Add a topic (title, date, template, notes) |

@@ -32,6 +32,12 @@ $gen_tone_label    = '' !== $gen_style_preview
 	? ucfirst( $gen_tone ) . ' — ' . $gen_style_preview
 	: ucfirst( $gen_tone );
 $gen_settings_url  = admin_url( 'admin.php?page=swps-settings' );
+
+// Custom content brief (optional, multiline) and its "help me write my brief" fields.
+$gen_brief_max         = SWPS_Content_Brief::MAX_BRIEF_LENGTH;
+$gen_brief_field_max   = SWPS_Content_Brief::MAX_FIELD_LENGTH;
+$gen_brief_tones       = SWPS_Settings::get_tone_options();
+$gen_brief_placeholder = __( 'Write a guide for small business owners in Omaha about choosing a WordPress maintenance provider. Include updates, backups, security, hosting, and support. Explain what questions to ask before hiring someone. Use a friendly, practical tone and finish with a consultation CTA. Avoid technical jargon and made-up pricing.', 'stratawp-seo' );
 ?>
 <div class="wrap swps-generate-wrap">
 	<?php
@@ -61,13 +67,97 @@ $gen_settings_url  = admin_url( 'admin.php?page=swps-settings' );
 			<h2><?php esc_html_e( 'Generate a New Post', 'stratawp-seo' ); ?></h2>
 			<p class="swps-card-desc"><?php esc_html_e( 'Create an SEO-optimized blog post. Enter a specific topic or let the AI choose one based on your site\'s content gaps.', 'stratawp-seo' ); ?></p>
 
+			<?php /* Custom content brief — optional; a blank brief keeps the original topic-only flow. */ ?>
+			<div class="swps-form-group swps-brief-group">
+				<label for="swps-brief"><?php esc_html_e( 'What would you like to write about?', 'stratawp-seo' ); ?></label>
+				<p id="swps-brief-help" class="swps-field-help"><?php esc_html_e( 'Describe your topic, what to include, who it\'s for, and anything to avoid. StrataWP SEO will use your instructions while keeping the content optimized for search.', 'stratawp-seo' ); ?></p>
+				<textarea
+					id="swps-brief"
+					class="swps-brief-textarea"
+					rows="6"
+					maxlength="<?php echo (int) $gen_brief_max; ?>"
+					aria-describedby="swps-brief-help swps-brief-count"
+					placeholder="<?php echo esc_attr( $gen_brief_placeholder ); ?>"
+					<?php echo ! $has_api_key ? 'disabled' : ''; ?>
+				></textarea>
+				<div class="swps-brief-meta">
+					<span id="swps-brief-count" class="swps-brief-count" aria-live="polite"></span>
+					<span class="swps-brief-optional"><?php esc_html_e( 'Optional — leave blank to let the AI pick a topic from your site\'s content gaps.', 'stratawp-seo' ); ?></span>
+				</div>
+			</div>
+
+			<details id="swps-brief-helper" class="swps-brief-helper">
+				<summary class="swps-brief-helper-summary">
+					<span class="dashicons dashicons-lightbulb" aria-hidden="true"></span>
+					<?php esc_html_e( 'Help me write my brief', 'stratawp-seo' ); ?>
+					<span class="swps-brief-helper-hint"><?php esc_html_e( 'Optional prompts to sharpen your instructions', 'stratawp-seo' ); ?></span>
+				</summary>
+				<div class="swps-brief-helper-body">
+					<p class="swps-field-help"><?php esc_html_e( 'Fill in any of these and they are added to your brief when you generate. Nothing here is required.', 'stratawp-seo' ); ?></p>
+					<div class="swps-brief-helper-grid">
+						<div class="swps-form-group">
+							<label for="swps-brief-audience"><?php esc_html_e( 'Target audience', 'stratawp-seo' ); ?></label>
+							<input type="text" id="swps-brief-audience" data-brief-key="audience" maxlength="<?php echo (int) $gen_brief_field_max; ?>" placeholder="<?php esc_attr_e( 'e.g., first-time landlords in Denver', 'stratawp-seo' ); ?>" <?php echo ! $has_api_key ? 'disabled' : ''; ?> />
+						</div>
+						<div class="swps-form-group">
+							<label for="swps-brief-goal"><?php esc_html_e( 'Content goal', 'stratawp-seo' ); ?></label>
+							<input type="text" id="swps-brief-goal" data-brief-key="goal" maxlength="<?php echo (int) $gen_brief_field_max; ?>" placeholder="<?php esc_attr_e( 'e.g., help readers compare options and book a call', 'stratawp-seo' ); ?>" <?php echo ! $has_api_key ? 'disabled' : ''; ?> />
+						</div>
+						<div class="swps-form-group swps-brief-helper-wide">
+							<label for="swps-brief-key-points"><?php esc_html_e( 'Key points or sections to include', 'stratawp-seo' ); ?></label>
+							<textarea id="swps-brief-key-points" data-brief-key="key_points" rows="3" maxlength="<?php echo (int) $gen_brief_field_max; ?>" placeholder="<?php esc_attr_e( 'One per line: updates, backups, security, hosting, support, questions to ask before hiring', 'stratawp-seo' ); ?>" <?php echo ! $has_api_key ? 'disabled' : ''; ?>></textarea>
+						</div>
+						<div class="swps-form-group">
+							<label for="swps-brief-tone"><?php esc_html_e( 'Tone of voice', 'stratawp-seo' ); ?></label>
+							<select id="swps-brief-tone" data-brief-key="tone" <?php echo ! $has_api_key ? 'disabled' : ''; ?>>
+								<option value=""><?php echo esc_html( sprintf( /* translators: %s: the tone configured in settings. */ __( 'Use my default (%s)', 'stratawp-seo' ), $gen_brief_tones[ $gen_tone ] ?? ucfirst( $gen_tone ) ) ); ?></option>
+								<?php foreach ( $gen_brief_tones as $gen_tone_option ) : ?>
+									<option value="<?php echo esc_attr( $gen_tone_option ); ?>"><?php echo esc_html( $gen_tone_option ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div>
+						<div class="swps-form-group">
+							<label for="swps-brief-cta"><?php esc_html_e( 'Desired call to action', 'stratawp-seo' ); ?></label>
+							<input type="text" id="swps-brief-cta" data-brief-key="cta" maxlength="<?php echo (int) $gen_brief_field_max; ?>" placeholder="<?php esc_attr_e( 'e.g., book a free consultation', 'stratawp-seo' ); ?>" <?php echo ! $has_api_key ? 'disabled' : ''; ?> />
+						</div>
+						<div class="swps-form-group swps-brief-helper-wide">
+							<label for="swps-brief-facts"><?php esc_html_e( 'Facts or business details to use', 'stratawp-seo' ); ?></label>
+							<textarea id="swps-brief-facts" data-brief-key="facts" rows="3" maxlength="<?php echo (int) $gen_brief_field_max; ?>" placeholder="<?php esc_attr_e( 'Business name, location, years in business, real services, real credentials. Only what is true — the AI is told not to invent details.', 'stratawp-seo' ); ?>" <?php echo ! $has_api_key ? 'disabled' : ''; ?>></textarea>
+						</div>
+						<div class="swps-form-group swps-brief-helper-wide">
+							<label for="swps-brief-avoid"><?php esc_html_e( 'Things to avoid', 'stratawp-seo' ); ?></label>
+							<textarea id="swps-brief-avoid" data-brief-key="avoid" rows="2" maxlength="<?php echo (int) $gen_brief_field_max; ?>" placeholder="<?php esc_attr_e( 'e.g., technical jargon, made-up pricing, competitor names', 'stratawp-seo' ); ?>" <?php echo ! $has_api_key ? 'disabled' : ''; ?>></textarea>
+						</div>
+					</div>
+
+					<div class="swps-brief-improve">
+						<button type="button" id="swps-improve-brief-btn" class="button" <?php echo ! $has_api_key ? 'disabled' : ''; ?>>
+							<span class="dashicons dashicons-editor-spellcheck" aria-hidden="true"></span>
+							<?php esc_html_e( 'Improve my brief', 'stratawp-seo' ); ?>
+						</button>
+						<span class="swps-field-help swps-brief-improve-note"><?php esc_html_e( 'Makes one extra AI request (uses API credits). Proposes a clearer version of your brief for you to review — it never changes your text on its own and does not write the article.', 'stratawp-seo' ); ?></span>
+					</div>
+
+					<div id="swps-brief-proposal" class="swps-brief-proposal" hidden>
+						<h3 class="swps-brief-proposal-title"><?php esc_html_e( 'Proposed brief', 'stratawp-seo' ); ?></h3>
+						<p class="swps-field-help"><?php esc_html_e( 'Review the suggestion below. Nothing changes until you click "Use this version".', 'stratawp-seo' ); ?></p>
+						<textarea id="swps-brief-proposal-text" class="swps-brief-textarea" rows="8" readonly aria-label="<?php esc_attr_e( 'Proposed brief', 'stratawp-seo' ); ?>"></textarea>
+						<ul id="swps-brief-proposal-notes" class="swps-brief-proposal-notes"></ul>
+						<div class="swps-brief-proposal-actions">
+							<button type="button" id="swps-brief-accept" class="button button-primary"><?php esc_html_e( 'Use this version', 'stratawp-seo' ); ?></button>
+							<button type="button" id="swps-brief-reject" class="button"><?php esc_html_e( 'Keep my original', 'stratawp-seo' ); ?></button>
+						</div>
+					</div>
+				</div>
+			</details>
+
 			<div class="swps-form-group">
-				<label for="swps-topic"><?php esc_html_e( 'Topic (optional)', 'stratawp-seo' ); ?></label>
+				<label for="swps-topic"><?php esc_html_e( 'Title or topic (optional)', 'stratawp-seo' ); ?></label>
 				<input
 					type="text"
 					id="swps-topic"
 					class="regular-text"
-					placeholder="<?php esc_attr_e( 'e.g., How to Choose the Right Kitchen Countertop — or leave blank for AI suggestion', 'stratawp-seo' ); ?>"
+					placeholder="<?php esc_attr_e( 'e.g., How to Choose the Right Kitchen Countertop — or leave blank and the AI will pick one from your brief or your site\'s gaps', 'stratawp-seo' ); ?>"
 					<?php echo ! $has_api_key ? 'disabled' : ''; ?>
 				/>
 			</div>
@@ -178,6 +268,7 @@ $gen_settings_url  = admin_url( 'admin.php?page=swps-settings' );
 					type="button"
 					id="swps-bulk-btn"
 					class="button button-secondary"
+					title="<?php esc_attr_e( 'Generates several posts on AI-chosen topics. Bulk runs do not use the brief above — each post gets its own topic.', 'stratawp-seo' ); ?>"
 					<?php echo ! $has_api_key ? 'disabled' : ''; ?>
 				>
 					<span class="dashicons dashicons-controls-repeat" style="margin-top: 4px;"></span>

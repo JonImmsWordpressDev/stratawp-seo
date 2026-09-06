@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.29.0
+Stable tag: 4.30.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,12 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.30.0 =
+* New: Generate Content now takes a custom content brief. A prominent "What would you like to write about?" field lets you describe the topic, audience, points to include, tone, business facts, things to avoid and the call to action in your own words, and the generator follows it for the subject, angle, sections, examples, tone and CTA while keeping the existing SEO structure (heading hierarchy, focus keyword placement, internal/external links, meta description, FAQ/TOC/takeaways settings and the strict JSON contract) in charge. Leave it blank and generation works exactly as before.
+* New: an expandable "Help me write my brief" section with optional Target audience, Content goal, Key points, Tone of voice (reusing the settings tone list), Facts or business details, Things to avoid and Desired call to action fields, plus an "Improve my brief" action that makes one extra AI request, proposes a clearer version for review and only replaces your text when you click "Use this version".
+* New: the REST generate endpoint accepts the same brief and guidance fields.
+* Security: briefs are nonce- and capability-checked, stripped of HTML and control characters, and capped server-side (4,000 characters for the brief, 1,000 per guidance field); the prompt states that the response format and SEO rules take precedence over anything in the brief and that no facts, statistics, testimonials, pricing or URLs may be invented.
 
 = 4.29.0 =
 * New: personal-brand sites (Site Represents: Person) can now describe the person. Four new Schema settings — Job Title, Bio, Headshot URL and Areas of Expertise — populate jobTitle, description, image and knowsAbout on the #person entity. When Local SEO is enabled the person also gets email, a city/region/country address (never the street or postal code) and a worksFor link to the LocalBusiness node, so the whole graph resolves to one unambiguous human. Before this the Person entity carried only a name, URL and social links, which is not enough for search engines or AI assistants to tell the site owner apart from other people with the same name.
