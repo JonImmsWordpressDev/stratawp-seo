@@ -78,6 +78,7 @@ It's designed to **replace** Yoast/RankMath/AIOSEO if you want to, or **coexist*
 - **Site-aware generation** — analyzes existing posts, categories, and internal links before writing
 - **Custom content brief** ★ v4.30 — describe exactly what to write, include, emphasize and avoid; an optional "Help me write my brief" helper (audience, goal, key points, tone, facts, things to avoid, CTA) and an "Improve my brief" review step, all applied within the existing SEO structure
 - **Pages, per-run images and source material** ★ v4.31 — generate service, landing, about and location pages with a parent picker; toggle the featured image and set 0-4 in-content images per run; paste URLs and notes as source material the AI grounds facts in and cites; tone selector moved onto the main form
+- **Know before you spend** — a live "What happens when you generate" summary shows the model, where the result lands (post or page, and its status), the word range for the selected template, featured and in-content image choices, tone and language before you click **Generate Post** / **Generate Page**, **Preview** (no save), **Bulk Generate** (posts only) or **Analyze My Site**
 - **8 post templates, 5 page templates**: posts get Auto, Informational, Listicle, How-To Guide, Comparison, Case Study, News Analysis and Tutorial; pages get Auto, Service page, Landing page, About / Team and Location / area page
 - **Voice profiles** — reusable writing personas (tone, formality 1-10, sentence length, vocabulary, person, avoid/preferred phrases, sample text)
 - **FAQ, Key Takeaways, TOC** — generated with `FAQPage` / `ItemList` schema and an auto-linked table of contents
@@ -314,7 +315,7 @@ The main AI content generator. It writes blog posts or pages ★ v4.31.
    Anything you fill in is added to the brief.
 4. Optionally click **Improve my brief** — one extra AI request rewrites the brief for clarity, keeps your intent and facts, never invents details (it inserts `[placeholders]` instead), and shows the proposal for review. Nothing changes until you click **Use this version**; it never writes the article.
 5. Optionally paste **Source material (optional)** ★ v4.31: up to 5 URLs and/or your own notes. See [Source material](#source-material) below for the fetch rules and limits.
-6. Optionally enter a **title or topic**. With a brief, leaving it blank lets the AI derive the title from the brief.
+6. Optionally fill in **Title or topic (optional)**. With a brief, leaving it blank lets the AI derive the title from the brief.
 7. Pick a **Template**, a **Tone of voice**, and either a **Parent page** or a **Bulk Count**:
    - **Template**: 8 options for posts, 5 for pages. The list swaps automatically with the content type. See [Pages vs posts](#pages-vs-posts).
    - **Tone of voice** ★ v4.31: sits next to Template now, not inside the brief helper. Blank keeps your Settings default.
