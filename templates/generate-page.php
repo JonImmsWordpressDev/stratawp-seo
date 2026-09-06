@@ -22,7 +22,6 @@ $gen_status_labels = array(
 $gen_status_label  = $gen_status_labels[ $gen_status ] ?? ucfirst( $gen_status );
 $gen_min_words     = (int) get_option( 'swps_word_count_min', 1200 );
 $gen_max_words     = (int) get_option( 'swps_word_count_max', 2000 );
-$gen_images_on     = (bool) get_option( 'swps_featured_images', false );
 $gen_tone          = (string) get_option( 'swps_tone', 'professional' );
 $gen_style         = trim( (string) get_option( 'swps_writing_style', '' ) );
 // A custom writing style can be a long paragraph; show only a short preview so
@@ -38,6 +37,24 @@ $gen_brief_max         = SWPS_Content_Brief::MAX_BRIEF_LENGTH;
 $gen_brief_field_max   = SWPS_Content_Brief::MAX_FIELD_LENGTH;
 $gen_brief_tones       = SWPS_Settings::get_tone_options();
 $gen_brief_placeholder = __( 'Write a guide for small business owners in Omaha about choosing a WordPress maintenance provider. Include updates, backups, security, hosting, and support. Explain what questions to ask before hiring someone. Use a friendly, practical tone and finish with a consultation CTA. Avoid technical jargon and made-up pricing.', 'stratawp-seo' );
+
+// Content type, page templates, per-run images and source material.
+$gen_page_templates   = SWPS_Templates::get_options( SWPS_Templates::TYPE_PAGE );
+$gen_image_defaults   = SWPS_Image_Plan::defaults_from_settings();
+$gen_image_provider   = SWPS_Provider_Factory::create_image_provider();
+$gen_images_available = ! $gen_image_provider->requires_api_key() || '' !== (string) $gen_image_provider->get_api_key();
+$gen_sources_max      = SWPS_Source_Material::MAX_TEXT;
+$gen_parent_dropdown  = wp_dropdown_pages(
+	array(
+		'name'              => 'swps_parent',
+		'id'                => 'swps-parent',
+		'show_option_none'  => __( 'None (top level)', 'stratawp-seo' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- passed to wp_dropdown_pages(), escaped internally by core.
+		'option_none_value' => '0',
+		'post_status'       => array( 'publish', 'draft', 'pending', 'private' ),
+		'sort_column'       => 'menu_order, post_title',
+		'echo'              => 0,
+	)
+);
 ?>
 <div class="wrap swps-generate-wrap">
 	<?php
@@ -67,6 +84,21 @@ $gen_brief_placeholder = __( 'Write a guide for small business owners in Omaha a
 			<h2><?php esc_html_e( 'Generate a New Post', 'stratawp-seo' ); ?></h2>
 			<p class="swps-card-desc"><?php esc_html_e( 'Create an SEO-optimized blog post. Enter a specific topic or let the AI choose one based on your site\'s content gaps.', 'stratawp-seo' ); ?></p>
 
+			<?php /* Content type: post (default) or page. Drives template list, parent picker, bulk visibility and labels. */ ?>
+			<fieldset id="swps-content-type" class="swps-segmented" <?php echo ! $has_api_key ? 'disabled' : ''; ?>>
+				<legend class="swps-segmented-legend"><?php esc_html_e( 'What are you creating?', 'stratawp-seo' ); ?></legend>
+				<label class="swps-segmented-option">
+					<input type="radio" name="swps_content_type" value="post" checked />
+					<span class="dashicons dashicons-admin-post" aria-hidden="true"></span>
+					<span><?php esc_html_e( 'Blog post', 'stratawp-seo' ); ?></span>
+				</label>
+				<label class="swps-segmented-option">
+					<input type="radio" name="swps_content_type" value="page" />
+					<span class="dashicons dashicons-admin-page" aria-hidden="true"></span>
+					<span><?php esc_html_e( 'Page', 'stratawp-seo' ); ?></span>
+				</label>
+			</fieldset>
+
 			<?php /* Custom content brief — optional; a blank brief keeps the original topic-only flow. */ ?>
 			<div class="swps-form-group swps-brief-group">
 				<label for="swps-brief"><?php esc_html_e( 'What would you like to write about?', 'stratawp-seo' ); ?></label>
@@ -83,6 +115,25 @@ $gen_brief_placeholder = __( 'Write a guide for small business owners in Omaha a
 				<div class="swps-brief-meta">
 					<span id="swps-brief-count" class="swps-brief-count" aria-live="polite"></span>
 					<span class="swps-brief-optional"><?php esc_html_e( 'Optional — leave blank to let the AI pick a topic from your site\'s content gaps.', 'stratawp-seo' ); ?></span>
+				</div>
+			</div>
+
+			<?php /* Source material — optional URLs and/or notes the AI grounds facts in and cites. */ ?>
+			<div class="swps-form-group swps-sources-group">
+				<label for="swps-sources"><?php esc_html_e( 'Source material (optional)', 'stratawp-seo' ); ?></label>
+				<p id="swps-sources-help" class="swps-field-help"><?php esc_html_e( 'Paste up to 5 URLs (one per line) and/or your own notes. The AI bases its facts on this material and cites the URLs as its external links.', 'stratawp-seo' ); ?></p>
+				<textarea
+					id="swps-sources"
+					class="swps-brief-textarea swps-sources-textarea"
+					rows="4"
+					maxlength="<?php echo (int) $gen_sources_max; ?>"
+					aria-describedby="swps-sources-help swps-sources-count"
+					placeholder="<?php esc_attr_e( "https://example.com/pricing\nhttps://example.com/about\nNotes: we have served Omaha since 2015; 24-hour response; no long-term contracts.", 'stratawp-seo' ); ?>"
+					<?php echo ! $has_api_key ? 'disabled' : ''; ?>
+				></textarea>
+				<div class="swps-brief-meta">
+					<span id="swps-sources-count" class="swps-brief-count" aria-live="polite"></span>
+					<span class="swps-brief-optional"><?php esc_html_e( 'Fetching happens when you generate or preview; failures are reported, never fatal.', 'stratawp-seo' ); ?></span>
 				</div>
 			</div>
 
@@ -106,15 +157,6 @@ $gen_brief_placeholder = __( 'Write a guide for small business owners in Omaha a
 						<div class="swps-form-group swps-brief-helper-wide">
 							<label for="swps-brief-key-points"><?php esc_html_e( 'Key points or sections to include', 'stratawp-seo' ); ?></label>
 							<textarea id="swps-brief-key-points" data-brief-key="key_points" rows="3" maxlength="<?php echo (int) $gen_brief_field_max; ?>" placeholder="<?php esc_attr_e( 'One per line: updates, backups, security, hosting, support, questions to ask before hiring', 'stratawp-seo' ); ?>" <?php echo ! $has_api_key ? 'disabled' : ''; ?>></textarea>
-						</div>
-						<div class="swps-form-group">
-							<label for="swps-brief-tone"><?php esc_html_e( 'Tone of voice', 'stratawp-seo' ); ?></label>
-							<select id="swps-brief-tone" data-brief-key="tone" <?php echo ! $has_api_key ? 'disabled' : ''; ?>>
-								<option value=""><?php echo esc_html( sprintf( /* translators: %s: the tone configured in settings. */ __( 'Use my default (%s)', 'stratawp-seo' ), $gen_brief_tones[ $gen_tone ] ?? ucfirst( $gen_tone ) ) ); ?></option>
-								<?php foreach ( $gen_brief_tones as $gen_tone_option ) : ?>
-									<option value="<?php echo esc_attr( $gen_tone_option ); ?>"><?php echo esc_html( $gen_tone_option ); ?></option>
-								<?php endforeach; ?>
-							</select>
 						</div>
 						<div class="swps-form-group">
 							<label for="swps-brief-cta"><?php esc_html_e( 'Desired call to action', 'stratawp-seo' ); ?></label>
@@ -173,9 +215,51 @@ $gen_brief_placeholder = __( 'Write a guide for small business owners in Omaha a
 				</div>
 
 				<div class="swps-form-group swps-form-group-inline">
+					<label for="swps-tone"><?php esc_html_e( 'Tone of voice', 'stratawp-seo' ); ?></label>
+					<select id="swps-tone" data-brief-key="tone" <?php echo ! $has_api_key ? 'disabled' : ''; ?>>
+						<option value=""><?php echo esc_html( sprintf( /* translators: %s: the tone configured in settings. */ __( 'Use my default (%s)', 'stratawp-seo' ), $gen_brief_tones[ $gen_tone ] ?? ucfirst( $gen_tone ) ) ); ?></option>
+						<?php foreach ( $gen_brief_tones as $gen_tone_option ) : ?>
+							<option value="<?php echo esc_attr( $gen_tone_option ); ?>"><?php echo esc_html( $gen_tone_option ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</div>
+
+				<div id="swps-parent-group" class="swps-form-group swps-form-group-inline" hidden>
+					<label for="swps-parent"><?php esc_html_e( 'Parent page', 'stratawp-seo' ); ?></label>
+					<?php echo '' !== $gen_parent_dropdown ? $gen_parent_dropdown : '<select id="swps-parent" name="swps_parent"><option value="0">' . esc_html__( 'None (top level)', 'stratawp-seo' ) . '</option></select>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_dropdown_pages() output is escaped by core; fallback markup is hardcoded and escaped. ?>
+				</div>
+
+				<div id="swps-bulk-group" class="swps-form-group swps-form-group-inline">
 					<label for="swps-bulk-count"><?php esc_html_e( 'Bulk Count', 'stratawp-seo' ); ?></label>
 					<input type="number" id="swps-bulk-count" value="1" min="1" max="5" class="small-text" <?php echo ! $has_api_key ? 'disabled' : ''; ?> />
 				</div>
+			</div>
+
+			<?php /* Per-run images. Defaults mirror Settings; changing them affects this run only. */ ?>
+			<div class="swps-form-row swps-images-row">
+				<div class="swps-form-group swps-form-group-inline">
+					<label class="swps-checkbox-label" for="swps-featured-image">
+						<input type="checkbox" id="swps-featured-image" value="1" <?php checked( $gen_image_defaults['featured'] ); ?> <?php echo ( ! $has_api_key || ! $gen_images_available ) ? 'disabled' : ''; ?> />
+						<?php esc_html_e( 'Featured image', 'stratawp-seo' ); ?>
+					</label>
+				</div>
+				<div class="swps-form-group swps-form-group-inline">
+					<label for="swps-content-images"><?php esc_html_e( 'In-content images', 'stratawp-seo' ); ?></label>
+					<input type="number" id="swps-content-images" class="small-text" min="0" max="<?php echo (int) SWPS_Image_Plan::MAX_CONTENT_IMAGES; ?>" value="<?php echo (int) $gen_image_defaults['content_count']; ?>" <?php echo ( ! $has_api_key || ! $gen_images_available ) ? 'disabled' : ''; ?> />
+				</div>
+				<p class="swps-field-help swps-images-note">
+					<?php if ( $gen_images_available ) : ?>
+						<?php esc_html_e( 'Applies to this run only. Defaults come from Settings.', 'stratawp-seo' ); ?>
+					<?php else : ?>
+						<?php
+						printf(
+							/* translators: %s: settings page URL. */
+							wp_kses( __( 'Add an image provider key in <a href="%s">Settings</a> to use images.', 'stratawp-seo' ), array( 'a' => array( 'href' => array() ) ) ),
+							esc_url( $gen_settings_url )
+						);
+						?>
+					<?php endif; ?>
+				</p>
 			</div>
 
 			<!-- Rate limit indicator -->
@@ -194,7 +278,7 @@ $gen_brief_placeholder = __( 'Write a guide for small business owners in Omaha a
 					</tr>
 					<tr>
 						<td><?php esc_html_e( 'After writing:', 'stratawp-seo' ); ?></td>
-						<td><?php echo esc_html( $gen_status_label ); ?></td>
+						<td id="swps-summary-lands" data-post="<?php echo esc_attr( $gen_status_label ); ?>" data-page="<?php echo esc_attr( str_replace( __( 'draft', 'stratawp-seo' ), __( 'draft page', 'stratawp-seo' ), $gen_status_label ) ); ?>"><?php echo esc_html( $gen_status_label ); ?></td>
 					</tr>
 					<tr>
 						<td><?php esc_html_e( 'Length:', 'stratawp-seo' ); ?></td>
@@ -213,11 +297,15 @@ $gen_brief_placeholder = __( 'Write a guide for small business owners in Omaha a
 					</tr>
 					<tr>
 						<td><?php esc_html_e( 'Featured image:', 'stratawp-seo' ); ?></td>
-						<td><?php echo $gen_images_on ? esc_html__( 'Added automatically', 'stratawp-seo' ) : esc_html__( 'Not added', 'stratawp-seo' ); ?></td>
+						<td id="swps-summary-featured"><?php echo $gen_image_defaults['featured'] ? esc_html__( 'Added automatically', 'stratawp-seo' ) : esc_html__( 'Not added', 'stratawp-seo' ); ?></td>
+					</tr>
+					<tr>
+						<td><?php esc_html_e( 'In-content images:', 'stratawp-seo' ); ?></td>
+						<td id="swps-summary-content-images"><?php echo (int) $gen_image_defaults['content_count']; ?></td>
 					</tr>
 					<tr>
 						<td><?php esc_html_e( 'Tone / style:', 'stratawp-seo' ); ?></td>
-						<td><?php echo esc_html( $gen_tone_label ); ?></td>
+						<td id="swps-summary-tone" data-default="<?php echo esc_attr( $gen_tone_label ); ?>"><?php echo esc_html( $gen_tone_label ); ?></td>
 					</tr>
 					<tr>
 						<td><?php esc_html_e( 'Language:', 'stratawp-seo' ); ?></td>
@@ -250,7 +338,7 @@ $gen_brief_placeholder = __( 'Write a guide for small business owners in Omaha a
 					<?php echo ! $has_api_key ? 'disabled' : ''; ?>
 				>
 					<span class="dashicons dashicons-edit-large" style="margin-top: 4px;"></span>
-					<?php esc_html_e( 'Generate Post', 'stratawp-seo' ); ?>
+					<span id="swps-generate-btn-label"><?php esc_html_e( 'Generate Post', 'stratawp-seo' ); ?></span>
 				</button>
 
 				<button
@@ -348,9 +436,10 @@ $gen_brief_placeholder = __( 'Write a guide for small business owners in Omaha a
 			<h2><?php esc_html_e( 'Site Overview', 'stratawp-seo' ); ?></h2>
 			<?php
 			$post_count = wp_count_posts( 'post' );
+			$page_count = wp_count_posts( 'page' );
 			$generated  = new WP_Query(
 				array(
-					'post_type'      => 'post',
+					'post_type'      => array( 'post', 'page' ),
 					'post_status'    => 'any',
 					'meta_key'       => '_swps_generated',
 					'meta_value'     => '1',
@@ -365,7 +454,11 @@ $gen_brief_placeholder = __( 'Write a guide for small business owners in Omaha a
 					<span class="swps-stat-label"><?php esc_html_e( 'Published Posts', 'stratawp-seo' ); ?></span>
 				</div>
 				<div class="swps-stat">
-					<span class="swps-stat-number"><?php echo esc_html( $post_count->draft ); ?></span>
+					<span class="swps-stat-number"><?php echo esc_html( $page_count->publish ); ?></span>
+					<span class="swps-stat-label"><?php esc_html_e( 'Published Pages', 'stratawp-seo' ); ?></span>
+				</div>
+				<div class="swps-stat">
+					<span class="swps-stat-number"><?php echo esc_html( $post_count->draft + $page_count->draft ); ?></span>
 					<span class="swps-stat-label"><?php esc_html_e( 'Drafts', 'stratawp-seo' ); ?></span>
 				</div>
 				<div class="swps-stat">
@@ -402,7 +495,7 @@ $gen_brief_placeholder = __( 'Write a guide for small business owners in Omaha a
 	<div id="swps-result" class="swps-card swps-card-result" style="display: none;">
 		<h2>
 			<span class="dashicons dashicons-yes-alt" style="color: #00a32a;"></span>
-			<?php esc_html_e( 'Post Generated Successfully!', 'stratawp-seo' ); ?>
+			<span id="swps-result-heading" data-post="<?php esc_attr_e( 'Post Generated Successfully!', 'stratawp-seo' ); ?>" data-page="<?php esc_attr_e( 'Page Generated Successfully!', 'stratawp-seo' ); ?>"><?php esc_html_e( 'Post Generated Successfully!', 'stratawp-seo' ); ?></span>
 		</h2>
 
 		<table class="swps-result-table">
@@ -430,6 +523,10 @@ $gen_brief_placeholder = __( 'Write a guide for small business owners in Omaha a
 				<td><strong><?php esc_html_e( 'Internal Links:', 'stratawp-seo' ); ?></strong></td>
 				<td id="swps-result-links"></td>
 			</tr>
+			<tr id="swps-result-sources-row" style="display: none;">
+				<td><strong><?php esc_html_e( 'Sources:', 'stratawp-seo' ); ?></strong></td>
+				<td><ul id="swps-result-sources" class="swps-result-sources"></ul></td>
+			</tr>
 			<tr id="swps-result-cost-row" style="display: none;">
 				<td><strong><?php esc_html_e( 'Cost:', 'stratawp-seo' ); ?></strong></td>
 				<td id="swps-result-cost"></td>
@@ -442,10 +539,10 @@ $gen_brief_placeholder = __( 'Write a guide for small business owners in Omaha a
 
 		<div class="swps-result-actions">
 			<a id="swps-result-edit" href="#" class="button button-primary" target="_blank">
-				<?php esc_html_e( 'Edit Post', 'stratawp-seo' ); ?>
+				<span data-post="<?php esc_attr_e( 'Edit Post', 'stratawp-seo' ); ?>" data-page="<?php esc_attr_e( 'Edit Page', 'stratawp-seo' ); ?>"><?php esc_html_e( 'Edit Post', 'stratawp-seo' ); ?></span>
 			</a>
 			<a id="swps-result-preview" href="#" class="button" target="_blank">
-				<?php esc_html_e( 'Preview Post', 'stratawp-seo' ); ?>
+				<span data-post="<?php esc_attr_e( 'Preview Post', 'stratawp-seo' ); ?>" data-page="<?php esc_attr_e( 'Preview Page', 'stratawp-seo' ); ?>"><?php esc_html_e( 'Preview Post', 'stratawp-seo' ); ?></span>
 			</a>
 			<button type="button" id="swps-generate-another" class="button">
 				<?php esc_html_e( 'Generate Another', 'stratawp-seo' ); ?>

@@ -712,6 +712,8 @@ final class StrataWP_SEO {
 				'generate_url'         => admin_url( 'admin.php?page=swps-generate' ),
 				'brief_max_length'     => SWPS_Content_Brief::MAX_BRIEF_LENGTH,
 				'brief_field_max'      => SWPS_Content_Brief::MAX_FIELD_LENGTH,
+				'page_templates'       => SWPS_Templates::get_options( SWPS_Templates::TYPE_PAGE ),
+				'sources_max_length'   => SWPS_Source_Material::MAX_TEXT,
 			)
 		);
 
