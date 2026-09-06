@@ -477,15 +477,7 @@ class SWPS_Settings {
 			'select',
 			'swps_writing_section',
 			array(
-				'options' => array(
-					'professional'   => __( 'Professional', 'stratawp-seo' ),
-					'conversational' => __( 'Conversational', 'stratawp-seo' ),
-					'friendly'       => __( 'Friendly & Approachable', 'stratawp-seo' ),
-					'authoritative'  => __( 'Authoritative & Expert', 'stratawp-seo' ),
-					'casual'         => __( 'Casual & Relaxed', 'stratawp-seo' ),
-					'formal'         => __( 'Formal & Academic', 'stratawp-seo' ),
-					'witty'          => __( 'Witty & Entertaining', 'stratawp-seo' ),
-				),
+				'options' => self::get_tone_options(),
 			)
 		);
 
@@ -1349,6 +1341,24 @@ class SWPS_Settings {
 	/**
 	 * Helper to register a setting field.
 	 */
+	/**
+	 * Tone of voice choices shared by the settings page and the Generate
+	 * Content brief helper.
+	 *
+	 * @return array<string, string> slug => label.
+	 */
+	public static function get_tone_options(): array {
+		return array(
+			'professional'   => __( 'Professional', 'stratawp-seo' ),
+			'conversational' => __( 'Conversational', 'stratawp-seo' ),
+			'friendly'       => __( 'Friendly & Approachable', 'stratawp-seo' ),
+			'authoritative'  => __( 'Authoritative & Expert', 'stratawp-seo' ),
+			'casual'         => __( 'Casual & Relaxed', 'stratawp-seo' ),
+			'formal'         => __( 'Formal & Academic', 'stratawp-seo' ),
+			'witty'          => __( 'Witty & Entertaining', 'stratawp-seo' ),
+		);
+	}
+
 	private function add_field( string $key, string $title, string $type, string $section, array $args = array() ): void {
 		$option_name = "swps_{$key}";
 

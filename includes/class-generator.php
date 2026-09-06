@@ -38,9 +38,10 @@ class SWPS_Generator {
 	 *
 	 * @param string $topic    Optional specific topic. If empty, AI picks one.
 	 * @param string $template Content template slug.
+	 * @param array  $brief    Optional normalized content brief (see SWPS_Content_Brief::from_request()).
 	 * @return array|WP_Error Post data on success, error on failure.
 	 */
-	public function generate_post( string $topic = '', string $template = 'auto' ): array|WP_Error {
+	public function generate_post( string $topic = '', string $template = 'auto', array $brief = array() ): array|WP_Error {
 		// Image generation (especially Gemini) can take several minutes per post.
 		// Lift PHP execution caps so cron/background jobs don't die mid-download,
 		// leaving posts with no images and an empty debug.log.
@@ -74,7 +75,7 @@ class SWPS_Generator {
 		}
 
 		// Build prompts and call AI.
-		$ai_result = $this->call_ai( $topic, $template );
+		$ai_result = $this->call_ai( $topic, $template, $brief );
 
 		if ( is_wp_error( $ai_result ) ) {
 			$this->log( 'Generation failed: ' . $ai_result->get_error_message() );
@@ -133,9 +134,10 @@ class SWPS_Generator {
 	 *
 	 * @param string $topic    Optional topic.
 	 * @param string $template Content template slug.
+	 * @param array  $brief    Optional normalized content brief (see SWPS_Content_Brief::from_request()).
 	 * @return array|WP_Error AI result data or error.
 	 */
-	public function preview_content( string $topic = '', string $template = 'auto' ): array|WP_Error {
+	public function preview_content( string $topic = '', string $template = 'auto', array $brief = array() ): array|WP_Error {
 		// Check rate limit.
 		if ( ! $this->rate_limiter->can_generate() ) {
 			$remaining = $this->rate_limiter->get_remaining_seconds();
@@ -145,7 +147,7 @@ class SWPS_Generator {
 			);
 		}
 
-		$ai_result = $this->call_ai( $topic, $template );
+		$ai_result = $this->call_ai( $topic, $template, $brief );
 
 		if ( is_wp_error( $ai_result ) ) {
 			return $ai_result;
@@ -158,13 +160,73 @@ class SWPS_Generator {
 	}
 
 	/**
+	 * Rewrite a content brief for clarity ("Improve my brief").
+	 *
+	 * Makes one small AI request and returns the proposed rewrite for the user
+	 * to review. It never generates the article and never replaces the brief
+	 * itself — the caller decides whether to accept the proposal.
+	 *
+	 * @param array $brief Normalized content brief (see SWPS_Content_Brief::from_request()).
+	 * @return array|WP_Error { improved_brief: string, notes: string[] } or error.
+	 */
+	public function improve_brief( array $brief ): array|WP_Error {
+		if ( SWPS_Content_Brief::is_empty( $brief ) ) {
+			return new WP_Error( 'swps_empty_brief', __( 'Write a brief first, then ask for an improved version.', 'stratawp-seo' ) );
+		}
+
+		$budget_check = SWPS_Autopilot_Guardian::check_budget();
+		if ( is_wp_error( $budget_check ) ) {
+			return $budget_check;
+		}
+
+		$result = $this->api->chat_json(
+			SWPS_Content_Brief::improve_system_prompt(),
+			SWPS_Content_Brief::improve_user_prompt( $brief ),
+			2048
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$improved = SWPS_Content_Brief::sanitize( $result['improved_brief'] ?? '', SWPS_Content_Brief::MAX_BRIEF_LENGTH );
+		if ( '' === $improved ) {
+			return new WP_Error( 'swps_improve_failed', __( 'The AI did not return a usable brief. Please try again.', 'stratawp-seo' ) );
+		}
+
+		$notes = array();
+		foreach ( (array) ( $result['notes'] ?? array() ) as $note ) {
+			if ( is_scalar( $note ) ) {
+				$note = SWPS_Content_Brief::sanitize( $note, 300 );
+				if ( '' !== $note ) {
+					$notes[] = $note;
+				}
+			}
+		}
+
+		if ( ! empty( $result['_usage'] ) ) {
+			$this->cost_tracker->track(
+				(string) get_option( 'swps_model', '' ),
+				(int) ( $result['_usage']['input_tokens'] ?? 0 ),
+				(int) ( $result['_usage']['output_tokens'] ?? 0 )
+			);
+		}
+
+		return array(
+			'improved_brief' => $improved,
+			'notes'          => array_slice( $notes, 0, 10 ),
+		);
+	}
+
+	/**
 	 * Call the AI provider with built prompts.
 	 *
 	 * @param string $topic    Topic.
 	 * @param string $template Template slug.
+	 * @param array  $brief    Normalized content brief (may be empty).
 	 * @return array|WP_Error Parsed AI response or error.
 	 */
-	private function call_ai( string $topic, string $template ): array|WP_Error {
+	private function call_ai( string $topic, string $template, array $brief = array() ): array|WP_Error {
 		// Gather site context (limit posts to keep prompt under timeout threshold).
 		$site_context   = $this->analyzer->build_context_for_prompt( 20 );
 		$linkable_posts = $this->analyzer->get_linkable_posts();
@@ -207,7 +269,8 @@ class SWPS_Generator {
 			$include_faq,
 			$include_toc,
 			$include_takeaways,
-			$takeaways_count
+			$takeaways_count,
+			$brief
 		);
 
 		// Apply template modifiers.
@@ -319,12 +382,19 @@ PROMPT;
 		bool $include_faq,
 		bool $include_toc,
 		bool $include_takeaways = false,
-		int $takeaways_count = 5
+		int $takeaways_count = 5,
+		array $brief = array()
 	): string {
 		$prompt = $site_context . "\n" . $links_context . "\n";
 
+		// The brief block is empty when no brief was supplied, which keeps the
+		// prompt identical to the pre-brief behaviour.
+		$brief_block = SWPS_Content_Brief::to_prompt_block( $brief );
+
 		if ( ! empty( $topic ) ) {
 			$prompt .= "TOPIC: Write a blog post about: {$topic}\n\n";
+		} elseif ( '' !== $brief_block ) {
+			$prompt .= "TOPIC: Derive the topic and angle from the CONTENT BRIEF below. Choose a title with good search potential that matches the brief and the site's niche ({$niche}).\n\n";
 		} else {
 			$prompt .= "TOPIC: Based on the site's niche ({$niche}) and existing content above, choose a topic that:\n";
 			$prompt .= "- Fills a content gap (something the site hasn't covered yet)\n";
@@ -332,6 +402,10 @@ PROMPT;
 			$prompt .= "- Has good search potential\n";
 			$prompt .= "- Can naturally link to existing content\n\n";
 		}
+
+		// Placed before the keyword rules and REQUIREMENTS so the brief shapes
+		// the content while those SEO rules keep the final say.
+		$prompt .= $brief_block;
 
 		if ( ! empty( $keywords ) ) {
 			$prompt .= "TARGET KEYWORDS: {$keywords}\n";

@@ -29,15 +29,56 @@ class SWPS_REST_API {
 				'callback'            => array( $this, 'generate_post' ),
 				'permission_callback' => array( $this, 'check_permissions' ),
 				'args'                => array(
-					'topic'    => array(
+					'topic'      => array(
 						'type'              => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
 						'default'           => '',
 					),
-					'template' => array(
+					'template'   => array(
 						'type'              => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
 						'default'           => 'auto',
+					),
+					'brief'      => array(
+						'type'              => 'string',
+						'description'       => __( 'Optional content brief: what to write about, include, emphasize or avoid. Plain text, multiline allowed.', 'stratawp-seo' ),
+						'sanitize_callback' => array( $this, 'sanitize_brief_text' ),
+						'default'           => '',
+					),
+					'audience'   => array(
+						'type'              => 'string',
+						'sanitize_callback' => array( $this, 'sanitize_brief_field' ),
+						'default'           => '',
+					),
+					'goal'       => array(
+						'type'              => 'string',
+						'sanitize_callback' => array( $this, 'sanitize_brief_field' ),
+						'default'           => '',
+					),
+					'key_points' => array(
+						'type'              => 'string',
+						'sanitize_callback' => array( $this, 'sanitize_brief_field' ),
+						'default'           => '',
+					),
+					'tone'       => array(
+						'type'              => 'string',
+						'sanitize_callback' => array( $this, 'sanitize_brief_field' ),
+						'default'           => '',
+					),
+					'facts'      => array(
+						'type'              => 'string',
+						'sanitize_callback' => array( $this, 'sanitize_brief_field' ),
+						'default'           => '',
+					),
+					'avoid'      => array(
+						'type'              => 'string',
+						'sanitize_callback' => array( $this, 'sanitize_brief_field' ),
+						'default'           => '',
+					),
+					'cta'        => array(
+						'type'              => 'string',
+						'sanitize_callback' => array( $this, 'sanitize_brief_field' ),
+						'default'           => '',
 					),
 				),
 			)
@@ -540,8 +581,14 @@ class SWPS_REST_API {
 		$topic    = $request->get_param( 'topic' );
 		$template = $request->get_param( 'template' );
 
+		$raw_brief = array( 'brief' => $request->get_param( 'brief' ) );
+		foreach ( SWPS_Content_Brief::guidance_keys() as $key ) {
+			$raw_brief[ $key ] = $request->get_param( $key );
+		}
+		$brief = SWPS_Content_Brief::from_request( $raw_brief );
+
 		$plugin = stratawp_seo();
-		$result = $plugin->generator->generate_post( $topic, $template );
+		$result = $plugin->generator->generate_post( $topic, $template, $brief );
 
 		if ( is_wp_error( $result ) ) {
 			return new WP_REST_Response(
@@ -560,6 +607,26 @@ class SWPS_REST_API {
 			),
 			201
 		);
+	}
+
+	/**
+	 * REST sanitize callback for the free-form brief.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	public function sanitize_brief_text( $value ): string {
+		return SWPS_Content_Brief::sanitize( $value, SWPS_Content_Brief::MAX_BRIEF_LENGTH );
+	}
+
+	/**
+	 * REST sanitize callback for one optional brief guidance field.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	public function sanitize_brief_field( $value ): string {
+		return SWPS_Content_Brief::sanitize( $value, SWPS_Content_Brief::MAX_FIELD_LENGTH );
 	}
 
 	/**
