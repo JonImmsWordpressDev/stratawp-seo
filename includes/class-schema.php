@@ -338,6 +338,33 @@ class SWPS_Schema {
 			}
 		}
 
+		// Personal-brand sites: describe the human so the entity is unambiguous.
+		// worksFor only points at #localbusiness when that node will actually be
+		// emitted (same gate as add_local_business_node), so the graph never
+		// carries a dangling reference.
+		if ( 'Person' === $entity_type ) {
+			$local          = (array) get_option( 'swps_local_seo', array() );
+			$emits_business = class_exists( 'SWPS_Local_SEO' )
+				&& ! empty( $local['enabled'] )
+				&& '' !== trim( (string) ( $local['name'] ?? '' ) )
+				&& '' !== trim( (string) ( $local['locality'] ?? '' ) )
+				&& (bool) apply_filters( 'swps_local_seo_emit', true );
+
+			$node = array_merge(
+				$node,
+				SWPS_Schema_Graph::person_details(
+					array(
+						'job_title'   => (string) get_option( 'swps_schema_person_job_title', '' ),
+						'description' => (string) get_option( 'swps_schema_person_description', '' ),
+						'image'       => (string) get_option( 'swps_schema_person_image', '' ),
+						'knows_about' => (string) get_option( 'swps_schema_person_knows_about', '' ),
+					),
+					$local,
+					$emits_business ? SWPS_Schema_Graph::local_business_id() : ''
+				)
+			);
+		}
+
 		// Legacy filter shim — receives standalone-shaped copy with @context; see class-hooks.php.
 		$node = SWPS_Schema_Graph::normalize_node(
 			SWPS_Hooks::filter_schema_organization( $node ),
