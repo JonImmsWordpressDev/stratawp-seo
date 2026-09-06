@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.30.0
+ * Version: 4.31.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.30.0' );
+define( 'SWPS_VERSION', '4.31.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -210,6 +210,8 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-migration.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-settings.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-analyzer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-content-brief.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-image-plan.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-source-material.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-generator.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-cron.php';
 
@@ -710,6 +712,14 @@ final class StrataWP_SEO {
 				'generate_url'         => admin_url( 'admin.php?page=swps-generate' ),
 				'brief_max_length'     => SWPS_Content_Brief::MAX_BRIEF_LENGTH,
 				'brief_field_max'      => SWPS_Content_Brief::MAX_FIELD_LENGTH,
+				'page_templates'       => SWPS_Templates::get_options( SWPS_Templates::TYPE_PAGE ),
+				'sources_max_length'   => SWPS_Source_Material::MAX_TEXT,
+				'page_template_ranges' => array_map(
+					static function ( array $t ): array {
+						return array( (int) ( $t['min_words'] ?? 0 ), (int) ( $t['max_words'] ?? 0 ) );
+					},
+					SWPS_Templates::get_templates( SWPS_Templates::TYPE_PAGE )
+				),
 			)
 		);
 
@@ -802,7 +812,13 @@ final class StrataWP_SEO {
 		$template = sanitize_text_field( $_POST['template'] ?? 'auto' );
 		$brief    = $this->read_brief_from_request();
 
-		$result = $this->generator->generate_post( $topic, $template, $brief );
+		$options = $this->read_generate_options_from_request();
+
+		if ( SWPS_Templates::TYPE_PAGE === $options['content_type'] && ! current_user_can( 'edit_pages' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to create pages.', 'stratawp-seo' ) ) );
+		}
+
+		$result = $this->generator->generate_post( $topic, $template, $brief, $options );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
@@ -869,7 +885,13 @@ final class StrataWP_SEO {
 		$template = sanitize_text_field( $_POST['template'] ?? 'auto' );
 		$brief    = $this->read_brief_from_request();
 
-		$result = $this->generator->preview_content( $topic, $template, $brief );
+		$options = $this->read_generate_options_from_request();
+
+		if ( SWPS_Templates::TYPE_PAGE === $options['content_type'] && ! current_user_can( 'edit_pages' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to create pages.', 'stratawp-seo' ) ) );
+		}
+
+		$result = $this->generator->preview_content( $topic, $template, $brief, $options );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
@@ -920,6 +942,42 @@ final class StrataWP_SEO {
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		return SWPS_Content_Brief::from_request( $raw );
+	}
+
+	/**
+	 * Read the content type, parent, image plan and source material from the
+	 * current AJAX request into the generator's options array.
+	 *
+	 * Absent keys are left out so the generator reproduces the settings-driven
+	 * behaviour; only what the form actually sent is applied.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function read_generate_options_from_request(): array {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- every caller runs check_ajax_referer() first.
+		$raw_type   = isset( $_POST['content_type'] ) && is_scalar( $_POST['content_type'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['content_type'] ) ) : SWPS_Templates::TYPE_POST;
+		$raw_parent = isset( $_POST['parent_id'] ) && is_scalar( $_POST['parent_id'] ) ? absint( wp_unslash( (string) $_POST['parent_id'] ) ) : 0;
+		$options    = array(
+			'content_type' => SWPS_Templates::normalize_type( $raw_type ),
+			'parent_id'    => $raw_parent,
+		);
+
+		$raw_images = array();
+		foreach ( array( SWPS_Image_Plan::KEY_FEATURED, SWPS_Image_Plan::KEY_CONTENT ) as $key ) {
+			if ( isset( $_POST[ $key ] ) && is_scalar( $_POST[ $key ] ) ) {
+				$raw_images[ $key ] = sanitize_text_field( wp_unslash( (string) $_POST[ $key ] ) );
+			}
+		}
+		if ( SWPS_Image_Plan::has_request_keys( $raw_images ) ) {
+			$options['image_plan'] = SWPS_Image_Plan::from_request( $raw_images, SWPS_Image_Plan::defaults_from_settings() );
+		}
+
+		if ( isset( $_POST[ SWPS_Source_Material::KEY ] ) && is_scalar( $_POST[ SWPS_Source_Material::KEY ] ) ) {
+			$options['sources'] = SWPS_Source_Material::sanitize( wp_unslash( (string) $_POST[ SWPS_Source_Material::KEY ] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitized by SWPS_Source_Material::sanitize().
+		}
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		return $options;
 	}
 
 	/**
@@ -1095,14 +1153,19 @@ final class StrataWP_SEO {
 	 * @param array $post_data The WordPress post data.
 	 */
 	public function schedule_image_jobs( int $post_id, array $ai_result, array $post_data ): void {
-		if ( get_option( 'swps_featured_images', 1 ) ) {
+		// A per-run plan saved by the generator wins; otherwise the global options apply.
+		$plan     = SWPS_Image_Plan::for_post( $post_id );
+		$featured = null !== $plan ? $plan['featured'] : (bool) get_option( 'swps_featured_images', 1 );
+		$content  = null !== $plan ? $plan['content_count'] > 0 : (bool) get_option( 'swps_insert_content_images', 0 );
+
+		if ( $featured ) {
 			$focus = (string) get_post_meta( $post_id, '_swps_focus_keyword', true );
 			$query = '' !== $focus ? $focus : (string) ( $ai_result['title'] ?? '' );
 			$query = SWPS_Hooks::filter_image_query( $query, $post_id );
 			$this->background_processor->schedule_featured_image( $post_id, $query );
 		}
 
-		if ( get_option( 'swps_insert_content_images', 0 ) ) {
+		if ( $content ) {
 			$this->background_processor->schedule_content_image( $post_id );
 		}
 	}

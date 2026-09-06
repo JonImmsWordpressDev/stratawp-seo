@@ -13,6 +13,8 @@
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/../../includes/class-content-brief.php';
+require_once __DIR__ . '/../../includes/class-source-material.php';
+require_once __DIR__ . '/../../includes/class-templates.php';
 require_once __DIR__ . '/../../includes/class-generator.php';
 
 final class GeneratorBriefPromptTest extends TestCase {

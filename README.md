@@ -21,7 +21,7 @@
 
 **AI-powered SEO that knows your WordPress site — and knows how AI search works.** Generate site-aware blog posts, run your technical SEO (sitemaps, redirects, schema `@graph`, audits, a full site crawler), get *cited* by AI answer engines (AEO scoring, llms.txt, AI citation tracking, AI referral analytics), and let the automation layer watch your budget, your decaying posts, and your topic pipeline while you sleep.
 
-[![Version](https://img.shields.io/badge/version-4.20.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.31.0-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -77,14 +77,17 @@ It's designed to **replace** Yoast/RankMath/AIOSEO if you want to, or **coexist*
 - **Multi-provider AI** — Anthropic (Claude), OpenAI (GPT), Google (Gemini), xAI (Grok); model lists are discovered live from each provider's API and refreshed daily, with dynamic labels (Most powerful, Cheapest, Costs most, Best value) and a dismissible new-model alert
 - **Site-aware generation** — analyzes existing posts, categories, and internal links before writing
 - **Custom content brief** ★ v4.30 — describe exactly what to write, include, emphasize and avoid; an optional "Help me write my brief" helper (audience, goal, key points, tone, facts, things to avoid, CTA) and an "Improve my brief" review step, all applied within the existing SEO structure
-- **7 content templates** — Auto, Listicle, How-To Guide, Comparison, Case Study, News Analysis, Tutorial
+- **Pages, per-run images and source material** ★ v4.31 — generate service, landing, about and location pages with a parent picker; toggle the featured image and set 0-4 in-content images per run; paste URLs and notes as source material the AI grounds facts in and cites; tone selector moved onto the main form
+- **Know before you spend** — a live "What happens when you generate" summary shows the model, where the result lands (post or page, and its status), the word range for the selected template, featured and in-content image choices, tone and language before you click **Generate Post** / **Generate Page**, **Preview** (no save), **Bulk Generate** (posts only) or **Analyze My Site**
+- **8 post templates, 5 page templates**: posts get Auto, Informational, Listicle, How-To Guide, Comparison, Case Study, News Analysis and Tutorial; pages get Auto, Service page, Landing page, About / Team and Location / area page
 - **Voice profiles** — reusable writing personas (tone, formality 1-10, sentence length, vocabulary, person, avoid/preferred phrases, sample text)
 - **FAQ, Key Takeaways, TOC** — generated with `FAQPage` / `ItemList` schema and an auto-linked table of contents
 - **Quality gates built in** — duplicate detection, content scoring with an optional draft-hold floor, rate limiting, and per-provider/model token + USD cost tracking (new models auto-priced via family heuristics)
 
 #### Featured & In-Content Images
 - **4 image providers** — Unsplash, Pexels, Pixabay (free stock), Gemini (AI-generated; image model auto-discovered)
-- **Auto featured image** plus **1-4 in-content images** with derived alt text and configurable max width
+- **Auto featured image** plus **0-4 in-content images** with derived alt text and configurable max width
+- **Settings are the defaults** ★ v4.31: Generate Content's Featured image checkbox and In-content images count start from these settings, and can be turned on/off or changed per run without touching Settings. Posts from Bulk Generate, cron and autopilot always follow Settings
 - **Background image jobs** — each image runs as its own background job (Action Scheduler, WP-Cron fallback), so scheduled posts get their images reliably; failures appear in Recent Activity
 
 #### Automated Publishing
@@ -295,18 +298,71 @@ The control panel — split into 7 tabs:
 
 ![Generate Content](screenshots/swps-generate.png)
 
-The main AI content generator.
+The main AI content generator. It writes blog posts or pages ★ v4.31.
 
-1. Describe the post in **What would you like to write about?** ★ v4.30 — your topic, who it's for, what to include, tone, real business facts, anything to avoid, and the call to action. Multiline is fine; it's optional, and a blank brief runs the classic topic-or-auto-pick flow.
-2. Optionally expand **Help me write my brief** for structured prompts: Target audience, Content goal, Key points or sections, Tone of voice (same list as Settings; blank keeps your default), Facts or business details, Things to avoid, Desired call to action. Anything you fill in is added to the brief.
-3. Optionally click **Improve my brief** — one extra AI request rewrites the brief for clarity, keeps your intent and facts, never invents details (it inserts `[placeholders]` instead), and shows the proposal for review. Nothing changes until you click **Use this version**; it never writes the article.
-4. Optionally enter a **title or topic** — with a brief, leaving it blank lets the AI derive the title from the brief.
-5. Pick a **template** (Auto, Informational, Listicle, How-To, Comparison, Case Study, News Analysis, Tutorial)
-6. Click **Preview** (no save) or **Generate Post** — it'll analyze your site, draft, score, attach images, and save per your "After writing" setting
+![Generate a page](screenshots/swps-generate-page.png)
 
-The brief steers subject, angle, examples, requested sections, tone and CTA. Precedence is fixed: the response format and app rules first, then the required SEO structure and your generation settings, then the brief and helper fields, then default writing preferences. Briefs are capped at 4,000 characters (1,000 per helper field), HTML is stripped, and the prompt forbids invented facts, statistics, testimonials, pricing or URLs. **Bulk Generate** does not use the brief — each bulk post gets its own AI-chosen topic.
+1. Pick **Blog post** or **Page** ★ v4.31 in the "What are you creating?" toggle. The rest of the form adapts to your choice.
+2. Describe it in **What would you like to write about?** ★ v4.30: the topic, who it's for, what to include, tone, real business facts, anything to avoid, and the call to action. Multiline is fine. It's optional, and a blank brief runs the classic topic-or-auto-pick flow.
+3. Optionally expand **Help me write my brief** for structured prompts:
+   - Target audience
+   - Content goal
+   - Key points or sections
+   - Facts or business details
+   - Things to avoid
+   - Desired call to action
+
+   Anything you fill in is added to the brief.
+4. Optionally click **Improve my brief** — one extra AI request rewrites the brief for clarity, keeps your intent and facts, never invents details (it inserts `[placeholders]` instead), and shows the proposal for review. Nothing changes until you click **Use this version**; it never writes the article.
+5. Optionally paste **Source material (optional)** ★ v4.31: up to 5 URLs and/or your own notes. See [Source material](#source-material) below for the fetch rules and limits.
+6. Optionally fill in **Title or topic (optional)**. With a brief, leaving it blank lets the AI derive the title from the brief.
+7. Pick a **Template**, a **Tone of voice**, and either a **Parent page** or a **Bulk Count**:
+   - **Template**: 8 options for posts, 5 for pages. The list swaps automatically with the content type. See [Pages vs posts](#pages-vs-posts).
+   - **Tone of voice** ★ v4.31: sits next to Template now, not inside the brief helper. Blank keeps your Settings default.
+   - **Parent page** ★ v4.31: pages only. "None (top level)" or any published/draft page.
+   - **Bulk Count**: posts only, hidden when Page is selected. Generates up to 5 posts, each on its own AI-chosen topic, ignoring the brief.
+8. Set **Images** ★ v4.31: a Featured image checkbox and an In-content images count (0-4) for this run only. See [Images per run](#images-per-run).
+
+   ![Template, tone, parent and images filled in](screenshots/swps-generate-page-options.png)
+9. Check **"What happens when you generate"**. It mirrors your live choices: where it lands, length, images, tone.
+10. Click **Preview** (no save), **Generate Post** / **Generate Page**, **Bulk Generate** (posts only), or **Analyze My Site**.
+
+    ![Live summary and generate buttons](screenshots/swps-generate-page-summary.png)
+
+The brief steers subject, angle, examples, requested sections, tone and CTA. Precedence is fixed: the response format and app rules first, then the required SEO structure and your generation settings, then the brief, source material and helper fields, then default writing preferences. Briefs are capped at 4,000 characters (1,000 per helper field), HTML is stripped, and the prompt forbids invented facts, statistics, testimonials, pricing or URLs not supplied in the brief or source material.
 
 **Tip:** if generation takes >2 min, the post is being processed in the background. Check the Calendar to see status.
+
+#### Pages vs posts
+
+| | Posts | Pages |
+|---|---|---|
+| Templates | 8: Auto, Informational, Listicle, How-To, Comparison, Case Study, News Analysis, Tutorial | 5: Auto, Service page, Landing page, About / Team, Location / area page |
+| Word range | From Settings (default 1,200-2,000) | Per template, 500-900 (About) up to 800-1,400 (Service, Location) |
+| FAQ | Follows the Settings FAQ toggle | Only Service and Location templates request one |
+| TOC / Key Takeaways | Follow their Settings toggles | Never included |
+| Category / tags | Category (fixed or AI-decided) plus tags | None |
+| Parent page | N/A | Optional; "None (top level)" by default |
+| Bulk Generate | Yes, up to 5 per click | Not available |
+| Cron / autopilot | Yes | Not available |
+
+#### Source material
+
+Paste up to 5 URLs (one per line) and/or your own notes, up to 12,000 characters in total. Generating or previewing fetches each URL in turn through WordPress' safe HTTP API:
+
+- 8-second timeout per URL, 25-second budget for the whole batch
+- Private and local addresses are rejected, including on redirects
+- Each response is capped at 1.5 MB and reduced to readable text (the article, main or body content, with scripts and navigation stripped)
+- Extracted text is trimmed to 6,000 characters per source, 20,000 for the combined block
+- Successful fetches are cached for an hour, failures for five minutes, so a quick retry doesn't refetch everything
+
+The AI is told to base its facts on this material, paraphrase rather than copy, cite each source URL as an external link, and never invent facts the material doesn't contain. Fetch failures are non-fatal: generation proceeds with whatever was fetched, or with the notes alone, and the result panel lists a **Sources** row reporting which URLs were fetched and which failed.
+
+![Result panel after a page generation, with the Sources row](screenshots/swps-generate-result.png)
+
+#### Images per run
+
+The Featured image checkbox and In-content images count (0-4) default from your Settings but apply to that run only; changing them here never changes Settings. If your configured image provider needs an API key and none is set, both controls are disabled with a link to add one. Posts created by Bulk Generate, cron, or autopilot always follow Settings.
 
 ### Voice Profiles (`StrataWP SEO → Voice Profiles`)
 
@@ -694,7 +750,7 @@ The plugin handles model-specific quirks automatically — for example, Claude 4
 
 | Setting | Description |
 |---|---|
-| **Tone of Voice** | Professional, Conversational, Friendly, Authoritative, Casual, Formal, Witty |
+| **Tone of Voice** | Professional, Conversational, Friendly, Authoritative, Casual, Formal, Witty. This is the default; Generate Content's Tone of voice selector ★ v4.31 can override it for a single run |
 | **Voice Profile** | Reusable persona (manage under StrataWP SEO → Voice Profiles); overrides tone/style |
 | **Custom Style Notes** | Free-text instructions ("Use short paragraphs, avoid jargon") |
 | **Target Keywords** | Comma-separated keywords woven into generated content + used by the keyword link engine |
@@ -721,6 +777,8 @@ The plugin handles model-specific quirks automatically — for example, Claude 4
 | **In-Content Images** | Insert contextual images within the post body |
 | **Images Per Post** | Number of in-content images (1-4) |
 | **Image Max Width** | Maximum width in pixels (600-2400) |
+
+These are the defaults. Generate Content's Featured image checkbox and In-content images count ★ v4.31 start from these settings but can be changed per run without touching Settings; posts created by Bulk Generate, cron, or autopilot always follow the settings above.
 
 ### Auto-Publishing Schedule (Schedule tab)
 
@@ -944,13 +1002,13 @@ All endpoints under `/wp-json/swps/v1/`:
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| `POST` | `/generate` | Generate a post (topic + template, plus an optional `brief` and `audience`/`goal`/`key_points`/`tone`/`facts`/`avoid`/`cta` guidance fields ★ v4.30) |
+| `POST` | `/generate` | Generate a post or page (`content_type` post\|page, `parent_id`, `topic`, `template`, optional `brief` + guidance fields ★ v4.30, `featured_image`, `content_images`, `sources` ★ v4.31) |
 | `GET` | `/status` | Plugin status |
 | `GET` | `/queue` | List topic queue |
 | `POST` | `/queue` | Add a topic (title, date, template, notes) |
 | `DELETE` | `/queue/{id}` | Remove a queued topic |
-| `GET` | `/score/{id}` | Get a post's content score |
-| `POST` | `/score/{id}` | Re-score a post |
+| `GET` | `/score/{id}` | Get a post's or page's content score |
+| `POST` | `/score/{id}` | Re-score a post or page ★ v4.31 |
 | `GET` | `/voice-profiles` | List voice profiles |
 | `POST` | `/voice-profiles` | Create voice profile |
 | `PUT` | `/voice-profiles/{id}` | Update voice profile |
@@ -993,7 +1051,7 @@ add_filter( 'swps_system_prompt', function( string $prompt, string $tone, string
 }, 10, 3 );
 ```
 
-**`swps_user_prompt`** — Modify the user prompt sent to the AI.
+**`swps_user_prompt`** — Modify the user prompt sent to the AI. ★ v4.31 For pages the prompt carries page-specific requirements (no TOC/takeaways, FAQ only for templates that request one, evergreen phrasing); when source material was supplied it also contains a fenced `SOURCE MATERIAL` block with the fetched text and citation instructions.
 
 ```php
 add_filter( 'swps_user_prompt', function( string $prompt, string $topic, string $site_context ): string {
@@ -1003,7 +1061,7 @@ add_filter( 'swps_user_prompt', function( string $prompt, string $topic, string 
 
 **`swps_ai_response`** — Modify the parsed AI response before post creation.
 
-**`swps_post_data`** — Modify WordPress post data before insertion.
+**`swps_post_data`** — Modify WordPress post data before insertion. ★ v4.31 For a page generation this array carries `post_type => 'page'` and a `post_parent` key instead of `post_category`.
 
 #### llms.txt
 
@@ -1149,7 +1207,7 @@ add_filter( 'swps_audit_modules', function( array $modules ): array {
 
 **`swps_after_generate`** — Fires after successful generation.
 
-**`swps_post_created`** — Fires after the WordPress post is inserted.
+**`swps_post_created`** — Fires after the WordPress post is inserted. ★ v4.31 When a per-run image plan was supplied it is already saved to the `_swps_image_plan` post meta by this point, so a callback here sees the same plan the background image jobs will read.
 
 ```php
 add_action( 'swps_post_created', function( int $post_id, array $ai_result, array $post_data ): void {
@@ -1245,6 +1303,7 @@ stratawp-seo/
 │   ├── class-head-cleanup.php         wp_head tag removal (generator, RSD, oEmbed, etc.)
 │   ├── class-hooks.php                Generation-pipeline filter/action hub (swps_* prefix)
 │   ├── class-image-inserter.php       In-content image placement engine
+│   ├── class-image-plan.php           Per-run image choice (0-4 in-content, featured on/off), stored on the post as `_swps_image_plan`
 │   ├── class-image-provider.php       Abstract base for image providers
 │   ├── class-image-seo.php            Auto-alt (heuristic/AI), filename sanitization, lazy-loading, bulk media fix
 │   ├── class-images.php               Image utility helpers
@@ -1283,6 +1342,7 @@ stratawp-seo/
 │   ├── class-site-crawler.php         Politeness-capped crawler: parsing, link extraction, 8 issue detectors
 │   ├── class-sitemap-admin.php        Sitemap admin page + IndexNow ping AJAX
 │   ├── class-sitemap-manager.php      Sitemap generation + IndexNow batch submission
+│   ├── class-source-material.php      Parses/fetches/extracts owner-supplied URLs + notes into a fenced prompt block
 │   ├── class-taxonomy-meta.php        Per-term archive meta
 │   ├── class-templates.php            Content template definitions (listicle, how-to, etc.)
 │   ├── class-topic-queue.php          Topic queue custom post type + helpers
@@ -1413,18 +1473,18 @@ SWPS_Image_Provider (abstract)
 
 ### Content Generation Pipeline
 
-`SWPS_Generator::generate( $topic, $template )` walks through:
+`SWPS_Generator::generate_post( $topic, $template, $brief, $options )` walks through:
 
 1. **Rate limit** — block if cooldown active (`SWPS_Rate_Limiter`)
 2. **Duplicate check** — refuse if a published post is too similar (`SWPS_Duplicate_Checker`)
 3. **Site analysis** — fetch existing posts, categories, internal link candidates (`SWPS_Analyzer`)
-4. **Prompt build** — system prompt (with voice profile injection) + user prompt with site context, template instructions, target keywords, internal link list
-5. **AI call** — `SWPS_AI_Provider::chat_json()` with 16,384 max tokens and a strict JSON schema requirement
-6. **JSON parse** — 5-stage repair pipeline (see `parse_json_response()` in `class-ai-provider.php`). Failures save the raw response to a transient and surface a Debug admin page.
-7. **Image fetch** — featured image from configured provider; in-content images placed by `SWPS_Image_Inserter`
-8. **Post insert** — `wp_insert_post()` with full schema metadata
-9. **Content scoring** — `SWPS_Content_Scorer` rates the result; below `min_content_score` → forced to draft
-10. **Hooks fire** — `swps_post_created`, `swps_after_generate`
+4. **Source material fetch** ★ v4.31: when URLs or notes were supplied, `SWPS_Source_Material` fetches, extracts and caps them into a fenced prompt block before the AI call
+5. **Prompt build**: the system prompt (with voice profile injection, or the page-specific prompt when `content_type => page`) plus a user prompt with site context, template instructions, target keywords, internal link list, the brief, and the source material block. A page request also adds page-only requirements: no TOC or key takeaways, the template's word range, FAQ only when that template calls for one
+6. **AI call** — `SWPS_AI_Provider::chat_json()` with 16,384 max tokens and a strict JSON schema requirement
+7. **JSON parse** — 5-stage repair pipeline (see `parse_json_response()` in `class-ai-provider.php`). Failures save the raw response to a transient and surface a Debug admin page.
+8. **Post insert**: `wp_insert_post()` with full schema metadata. A page gets `post_parent` and no category or tags
+9. **Image plan meta** ★ v4.31: when a per-run featured/in-content image choice was supplied, it's saved to the `_swps_image_plan` post meta before the hooks below fire
+10. **Hooks fire**: `swps_post_created` runs content scoring (`SWPS_Content_Scorer`; below `min_content_score` forces a draft) and schedules the background image jobs, which read `_swps_image_plan` when present and otherwise fall back to Settings. `swps_after_generate` fires last
 
 ### AI Crawler Allowlist (`SWPS_AI_Bots`)
 
