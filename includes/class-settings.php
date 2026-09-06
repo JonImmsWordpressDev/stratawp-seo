@@ -848,6 +848,53 @@ class SWPS_Settings {
 			)
 		);
 
+		// Person-only details. Rendered for every entity type (Settings API has no
+		// conditional fields) but only emitted when "Site Represents" is Person.
+		$this->add_field(
+			'schema_person_job_title',
+			__( 'Job Title (Person)', 'stratawp-seo' ),
+			'text',
+			'swps_schema_section',
+			array(
+				'placeholder' => __( 'Senior WordPress Developer', 'stratawp-seo' ),
+				'description' => __( 'Only used when Site Represents is Person. Populates jobTitle.', 'stratawp-seo' ),
+			)
+		);
+
+		$this->add_field(
+			'schema_person_description',
+			__( 'Bio (Person)', 'stratawp-seo' ),
+			'textarea',
+			'swps_schema_section',
+			array(
+				'rows'        => 3,
+				'description' => __( 'One or two sentences that identify you unambiguously: what you do, where, and what you are known for. Populates description.', 'stratawp-seo' ),
+			)
+		);
+
+		$this->add_field(
+			'schema_person_image',
+			__( 'Headshot URL (Person)', 'stratawp-seo' ),
+			'text',
+			'swps_schema_section',
+			array(
+				'placeholder' => 'https://example.com/headshot.jpg',
+				'description' => __( 'Full URL to a photo of the person (square, at least 400x400px). Populates image. The Logo URL above is not used for Person sites.', 'stratawp-seo' ),
+			)
+		);
+
+		$this->add_field(
+			'schema_person_knows_about',
+			__( 'Areas of Expertise (Person)', 'stratawp-seo' ),
+			'textarea',
+			'swps_schema_section',
+			array(
+				'rows'        => 4,
+				'placeholder' => "WordPress\nGutenberg block development\nREST API",
+				'description' => __( 'One topic per line (or comma-separated). Populates knowsAbout, which helps search engines and AI assistants tell you apart from people with the same name.', 'stratawp-seo' ),
+			)
+		);
+
 		// --- SEO Meta Section ---
 		add_settings_section( 'swps_meta_section', __( 'SEO Meta', 'stratawp-seo' ), array( $this, 'render_meta_section' ), 'stratawp-seo' );
 

@@ -192,6 +192,104 @@ class SWPS_Schema_Graph {
 		return trailingslashit( $author_url ) . '#profilepage';
 	}
 
+	/**
+	 * Build the descriptive properties for a personal-brand Person entity.
+	 *
+	 * Pure helper: takes the raw option values and the Local SEO settings array
+	 * and returns only the properties that have a usable value, so the caller
+	 * can array_merge() the result straight into the #person node. Nothing here
+	 * touches WordPress, which keeps it unit-testable.
+	 *
+	 * @param array  $opts        {
+	 *     Person option values (all optional, all strings).
+	 *
+	 *     @type string $job_title   Role or title, e.g. "Senior WordPress Developer".
+	 *     @type string $description One- or two-sentence bio. Whitespace is collapsed.
+	 *     @type string $image       Absolute URL of a headshot.
+	 *     @type string $knows_about Topics, one per line or comma-separated.
+	 *     @type string $email       Contact email; falls back to the Local SEO email.
+	 * }
+	 * @param array  $local       The swps_local_seo settings array (enabled, email,
+	 *                            locality, region, country). Only locality, region
+	 *                            and country are used for the address — never the
+	 *                            street or postal code, which would publish a home
+	 *                            address for a person.
+	 * @param string $business_id @id of the LocalBusiness node to reference via
+	 *                            worksFor, or '' when no such node is emitted.
+	 * @return array<string,mixed> Schema.org Person properties, possibly empty.
+	 */
+	public static function person_details( array $opts, array $local = array(), string $business_id = '' ): array {
+		$out = array();
+
+		$job_title = trim( (string) ( $opts['job_title'] ?? '' ) );
+		if ( '' !== $job_title ) {
+			$out['jobTitle'] = $job_title;
+		}
+
+		$description = trim( (string) preg_replace( '/\s+/', ' ', (string) ( $opts['description'] ?? '' ) ) );
+		if ( '' !== $description ) {
+			$out['description'] = $description;
+		}
+
+		$image = trim( (string) ( $opts['image'] ?? '' ) );
+		if ( '' !== $image && false !== filter_var( $image, FILTER_VALIDATE_URL ) ) {
+			$out['image'] = array(
+				'@type' => 'ImageObject',
+				'url'   => $image,
+			);
+		}
+
+		$topics = preg_split( '/[\r\n,]+/', (string) ( $opts['knows_about'] ?? '' ) );
+		if ( ! is_array( $topics ) ) {
+			$topics = array();
+		}
+		$topics = array_values(
+			array_unique(
+				array_filter(
+					array_map( 'trim', $topics ),
+					static fn( string $topic ): bool => '' !== $topic
+				)
+			)
+		);
+		if ( ! empty( $topics ) ) {
+			$out['knowsAbout'] = $topics;
+		}
+
+		$local_enabled = ! empty( $local['enabled'] );
+
+		$email = trim( (string) ( $opts['email'] ?? '' ) );
+		if ( '' === $email && $local_enabled ) {
+			$email = trim( (string) ( $local['email'] ?? '' ) );
+		}
+		if ( '' !== $email && false !== filter_var( $email, FILTER_VALIDATE_EMAIL ) ) {
+			$out['email'] = $email;
+		}
+
+		if ( $local_enabled ) {
+			$address     = array();
+			$address_map = array(
+				'locality' => 'addressLocality',
+				'region'   => 'addressRegion',
+				'country'  => 'addressCountry',
+			);
+			foreach ( $address_map as $key => $prop ) {
+				$value = trim( (string) ( $local[ $key ] ?? '' ) );
+				if ( '' !== $value ) {
+					$address[ $prop ] = $value;
+				}
+			}
+			if ( ! empty( $address ) ) {
+				$out['address'] = array_merge( array( '@type' => 'PostalAddress' ), $address );
+			}
+
+			if ( '' !== $business_id ) {
+				$out['worksFor'] = array( '@id' => $business_id );
+			}
+		}
+
+		return $out;
+	}
+
 	// -------------------------------------------------------------------------
 	// FAQ / Takeaways normalization helpers (used by SWPS_Schema)
 	// -------------------------------------------------------------------------
