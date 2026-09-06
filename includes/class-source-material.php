@@ -305,7 +305,7 @@ class SWPS_Source_Material {
 
 		foreach ( $urls as $i => $url ) {
 			$cached = get_transient( self::cache_key( $url ) );
-			if ( is_array( $cached ) && isset( $cached['ok'] ) ) {
+			if ( self::is_valid_cache_entry( $cached ) ) {
 				$results[ $i ] = $cached;
 				continue;
 			}
@@ -352,7 +352,7 @@ class SWPS_Source_Material {
 				}
 
 				$type = strtolower( (string) $response->headers['content-type'] );
-				if ( '' !== $type && ! str_contains( $type, 'html' ) && ! str_contains( $type, 'text/plain' ) && ! str_contains( $type, 'xml' ) ) {
+				if ( ! str_contains( $type, 'html' ) && ! str_contains( $type, 'text/plain' ) && ! str_contains( $type, 'xml' ) ) {
 					$results[ $i ] = self::failure( $url, __( 'Not an HTML or text page.', 'stratawp-seo' ) );
 					continue;
 				}
@@ -456,6 +456,24 @@ class SWPS_Source_Material {
 			return __( 'SSL certificate problem', 'stratawp-seo' );
 		}
 		return self::shorten( $message, 80 );
+	}
+
+	/**
+	 * Validate a cached fetch result.
+	 *
+	 * @param mixed $value Transient value.
+	 * @return bool
+	 */
+	private static function is_valid_cache_entry( $value ): bool {
+		if ( ! is_array( $value ) ) {
+			return false;
+		}
+		return isset( $value['ok'], $value['url'], $value['text'], $value['title'], $value['error'] )
+			&& true === $value['ok']
+			&& is_string( $value['url'] ) && '' !== $value['url']
+			&& is_string( $value['text'] ) && '' !== $value['text']
+			&& is_string( $value['title'] )
+			&& is_string( $value['error'] );
 	}
 
 	/**
