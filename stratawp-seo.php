@@ -804,7 +804,8 @@ final class StrataWP_SEO {
 		$template = sanitize_text_field( $_POST['template'] ?? 'auto' );
 		$brief    = $this->read_brief_from_request();
 
-		$result = $this->generator->generate_post( $topic, $template, $brief );
+		$options = $this->read_generate_options_from_request();
+		$result  = $this->generator->generate_post( $topic, $template, $brief, $options );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
@@ -871,7 +872,8 @@ final class StrataWP_SEO {
 		$template = sanitize_text_field( $_POST['template'] ?? 'auto' );
 		$brief    = $this->read_brief_from_request();
 
-		$result = $this->generator->preview_content( $topic, $template, $brief );
+		$options = $this->read_generate_options_from_request();
+		$result  = $this->generator->preview_content( $topic, $template, $brief, $options );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
@@ -922,6 +924,40 @@ final class StrataWP_SEO {
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		return SWPS_Content_Brief::from_request( $raw );
+	}
+
+	/**
+	 * Read the content type, parent, image plan and source material from the
+	 * current AJAX request into the generator's options array.
+	 *
+	 * Absent keys are left out so the generator reproduces the settings-driven
+	 * behaviour; only what the form actually sent is applied.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function read_generate_options_from_request(): array {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- every caller runs check_ajax_referer() first.
+		$options = array(
+			'content_type' => SWPS_Templates::normalize_type( sanitize_text_field( wp_unslash( (string) ( $_POST['content_type'] ?? SWPS_Templates::TYPE_POST ) ) ) ),
+			'parent_id'    => absint( $_POST['parent_id'] ?? 0 ),
+		);
+
+		$raw_images = array();
+		foreach ( array( SWPS_Image_Plan::KEY_FEATURED, SWPS_Image_Plan::KEY_CONTENT ) as $key ) {
+			if ( isset( $_POST[ $key ] ) && is_scalar( $_POST[ $key ] ) ) {
+				$raw_images[ $key ] = sanitize_text_field( wp_unslash( (string) $_POST[ $key ] ) );
+			}
+		}
+		if ( SWPS_Image_Plan::has_request_keys( $raw_images ) ) {
+			$options['image_plan'] = SWPS_Image_Plan::from_request( $raw_images, SWPS_Image_Plan::defaults_from_settings() );
+		}
+
+		if ( isset( $_POST[ SWPS_Source_Material::KEY ] ) && is_scalar( $_POST[ SWPS_Source_Material::KEY ] ) ) {
+			$options['sources'] = SWPS_Source_Material::sanitize( wp_unslash( (string) $_POST[ SWPS_Source_Material::KEY ] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitized by SWPS_Source_Material::sanitize().
+		}
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		return $options;
 	}
 
 	/**
