@@ -19,6 +19,20 @@ class SWPS_Generator {
 	private SWPS_Rate_Limiter $rate_limiter;
 	private SWPS_Cost_Tracker $cost_tracker;
 
+	/**
+	 * Fetch report from the last call_ai().
+	 *
+	 * @var array<int, array{url: string, ok: bool, error: string}>
+	 */
+	private array $last_sources_report = array();
+
+	/**
+	 * URLs dropped from the last request for exceeding the cap.
+	 *
+	 * @var string[]
+	 */
+	private array $last_dropped_sources = array();
+
 	public function __construct(
 		SWPS_AI_Provider $api,
 		SWPS_Analyzer $analyzer,
@@ -39,9 +53,12 @@ class SWPS_Generator {
 	 * @param string $topic    Optional specific topic. If empty, AI picks one.
 	 * @param string $template Content template slug.
 	 * @param array  $brief    Optional normalized content brief (see SWPS_Content_Brief::from_request()).
+	 * @param array  $options  Optional generation options (content_type, parent_id, image_plan, sources).
 	 * @return array|WP_Error Post data on success, error on failure.
 	 */
-	public function generate_post( string $topic = '', string $template = 'auto', array $brief = array() ): array|WP_Error {
+	public function generate_post( string $topic = '', string $template = 'auto', array $brief = array(), array $options = array() ): array|WP_Error {
+		$options = $this->normalize_options( $options );
+
 		// Image generation (especially Gemini) can take several minutes per post.
 		// Lift PHP execution caps so cron/background jobs don't die mid-download,
 		// leaving posts with no images and an empty debug.log.
@@ -75,7 +92,7 @@ class SWPS_Generator {
 		}
 
 		// Build prompts and call AI.
-		$ai_result = $this->call_ai( $topic, $template, $brief );
+		$ai_result = $this->call_ai( $topic, $template, $brief, $options );
 
 		if ( is_wp_error( $ai_result ) ) {
 			$this->log( 'Generation failed: ' . $ai_result->get_error_message() );
@@ -116,12 +133,15 @@ class SWPS_Generator {
 		}
 
 		// Create the WordPress post.
-		$post_data = $this->create_wp_post( $ai_result, $template );
+		$post_data = $this->create_wp_post( $ai_result, $template, $options );
 
 		if ( is_wp_error( $post_data ) ) {
 			SWPS_Hooks::do_generation_failed( $post_data, $topic, $template );
 			return $post_data;
 		}
+
+		$post_data['sources']         = $this->last_sources_report;
+		$post_data['dropped_sources'] = $this->last_dropped_sources;
 
 		// Fire after_generate action.
 		SWPS_Hooks::do_after_generate( $post_data, $topic, $template );
@@ -135,9 +155,12 @@ class SWPS_Generator {
 	 * @param string $topic    Optional topic.
 	 * @param string $template Content template slug.
 	 * @param array  $brief    Optional normalized content brief (see SWPS_Content_Brief::from_request()).
+	 * @param array  $options  Optional generation options (content_type, parent_id, image_plan, sources).
 	 * @return array|WP_Error AI result data or error.
 	 */
-	public function preview_content( string $topic = '', string $template = 'auto', array $brief = array() ): array|WP_Error {
+	public function preview_content( string $topic = '', string $template = 'auto', array $brief = array(), array $options = array() ): array|WP_Error {
+		$options = $this->normalize_options( $options );
+
 		// Check rate limit.
 		if ( ! $this->rate_limiter->can_generate() ) {
 			$remaining = $this->rate_limiter->get_remaining_seconds();
@@ -147,7 +170,7 @@ class SWPS_Generator {
 			);
 		}
 
-		$ai_result = $this->call_ai( $topic, $template, $brief );
+		$ai_result = $this->call_ai( $topic, $template, $brief, $options );
 
 		if ( is_wp_error( $ai_result ) ) {
 			return $ai_result;
@@ -156,7 +179,48 @@ class SWPS_Generator {
 		// Lock rate limiter.
 		$this->rate_limiter->lock();
 
+		$ai_result['content_type']    = $options['content_type'];
+		$ai_result['sources']         = $this->last_sources_report;
+		$ai_result['dropped_sources'] = $this->last_dropped_sources;
+
 		return $ai_result;
+	}
+
+	/**
+	 * Normalize generation options.
+	 *
+	 * Missing keys reproduce the 4.30 behaviour exactly: a blog post, no
+	 * parent, image handling from Settings, no source material.
+	 *
+	 * @param array<string, mixed> $options Raw options.
+	 * @return array{content_type: string, parent_id: int, image_plan: array|null, sources: string}
+	 */
+	private function normalize_options( array $options ): array {
+		$content_type = SWPS_Templates::normalize_type( $options['content_type'] ?? SWPS_Templates::TYPE_POST );
+		$parent_id    = 0;
+
+		if ( SWPS_Templates::TYPE_PAGE === $content_type && ! empty( $options['parent_id'] ) ) {
+			$candidate = (int) $options['parent_id'];
+			$parent    = $candidate > 0 ? get_post( $candidate ) : null;
+			if ( $parent && 'page' === $parent->post_type && 'trash' !== $parent->post_status ) {
+				$parent_id = $candidate;
+			}
+		}
+
+		$image_plan = null;
+		if ( isset( $options['image_plan'] ) && is_array( $options['image_plan'] ) && array_key_exists( 'featured', $options['image_plan'] ) ) {
+			$image_plan = array(
+				'featured'      => (bool) $options['image_plan']['featured'],
+				'content_count' => max( 0, min( SWPS_Image_Plan::MAX_CONTENT_IMAGES, (int) ( $options['image_plan']['content_count'] ?? 0 ) ) ),
+			);
+		}
+
+		return array(
+			'content_type' => $content_type,
+			'parent_id'    => $parent_id,
+			'image_plan'   => $image_plan,
+			'sources'      => is_string( $options['sources'] ?? null ) ? $options['sources'] : '',
+		);
 	}
 
 	/**
@@ -224,9 +288,13 @@ class SWPS_Generator {
 	 * @param string $topic    Topic.
 	 * @param string $template Template slug.
 	 * @param array  $brief    Normalized content brief (may be empty).
+	 * @param array  $options  Normalized generation options (see normalize_options()).
 	 * @return array|WP_Error Parsed AI response or error.
 	 */
-	private function call_ai( string $topic, string $template, array $brief = array() ): array|WP_Error {
+	private function call_ai( string $topic, string $template, array $brief = array(), array $options = array() ): array|WP_Error {
+		$content_type = SWPS_Templates::normalize_type( $options['content_type'] ?? SWPS_Templates::TYPE_POST );
+		$is_page      = SWPS_Templates::TYPE_PAGE === $content_type;
+
 		// Gather site context (limit posts to keep prompt under timeout threshold).
 		$site_context   = $this->analyzer->build_context_for_prompt( 20 );
 		$linkable_posts = $this->analyzer->get_linkable_posts();
@@ -245,8 +313,25 @@ class SWPS_Generator {
 		$include_takeaways = (bool) get_option( 'swps_include_takeaways', false );
 		$takeaways_count   = (int) get_option( 'swps_takeaways_count', 5 );
 
+		// Resolve the template for the type first: page templates supply the
+		// word range and FAQ flag; posts keep the settings-driven values.
+		if ( $is_page ) {
+			$template          = SWPS_Templates::resolve_slug( $template, $content_type );
+			$page_template     = SWPS_Templates::get_template( $template, $content_type ) ?? array();
+			$min_words         = (int) ( $page_template['min_words'] ?? 600 );
+			$max_words         = (int) ( $page_template['max_words'] ?? 1200 );
+			$include_faq       = (bool) ( $page_template['include_faq'] ?? false );
+			$include_toc       = false;
+			$include_takeaways = false;
+		}
+
+		// Owner-supplied source material (fetched once per request).
+		$sources                    = SWPS_Source_Material::prepare( (string) ( $options['sources'] ?? '' ) );
+		$this->last_sources_report  = $sources['report'];
+		$this->last_dropped_sources = $sources['dropped_urls'];
+
 		// Build the system prompt.
-		$system_prompt = $this->build_system_prompt( $tone, $style );
+		$system_prompt = $this->build_system_prompt( $tone, $style, $content_type );
 
 		// Build linkable posts reference.
 		$links_context  = "=== EXISTING PAGES FOR INTERNAL LINKING ===\n";
@@ -270,14 +355,17 @@ class SWPS_Generator {
 			$include_toc,
 			$include_takeaways,
 			$takeaways_count,
-			$brief
+			$brief,
+			$content_type,
+			$sources['block']
 		);
 
-		// Apply template modifiers.
-		if ( $template === 'auto' ) {
+		// Apply template modifiers. Posts keep the settings default for 'auto';
+		// pages always resolve to a page template (page-auto guides structure).
+		if ( ! $is_page && 'auto' === $template ) {
 			$template = get_option( 'swps_default_template', 'auto' );
 		}
-		[ $system_prompt, $user_prompt ] = SWPS_Templates::apply( $system_prompt, $user_prompt, $template );
+		[ $system_prompt, $user_prompt ] = SWPS_Templates::apply( $system_prompt, $user_prompt, $template, $content_type );
 
 		// Apply hook filters.
 		$system_prompt = SWPS_Hooks::filter_system_prompt( $system_prompt, $tone, $style );
@@ -298,7 +386,11 @@ class SWPS_Generator {
 	/**
 	 * Build the system prompt for Claude.
 	 */
-	private function build_system_prompt( string $tone, string $style ): string {
+	private function build_system_prompt( string $tone, string $style, string $content_type = SWPS_Templates::TYPE_POST ): string {
+		if ( SWPS_Templates::TYPE_PAGE === $content_type ) {
+			return $this->build_page_system_prompt( $tone, $style );
+		}
+
 		$prompt = <<<PROMPT
 You are an expert SEO content writer and WordPress specialist. You create blog posts that are:
 
@@ -367,6 +459,85 @@ PROMPT;
 	}
 
 	/**
+	 * System prompt for website pages (service, landing, about, location).
+	 *
+	 * Same JSON contract and syntax rules as posts so the parser and the save
+	 * path are shared; the role, rules and empty taxonomy fields differ.
+	 *
+	 * @param string $tone  Tone setting or brief override.
+	 * @param string $style Writing style setting.
+	 * @return string
+	 */
+	private function build_page_system_prompt( string $tone, string $style ): string {
+		$prompt = <<<PROMPT
+You are an expert website copywriter and SEO specialist. You write evergreen website pages (service pages, landing pages, about pages, location pages) that are:
+
+1. SEO-optimized with proper heading hierarchy (H2, H3 — never H1, as WordPress uses the page title as H1)
+2. Written in the voice of the business itself, speaking directly to the visitor
+3. Clear about who the page is for, what is offered and what to do next
+4. Grounded only in supplied facts — nothing invented
+
+TONE: {$tone}
+PROMPT;
+
+		if ( ! empty( $style ) ) {
+			$prompt .= "\nWRITING STYLE: {$style}";
+		}
+
+		$prompt .= <<<'PROMPT'
+
+
+RESPONSE FORMAT: Respond ONLY with a single, strictly valid RFC 8259 JSON object. No markdown fences, no prose, no explanation.
+
+JSON SYNTAX REQUIREMENTS (NON-NEGOTIABLE — output MUST parse with strict JSON parsers):
+- Every string value must be properly quoted with " and any inner " escaped as \".
+- Escape sequences (\n, \r, \t, \", \\) are ONLY valid INSIDE string literals. NEVER emit a backslash-letter sequence between tokens, between array elements, between object members, or anywhere outside of a quoted string.
+- Use real whitespace (spaces, real newlines) between JSON tokens — never literal \n or \t characters as separators.
+- No trailing commas before } or ].
+- No comments (// or /* */).
+- No control characters (0x00–0x1F) inside strings — encode them as \n, \r, \t, etc.
+- Balanced brackets: every { has a matching } and every [ has a matching ].
+- Before finishing your response, mentally re-parse it as JSON and confirm it is valid.
+
+Required JSON structure:
+{
+  "title": "The page title (also the SEO title tag)",
+  "slug": "url-friendly-slug",
+  "meta_description": "Compelling meta description, 147-160 characters",
+  "content_html": "Full page HTML content with headings, paragraphs, lists, and internal links",
+  "excerpt": "1-2 sentence summary of the page",
+  "focus_keyword": "2-4 word keyword phrase (e.g. 'WordPress Maintenance Omaha', 'Website Care Plans')",
+  "secondary_keywords": ["keyword2", "keyword3"],
+  "suggested_tags": [],
+  "suggested_category": "",
+  "internal_links_used": [{"anchor_text": "text", "url": "url"}],
+  "external_links": [{"anchor_text": "text", "url": "url", "source": "source name"}],
+  "faq_schema": [{"question": "Q?", "answer": "A."}],
+  "key_takeaways": [],
+  "estimated_word_count": 900
+}
+
+CRITICAL RULES:
+- content_html must use proper HTML tags: <h2>, <h3>, <p>, <ul>, <ol>, <li>, <a>, <strong>, <em>
+- This is a PAGE, not an article: never use the words "post", "article" or "blog" to describe it; no publication dates, no "in this post", no "today we", no time-bound phrasing that will age
+- Internal links must use <a href="URL">anchor text</a> format with REAL URLs from the provided list
+- Every internal link must point to a URL from the provided existing pages list
+- suggested_tags MUST be an empty array and suggested_category MUST be an empty string (pages have no taxonomy)
+- key_takeaways MUST be an empty array
+- faq_schema: populate only when a FAQ section is requested; otherwise an empty array
+- Never use H1 tags in content_html
+- Never invent facts, statistics, testimonials, reviews, prices, credentials, addresses, opening hours or URLs; use only what the brief or source material supplies and write around gaps or leave a short [placeholder]
+- Write specific, useful copy — not generic filler
+- The focus_keyword MUST be exactly 2-4 words — short and broad. NEVER use a long phrase or sentence as the focus keyword.
+- The focus_keyword MUST appear in: meta_description, the first <p> of content_html, and at least one <h2> heading
+- The slug must contain the focus_keyword words
+- Every <img> tag in content_html MUST have an alt attribute that contains the focus_keyword
+PROMPT;
+
+		return $prompt;
+	}
+
+	/**
 	 * Build the user prompt with site context and preferences.
 	 */
 	private function build_user_prompt(
@@ -383,8 +554,13 @@ PROMPT;
 		bool $include_toc,
 		bool $include_takeaways = false,
 		int $takeaways_count = 5,
-		array $brief = array()
+		array $brief = array(),
+		string $content_type = SWPS_Templates::TYPE_POST,
+		string $sources_block = ''
 	): string {
+		$is_page     = SWPS_Templates::TYPE_PAGE === $content_type;
+		$has_sources = '' !== trim( $sources_block );
+
 		$prompt = $site_context . "\n" . $links_context . "\n";
 
 		// The brief block is empty when no brief was supplied, which keeps the
@@ -392,9 +568,19 @@ PROMPT;
 		$brief_block = SWPS_Content_Brief::to_prompt_block( $brief );
 
 		if ( ! empty( $topic ) ) {
-			$prompt .= "TOPIC: Write a blog post about: {$topic}\n\n";
+			$prompt .= $is_page
+				? "TOPIC: Write a website page about: {$topic}\n\n"
+				: "TOPIC: Write a blog post about: {$topic}\n\n";
 		} elseif ( '' !== $brief_block ) {
-			$prompt .= "TOPIC: Derive the topic and angle from the CONTENT BRIEF below. Choose a title with good search potential that matches the brief and the site's niche ({$niche}).\n\n";
+			$prompt .= $is_page
+				? "TOPIC: Derive the page subject and angle from the CONTENT BRIEF below. Choose a title with good search potential that matches the brief and the site's niche ({$niche}).\n\n"
+				: "TOPIC: Derive the topic and angle from the CONTENT BRIEF below. Choose a title with good search potential that matches the brief and the site's niche ({$niche}).\n\n";
+		} elseif ( $is_page ) {
+			$prompt .= "TOPIC: Based on the site's niche ({$niche}) and existing content above, choose a page the site is missing that:\n";
+			$prompt .= "- Describes a service, offer, place or the business itself that visitors would search for\n";
+			$prompt .= "- Is relevant to the site's niche and audience\n";
+			$prompt .= "- Has good search potential\n";
+			$prompt .= "- Can naturally link to existing content\n\n";
 		} else {
 			$prompt .= "TOPIC: Based on the site's niche ({$niche}) and existing content above, choose a topic that:\n";
 			$prompt .= "- Fills a content gap (something the site hasn't covered yet)\n";
@@ -406,6 +592,12 @@ PROMPT;
 		// Placed before the keyword rules and REQUIREMENTS so the brief shapes
 		// the content while those SEO rules keep the final say.
 		$prompt .= $brief_block;
+
+		// Source material follows the brief and precedes the SEO rules for the
+		// same reason: it shapes the facts, the rules keep the final say.
+		if ( $has_sources ) {
+			$prompt .= $sources_block;
+		}
 
 		if ( ! empty( $keywords ) ) {
 			$prompt .= "TARGET KEYWORDS: {$keywords}\n";
@@ -421,9 +613,16 @@ PROMPT;
 		$prompt .= "REQUIREMENTS:\n";
 		$prompt .= "- Word count: {$min_words}-{$max_words} words\n";
 		$prompt .= "- Include {$min_links}-{$max_links} internal links to existing pages listed above\n";
-		$prompt .= "- Include 2-4 external links to authoritative sources (real websites, documentation, or industry publications)\n";
 
-		if ( $include_toc ) {
+		if ( $has_sources ) {
+			$prompt .= "- Cite the supplied SOURCE MATERIAL URLs as the external links where you use their facts; add no other external links unless essential\n";
+		} elseif ( $is_page ) {
+			$prompt .= "- External links: only where genuinely useful to the visitor, at most 2\n";
+		} else {
+			$prompt .= "- Include 2-4 external links to authoritative sources (real websites, documentation, or industry publications)\n";
+		}
+
+		if ( $include_toc && ! $is_page ) {
 			$prompt .= "- Include a table of contents (HTML list with anchor links to each H2) at the beginning\n";
 		}
 
@@ -431,14 +630,16 @@ PROMPT;
 			$prompt .= "- Include a FAQ section at the end with 3-5 questions (also populate the faq_schema field for structured data)\n";
 		}
 
-		if ( $include_takeaways ) {
+		if ( $include_takeaways && ! $is_page ) {
 			$prompt .= "- Include {$takeaways_count} key takeaways — concise, actionable bullet points summarizing the post's most important insights (also populate the key_takeaways JSON field)\n";
 		}
 
 		$prompt .= "- Use proper heading hierarchy (H2 for main sections, H3 for subsections)\n";
-		$prompt .= "- Suggest the best existing category for this post, or suggest a new one\n";
+		if ( ! $is_page ) {
+			$prompt .= "- Suggest the best existing category for this post, or suggest a new one\n";
+		}
 		$prompt .= "- Write a compelling meta description (147-160 characters) that includes the primary target keyword\n\n";
-		$prompt .= 'Generate the blog post now. Respond with JSON only.';
+		$prompt .= $is_page ? 'Generate the page now. Respond with JSON only.' : 'Generate the blog post now. Respond with JSON only.';
 
 		return $prompt;
 	}
@@ -448,15 +649,24 @@ PROMPT;
 	 *
 	 * @param array  $ai_result The parsed JSON from Claude.
 	 * @param string $template  The template used.
+	 * @param array  $options   Normalized generation options (see normalize_options()).
 	 * @return array|WP_Error Post data or error.
 	 */
-	private function create_wp_post( array $ai_result, string $template = 'auto' ): array|WP_Error {
+	private function create_wp_post( array $ai_result, string $template = 'auto', array $options = array() ): array|WP_Error {
+		$content_type = SWPS_Templates::normalize_type( $options['content_type'] ?? SWPS_Templates::TYPE_POST );
+		$is_page      = SWPS_Templates::TYPE_PAGE === $content_type;
+		$parent_id    = $is_page ? (int) ( $options['parent_id'] ?? 0 ) : 0;
+		// Store the slug that was actually applied (pages resolve 'auto' to 'page-auto').
+		if ( $is_page ) {
+			$template = SWPS_Templates::resolve_slug( $template, $content_type );
+		}
+
 		$post_status = get_option( 'swps_post_status', 'draft' );
 		$post_author = (int) get_option( 'swps_post_author', get_current_user_id() );
 		$category_id = (int) get_option( 'swps_post_category', 0 );
 
-		// Handle category.
-		if ( ! empty( $ai_result['suggested_category'] ) ) {
+		// Handle category (posts only; pages have no taxonomy).
+		if ( ! $is_page && ! empty( $ai_result['suggested_category'] ) ) {
 			$cat = get_cat_ID( $ai_result['suggested_category'] );
 			if ( $cat > 0 ) {
 				$category_id = $cat;
@@ -471,7 +681,7 @@ PROMPT;
 		$content = $ai_result['content_html'];
 
 		// Inject key takeaways block if enabled.
-		if ( get_option( 'swps_include_takeaways', false ) && ! empty( $ai_result['key_takeaways'] ) ) {
+		if ( ! $is_page && get_option( 'swps_include_takeaways', false ) && ! empty( $ai_result['key_takeaways'] ) ) {
 			$content = $this->inject_takeaways( $content, $ai_result['key_takeaways'] );
 		}
 
@@ -482,8 +692,9 @@ PROMPT;
 			'post_status'   => $post_status,
 			'post_author'   => $post_author,
 			'post_name'     => sanitize_title( $ai_result['slug'] ),
-			'post_category' => $category_id ? array( $category_id ) : array(),
-			'post_type'     => 'post',
+			'post_category' => ( ! $is_page && $category_id ) ? array( $category_id ) : array(),
+			'post_type'     => $content_type,
+			'post_parent'   => $parent_id,
 		);
 
 		// Apply post data filter.
@@ -502,10 +713,10 @@ PROMPT;
 
 		// Log the post creation immediately so we have a record even if a
 		// later step (featured image, hooks) fails or times out mid-cron.
-		$this->log( sprintf( 'Generated post #%d: "%s"', $post_id, $ai_result['title'] ) );
+		$this->log( sprintf( 'Generated %s #%d: "%s"', $is_page ? 'page' : 'post', $post_id, $ai_result['title'] ) );
 
 		// Set tags.
-		if ( ! empty( $ai_result['suggested_tags'] ) ) {
+		if ( ! $is_page && ! empty( $ai_result['suggested_tags'] ) ) {
 			wp_set_post_tags( $post_id, array_map( 'sanitize_text_field', $ai_result['suggested_tags'] ) );
 		}
 
@@ -539,9 +750,17 @@ PROMPT;
 		update_post_meta( $post_id, '_swps_internal_links', $ai_result['internal_links_used'] ?? array() );
 		update_post_meta( $post_id, '_swps_external_links', $ai_result['external_links'] ?? array() );
 		update_post_meta( $post_id, '_swps_template', $template );
+		update_post_meta( $post_id, '_swps_content_type', $content_type );
+
+		// Per-run image plan: the scheduler and background jobs read this
+		// before falling back to the global options. Only saved when the
+		// request carried one, so cron/bulk posts keep today's behaviour.
+		if ( ! empty( $options['image_plan'] ) && is_array( $options['image_plan'] ) ) {
+			update_post_meta( $post_id, SWPS_Image_Plan::META_KEY, $options['image_plan'] );
+		}
 
 		// Store key takeaways for schema output.
-		if ( ! empty( $ai_result['key_takeaways'] ) ) {
+		if ( ! $is_page && ! empty( $ai_result['key_takeaways'] ) ) {
 			update_post_meta( $post_id, '_swps_key_takeaways', array_map( 'sanitize_text_field', $ai_result['key_takeaways'] ) );
 		}
 
@@ -580,6 +799,8 @@ PROMPT;
 			'external_links'   => $ai_result['external_links'] ?? array(),
 			'word_count'       => $ai_result['estimated_word_count'] ?? 0,
 			'template'         => $template,
+			'content_type'     => $content_type,
+			'parent_id'        => $parent_id,
 			'cost'             => $cost,
 			'content_score'    => $content_score ?: null,
 		);
