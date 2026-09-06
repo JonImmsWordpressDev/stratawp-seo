@@ -217,7 +217,7 @@ class SWPS_Source_Material {
 			array_filter(
 				$fetched,
 				static function ( $item ) {
-					return ! empty( $item['ok'] ) && '' !== trim( (string) ( $item['text'] ?? '' ) );
+					return ! empty( $item['ok'] ) && '' !== trim( (string) $item['text'] );
 				}
 			)
 		);
