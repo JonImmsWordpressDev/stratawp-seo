@@ -48,8 +48,8 @@ class SWPS_Image_Plan {
 	/**
 	 * Build a normalized plan from raw request input.
 	 *
-	 * @param array<string, mixed>                      $raw      Raw request data.
-	 * @param array{featured: bool, content_count: int} $defaults Values used for missing or invalid keys.
+	 * @param array<string, mixed>    $raw      Raw request data.
+	 * @param array<string, bool|int> $defaults Values used for missing or invalid keys (featured, content_count).
 	 * @return array{featured: bool, content_count: int}
 	 */
 	public static function from_request( array $raw, array $defaults ): array {
