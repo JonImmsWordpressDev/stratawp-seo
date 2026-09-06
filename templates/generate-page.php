@@ -20,6 +20,12 @@ $gen_status_labels = array(
 	'publish' => __( 'Published immediately (live on your site)', 'stratawp-seo' ),
 );
 $gen_status_label  = $gen_status_labels[ $gen_status ] ?? ucfirst( $gen_status );
+$gen_status_labels_page = array(
+	'draft'   => __( 'Saved as a draft page for your review (not published)', 'stratawp-seo' ),
+	'pending' => __( 'Saved as a Pending Review page for your approval', 'stratawp-seo' ),
+	'publish' => __( 'Published immediately as a page (live on your site)', 'stratawp-seo' ),
+);
+$gen_status_label_page = $gen_status_labels_page[ $gen_status ] ?? ucfirst( $gen_status );
 $gen_min_words     = (int) get_option( 'swps_word_count_min', 1200 );
 $gen_max_words     = (int) get_option( 'swps_word_count_max', 2000 );
 $gen_tone          = (string) get_option( 'swps_tone', 'professional' );
@@ -38,8 +44,7 @@ $gen_brief_field_max   = SWPS_Content_Brief::MAX_FIELD_LENGTH;
 $gen_brief_tones       = SWPS_Settings::get_tone_options();
 $gen_brief_placeholder = __( 'Write a guide for small business owners in Omaha about choosing a WordPress maintenance provider. Include updates, backups, security, hosting, and support. Explain what questions to ask before hiring someone. Use a friendly, practical tone and finish with a consultation CTA. Avoid technical jargon and made-up pricing.', 'stratawp-seo' );
 
-// Content type, page templates, per-run images and source material.
-$gen_page_templates   = SWPS_Templates::get_options( SWPS_Templates::TYPE_PAGE );
+// Content type, per-run images and source material.
 $gen_image_defaults   = SWPS_Image_Plan::defaults_from_settings();
 $gen_image_provider   = SWPS_Provider_Factory::create_image_provider();
 $gen_images_available = ! $gen_image_provider->requires_api_key() || '' !== (string) $gen_image_provider->get_api_key();
@@ -81,8 +86,8 @@ $gen_parent_dropdown  = wp_dropdown_pages(
 
 		<!-- Generate Card -->
 		<div class="swps-card swps-card-generate">
-			<h2><?php esc_html_e( 'Generate a New Post', 'stratawp-seo' ); ?></h2>
-			<p class="swps-card-desc"><?php esc_html_e( 'Create an SEO-optimized blog post. Enter a specific topic or let the AI choose one based on your site\'s content gaps.', 'stratawp-seo' ); ?></p>
+			<h2 id="swps-card-title" data-post="<?php esc_attr_e( 'Generate a New Post', 'stratawp-seo' ); ?>" data-page="<?php esc_attr_e( 'Generate a New Page', 'stratawp-seo' ); ?>"><?php esc_html_e( 'Generate a New Post', 'stratawp-seo' ); ?></h2>
+			<p class="swps-card-desc" id="swps-card-desc" data-post="<?php esc_attr_e( 'Create an SEO-optimized blog post. Enter a specific topic or let the AI choose one based on your site\'s content gaps.', 'stratawp-seo' ); ?>" data-page="<?php esc_attr_e( 'Create an SEO-optimized page. Describe the service, offer, place or story it should tell, or leave the topic blank and let the AI pick a page your site is missing.', 'stratawp-seo' ); ?>"><?php esc_html_e( 'Create an SEO-optimized blog post. Enter a specific topic or let the AI choose one based on your site\'s content gaps.', 'stratawp-seo' ); ?></p>
 
 			<?php /* Content type: post (default) or page. Drives template list, parent picker, bulk visibility and labels. */ ?>
 			<fieldset id="swps-content-type" class="swps-segmented" <?php echo ! $has_api_key ? 'disabled' : ''; ?>>
@@ -278,11 +283,11 @@ $gen_parent_dropdown  = wp_dropdown_pages(
 					</tr>
 					<tr>
 						<td><?php esc_html_e( 'After writing:', 'stratawp-seo' ); ?></td>
-						<td id="swps-summary-lands" data-post="<?php echo esc_attr( $gen_status_label ); ?>" data-page="<?php echo esc_attr( str_replace( __( 'draft', 'stratawp-seo' ), __( 'draft page', 'stratawp-seo' ), $gen_status_label ) ); ?>"><?php echo esc_html( $gen_status_label ); ?></td>
+						<td id="swps-summary-lands" data-post="<?php echo esc_attr( $gen_status_label ); ?>" data-page="<?php echo esc_attr( $gen_status_label_page ); ?>"><?php echo esc_html( $gen_status_label ); ?></td>
 					</tr>
 					<tr>
 						<td><?php esc_html_e( 'Length:', 'stratawp-seo' ); ?></td>
-						<td>
+						<td id="swps-summary-length" data-post="<?php echo esc_attr( sprintf( __( '~%1$s–%2$s words', 'stratawp-seo' ), number_format_i18n( $gen_min_words ), number_format_i18n( $gen_max_words ) ) ); ?>">
 						<?php
 						echo esc_html(
 							sprintf(

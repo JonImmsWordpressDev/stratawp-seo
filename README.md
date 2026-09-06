@@ -304,7 +304,7 @@ The main AI content generator.
 4. Optionally click **Improve my brief** — one extra AI request rewrites the brief for clarity, keeps your intent and facts, never invents details (it inserts `[placeholders]` instead), and shows the proposal for review. Nothing changes until you click **Use this version**; it never writes the article.
 5. Optionally enter a **title or topic** — with a brief, leaving it blank lets the AI derive the title from the brief.
 6. Pick a **template** (Auto, Informational, Listicle, How-To, Comparison, Case Study, News Analysis, Tutorial)
-- **Source material** ★ v4.31 — up to 5 URLs (one per line) and/or notes. URLs are fetched (10 s timeout, private/local addresses rejected, cached for an hour), trimmed to readable text and handed to the AI with instructions to base facts on them, paraphrase and cite them as the external links. Failures are listed in the result panel, never fatal.
+- **Source material** ★ v4.31 — up to 5 URLs (one per line) and/or notes. URLs are fetched one at a time (8 s each, 25 s total, private/local addresses rejected including on redirects, successes cached for an hour), trimmed to readable text and handed to the AI with instructions to base facts on them, paraphrase and cite them as the external links. Failures are listed in the result panel, never fatal.
 - **Images** ★ v4.31 — Featured image on/off and In-content images 0-4 for this run only; defaults come from Settings.
 - **Tone of voice** now sits next to Template; blank keeps your Settings default.
 7. Click **Preview** (no save) or **Generate Post** — it'll analyze your site, draft, score, attach images, and save per your "After writing" setting

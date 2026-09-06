@@ -3,10 +3,11 @@
  * Owner-supplied source material for AI generation.
  *
  * The Generate Content form accepts URLs (one per line) and free-text notes.
- * URLs are fetched, reduced to readable text and, together with the notes,
- * rendered as a fenced prompt block the generator appends after the content
- * brief. The AI is told to base facts on this material, paraphrase, and cite
- * the URLs as its external links.
+ * URLs are fetched one at a time through WordPress' safe HTTP API, reduced
+ * to readable text and, together with the notes, rendered as a fenced
+ * prompt block the generator appends after the content brief. The AI is
+ * told to base facts on this material, paraphrase, and cite the URLs as its
+ * external links.
  *
  * Everything except fetch() is pure PHP so it can be unit tested without a
  * WordPress bootstrap.
@@ -42,7 +43,13 @@ class SWPS_Source_Material {
 	public const MAX_NOTES = 8000;
 
 	/** Fetch timeout in seconds per URL. */
-	public const FETCH_TIMEOUT = 10;
+	public const FETCH_TIMEOUT = 8;
+
+	/** Whole-batch time budget in seconds for fetching all URLs. */
+	public const FETCH_BUDGET = 25;
+
+	/** Transient cache lifetime for cached fetch failures. */
+	public const CACHE_FAIL_TTL = 300;
 
 	/** Maximum response body accepted, in bytes. */
 	public const MAX_BODY_BYTES = 1572864; // 1.5 MB.
@@ -173,6 +180,7 @@ class SWPS_Source_Material {
 		$text = (string) preg_replace( '/ *\n */', "\n", $text );
 		$text = (string) preg_replace( '/\n{2,}/', "\n", $text );
 		$text = trim( $text );
+		$text = self::neutralize_fences( $text );
 
 		return array(
 			'title' => $title,
@@ -200,6 +208,21 @@ class SWPS_Source_Material {
 	}
 
 	/**
+	 * Strip fence-like lines from third-party or owner-supplied text.
+	 *
+	 * Third-party or owner text must not be able to close the SOURCE/NOTES
+	 * fences the prompt relies on.
+	 *
+	 * @param string $text Text.
+	 * @return string
+	 */
+	private static function neutralize_fences( string $text ): string {
+		$text = (string) preg_replace( '/^[ \t]*[-=]{3,}.*$/m', '', $text );
+		$text = (string) preg_replace( '/\n{2,}/', "\n", $text );
+		return trim( $text );
+	}
+
+	/**
 	 * Render fetched sources and notes as the prompt block.
 	 *
 	 * The rendered block is guaranteed not to exceed MAX_TOTAL by construction:
@@ -221,7 +244,7 @@ class SWPS_Source_Material {
 				}
 			)
 		);
-		$notes  = self::shorten( trim( $notes ), self::MAX_NOTES );
+		$notes  = self::shorten( self::neutralize_fences( trim( $notes ) ), self::MAX_NOTES );
 
 		if ( empty( $usable ) && '' === $notes ) {
 			return '';
@@ -253,7 +276,7 @@ class SWPS_Source_Material {
 		$block = $header;
 		foreach ( $usable as $i => $item ) {
 			$block .= self::fence_open( $i + 1, $item );
-			$block .= self::shorten( trim( (string) $item['text'] ), $per_src ) . "\n";
+			$block .= self::shorten( self::neutralize_fences( trim( (string) $item['text'] ) ), $per_src ) . "\n";
 			$block .= self::fence_close( $i + 1 );
 		}
 		$block .= $notes_block;
@@ -290,18 +313,19 @@ class SWPS_Source_Material {
 	/**
 	 * Fetch each URL and reduce it to readable text.
 	 *
-	 * Requests run in parallel via WordPress' bundled Requests library so five
-	 * slow hosts cost one timeout, not five. Unsafe URLs (private/loopback
-	 * hosts, non-http schemes) are rejected before any request is made.
-	 * Results are cached per URL for CACHE_TTL so Preview then Generate
-	 * fetches once.
+	 * Fetched one at a time through WordPress' safe HTTP API
+	 * (`wp_safe_remote_get`): private/loopback hosts are rejected on the
+	 * initial URL and on every redirect, the response is size-capped, and
+	 * WordPress' CA bundle is used. Per-URL timeout FETCH_TIMEOUT, whole-batch
+	 * budget FETCH_BUDGET. Successes cached CACHE_TTL, failures
+	 * CACHE_FAIL_TTL.
 	 *
 	 * @param string[] $urls Parsed URLs (already capped).
 	 * @return array<int, array{url: string, ok: bool, title: string, text: string, error: string}>
 	 */
 	public static function fetch( array $urls ): array {
-		$results  = array();
-		$requests = array();
+		$results = array();
+		$started = microtime( true );
 
 		foreach ( $urls as $i => $url ) {
 			$cached = get_transient( self::cache_key( $url ) );
@@ -310,73 +334,75 @@ class SWPS_Source_Material {
 				continue;
 			}
 
-			if ( ! wp_http_validate_url( $url ) ) {
-				$results[ $i ] = self::failure( $url, __( 'URL rejected (private, local or malformed address).', 'stratawp-seo' ) );
+			if ( microtime( true ) - $started > self::FETCH_BUDGET ) {
+				$results[ $i ] = self::failure( $url, __( 'skipped: time budget for fetching sources was used up', 'stratawp-seo' ) );
 				continue;
 			}
 
-			$requests[ $i ] = array(
-				'url'     => $url,
-				'type'    => 'GET',
-				'headers' => array(
-					'Accept'     => 'text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1',
-					'User-Agent' => 'StrataWP-SEO/' . ( defined( 'SWPS_VERSION' ) ? SWPS_VERSION : 'dev' ) . ' (+source-material)',
-				),
-				'options' => array(
-					'timeout'          => self::FETCH_TIMEOUT,
-					'connect_timeout'  => 5,
-					'redirects'        => 3,
-					'max_bytes'        => self::MAX_BODY_BYTES,
-					'verify'           => true,
-					'follow_redirects' => true,
-				),
-			);
-		}
-
-		if ( ! empty( $requests ) ) {
-			$responses = \WpOrg\Requests\Requests::request_multiple( $requests );
-
-			foreach ( $requests as $i => $request ) {
-				$url      = $request['url'];
-				$response = $responses[ $i ] ?? null;
-
-				if ( ! ( $response instanceof \WpOrg\Requests\Response ) ) {
-					$message       = $response instanceof \Throwable ? $response->getMessage() : __( 'No response.', 'stratawp-seo' );
-					$results[ $i ] = self::failure( $url, self::humanize_error( $message ) );
-					continue;
-				}
-
-				if ( $response->status_code < 200 || $response->status_code >= 300 ) {
-					$results[ $i ] = self::failure( $url, sprintf( 'HTTP %d', $response->status_code ) );
-					continue;
-				}
-
-				$type = strtolower( (string) $response->headers['content-type'] );
-				if ( ! str_contains( $type, 'html' ) && ! str_contains( $type, 'text/plain' ) && ! str_contains( $type, 'xml' ) ) {
-					$results[ $i ] = self::failure( $url, __( 'Not an HTML or text page.', 'stratawp-seo' ) );
-					continue;
-				}
-
-				$body = (string) $response->body;
-				if ( strlen( $body ) > self::MAX_BODY_BYTES ) {
-					$body = substr( $body, 0, self::MAX_BODY_BYTES );
-				}
-
-				$extracted = self::extract_text( $body );
-				if ( '' === $extracted['text'] ) {
-					$results[ $i ] = self::failure( $url, __( 'No readable text found.', 'stratawp-seo' ) );
-					continue;
-				}
-
-				$results[ $i ] = array(
-					'url'   => $url,
-					'ok'    => true,
-					'title' => $extracted['title'],
-					'text'  => $extracted['text'],
-					'error' => '',
-				);
-				set_transient( self::cache_key( $url ), $results[ $i ], self::CACHE_TTL );
+			if ( ! wp_http_validate_url( $url ) ) {
+				$result        = self::failure( $url, __( 'URL rejected (private, local or malformed address).', 'stratawp-seo' ) );
+				$results[ $i ] = $result;
+				set_transient( self::cache_key( $url ), $result, self::CACHE_FAIL_TTL );
+				continue;
 			}
+
+			$response = wp_safe_remote_get(
+				$url,
+				array(
+					'timeout'             => self::FETCH_TIMEOUT,
+					'redirection'         => 3,
+					'limit_response_size' => self::MAX_BODY_BYTES,
+					'user-agent'          => 'StrataWP-SEO/' . ( defined( 'SWPS_VERSION' ) ? SWPS_VERSION : 'dev' ) . ' (+source-material)',
+					'headers'             => array(
+						'Accept' => 'text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1',
+					),
+				)
+			);
+
+			if ( is_wp_error( $response ) ) {
+				$result        = self::failure( $url, self::humanize_error( $response->get_error_message() ) );
+				$results[ $i ] = $result;
+				set_transient( self::cache_key( $url ), $result, self::CACHE_FAIL_TTL );
+				continue;
+			}
+
+			$code = wp_remote_retrieve_response_code( $response );
+			if ( $code < 200 || $code >= 300 ) {
+				$result        = self::failure( $url, sprintf( 'HTTP %d', $code ) );
+				$results[ $i ] = $result;
+				set_transient( self::cache_key( $url ), $result, self::CACHE_FAIL_TTL );
+				continue;
+			}
+
+			$type = strtolower( (string) wp_remote_retrieve_header( $response, 'content-type' ) );
+			if ( ! str_contains( $type, 'html' ) && ! str_contains( $type, 'text/plain' ) && ! str_contains( $type, 'xml' ) ) {
+				$result        = self::failure( $url, __( 'Not an HTML or text page.', 'stratawp-seo' ) );
+				$results[ $i ] = $result;
+				set_transient( self::cache_key( $url ), $result, self::CACHE_FAIL_TTL );
+				continue;
+			}
+
+			$body = wp_remote_retrieve_body( $response );
+			if ( strlen( $body ) > self::MAX_BODY_BYTES ) {
+				$body = substr( $body, 0, self::MAX_BODY_BYTES );
+			}
+
+			$extracted = self::extract_text( $body );
+			if ( '' === $extracted['text'] ) {
+				$result        = self::failure( $url, __( 'No readable text found.', 'stratawp-seo' ) );
+				$results[ $i ] = $result;
+				set_transient( self::cache_key( $url ), $result, self::CACHE_FAIL_TTL );
+				continue;
+			}
+
+			$results[ $i ] = array(
+				'url'   => $url,
+				'ok'    => true,
+				'title' => $extracted['title'],
+				'text'  => $extracted['text'],
+				'error' => '',
+			);
+			set_transient( self::cache_key( $url ), $results[ $i ], self::CACHE_TTL );
 		}
 
 		ksort( $results );
@@ -455,11 +481,17 @@ class SWPS_Source_Material {
 		if ( str_contains( $lower, 'ssl' ) || str_contains( $lower, 'certificate' ) ) {
 			return __( 'SSL certificate problem', 'stratawp-seo' );
 		}
+		if ( str_contains( $lower, 'a valid url was not provided' ) ) {
+			return __( 'URL rejected (private, local or malformed address).', 'stratawp-seo' );
+		}
 		return self::shorten( $message, 80 );
 	}
 
 	/**
 	 * Validate a cached fetch result.
+	 *
+	 * Both successes and failures are valid cache entries; a cached success
+	 * must still carry non-empty text.
 	 *
 	 * @param mixed $value Transient value.
 	 * @return bool
@@ -468,12 +500,22 @@ class SWPS_Source_Material {
 		if ( ! is_array( $value ) ) {
 			return false;
 		}
-		return isset( $value['ok'], $value['url'], $value['text'], $value['title'], $value['error'] )
-			&& true === $value['ok']
-			&& is_string( $value['url'] ) && '' !== $value['url']
-			&& is_string( $value['text'] ) && '' !== $value['text']
-			&& is_string( $value['title'] )
-			&& is_string( $value['error'] );
+		if ( ! isset( $value['ok'], $value['url'], $value['text'], $value['title'], $value['error'] ) ) {
+			return false;
+		}
+		if ( ! is_bool( $value['ok'] ) ) {
+			return false;
+		}
+		if ( ! is_string( $value['url'] ) || '' === $value['url'] ) {
+			return false;
+		}
+		if ( ! is_string( $value['title'] ) || ! is_string( $value['text'] ) || ! is_string( $value['error'] ) ) {
+			return false;
+		}
+		if ( true === $value['ok'] && '' === $value['text'] ) {
+			return false;
+		}
+		return true;
 	}
 
 	/**

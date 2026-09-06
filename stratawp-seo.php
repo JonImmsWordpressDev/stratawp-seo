@@ -714,6 +714,12 @@ final class StrataWP_SEO {
 				'brief_field_max'      => SWPS_Content_Brief::MAX_FIELD_LENGTH,
 				'page_templates'       => SWPS_Templates::get_options( SWPS_Templates::TYPE_PAGE ),
 				'sources_max_length'   => SWPS_Source_Material::MAX_TEXT,
+				'page_template_ranges' => array_map(
+					static function ( array $t ): array {
+						return array( (int) ( $t['min_words'] ?? 0 ), (int) ( $t['max_words'] ?? 0 ) );
+					},
+					SWPS_Templates::get_templates( SWPS_Templates::TYPE_PAGE )
+				),
 			)
 		);
 
@@ -807,7 +813,12 @@ final class StrataWP_SEO {
 		$brief    = $this->read_brief_from_request();
 
 		$options = $this->read_generate_options_from_request();
-		$result  = $this->generator->generate_post( $topic, $template, $brief, $options );
+
+		if ( SWPS_Templates::TYPE_PAGE === $options['content_type'] && ! current_user_can( 'edit_pages' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to create pages.', 'stratawp-seo' ) ) );
+		}
+
+		$result = $this->generator->generate_post( $topic, $template, $brief, $options );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
@@ -875,7 +886,12 @@ final class StrataWP_SEO {
 		$brief    = $this->read_brief_from_request();
 
 		$options = $this->read_generate_options_from_request();
-		$result  = $this->generator->preview_content( $topic, $template, $brief, $options );
+
+		if ( SWPS_Templates::TYPE_PAGE === $options['content_type'] && ! current_user_can( 'edit_pages' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to create pages.', 'stratawp-seo' ) ) );
+		}
+
+		$result = $this->generator->preview_content( $topic, $template, $brief, $options );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
@@ -939,9 +955,11 @@ final class StrataWP_SEO {
 	 */
 	private function read_generate_options_from_request(): array {
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- every caller runs check_ajax_referer() first.
-		$options = array(
-			'content_type' => SWPS_Templates::normalize_type( sanitize_text_field( wp_unslash( (string) ( $_POST['content_type'] ?? SWPS_Templates::TYPE_POST ) ) ) ),
-			'parent_id'    => absint( $_POST['parent_id'] ?? 0 ),
+		$raw_type   = isset( $_POST['content_type'] ) && is_scalar( $_POST['content_type'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['content_type'] ) ) : SWPS_Templates::TYPE_POST;
+		$raw_parent = isset( $_POST['parent_id'] ) && is_scalar( $_POST['parent_id'] ) ? absint( wp_unslash( (string) $_POST['parent_id'] ) ) : 0;
+		$options    = array(
+			'content_type' => SWPS_Templates::normalize_type( $raw_type ),
+			'parent_id'    => $raw_parent,
 		);
 
 		$raw_images = array();

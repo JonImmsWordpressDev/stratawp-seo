@@ -200,11 +200,16 @@ Pure-PHP where possible; fetching isolated in one method.
 - `parse(string $text): array` → `['urls' => string[], 'notes' =>
   string]`. A line that is solely an http(s) URL is a URL (deduped,
   capped at 5, extras dropped and reported); everything else is notes.
-- `fetch(array $urls): array` — `Requests::request_multiple` (WP core)
-  with 10s timeout, `reject_unsafe_urls => true`, redirects 3, response
+- `fetch(array $urls): array` — one `wp_safe_remote_get()` call per URL
+  in order (`reject_unsafe_urls` on, so redirects are validated too),
+  8s timeout per URL, 25s whole-batch budget, redirects 3, response
   body capped at 1.5 MB, content-type must be HTML or text. Each
-  result: `['url','ok','title','text','error']`. Results cached in a
-  transient keyed by `md5(url)` for 1 hour.
+  result: `['url','ok','title','text','error']`. Successes cached in a
+  transient keyed by `md5(url)` for 1 hour; failures cached for 5
+  minutes.
+  Changed after review: parallel fetch dropped because it bypassed
+  WordPress' redirect validation and the namespaced Requests class
+  does not exist on WP 6.0/6.1.
 - `extract_text(string $html): array{title,text}` — prefer `<article>`,
   then `<main>`, then `<body>`; remove `script`, `style`, `noscript`,
   `nav`, `header`, `footer`, `aside`, `form`, `iframe`, `svg`; keep

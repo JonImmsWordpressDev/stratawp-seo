@@ -452,10 +452,29 @@
         if ($lands.length) {
             $lands.text($lands.data(type) || $lands.text());
         }
+        var $cardTitle = $('#swps-card-title');
+        if ($cardTitle.length) {
+            $cardTitle.text($cardTitle.data(type) || $cardTitle.text());
+        }
+        var $cardDesc = $('#swps-card-desc');
+        if ($cardDesc.length) {
+            $cardDesc.text($cardDesc.data(type) || $cardDesc.text());
+        }
+        updateLengthSummary();
         // Fallback for browsers without :has() support — see the CSS below.
         $contentTypeRadios.each(function() {
             $(this).closest('.swps-segmented-option').toggleClass('is-selected', $(this).is(':checked'));
         });
+    }
+
+    function updateLengthSummary() {
+        var $cell = $('#swps-summary-length');
+        if (!$cell.length) return;
+        if (getContentType() !== 'page') { $cell.text($cell.data('post')); return; }
+        var ranges = swpsAdmin.page_template_ranges || {};
+        var r = ranges[$templateSelect.val()] || ranges['page-auto'];
+        if (!r) { $cell.text($cell.data('post')); return; }
+        $cell.text('~' + Number(r[0]).toLocaleString() + '–' + Number(r[1]).toLocaleString() + ' words');
     }
 
     function updateImageSummary() {
@@ -577,10 +596,12 @@
         $featuredImage.on('change', function() { updateImageSummary(); saveBriefDraft(); });
         $contentImages.on('input change', function() { updateImageSummary(); saveBriefDraft(); });
         $toneSelect.on('change', updateToneSummary);
+        $templateSelect.on('change', updateLengthSummary);
         applyContentType();
         updateImageSummary();
         updateToneSummary();
         updateSourcesCount();
+        updateLengthSummary();
         restoreBriefDraft();
         updateBriefCount();
 
