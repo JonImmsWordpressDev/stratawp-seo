@@ -320,6 +320,14 @@ class SWPS_Image_SEO {
 				if ( preg_match( '/\bloading\s*=/i', $attrs ) ) {
 					return $m[0];
 				}
+				// Core marks the LCP candidate with fetchpriority="high" and
+				// DELIBERATELY omits loading, so "no loading attribute" does not
+				// mean "core forgot" — it means core opted out. Lazy-loading that
+				// image defers the largest paint and regresses LCP, and the pair
+				// fetchpriority="high" loading="lazy" is self-contradictory.
+				if ( preg_match( '/\bfetchpriority\s*=\s*["\']?high/i', $attrs ) ) {
+					return $m[0];
+				}
 				return '<img' . $attrs . ' loading="lazy" decoding="async">';
 			},
 			$html
