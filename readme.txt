@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.31.1
+Stable tag: 4.31.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -331,6 +331,10 @@ StrataWP SEO connects to external services **only when you configure them**, alw
 
 **Google Search Console (optional).** If you connect Google OAuth, the plugin reads your Search Console performance data (clicks, impressions, queries, positions) to power rank tracking, the decay watchdog, cannibalization detection, and question mining — terms: https://developers.google.com/terms · privacy: https://policies.google.com/privacy
 
+**IndexNow (optional).** When IndexNow is enabled, the plugin submits the URL of a post or term you publish, update or delete — and your site's IndexNow key — to the IndexNow API, which shares it with participating search engines (Bing, Yandex, Seznam, Naver). Only URLs and the key are sent, never post content, and submissions are paused automatically outside production — terms and privacy: https://www.indexnow.org/faq · https://www.bing.com/webmasters/indexnow
+
+**GitHub (only for copies installed outside WordPress.org).** A build installed from a GitHub release checks https://api.github.com for a newer release so it can self-update. This sends nothing but the request itself. A copy installed from the WordPress.org directory does not make this request at all — see `admin/js/vendor/README.md` and the `swps_github_updater_enabled` filter — terms: https://docs.github.com/site-policy/github-terms/github-terms-of-service · privacy: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+
 == Installation ==
 
 1. Upload the `stratawp-seo` folder to `/wp-content/plugins/`
@@ -421,6 +425,11 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.31.2 =
+* Changed: Chart.js and FullCalendar are now bundled with the plugin instead of loaded from cdn.jsdelivr.net, and the admin fonts (Poppins, Open Sans) are self-hosted instead of loaded from fonts.googleapis.com. No admin page view sends anything to a third-party CDN any more — which also settles the GDPR question that remote webfonts raise.
+* Changed: the GitHub self-updater now runs only on copies installed from a GitHub release. A copy installed from the WordPress.org directory leaves updating to the directory, so the two can never race. Override with the SWPS_GITHUB_UPDATER constant or the `swps_github_updater_enabled` filter.
+* Docs: the readme's Third-Party Services section now also covers IndexNow and the GitHub update check.
 
 = 4.31.1 =
 * Fixed: the Image SEO pass was lazy-loading the largest image on every page. WordPress marks the LCP candidate with fetchpriority="high" and deliberately leaves `loading` off it; the pass read a missing `loading` attribute as an oversight and added `loading="lazy"`, producing the self-contradictory pair fetchpriority="high" loading="lazy" and telling the browser to both prioritise and defer the largest paint. Images carrying fetchpriority="high" are now left alone; everything else is lazy-loaded exactly as before.

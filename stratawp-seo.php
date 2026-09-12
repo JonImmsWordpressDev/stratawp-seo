@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.31.1
+ * Version: 4.31.2
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.31.1' );
+define( 'SWPS_VERSION', '4.31.2' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -537,9 +537,9 @@ final class StrataWP_SEO {
 		$this->dashboard   = new SWPS_Dashboard();
 		$this->migration   = new SWPS_Migration();
 
-		// GitHub release-based updater (admin only). Temporary until the plugin
-		// ships through the WordPress.org directory — see the require above.
-		if ( is_admin() ) {
+		// GitHub release-based updater (admin only), and only for copies that
+		// actually came from a GitHub release — see github_updates_enabled().
+		if ( is_admin() && self::github_updates_enabled() ) {
 			new SWPS_GitHub_Updater( __FILE__, SWPS_VERSION );
 		}
 
@@ -726,9 +726,12 @@ final class StrataWP_SEO {
 		// Analytics dashboard JS.
 		if ( str_contains( $hook, 'swps-analytics' ) || in_array( $hook, array( 'post.php', 'post-new.php' ), true ) ) {
 			if ( str_contains( $hook, 'swps-analytics' ) ) {
+				// Bundled, not CDN: WordPress.org requires scripts to be served
+				// from the plugin, and a CDN request leaks every admin user's IP
+				// to a third party. See admin/js/vendor/README.md.
 				wp_enqueue_script(
 					'chartjs',
-					'https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js',
+					SWPS_PLUGIN_URL . 'admin/js/vendor/chart.umd.min.js',
 					array(),
 					'4.4.7',
 					true
@@ -1447,6 +1450,37 @@ final class StrataWP_SEO {
 		( new SWPS_Model_Discovery() )->dismiss_alert();
 
 		wp_send_json_success();
+	}
+
+	/**
+	 * Whether the GitHub release updater should run.
+	 *
+	 * WordPress.org guideline 8 forbids a plugin hosted in the directory from
+	 * updating itself from anywhere else, and two update sources racing each
+	 * other is a good way to downgrade someone's site. So the updater is opt-in
+	 * by provenance: the release workflow drops a `.github-release` marker into
+	 * the zip it publishes, and only a copy carrying that marker self-updates.
+	 * A copy installed from the WordPress.org directory has no marker, so the
+	 * directory remains its single source of updates.
+	 *
+	 * Override with the SWPS_GITHUB_UPDATER constant (wp-config.php) or the
+	 * `swps_github_updater_enabled` filter.
+	 *
+	 * @return bool
+	 */
+	private static function github_updates_enabled(): bool {
+		$enabled = file_exists( SWPS_PLUGIN_DIR . '.github-release' );
+
+		if ( defined( 'SWPS_GITHUB_UPDATER' ) ) {
+			$enabled = (bool) constant( 'SWPS_GITHUB_UPDATER' );
+		}
+
+		/**
+		 * Filters whether the GitHub release updater runs.
+		 *
+		 * @param bool $enabled True to let the plugin update itself from GitHub.
+		 */
+		return (bool) apply_filters( 'swps_github_updater_enabled', $enabled );
 	}
 }
 

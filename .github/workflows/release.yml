@@ -55,36 +55,18 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build production zip
+      - name: Build release zips
         if: steps.exists.outputs.exists == 'false'
         run: |
-          set -e
-          mkdir -p build
-          rsync -a \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='docs' \
-            --exclude='screenshots' \
-            --exclude='.wordpress-org' \
-            --exclude='build' \
-            --exclude='node_modules' \
-            --exclude='*.zip' \
-            --exclude='AGENTS.md' \
-            --exclude='CLAUDE.md' \
-            --exclude='.claude' \
-            --exclude='.claude-flow' \
-            --exclude='**/.claude-flow' \
-            --exclude='.superpowers' \
-            --exclude='.agents' \
-            --exclude='.codex' \
-            --exclude='.idea' \
-            --exclude='.vscode' \
-            --exclude='.mcp.json' \
-            --exclude='.DS_Store' \
-            --exclude='**/.DS_Store' \
-            ./ build/stratawp-seo/
-          (cd build && zip -rq stratawp-seo.zip stratawp-seo)
-          ls -lh build/stratawp-seo.zip
+          # Two zips from one tree — see bin/build-zip.sh.
+          #   stratawp-seo.zip        GitHub release, carries the provenance
+          #                           marker that enables the self-updater
+          #   stratawp-seo-wporg.zip  WordPress.org upload, no marker, no dev
+          #                           tooling, so the directory owns updates
+          # The script verifies each zip and deletes any that fails.
+          ./bin/build-zip.sh --target github
+          ./bin/build-zip.sh --target wporg
+          ls -lh build/*.zip
 
       - name: Publish GitHub Release
         if: steps.exists.outputs.exists == 'false'
@@ -92,6 +74,8 @@ jobs:
         with:
           tag_name: v${{ steps.ver.outputs.version }}
           name: v${{ steps.ver.outputs.version }}
-          files: build/stratawp-seo.zip
+          files: |
+            build/stratawp-seo.zip
+            build/stratawp-seo-wporg.zip
           generate_release_notes: true
           make_latest: true

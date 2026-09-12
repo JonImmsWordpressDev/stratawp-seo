@@ -1,7 +1,9 @@
 .DS_Store
 Thumbs.db
 node_modules/
-vendor/
+# Anchored: a bare "vendor/" also matches admin/js/vendor/ and silently
+# drops the bundled Chart.js and FullCalendar from the repo.
+/vendor/
 *.zip
 .vscode/
 .idea/
@@ -36,3 +38,6 @@ agentdb.rvf
 agentdb.rvf.lock
 ruvector.db
 .swarm/
+
+# Provenance marker — written into the release zip only, never committed.
+.github-release

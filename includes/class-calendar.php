@@ -52,10 +52,12 @@ class SWPS_Calendar {
 			return;
 		}
 
-		// FullCalendar CDN.
+		// Bundled, not CDN: WordPress.org requires scripts to be served from
+		// the plugin, and a CDN request leaks every admin user's IP to a third
+		// party. See admin/js/vendor/README.md.
 		wp_enqueue_script(
 			'fullcalendar',
-			'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js',
+			SWPS_PLUGIN_URL . 'admin/js/vendor/fullcalendar.global.min.js',
 			array(),
 			'6.1.11',
 			true
