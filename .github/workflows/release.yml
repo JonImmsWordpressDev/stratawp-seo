@@ -83,7 +83,17 @@ jobs:
             --exclude='.DS_Store' \
             --exclude='**/.DS_Store' \
             ./ build/stratawp-seo/
+          # Provenance marker. The plugin only enables its GitHub self-updater
+          # when this file is present, so a copy installed from the
+          # WordPress.org directory (which never carries it) leaves updates to
+          # the directory — WordPress.org guideline 8. Do not add this file to
+          # the repository; it must exist only in the released zip.
+          printf 'Built by %s from %s at %s\n' \
+            "$GITHUB_WORKFLOW" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            > build/stratawp-seo/.github-release
           (cd build && zip -rq stratawp-seo.zip stratawp-seo)
+          unzip -l build/stratawp-seo.zip | grep -q '\.github-release' \
+            || { echo "::error::provenance marker missing from the zip"; exit 1; }
           ls -lh build/stratawp-seo.zip
 
       - name: Publish GitHub Release

@@ -120,10 +120,13 @@ class SWPS_Admin_Shell {
 			return;
 		}
 
-		// v4.0.4: Poppins (heading) + Open Sans (body) — match jonimms.com.
+		// Poppins (heading) + Open Sans (body), self-hosted. Loaded from
+		// fonts.googleapis.com until 4.31.2 — serving them from the plugin keeps
+		// every admin page view from sending the user's IP to Google.
+		// See admin/fonts/README.md.
 		wp_enqueue_style(
 			'swps-fonts',
-			'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Open+Sans:wght@400;500;600&display=swap',
+			SWPS_PLUGIN_URL . 'admin/css/fonts.css',
 			array(),
 			SWPS_VERSION
 		);
