@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.31.0
+Stable tag: 4.31.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -421,6 +421,9 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.31.1 =
+* Fixed: the Image SEO pass was lazy-loading the largest image on every page. WordPress marks the LCP candidate with fetchpriority="high" and deliberately leaves `loading` off it; the pass read a missing `loading` attribute as an oversight and added `loading="lazy"`, producing the self-contradictory pair fetchpriority="high" loading="lazy" and telling the browser to both prioritise and defer the largest paint. Images carrying fetchpriority="high" are now left alone; everything else is lazy-loaded exactly as before.
 
 = 4.31.0 =
 * New: Generate Content can create pages as well as posts. A "What are you creating?" toggle switches to page templates (Auto, Service page, Landing page, About / Team, Location / area page), adds a Parent page picker, and uses a page-specific prompt: evergreen copy with no dates or "in this post" phrasing, conversion-oriented sections per template, no table of contents or key takeaways, FAQ only for service and location pages, shorter per-template word ranges, and no category or tags. Pages save with the same SEO meta and content score as posts. Bulk Generate, cron and autopilot remain posts only.
