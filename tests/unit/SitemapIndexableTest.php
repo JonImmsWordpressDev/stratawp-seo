@@ -239,4 +239,33 @@ class SitemapIndexableTest extends TestCase {
 			$this->assertNotInstanceOf( WP_Error::class, $url, 'A WP_Error must never survive into the URL list.' );
 		}
 	}
+
+	public function test_author_sitemap_visible_by_default(): void {
+		$this->assertFalse( SWPS_Sitemap_Manager::is_author_sitemap_hidden() );
+	}
+
+	public function test_author_sitemap_hidden_when_excluded(): void {
+		$GLOBALS['swps_test_options']['swps_sitemap_exclude_author'] = 1;
+		$this->assertTrue( SWPS_Sitemap_Manager::is_author_sitemap_hidden() );
+	}
+
+	/**
+	 * Author archives set to noindex must not be advertised in the sitemap,
+	 * matching how noindexed post types and taxonomies are handled.
+	 */
+	public function test_author_sitemap_hidden_when_authors_noindexed(): void {
+		$GLOBALS['swps_test_options']['swps_noindex_author'] = 1;
+		$this->assertTrue( SWPS_Sitemap_Manager::is_author_sitemap_hidden() );
+	}
+
+	public function test_indexable_urls_omit_authors_when_noindexed(): void {
+		$GLOBALS['swps_test_options']['swps_noindex_author'] = 1;
+		$GLOBALS['swps_test_post_types'] = array();
+		$GLOBALS['swps_test_taxonomies'] = array();
+		$GLOBALS['swps_test_users']      = array( 7 );
+
+		$urls = SWPS_Sitemap_Manager::get_indexable_urls();
+
+		$this->assertNotContains( 'https://example.com/author/7/', $urls );
+	}
 }

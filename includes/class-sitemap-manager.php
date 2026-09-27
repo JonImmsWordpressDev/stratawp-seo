@@ -126,7 +126,7 @@ class SWPS_Sitemap_Manager {
 			}
 		}
 
-		if ( ! get_option( 'swps_sitemap_exclude_author', 0 ) ) {
+		if ( ! self::is_author_sitemap_hidden() ) {
 			$authors = get_users( array( 'has_published_posts' => true, 'fields' => 'ID' ) );
 			foreach ( $authors as $author_id ) {
 				$urls[] = get_author_posts_url( (int) $author_id );
@@ -173,6 +173,15 @@ class SWPS_Sitemap_Manager {
 	 */
 	public static function is_legacy_redirect_type( string $type ): bool {
 		return 'legacy_redirect' === $type || 'swps' === $type;
+	}
+
+	/**
+	 * Whether author archives are kept out of the sitemap: excluded outright,
+	 * or noindexed (a sitemap must not advertise noindex URLs).
+	 */
+	public static function is_author_sitemap_hidden(): bool {
+		return (bool) get_option( 'swps_sitemap_exclude_author', 0 )
+			|| (bool) get_option( 'swps_noindex_author', 0 );
 	}
 
 	public function __construct() {
@@ -260,6 +269,10 @@ class SWPS_Sitemap_Manager {
 		if ( 'index' === $type ) {
 			$this->render_sitemap_index();
 		} elseif ( 'author' === $type ) {
+			if ( self::is_author_sitemap_hidden() ) {
+				status_header( 404 );
+				exit;
+			}
 			$this->render_author_sitemap();
 		} else {
 			// Check if it's a taxonomy.
@@ -334,7 +347,7 @@ class SWPS_Sitemap_Manager {
 		}
 
 		// Author sitemap.
-		if ( ! get_option( 'swps_sitemap_exclude_author', 0 ) ) {
+		if ( ! self::is_author_sitemap_hidden() ) {
 			printf(
 				"<sitemap>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n</sitemap>\n",
 				esc_url( home_url( '/author-sitemap.xml' ) ),
