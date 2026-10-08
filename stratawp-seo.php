@@ -237,6 +237,10 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-modules.php';
 
 // Block editor sidebar.
 require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-sidebar.php';
+require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-text.php';
+require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-check-registry.php';
+require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-check-engine.php';
+require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-input.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-admin-shell.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-dashboard.php';
 

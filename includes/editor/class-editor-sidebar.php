@@ -20,6 +20,9 @@ class SWPS_Editor_Sidebar {
 		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue' ) );
 		add_action( 'admin_post_' . self::TOGGLE_ACTION, array( $this, 'handle_toggle' ) );
 		add_action( 'admin_notices', array( $this, 'maybe_show_notice' ) );
+		add_action( 'init', array( $this, 'register_meta' ), 20 );
+		add_action( 'added_post_meta', array( $this, 'mirror_related' ), 10, 4 );
+		add_action( 'updated_post_meta', array( $this, 'mirror_related' ), 10, 4 );
 	}
 
 	/**
@@ -69,6 +72,9 @@ class SWPS_Editor_Sidebar {
 		if ( ! $screen || 'post' !== $screen->base || ! $screen->is_block_editor() ) {
 			return;
 		}
+		if ( ! in_array( $screen->post_type, SWPS_Meta_Editor::get_enabled_post_types(), true ) ) {
+			return;
+		}
 		$asset_file = SWPS_PLUGIN_DIR . 'admin/editor/index.asset.php';
 		if ( ! is_readable( $asset_file ) ) {
 			return;
@@ -97,13 +103,136 @@ class SWPS_Editor_Sidebar {
 		);
 	}
 
+	public static function sanitize_robots( $value ): string {
+		$allowed = array( '', 'noindex, follow', 'index, nofollow', 'noindex, nofollow' );
+		$value   = (string) $value;
+		return in_array( $value, $allowed, true ) ? $value : '';
+	}
+
+	/**
+	 * Expose the SEO fields to the block editor through REST. Only registered
+	 * when the sidebar is on, so nothing changes for sites that have not
+	 * opted in.
+	 */
+	public function register_meta(): void {
+		if ( ! self::is_enabled() ) {
+			return;
+		}
+
+		$auth = static function ( $allowed, $meta_key, $post_id ): bool {
+			return current_user_can( 'edit_post', (int) $post_id );
+		};
+
+		$strings = array(
+			'_swps_meta_title'         => 'sanitize_text_field',
+			'_swps_meta_description'   => 'sanitize_textarea_field',
+			'_swps_focus_keyword'      => 'sanitize_text_field',
+			'_swps_secondary_keywords' => 'sanitize_text_field',
+			'_swps_canonical_url'      => 'esc_url_raw',
+			'_swps_robots'             => array( __CLASS__, 'sanitize_robots' ),
+			'_swps_breadcrumb_title'   => 'sanitize_text_field',
+			'_swps_social_title'       => 'sanitize_text_field',
+			'_swps_social_description' => 'sanitize_textarea_field',
+			'_swps_social_image'       => 'esc_url_raw',
+			'_swps_sitemap_priority'   => 'sanitize_text_field',
+			'_swps_sitemap_changefreq' => 'sanitize_text_field',
+		);
+
+		foreach ( SWPS_Meta_Editor::get_enabled_post_types() as $type ) {
+			foreach ( $strings as $key => $sanitize ) {
+				register_post_meta(
+					$type,
+					$key,
+					array(
+						'type'              => 'string',
+						'single'            => true,
+						'show_in_rest'      => true,
+						'sanitize_callback' => $sanitize,
+						'auth_callback'     => $auth,
+					)
+				);
+			}
+
+			register_post_meta(
+				$type,
+				'_swps_sitemap_exclude',
+				array(
+					'type'              => 'integer',
+					'single'            => true,
+					'show_in_rest'      => true,
+					'sanitize_callback' => 'absint',
+					'auth_callback'     => $auth,
+				)
+			);
+
+			register_post_meta(
+				$type,
+				SWPS_Editor_Input::META_RELATED,
+				array(
+					'type'              => 'array',
+					'single'            => true,
+					'show_in_rest'      => array(
+						'schema' => array(
+							'type'     => 'array',
+							'items'    => array( 'type' => 'string' ),
+							'maxItems' => SWPS_Editor_Input::MAX_RELATED,
+						),
+					),
+					'sanitize_callback' => array( 'SWPS_Editor_Input', 'sanitize_related' ),
+					'auth_callback'     => $auth,
+				)
+			);
+
+			// Readable in the editor (for the old versus new score note), never writable over REST.
+			register_post_meta(
+				$type,
+				'_swps_seo_score_value',
+				array(
+					'type'          => 'integer',
+					'single'        => true,
+					'show_in_rest'  => true,
+					'auth_callback' => '__return_false',
+				)
+			);
+		}
+	}
+
+	/**
+	 * Keep the legacy comma separated secondary keywords in step with the new
+	 * related keywords list so the AI generation path sees the same values.
+	 *
+	 * @param int    $meta_id    Meta row ID.
+	 * @param int    $post_id    Post ID.
+	 * @param string $meta_key   Meta key.
+	 * @param mixed  $meta_value New value.
+	 */
+	public function mirror_related( $meta_id, $post_id, $meta_key, $meta_value ): void {
+		if ( SWPS_Editor_Input::META_RELATED !== $meta_key ) {
+			return;
+		}
+		update_post_meta(
+			(int) $post_id,
+			'_swps_secondary_keywords',
+			SWPS_Editor_Input::secondary_string( SWPS_Editor_Input::sanitize_related( $meta_value ) )
+		);
+	}
+
 	/**
 	 * @return array<string,mixed>
 	 */
 	private function script_data(): array {
+		$screen    = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		$post_type = $screen && $screen->post_type ? $screen->post_type : 'post';
+
 		return array(
-			'enabled'   => true,
-			'toggleUrl' => $this->toggle_url( false ),
+			'enabled'    => true,
+			'toggleUrl'  => $this->toggle_url( false ),
+			'registry'   => SWPS_Editor_Check_Registry::for_js(),
+			'preset'     => SWPS_Editor_Input::preset( $post_type ),
+			'host'       => (string) wp_parse_url( home_url(), PHP_URL_HOST ),
+			'lang'       => get_locale(),
+			'siteTitle'  => get_bloginfo( 'name' ),
+			'aeoEnabled' => (bool) get_option( SWPS_AEO_Scorer::OPTION_COVERAGE_ENABLED ),
 		);
 	}
 

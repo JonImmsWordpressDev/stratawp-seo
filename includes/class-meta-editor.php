@@ -591,7 +591,7 @@ class SWPS_Meta_Editor {
 	/**
 	 * Get post types where the meta editor is enabled.
 	 */
-	private function get_enabled_post_types(): array {
+	public static function get_enabled_post_types(): array {
 		$saved = get_option( 'swps_meta_editor_post_types', '' );
 
 		if ( is_array( $saved ) && ! empty( $saved ) ) {
