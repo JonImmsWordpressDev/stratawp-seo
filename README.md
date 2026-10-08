@@ -21,7 +21,7 @@
 
 **AI-powered SEO that knows your WordPress site — and knows how AI search works.** Generate site-aware blog posts, run your technical SEO (sitemaps, redirects, schema `@graph`, audits, a full site crawler), get *cited* by AI answer engines (AEO scoring, llms.txt, AI citation tracking, AI referral analytics), and let the automation layer watch your budget, your decaying posts, and your topic pipeline while you sleep.
 
-[![Version](https://img.shields.io/badge/version-4.31.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-4.32.0-blue.svg)]()
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)]()
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/license-GPL--2.0%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
@@ -99,6 +99,16 @@ It's designed to **replace** Yoast/RankMath/AIOSEO if you want to, or **coexist*
 - **Re-score all published posts** in chunks with live progress; posts below your threshold (default 75) queue up
 - **AI proposals with diff review** — concrete find/replace edits, optional new meta title/description/focus keyword, and a projected score; check/uncheck each edit before applying
 - **One-click apply** with automatic re-score, plus per-row dismiss
+
+#### Editor sidebar ★ v4.32
+- **Live analysis**: a block editor sidebar replaces the SEO and AEO metaboxes. It analyses as you type, with SEO checks and readability grouped into problems, improvements and good
+- **Related keywords**: a focus keyword plus up to four related keywords
+- **Search preview**: see the result on desktop and mobile
+- **AI visibility panel**: the AI visibility score, the questions an answer engine would ask, schema found in the content and AI citation status for the post
+- **Fix buttons with diff and Undo**: deterministic fixes (keyword slug for drafts, trimming a long title or description) apply instantly; AI fixes (keyword in the title, description, introduction or conclusion, and "Add an answer" for missing AI visibility questions) show a before and after diff and write nothing until you press Apply. Every fix goes through the editor, so Undo reverses it. AI fixes respect the monthly AI budget and are cost tracked
+- **Before and after snapshots**: when a post with applied fixes is next saved while published, the plugin stores a snapshot of its score and search numbers so later releases can show before and after results
+- **Rollout**: new installs use the sidebar by default. Existing sites keep the classic metaboxes until they choose "Turn it on" in the notice shown in the block editor. "Use the classic editor panel instead" in the sidebar's Advanced panel switches back
+- **Build**: the compiled sidebar is built with @wordpress/scripts; sources are in `src/editor` and the compiled files are in `admin/editor`
 
 ### The AI Visibility & AEO Layer
 
@@ -1798,6 +1808,13 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 ---
 
 ## Changelog
+
+### v4.32.0 (October 2026)
+- **New:** a block editor sidebar replaces the SEO and AEO metaboxes in the block editor. It analyses as you type (SEO checks and readability, grouped into problems, improvements and good), supports a focus keyword plus up to four related keywords, previews the search result on desktop and mobile, and shows the AI visibility score, the questions an answer engine would ask, schema found in the content and AI citation status for the post.
+- **New:** Fix buttons. Deterministic fixes (keyword slug for drafts, trimming a long title or description) apply instantly; AI fixes (keyword in the title, description, introduction or conclusion, and "Add an answer" for missing AI visibility questions) show a before and after diff and write nothing until you press Apply. Every fix goes through the editor, so Undo reverses it. AI fixes respect the monthly AI budget and are cost tracked.
+- **New:** when a post with applied fixes is next saved while published, the plugin stores a snapshot of its score and search numbers so later releases can show before and after results.
+- **Changed:** new installs use the sidebar by default. Existing sites keep the classic metaboxes until they choose "Turn it on" in the notice shown in the block editor. "Use the classic editor panel instead" in the sidebar's Advanced panel switches back.
+- **Changed:** the compiled sidebar is built with @wordpress/scripts; sources are in src/editor and the compiled files are in admin/editor.
 
 ### v4.26.3 — August 2026
 - **Regex redirects no longer lose their backslashes** — a pattern like `^/category/([^/]+)(?:/page/\d+)?$` added via WP-CLI, the add-redirect ability, or a migration import was silently stored as `…(?:/page/d+)?$` and never matched. The redirect manager stripped slashes from its input a second time even though every form/AJAX entry point had already unslashed it; the double-unslash is gone and patterns are stored verbatim

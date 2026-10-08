@@ -68,7 +68,7 @@ EXCLUDES=(
 # unanchored pattern already cost us the bundled Chart.js once.
 if [ "$TARGET" = wporg ]; then
   EXCLUDES+=(
-    --exclude='/tests' --exclude='/e2e' --exclude='/bin'
+    --exclude='/tests' --exclude='/e2e' --exclude='/playwright.config.js' --exclude='/bin'
     --exclude='/vendor' --exclude='/composer.json' --exclude='/composer.lock'
     --exclude='/phpunit.xml' --exclude='/phpunit.xml.dist'
     --exclude='/phpcs.xml' --exclude='/phpcs.xml.dist'
@@ -108,6 +108,8 @@ has "$SLUG/readme.txt"       || fail "readme.txt missing"
 has "vendor/chart.umd.min.js"        || fail "bundled Chart.js missing"
 has "vendor/fullcalendar.global.min.js" || fail "bundled FullCalendar missing"
 has "admin/fonts/"           || fail "bundled fonts missing"
+has "admin/editor/index.js"  || fail "editor sidebar bundle missing"
+has "admin/editor/index.asset.php" || fail "editor sidebar asset manifest missing"
 
 if [ "$TARGET" = github ]; then
   has '.github-release' || fail "provenance marker missing — self-updater would be dead"

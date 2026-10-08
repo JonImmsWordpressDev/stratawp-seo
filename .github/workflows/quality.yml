@@ -88,3 +88,18 @@ jobs:
       - uses: ramsey/composer-install@v3
       - name: Run PHPUnit
         run: composer test
+
+  editor-js:
+    name: Editor sidebar (Jest and committed build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Jest
+        run: npm run test:js
+      - name: Committed build matches sources
+        run: npm run verify:build

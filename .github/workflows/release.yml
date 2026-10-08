@@ -17,6 +17,9 @@ on:
       - 'admin/**'
       - 'templates/**'
       - 'css/**'
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
       - 'readme.txt'
       - 'uninstall.php'
       - '.github/workflows/release.yml'
@@ -54,6 +57,20 @@ jobs:
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Set up Node
+        if: steps.exists.outputs.exists == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Build the editor sidebar and confirm it matches what is committed
+        if: steps.exists.outputs.exists == 'false'
+        run: |
+          npm ci
+          npm run build
+          git diff --exit-code -- admin/editor
 
       - name: Build release zips
         if: steps.exists.outputs.exists == 'false'
