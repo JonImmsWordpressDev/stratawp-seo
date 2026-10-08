@@ -27,6 +27,8 @@ export default function AiVisibilityPanel( {
 		);
 	}
 	const { aeo, citations } = data;
+	const subscores = aeo.subscores || {};
+	const subQueries = aeo.sub_queries || [];
 
 	return (
 		<div className="swps-ai">
@@ -34,7 +36,7 @@ export default function AiVisibilityPanel( {
 			{ aeo.error && <Notice status="warning" isDismissible={ false }>{ aeo.error }</Notice> }
 
 			<div className="swps-ai__score" data-testid="swps-aeo">
-				<strong>{ aeo.total === null ? __( 'Not scored yet', 'stratawp-seo' ) : aeo.total }</strong>
+				<strong>{ aeo.total === null || aeo.total === undefined ? __( 'Not scored yet', 'stratawp-seo' ) : aeo.total }</strong>
 				<span>{ __( 'AI visibility score', 'stratawp-seo' ) }</span>
 				{ loading && <Spinner /> }
 			</div>
@@ -53,7 +55,7 @@ export default function AiVisibilityPanel( {
 				{ DIMENSIONS.map( ( [ key, label ] ) => (
 					<li key={ key }>
 						<span>{ label }</span>
-						<span>{ aeo.subscores[ key ] === null ? '-' : aeo.subscores[ key ] }</span>
+						<span>{ subscores[ key ] === null || subscores[ key ] === undefined ? '-' : subscores[ key ] }</span>
 					</li>
 				) ) }
 			</ul>
@@ -67,11 +69,11 @@ export default function AiVisibilityPanel( {
 				{ __( 'Re-score (may use AI)', 'stratawp-seo' ) }
 			</Button>
 
-			{ aeo.sub_queries.length > 0 && (
+			{ subQueries.length > 0 && (
 				<>
 					<h3 className="swps-bucket__title">{ __( 'Questions an answer engine would ask', 'stratawp-seo' ) }</h3>
 					<ul className="swps-ai__queries">
-						{ aeo.sub_queries.map( ( sq ) => (
+						{ subQueries.map( ( sq ) => (
 							<li key={ sq.q } className={ `swps-query swps-query--${ sq.status }` }>
 								<span aria-hidden="true">{ QUERY_GLYPH[ sq.status ] }</span>
 								<span className="swps-query__q">{ sq.q }</span>

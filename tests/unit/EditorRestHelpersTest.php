@@ -46,4 +46,34 @@ final class EditorRestHelpersTest extends TestCase {
 	public function test_schema_nodes_is_empty_without_jsonld(): void {
 		$this->assertSame( array(), SWPS_Editor_Rest::schema_nodes( '<p>No schema</p>', array() ) );
 	}
+
+	public function test_snapshot_shape_always_has_the_same_keys(): void {
+		$plain = SWPS_Editor_Rest::snapshot_shape( array(), null, null );
+		$err   = SWPS_Editor_Rest::snapshot_shape( array(), 'Budget reached', 'swps_budget' );
+
+		$expected = array( 'enabled', 'scanned', 'total', 'subscores', 'sub_queries', 'stale' );
+		$this->assertSame( $expected, array_keys( $plain ) );
+		$this->assertSame( array_merge( $expected, array( 'error', 'code' ) ), array_keys( $err ) );
+	}
+
+	public function test_snapshot_shape_adds_error_and_code_when_given(): void {
+		$out = SWPS_Editor_Rest::snapshot_shape( array(), 'Budget reached', 'swps_budget' );
+
+		$this->assertSame( 'Budget reached', $out['error'] );
+		$this->assertSame( 'swps_budget', $out['code'] );
+		$this->assertArrayNotHasKey( 'error', SWPS_Editor_Rest::snapshot_shape( array(), null, null ) );
+	}
+
+	public function test_snapshot_shape_normalises_missing_values(): void {
+		$out = SWPS_Editor_Rest::snapshot_shape( array( 'total' => '', 'subscores' => array( 'markup' => '7' ) ), null, null );
+
+		$this->assertNull( $out['total'] );
+		$this->assertNull( $out['scanned'] );
+		$this->assertSame( array(), $out['sub_queries'] );
+		$this->assertSame(
+			array( 'extractability' => null, 'markup' => 7, 'authority' => null, 'coverage' => null ),
+			$out['subscores']
+		);
+		$this->assertFalse( $out['stale'] );
+	}
 }

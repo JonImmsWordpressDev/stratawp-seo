@@ -207,40 +207,77 @@ class SWPS_Editor_Rest {
 	}
 
 	/**
+	 * Build the AEO response shape from already-read values. The shape is
+	 * identical in every case; error and code are only added when given.
+	 *
+	 * @param array<string,mixed> $meta  Keys: enabled, scanned, total, subscores, sub_queries, stale.
+	 * @param string|null         $error Budget or scoring message.
+	 * @param string|null         $code  Error code.
+	 * @return array<string,mixed>
+	 */
+	public static function snapshot_shape( array $meta, ?string $error, ?string $code ): array {
+		$raw       = is_array( $meta['subscores'] ?? null ) ? $meta['subscores'] : array();
+		$subscores = array();
+		foreach ( array( 'extractability', 'markup', 'authority', 'coverage' ) as $dim ) {
+			$v                 = $raw[ $dim ] ?? '';
+			$subscores[ $dim ] = ( '' === $v || null === $v ) ? null : (int) $v;
+		}
+		$total   = $meta['total'] ?? '';
+		$scanned = (int) ( $meta['scanned'] ?? 0 );
+
+		$out = array(
+			'enabled'     => (bool) ( $meta['enabled'] ?? false ),
+			'scanned'     => $scanned > 0 ? $scanned : null,
+			'total'       => ( '' === $total || null === $total ) ? null : (int) $total,
+			'subscores'   => $subscores,
+			'sub_queries' => is_array( $meta['sub_queries'] ?? null ) ? array_values( $meta['sub_queries'] ) : array(),
+			'stale'       => (bool) ( $meta['stale'] ?? false ),
+		);
+		if ( null !== $error ) {
+			$out['error'] = $error;
+			$out['code']  = (string) $code;
+		}
+		return $out;
+	}
+
+	/**
 	 * Cached AEO values. A rescore is the only path that can spend AI budget
-	 * (coverage), so it is explicit and guarded by the monthly cap.
+	 * (coverage), so it is explicit and guarded by the monthly cap. When the
+	 * cap refuses, the cached snapshot is still returned with the message.
 	 *
 	 * @return array<string,mixed>
 	 */
 	private function aeo_snapshot( int $post_id, string $mode ): array {
+		$error = null;
+		$code  = null;
 		if ( 'rescore' === $mode ) {
 			$budget = SWPS_Autopilot_Guardian::check_budget();
 			if ( is_wp_error( $budget ) ) {
-				return array(
-					'error' => $budget->get_error_message(),
-					'code'  => $budget->get_error_code(),
-				);
+				$error = $budget->get_error_message();
+				$code  = (string) $budget->get_error_code();
+			} else {
+				$this->aeo->do_score( $post_id );
 			}
-			$this->aeo->do_score( $post_id );
 		}
 
 		$post      = get_post( $post_id );
 		$payload   = get_post_meta( $post_id, SWPS_AEO_Scorer::META_COVERAGE_PAYLOAD, true );
 		$subscores = array();
 		foreach ( array( 'extractability', 'markup', 'authority', 'coverage' ) as $dim ) {
-			$v                  = get_post_meta( $post_id, SWPS_AEO_Scorer::META_SUBSCORE_PREFIX . $dim, true );
-			$subscores[ $dim ] = '' === $v ? null : (int) $v;
+			$subscores[ $dim ] = get_post_meta( $post_id, SWPS_AEO_Scorer::META_SUBSCORE_PREFIX . $dim, true );
 		}
-		$total   = get_post_meta( $post_id, SWPS_AEO_Scorer::META_TOTAL, true );
-		$scanned = (int) get_post_meta( $post_id, SWPS_AEO_Scorer::META_LAST_SCAN, true );
 
-		return array(
-			'enabled'     => (bool) get_option( SWPS_AEO_Scorer::OPTION_COVERAGE_ENABLED ),
-			'scanned'     => $scanned > 0 ? $scanned : null,
-			'total'       => '' === $total ? null : (int) $total,
-			'subscores'   => $subscores,
-			'sub_queries' => is_array( $payload ) ? array_values( (array) ( $payload['sub_queries'] ?? array() ) ) : array(),
-			'stale'       => $post instanceof WP_Post && is_array( $payload ) && ( $payload['hash'] ?? '' ) !== md5( $post->post_content ),
+		return self::snapshot_shape(
+			array(
+				'enabled'     => (bool) get_option( SWPS_AEO_Scorer::OPTION_COVERAGE_ENABLED ),
+				'scanned'     => get_post_meta( $post_id, SWPS_AEO_Scorer::META_LAST_SCAN, true ),
+				'total'       => get_post_meta( $post_id, SWPS_AEO_Scorer::META_TOTAL, true ),
+				'subscores'   => $subscores,
+				'sub_queries' => is_array( $payload ) ? (array) ( $payload['sub_queries'] ?? array() ) : array(),
+				'stale'       => $post instanceof WP_Post && is_array( $payload ) && ( $payload['hash'] ?? '' ) !== md5( $post->post_content ),
+			),
+			$error,
+			$code
 		);
 	}
 
