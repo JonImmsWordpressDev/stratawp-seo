@@ -553,6 +553,10 @@ class SWPS_Meta_Editor {
 		// Wait until the REST meta is saved, then run.
 		if ( ! $this->replaying && defined( 'REST_REQUEST' ) && REST_REQUEST && SWPS_Editor_Sidebar::active_for( $post->post_type ) ) {
 			self::$deferred_generation[ $post->ID ] = array( $new_status, $old_status );
+			// Custom REST routes that publish never fire rest_after_insert.
+			if ( ! has_action( 'shutdown', array( $this, 'replay_pending_generation' ) ) ) {
+				add_action( 'shutdown', array( $this, 'replay_pending_generation' ) );
+			}
 			return;
 		}
 
@@ -644,6 +648,18 @@ class SWPS_Meta_Editor {
 			$this->maybe_auto_generate( $new_status, $old_status, $fresh );
 		} finally {
 			$this->replaying = false;
+		}
+	}
+
+	/**
+	 * Runs any deferred generation that no rest_after_insert hook picked up.
+	 */
+	public function replay_pending_generation(): void {
+		foreach ( array_keys( self::$deferred_generation ) as $post_id ) {
+			$post = get_post( $post_id );
+			if ( $post instanceof WP_Post ) {
+				$this->replay_auto_generate( $post );
+			}
 		}
 	}
 
