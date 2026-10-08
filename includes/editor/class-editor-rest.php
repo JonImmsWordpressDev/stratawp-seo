@@ -16,17 +16,23 @@ class SWPS_Editor_Rest {
 
 	private const NS = 'swps/v1';
 
+	private SWPS_AI_Provider $ai;
+	private SWPS_Cost_Tracker $cost;
 	private SWPS_AEO_Optimizer $aeo;
 	private SWPS_Citation_Tracker $citations;
 	private SWPS_Search_Console $gsc;
 	private SWPS_Keyword_Tracker $keywords;
 
 	public function __construct(
+		SWPS_AI_Provider $ai,
+		SWPS_Cost_Tracker $cost,
 		SWPS_AEO_Optimizer $aeo,
 		SWPS_Citation_Tracker $citations,
 		SWPS_Search_Console $gsc,
 		SWPS_Keyword_Tracker $keywords
 	) {
+		$this->ai        = $ai;
+		$this->cost      = $cost;
 		$this->aeo       = $aeo;
 		$this->citations = $citations;
 		$this->gsc       = $gsc;
@@ -169,6 +175,133 @@ class SWPS_Editor_Rest {
 						'required' => true,
 					),
 				),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
+			'/editor/fix',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'fix' ),
+				'permission_callback' => array( $this, 'can_edit' ),
+				'args'                => array(
+					'post_id'          => $post_id,
+					'check_id'         => array(
+						'type'     => 'string',
+						'required' => true,
+						'enum'     => SWPS_Editor_Fix::check_ids(),
+					),
+					'keyword'          => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'title'            => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'meta_title'       => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'meta_description' => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'content_html'     => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'lang'             => array(
+						'type'    => 'string',
+						'default' => 'en',
+					),
+					'target_text'      => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'question'         => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Ask the provider for one fix and return it only if it validates.
+	 * Nothing is written to the post here; the editor applies it on request.
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function fix( WP_REST_Request $request ) {
+		$check_id = (string) $request['check_id'];
+		$keyword  = trim( (string) $request['keyword'] );
+		$post_id  = (int) $request['post_id'];
+
+		if ( ! SWPS_Editor_Fix::supports( $check_id ) ) {
+			return new WP_Error( 'swps_fix_unsupported', __( 'This check has no AI fix.', 'stratawp-seo' ), array( 'status' => 400 ) );
+		}
+		if ( '' === $keyword && 'aeo_answer' !== $check_id ) {
+			return new WP_Error( 'swps_fix_no_keyword', __( 'Set a focus keyword first.', 'stratawp-seo' ), array( 'status' => 400 ) );
+		}
+
+		$ctx = array(
+			'title'            => (string) $request['title'],
+			'meta_title'       => (string) $request['meta_title'],
+			'meta_description' => (string) $request['meta_description'],
+			'target_text'      => (string) $request['target_text'],
+			'question'         => (string) $request['question'],
+			'lang'             => (string) $request['lang'],
+		);
+
+		if ( 'paragraph' === SWPS_Editor_Fix::kind( $check_id )
+			&& ! SWPS_Editor_Fix::target_matches( (string) $request['content_html'], $check_id, $ctx['target_text'] ) ) {
+			return new WP_Error( 'swps_fix_stale', __( 'The paragraph changed. Try again.', 'stratawp-seo' ), array( 'status' => 409 ) );
+		}
+
+		$budget = SWPS_Autopilot_Guardian::check_budget();
+		if ( is_wp_error( $budget ) ) {
+			return new WP_Error( $budget->get_error_code(), $budget->get_error_message(), array( 'status' => 402 ) );
+		}
+
+		$prompt = SWPS_Editor_Fix::build_prompt( $check_id, $keyword, $ctx );
+		$result = $this->ai->chat_json( $prompt['system'], $prompt['user'], 1024 );
+		if ( is_wp_error( $result ) ) {
+			return new WP_Error( $result->get_error_code(), $result->get_error_message(), array( 'status' => 502 ) );
+		}
+
+		$cost  = null;
+		$model = (string) get_option( 'swps_model', '' );
+		if ( ! empty( $result['_usage'] ) ) {
+			$in   = (int) ( $result['_usage']['input_tokens'] ?? 0 );
+			$out  = (int) ( $result['_usage']['output_tokens'] ?? 0 );
+			$this->cost->track( $model, $in, $out, $post_id );
+			$cost = round( $this->cost->calculate_cost( $model, $in, $out ), 4 );
+		}
+
+		$checked = SWPS_Editor_Fix::validate( $check_id, $keyword, $ctx, $result );
+		if ( empty( $checked['ok'] ) ) {
+			return new WP_Error( (string) $checked['code'], (string) $checked['message'], array( 'status' => 422 ) );
+		}
+
+		$proposal = $checked['proposal'];
+		if ( in_array( $proposal['kind'], array( 'paragraph', 'insert' ), true ) ) {
+			$proposal['value'] = wp_kses(
+				$proposal['value'],
+				array(
+					'a'      => array( 'href' => true ),
+					'strong' => array(),
+					'em'     => array(),
+				)
+			);
+		}
+
+		return rest_ensure_response(
+			array(
+				'proposal' => $proposal,
+				'cost'     => $cost,
 			)
 		);
 	}

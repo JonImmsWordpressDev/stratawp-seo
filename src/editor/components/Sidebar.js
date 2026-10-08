@@ -19,6 +19,8 @@ import ChecksPanel from './ChecksPanel';
 import AdvancedPanel from './AdvancedPanel';
 import AiVisibilityPanel from './AiVisibilityPanel';
 import SchemaPanel from './SchemaPanel';
+import FixButton from './FixButton';
+import AnswerButton from './AnswerButton';
 
 export default function Sidebar() {
 	const title = __( 'StrataWP SEO', 'stratawp-seo' );
@@ -78,11 +80,21 @@ export default function Sidebar() {
 							registry={ registry }
 							group="seo"
 							keywordIndex={ activeIndex }
+							renderAction={ ( def, res, keyword ) => (
+								<FixButton def={ def } res={ res } keyword={ keyword } input={ analysis.input } />
+							) }
 						/>
 					</PanelBody>
 
 					<PanelBody title={ __( 'Readability', 'stratawp-seo' ) } initialOpen={ false }>
-						<ChecksPanel output={ analysis.output } registry={ registry } group="readability" />
+						<ChecksPanel
+							output={ analysis.output }
+							registry={ registry }
+							group="readability"
+							renderAction={ ( def, res, keyword ) => (
+								<FixButton def={ def } res={ res } keyword={ keyword } input={ analysis.input } />
+							) }
+						/>
 					</PanelBody>
 
 					<PanelBody title={ __( 'AI visibility', 'stratawp-seo' ) } initialOpen>
@@ -94,6 +106,9 @@ export default function Sidebar() {
 							focus={ focus }
 							onRescore={ () => deep.refresh( 'rescore' ) }
 							onTrack={ track }
+							renderQueryAction={ ( sq ) => (
+								<AnswerButton question={ sq.q } keyword={ focus } input={ analysis.input } />
+							) }
 						/>
 					</PanelBody>
 

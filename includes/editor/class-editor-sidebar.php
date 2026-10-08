@@ -234,7 +234,21 @@ class SWPS_Editor_Sidebar {
 			'siteTitle'  => get_bloginfo( 'name' ),
 			'aeoEnabled' => (bool) get_option( SWPS_AEO_Scorer::OPTION_COVERAGE_ENABLED ),
 			'canManage'  => current_user_can( 'manage_options' ),
+			'fixCost'    => $this->estimate_fix_cost(),
 		);
+	}
+
+	/**
+	 * Rough price of one AI fix (about 1,500 tokens in, 300 out), or null when
+	 * the model price is unknown.
+	 */
+	private function estimate_fix_cost(): ?float {
+		$model = (string) get_option( 'swps_model', '' );
+		if ( '' === $model ) {
+			return null;
+		}
+		$cost = ( new SWPS_Cost_Tracker() )->calculate_cost( $model, 1500, 300 );
+		return $cost > 0 ? round( $cost, 4 ) : null;
 	}
 
 	private function toggle_url( bool $enable ): string {

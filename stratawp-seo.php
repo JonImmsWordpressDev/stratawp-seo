@@ -242,6 +242,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-check-registry.php'
 require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-check-engine.php';
 require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-input.php';
 require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-rest.php';
+require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-fix.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-admin-shell.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-dashboard.php';
 
@@ -471,6 +472,8 @@ final class StrataWP_SEO {
 		$this->aeo_editor_panel  = new SWPS_AEO_Editor_Panel( $this->aeo_scorer );
 		new SWPS_Editor_Sidebar();
 		new SWPS_Editor_Rest(
+			$this->api,
+			$this->cost_tracker,
 			$this->aeo_optimizer,
 			$this->citation_tracker,
 			$this->search_console,

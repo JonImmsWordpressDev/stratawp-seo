@@ -91,3 +91,18 @@
 .swps-suggest__actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
 .swps-suggest__list li { display: flex; align-items: center; gap: 8px; }
 .swps-suggest__list li span { flex: 1; }
+
+.swps-check { flex-wrap: wrap; }
+.swps-fix { flex-basis: 100%; margin-top: 4px; }
+.swps-diff {
+	padding: 8px;
+	border: 1px solid #dcdcde;
+	border-radius: 2px;
+	background: #fff;
+
+	&__before, &__after { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+	&__tag { color: #50575e; font-size: 11px; text-transform: uppercase; }
+	del { color: #8a2424; background: #fcf0f1; text-decoration: line-through; }
+	ins { color: #007017; background: #edfaef; text-decoration: none; }
+	&__actions { display: flex; gap: 8px; }
+}
