@@ -15,7 +15,7 @@ function summary( output, registry, index ) {
 	return `${ passing } / ${ results.length }`;
 }
 
-export default function KeywordsPanel( { output, activeIndex, onSelect, children } ) {
+export default function KeywordsPanel( { output, activeIndex, onSelect, onRemove, children } ) {
 	const { focus, related, setFocus, setRelated } = useKeywords();
 	const [ draft, setDraft ] = useState( '' );
 	const registry = ( window.swpsEditor || {} ).registry || { checks: [] };
@@ -45,7 +45,12 @@ export default function KeywordsPanel( { output, activeIndex, onSelect, children
 						<Button
 							icon="no-alt"
 							label={ __( 'Remove related keyword', 'stratawp-seo' ) + ': ' + kw }
-							onClick={ () => setRelated( related.filter( ( k ) => k !== kw ) ) }
+							onClick={ () => {
+								setRelated( related.filter( ( k ) => k !== kw ) );
+								if ( onRemove ) {
+									onRemove( i + 1 );
+								}
+							} }
 						/>
 					</li>
 				) ) }

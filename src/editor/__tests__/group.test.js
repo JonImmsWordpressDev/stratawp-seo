@@ -25,8 +25,26 @@ describe( 'groupResults', () => {
 
 	it( 'reads results for the requested keyword index', () => {
 		const c = byName( 'related-keywords' );
+		const ids = ( rows ) => rows.map( ( r ) => r.def.id );
 		const first = groupResults( c.output, golden.registry, 'seo', 0 );
 		const third = groupResults( c.output, golden.registry, 'seo', 2 );
-		expect( first.good.length ).not.toBe( third.good.length );
+		expect( ids( first.good ) ).toContain( 'kw_in_title' );
+		expect( ids( third.problems ) ).toContain( 'kw_in_title' );
+		expect( ids( first.problems ) ).toEqual( [ 'kw_density' ] );
+		expect( ids( third.notAnalyzed ) ).toEqual(
+			expect.arrayContaining( [ 'kw_title_position', 'kw_unique' ] )
+		);
+		expect( ids( first.notAnalyzed ) ).not.toContain( 'kw_unique' );
+	} );
+
+	it( 'returns only global rows for an out-of-range keyword index', () => {
+		const c = byName( 'related-keywords' );
+		let g;
+		expect( () => {
+			g = groupResults( c.output, golden.registry, 'seo', 9 );
+		} ).not.toThrow();
+		const all = [ ...g.problems, ...g.improvements, ...g.good, ...g.notAnalyzed ];
+		expect( all.length ).toBeGreaterThan( 0 );
+		expect( all.every( ( r ) => r.def.scope === 'global' ) ).toBe( true );
 	} );
 } );

@@ -7,6 +7,7 @@ import {
 	PluginSidebarMoreMenuItem,
 } from '../compat';
 import { useAnalysis } from '../hooks/useAnalysis';
+import { useKeywords } from '../hooks/useKeywords';
 import { usePostMeta } from '../hooks/usePostMeta';
 import ScoreBadge from './ScoreBadge';
 import SearchPreview from './SearchPreview';
@@ -17,7 +18,16 @@ export default function Sidebar() {
 	const title = __( 'StrataWP SEO', 'stratawp-seo' );
 	const { meta } = usePostMeta();
 	const analysis = useAnalysis();
-	const [ activeIndex, setActiveIndex ] = useState( 0 );
+	const { related } = useKeywords();
+	const [ selected, setSelected ] = useState( 0 );
+	// Always a valid index, even while analysis output lags the keyword list.
+	const activeIndex = Math.min( selected, related.length );
+	// Removing the active keyword or one before it steps the selection back one.
+	const handleRemove = ( position ) => {
+		if ( position <= activeIndex ) {
+			setSelected( Math.max( 0, activeIndex - 1 ) );
+		}
+	};
 	const registry = ( window.swpsEditor || {} ).registry;
 
 	return (
@@ -40,7 +50,8 @@ export default function Sidebar() {
 						<KeywordsPanel
 							output={ analysis.output }
 							activeIndex={ activeIndex }
-							onSelect={ setActiveIndex }
+							onSelect={ setSelected }
+							onRemove={ handleRemove }
 						/>
 					</PanelBody>
 
