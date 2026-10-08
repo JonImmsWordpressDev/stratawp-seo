@@ -30,6 +30,9 @@ AGENTS.md
 # PHPUnit cache
 .phpunit.cache/
 
+# Staging and zips from bin/build-zip.sh
+/build/
+
 .claude-flow/
 CLAUDE.local.md
 

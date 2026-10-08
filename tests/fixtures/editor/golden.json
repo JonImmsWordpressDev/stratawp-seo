@@ -1,0 +1,2126 @@
+{
+    "registry": {
+        "checks": [
+            {
+                "id": "title_length",
+                "scope": "global",
+                "dimension": "meta_quality",
+                "group": "seo",
+                "fix": "rule",
+                "tier": "instant",
+                "label": "Title length",
+                "help": "Keep the title long enough to be useful and short enough to avoid being cut off in results."
+            },
+            {
+                "id": "description_length",
+                "scope": "global",
+                "dimension": "meta_quality",
+                "group": "seo",
+                "fix": "rule",
+                "tier": "instant",
+                "label": "Meta description length",
+                "help": "Write a description that fills the snippet without being truncated."
+            },
+            {
+                "id": "content_length",
+                "scope": "global",
+                "dimension": "content_depth",
+                "group": "seo",
+                "fix": "none",
+                "tier": "instant",
+                "label": "Content length",
+                "help": "Cover the topic in enough depth for this type of page."
+            },
+            {
+                "id": "internal_links",
+                "scope": "global",
+                "dimension": "internal_links",
+                "group": "seo",
+                "fix": "none",
+                "tier": "instant",
+                "label": "Internal links",
+                "help": "Link to at least one related page on your site."
+            },
+            {
+                "id": "external_links",
+                "scope": "global",
+                "dimension": "internal_links",
+                "group": "seo",
+                "fix": "none",
+                "tier": "instant",
+                "label": "External links",
+                "help": "Link out to at least one trustworthy source."
+            },
+            {
+                "id": "subheading_distribution",
+                "scope": "global",
+                "dimension": "heading_structure",
+                "group": "seo",
+                "fix": "none",
+                "tier": "instant",
+                "label": "Subheading distribution",
+                "help": "Break long stretches of text with subheadings."
+            },
+            {
+                "id": "image_alt_missing",
+                "scope": "global",
+                "dimension": "engagement",
+                "group": "seo",
+                "fix": "none",
+                "tier": "instant",
+                "label": "Image alt text",
+                "help": "Give every image descriptive alt text."
+            },
+            {
+                "id": "sentence_length",
+                "scope": "global",
+                "dimension": "readability",
+                "group": "readability",
+                "fix": "none",
+                "tier": "instant",
+                "label": "Sentence length",
+                "help": "Keep most sentences under 20 words."
+            },
+            {
+                "id": "paragraph_length",
+                "scope": "global",
+                "dimension": "readability",
+                "group": "readability",
+                "fix": "none",
+                "tier": "instant",
+                "label": "Paragraph length",
+                "help": "Split paragraphs longer than 150 words."
+            },
+            {
+                "id": "transition_words",
+                "scope": "global",
+                "dimension": "readability",
+                "group": "readability",
+                "fix": "none",
+                "tier": "instant",
+                "label": "Transition words",
+                "help": "Use connecting words so the text flows."
+            },
+            {
+                "id": "passive_voice",
+                "scope": "global",
+                "dimension": "readability",
+                "group": "readability",
+                "fix": "none",
+                "tier": "instant",
+                "label": "Passive voice",
+                "help": "Prefer active sentences."
+            },
+            {
+                "id": "consecutive_starters",
+                "scope": "global",
+                "dimension": "readability",
+                "group": "readability",
+                "fix": "none",
+                "tier": "instant",
+                "label": "Sentence beginnings",
+                "help": "Avoid starting three sentences in a row with the same word."
+            },
+            {
+                "id": "kw_in_title",
+                "scope": "keyword",
+                "dimension": "meta_quality",
+                "group": "seo",
+                "fix": "ai",
+                "tier": "instant",
+                "label": "Keyword in the title",
+                "help": "Use the keyword in the page title."
+            },
+            {
+                "id": "kw_in_description",
+                "scope": "keyword",
+                "dimension": "meta_quality",
+                "group": "seo",
+                "fix": "ai",
+                "tier": "instant",
+                "label": "Keyword in the meta description",
+                "help": "Use the keyword in the meta description."
+            },
+            {
+                "id": "kw_in_slug",
+                "scope": "keyword",
+                "dimension": "meta_quality",
+                "group": "seo",
+                "fix": "rule",
+                "tier": "instant",
+                "label": "Keyword in the URL slug",
+                "help": "Use the keyword in the URL."
+            },
+            {
+                "id": "kw_in_intro",
+                "scope": "keyword",
+                "dimension": "keyword_density",
+                "group": "seo",
+                "fix": "ai",
+                "tier": "instant",
+                "label": "Keyword in the introduction",
+                "help": "Mention the keyword in the first paragraph."
+            },
+            {
+                "id": "kw_in_subheading",
+                "scope": "keyword",
+                "dimension": "heading_structure",
+                "group": "seo",
+                "fix": "none",
+                "tier": "instant",
+                "label": "Keyword in a subheading",
+                "help": "Use the keyword in at least one H2 or H3."
+            },
+            {
+                "id": "kw_in_image_alt",
+                "scope": "keyword",
+                "dimension": "engagement",
+                "group": "seo",
+                "fix": "none",
+                "tier": "instant",
+                "label": "Keyword in image alt text",
+                "help": "Describe at least one image using the keyword."
+            },
+            {
+                "id": "kw_density",
+                "scope": "keyword",
+                "dimension": "keyword_density",
+                "group": "seo",
+                "fix": "none",
+                "tier": "instant",
+                "label": "Keyword density",
+                "help": "Use the keyword naturally, about 0.5 to 3 percent of the words."
+            },
+            {
+                "id": "kw_title_position",
+                "scope": "keyword",
+                "dimension": "keyword_density",
+                "group": "seo",
+                "fix": "none",
+                "tier": "instant",
+                "label": "Keyword near the start of the title",
+                "help": "Place the keyword in the first half of the title."
+            },
+            {
+                "id": "kw_in_conclusion",
+                "scope": "keyword",
+                "dimension": "keyword_density",
+                "group": "seo",
+                "fix": "ai",
+                "tier": "instant",
+                "label": "Keyword in the conclusion",
+                "help": "Mention the keyword in the last paragraph."
+            },
+            {
+                "id": "kw_unique",
+                "scope": "keyword",
+                "dimension": "meta_quality",
+                "group": "seo",
+                "fix": "none",
+                "tier": "instant",
+                "label": "Keyword not used on another post",
+                "help": "Using one keyword on several pages makes them compete."
+            }
+        ],
+        "weights": {
+            "keyword_density": 15,
+            "readability": 20,
+            "heading_structure": 15,
+            "meta_quality": 15,
+            "internal_links": 10,
+            "content_depth": 15,
+            "engagement": 10
+        }
+    },
+    "cases": [
+        {
+            "name": "good-post",
+            "input": {
+                "title": "How to make cold brew coffee at home",
+                "slug": "cold-brew-coffee",
+                "content_html": "<!-- wp:paragraph --><p>Cold brew coffee is easier to make at home than most people expect. It takes a coarse grind, cold water and patience.</p><!-- /wp:paragraph --><!-- wp:heading --><h2>How to make cold brew coffee</h2><!-- /wp:heading --><!-- wp:paragraph --><p>Add the grounds to a jar, pour in water and wait. However, the wait is the hard part. Therefore plan ahead and start the night before. Read our <a href=\"/grinding-guide\">grinding guide</a> or the <a href=\"https://en.wikipedia.org/wiki/Cold_brew\">cold brew article</a>.</p><!-- /wp:paragraph --><img src=\"jar.jpg\" alt=\"A jar of cold brew coffee\"><!-- wp:paragraph --><p>Strain it, dilute it and enjoy. Cold brew coffee keeps for a week in the fridge.</p><!-- /wp:paragraph -->",
+                "meta_title": "",
+                "meta_description": "Learn how to make cold brew coffee at home with a coarse grind and cold water.",
+                "lang": "en_US",
+                "host": "example.com",
+                "preset": {
+                    "min_words": 20
+                },
+                "keywords": [
+                    {
+                        "keyword": "cold brew coffee",
+                        "used_elsewhere": false
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "pass",
+                        "value": 36
+                    },
+                    "description_length": {
+                        "status": "pass",
+                        "value": 78
+                    },
+                    "content_length": {
+                        "status": "pass",
+                        "value": 79
+                    },
+                    "internal_links": {
+                        "status": "pass",
+                        "value": 1
+                    },
+                    "external_links": {
+                        "status": "pass",
+                        "value": 1
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "sentence_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "pass",
+                        "value": 22
+                    },
+                    "passive_voice": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "consecutive_starters": {
+                        "status": "pass",
+                        "value": 1
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "cold brew coffee",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 11.39
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 12
+                            },
+                            "kw_in_conclusion": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "pass",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 96,
+                "seo": 95,
+                "readability": 100,
+                "status": "good"
+            }
+        },
+        {
+            "name": "empty-keyword",
+            "input": {
+                "title": "Untitled draft",
+                "slug": "",
+                "content_html": "<p>A short first paragraph with no keyword chosen yet. It has two sentences. And a third one.</p>",
+                "meta_title": "",
+                "meta_description": "",
+                "lang": "en",
+                "host": "example.com",
+                "keywords": [
+                    {
+                        "keyword": ""
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "warn",
+                        "value": 14
+                    },
+                    "description_length": {
+                        "status": "fail",
+                        "value": 0
+                    },
+                    "content_length": {
+                        "status": "fail",
+                        "value": 17
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "sentence_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "pass",
+                        "value": 67
+                    },
+                    "passive_voice": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "consecutive_starters": {
+                        "status": "pass",
+                        "value": 1
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_title_position": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_conclusion": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 48,
+                "seo": 22,
+                "readability": 100,
+                "status": "no_keyword"
+            }
+        },
+        {
+            "name": "japanese",
+            "input": {
+                "title": "テストの書き方",
+                "slug": "test",
+                "content_html": "<p>これはテストです。日本語の文章です。三つ目の文です。</p>",
+                "meta_title": "",
+                "meta_description": "テストの書き方を説明します。",
+                "lang": "ja",
+                "host": "example.com",
+                "keywords": [
+                    {
+                        "keyword": "テスト"
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "warn",
+                        "value": 7
+                    },
+                    "description_length": {
+                        "status": "warn",
+                        "value": 14
+                    },
+                    "content_length": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "sentence_length": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "paragraph_length": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "transition_words": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "passive_voice": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "consecutive_starters": {
+                        "status": "na",
+                        "value": null
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "テスト",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 0
+                            },
+                            "kw_in_conclusion": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 73,
+                "seo": 73,
+                "readability": null,
+                "status": "needs_work"
+            }
+        },
+        {
+            "name": "blocks-and-shortcodes",
+            "input": {
+                "title": "Gallery tips & tricks",
+                "slug": "gallery-tips",
+                "content_html": "<!-- wp:paragraph {\"className\":\"gallery tips\"} --><p>Hello [gallery ids=\"1,2\"] world &amp; friends. These gallery tips help.</p><!-- /wp:paragraph --><!-- wp:shortcode -->[contact-form]<!-- /wp:shortcode -->",
+                "meta_title": "Gallery tips",
+                "meta_description": "Short description about gallery tips for your site.",
+                "lang": "en",
+                "host": "example.com",
+                "preset": {
+                    "min_words": 5
+                },
+                "keywords": [
+                    {
+                        "keyword": "gallery tips",
+                        "used_elsewhere": null
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "warn",
+                        "value": 12
+                    },
+                    "description_length": {
+                        "status": "warn",
+                        "value": 51
+                    },
+                    "content_length": {
+                        "status": "pass",
+                        "value": 7
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "sentence_length": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "passive_voice": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "consecutive_starters": {
+                        "status": "na",
+                        "value": null
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "gallery tips",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 28.57
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 0
+                            },
+                            "kw_in_conclusion": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 83,
+                "seo": 76,
+                "readability": 100,
+                "status": "good"
+            }
+        },
+        {
+            "name": "accents",
+            "input": {
+                "title": "Café au lait at home",
+                "slug": "cafe-au-lait",
+                "content_html": "<p>Un café au lait est simple. Le café au lait se prépare avec du lait chaud et du café fort.</p><h2>Le café au lait parfait</h2><p>Servez le café au lait chaud.</p><p>Bonne dégustation avec ce café au lait.</p>",
+                "meta_title": "",
+                "meta_description": "Comment préparer un café au lait parfait à la maison, étape par étape et sans effort.",
+                "lang": "fr_FR",
+                "host": "example.com",
+                "preset": {
+                    "min_words": 10
+                },
+                "keywords": [
+                    {
+                        "keyword": "café au lait",
+                        "used_elsewhere": false
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "warn",
+                        "value": 20
+                    },
+                    "description_length": {
+                        "status": "pass",
+                        "value": 85
+                    },
+                    "content_length": {
+                        "status": "pass",
+                        "value": 38
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "sentence_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "passive_voice": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "consecutive_starters": {
+                        "status": "pass",
+                        "value": 2
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "café au lait",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 39.47
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 0
+                            },
+                            "kw_in_conclusion": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "pass",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 89,
+                "seo": 86,
+                "readability": 100,
+                "status": "good"
+            }
+        },
+        {
+            "name": "stuffed",
+            "input": {
+                "title": "Espresso espresso espresso",
+                "slug": "espresso",
+                "content_html": "<p>espresso espresso espresso espresso espresso espresso espresso espresso espresso espresso word word word word word word word word word word</p>",
+                "meta_title": "",
+                "meta_description": "espresso",
+                "lang": "en",
+                "host": "example.com",
+                "preset": {
+                    "min_words": 10
+                },
+                "keywords": [
+                    {
+                        "keyword": "espresso"
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "warn",
+                        "value": 26
+                    },
+                    "description_length": {
+                        "status": "warn",
+                        "value": 8
+                    },
+                    "content_length": {
+                        "status": "pass",
+                        "value": 20
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "sentence_length": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "passive_voice": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "consecutive_starters": {
+                        "status": "na",
+                        "value": null
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "espresso",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 50
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 0
+                            },
+                            "kw_in_conclusion": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 83,
+                "seo": 76,
+                "readability": 100,
+                "status": "good"
+            }
+        },
+        {
+            "name": "related-keywords",
+            "input": {
+                "title": "Cold brew vs iced coffee: what is the difference",
+                "slug": "cold-brew-vs-iced-coffee",
+                "content_html": "<p>Cold brew is steeped for hours. Iced coffee is brewed hot and then cooled. The difference is taste.</p><h2>Cold brew</h2><p>Smooth and low in acid.</p><h3>Iced coffee</h3><p>Bright and sharp, so it suits milk.</p>",
+                "meta_title": "",
+                "meta_description": "Cold brew and iced coffee taste different because of how they are made. Here is how to choose.",
+                "lang": "en",
+                "host": "example.com",
+                "preset": {
+                    "min_words": 20
+                },
+                "keywords": [
+                    {
+                        "keyword": "cold brew",
+                        "used_elsewhere": false
+                    },
+                    {
+                        "keyword": "iced coffee",
+                        "used_elsewhere": true
+                    },
+                    {
+                        "keyword": "nitro coffee",
+                        "used_elsewhere": null
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "pass",
+                        "value": 48
+                    },
+                    "description_length": {
+                        "status": "pass",
+                        "value": 94
+                    },
+                    "content_length": {
+                        "status": "pass",
+                        "value": 34
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "sentence_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "warn",
+                        "value": 14
+                    },
+                    "passive_voice": {
+                        "status": "fail",
+                        "value": 29
+                    },
+                    "consecutive_starters": {
+                        "status": "pass",
+                        "value": 1
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "cold brew",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 11.76
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 0
+                            },
+                            "kw_in_conclusion": {
+                                "status": "warn",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "pass",
+                                "value": null
+                            }
+                        }
+                    },
+                    {
+                        "keyword": "iced coffee",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 11.76
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 13
+                            },
+                            "kw_in_conclusion": {
+                                "status": "warn",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "fail",
+                                "value": null
+                            }
+                        }
+                    },
+                    {
+                        "keyword": "nitro coffee",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 0
+                            },
+                            "kw_title_position": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_conclusion": {
+                                "status": "warn",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 76,
+                "seo": 77,
+                "readability": 70,
+                "status": "good"
+            }
+        },
+        {
+            "name": "long-passive-no-headings",
+            "input": {
+                "title": "Committee report",
+                "slug": "committee-report",
+                "content_html": "<p>The report was written by the committee and it was reviewed by the board before the results were shared with everyone who had been waiting for an answer about the new policy. The report was written by the committee and it was reviewed by the board before the results were shared with everyone who had been waiting for an answer about the new policy. The report was written by the committee and it was reviewed by the board before the results were shared with everyone who had been waiting for an answer about the new policy. The report was written by the committee and it was reviewed by the board before the results were shared with everyone who had been waiting for an answer about the new policy. The report was written by the committee and it was reviewed by the board before the results were shared with everyone who had been waiting for an answer about the new policy. The report was written by the committee and it was reviewed by the board before the results were shared with everyone who had been waiting for an answer about the new policy. The report was written by the committee and it was reviewed by the board before the results were shared with everyone who had been waiting for an answer about the new policy. The report was written by the committee and it was reviewed by the board before the results were shared with everyone who had been waiting for an answer about the new policy. The report was written by the committee and it was reviewed by the board before the results were shared with everyone who had been waiting for an answer about the new policy. The report was written by the committee and it was reviewed by the board before the results were shared with everyone who had been waiting for an answer about the new policy. The report was written by the committee and it was reviewed by the board before the results were shared with everyone who had been waiting for an answer about the new policy. The report was written by the committee and it was reviewed by the board before the results were shared with everyone who had been waiting for an answer about the new policy. </p>",
+                "meta_title": "",
+                "meta_description": "A report about the committee.",
+                "lang": "en",
+                "host": "example.com",
+                "keywords": [
+                    {
+                        "keyword": "committee report"
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "warn",
+                        "value": 16
+                    },
+                    "description_length": {
+                        "status": "warn",
+                        "value": 29
+                    },
+                    "content_length": {
+                        "status": "pass",
+                        "value": 384
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "warn",
+                        "value": 384
+                    },
+                    "image_alt_missing": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "sentence_length": {
+                        "status": "fail",
+                        "value": 100
+                    },
+                    "paragraph_length": {
+                        "status": "warn",
+                        "value": 1
+                    },
+                    "transition_words": {
+                        "status": "fail",
+                        "value": 0
+                    },
+                    "passive_voice": {
+                        "status": "fail",
+                        "value": 100
+                    },
+                    "consecutive_starters": {
+                        "status": "warn",
+                        "value": 12
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "committee report",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 0
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 0
+                            },
+                            "kw_in_conclusion": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 51,
+                "seo": 59,
+                "readability": 20,
+                "status": "needs_work"
+            }
+        },
+        {
+            "name": "nbsp-padding",
+            "input": {
+                "title": " Cold brew guide for beginners ",
+                "slug": "cold-brew-guide",
+                "content_html": "<p>Cold brew is simple. It needs time.</p>",
+                "meta_title": " ",
+                "meta_description": " Learn cold brew with a short guide that covers grind and time. ",
+                "lang": "en",
+                "host": "example.com",
+                "preset": {
+                    "min_words": 5
+                },
+                "keywords": [
+                    {
+                        "keyword": " cold brew "
+                    },
+                    {
+                        "keyword": " "
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "warn",
+                        "value": 1
+                    },
+                    "description_length": {
+                        "status": "warn",
+                        "value": 64
+                    },
+                    "content_length": {
+                        "status": "pass",
+                        "value": 7
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "sentence_length": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "passive_voice": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "consecutive_starters": {
+                        "status": "na",
+                        "value": null
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": " cold brew ",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 0
+                            },
+                            "kw_title_position": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_conclusion": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    },
+                    {
+                        "keyword": " ",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 0
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 0
+                            },
+                            "kw_in_conclusion": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 64,
+                "seo": 51,
+                "readability": 100,
+                "status": "needs_work"
+            }
+        },
+        {
+            "name": "crlf-quotes-links",
+            "input": {
+                "title": "Windows line endings",
+                "slug": "windows-line-endings",
+                "content_html": "<p>First line of text.\r\nSecond line of text. Third sentence here.</p>\r\n<p>Another paragraph.\r\nWith a break.</p>\r\n<img src='a.jpg' alt='windows line endings'>\r\n<img src=\"b.jpg\">\r\n<a href='/local'>local</a> <a href=\"https://www.example.com/page\">own www</a> <a href=\"//other.org/x\">proto relative</a> <a href='mailto:a@b.c'>mail</a> <a href=\"#top\">top</a>",
+                "meta_title": "",
+                "meta_description": "A description about windows line endings that is long enough to pass.",
+                "lang": "en",
+                "host": "EXAMPLE.com",
+                "preset": {
+                    "min_words": 5
+                },
+                "keywords": [
+                    {
+                        "keyword": "windows line endings",
+                        "used_elsewhere": false
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "warn",
+                        "value": 20
+                    },
+                    "description_length": {
+                        "status": "warn",
+                        "value": 69
+                    },
+                    "content_length": {
+                        "status": "pass",
+                        "value": 23
+                    },
+                    "internal_links": {
+                        "status": "pass",
+                        "value": 2
+                    },
+                    "external_links": {
+                        "status": "pass",
+                        "value": 1
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "warn",
+                        "value": 1
+                    },
+                    "sentence_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "pass",
+                        "value": 50
+                    },
+                    "passive_voice": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "consecutive_starters": {
+                        "status": "pass",
+                        "value": 1
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "windows line endings",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 0
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 0
+                            },
+                            "kw_in_conclusion": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "pass",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 82,
+                "seo": 77,
+                "readability": 100,
+                "status": "good"
+            }
+        },
+        {
+            "name": "empty-title",
+            "input": {
+                "title": "",
+                "slug": "",
+                "content_html": "<p>Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while.</p>",
+                "meta_title": "",
+                "meta_description": "",
+                "lang": "en",
+                "host": "example.com",
+                "keywords": [
+                    {
+                        "keyword": "filler words"
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "fail",
+                        "value": 0
+                    },
+                    "description_length": {
+                        "status": "fail",
+                        "value": 0
+                    },
+                    "content_length": {
+                        "status": "fail",
+                        "value": 100
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "sentence_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "pass",
+                        "value": 100
+                    },
+                    "passive_voice": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "consecutive_starters": {
+                        "status": "warn",
+                        "value": 10
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "filler words",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 20
+                            },
+                            "kw_title_position": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_conclusion": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 41,
+                "seo": 23,
+                "readability": 90,
+                "status": "poor"
+            }
+        },
+        {
+            "name": "late-keyword-density",
+            "input": {
+                "title": "A long and winding title that eventually mentions espresso",
+                "slug": "winding-espresso",
+                "content_html": "<p>Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Espresso is mentioned once.</p><img src=\"x.jpg\" alt=\"\"><img src=\"y.jpg\" alt=\"cup\">",
+                "meta_title": "",
+                "meta_description": "A medium description about the topic of this long winding page for readers.",
+                "lang": "en",
+                "host": "example.com",
+                "preset": {
+                    "min_words": 20
+                },
+                "keywords": [
+                    {
+                        "keyword": "espresso"
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "pass",
+                        "value": 58
+                    },
+                    "description_length": {
+                        "status": "pass",
+                        "value": 75
+                    },
+                    "content_length": {
+                        "status": "pass",
+                        "value": 104
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "warn",
+                        "value": 1
+                    },
+                    "sentence_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "pass",
+                        "value": 91
+                    },
+                    "passive_voice": {
+                        "status": "pass",
+                        "value": 9
+                    },
+                    "consecutive_starters": {
+                        "status": "warn",
+                        "value": 10
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "espresso",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "pass",
+                                "value": 0.96
+                            },
+                            "kw_title_position": {
+                                "status": "warn",
+                                "value": 50
+                            },
+                            "kw_in_conclusion": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 76,
+                "seo": 72,
+                "readability": 90,
+                "status": "good"
+            }
+        },
+        {
+            "name": "consecutive-paragraphs",
+            "input": {
+                "title": "Cold brew basics",
+                "slug": "cold-brew-basics",
+                "meta_title": "",
+                "meta_description": "A short guide to the basics of cold brew coffee for new home brewers.",
+                "lang": "en",
+                "host": "example.com",
+                "preset": {
+                    "min_words": 20
+                },
+                "keywords": [
+                    {
+                        "keyword": "cold brew"
+                    }
+                ],
+                "content_html": "<p>Cold brew is simple.</p><p>It needs time. Patience helps.</p><div>Grind coarse.</div><ul><li>Water.</li><li>Coffee.</li></ul><p>Cold brew keeps well.</p>"
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "warn",
+                        "value": 16
+                    },
+                    "description_length": {
+                        "status": "warn",
+                        "value": 69
+                    },
+                    "content_length": {
+                        "status": "warn",
+                        "value": 17
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "sentence_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "fail",
+                        "value": 0
+                    },
+                    "passive_voice": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "consecutive_starters": {
+                        "status": "pass",
+                        "value": 1
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "cold brew",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 23.53
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 0
+                            },
+                            "kw_in_conclusion": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 69,
+                "seo": 65,
+                "readability": 80,
+                "status": "needs_work"
+            }
+        },
+        {
+            "name": "reforming-markup",
+            "input": {
+                "title": "Cold brew basics",
+                "slug": "cold-brew-basics",
+                "meta_title": "",
+                "meta_description": "A short guide to the basics of cold brew coffee for new home brewers.",
+                "lang": "en",
+                "host": "example.com",
+                "preset": {
+                    "min_words": 20
+                },
+                "keywords": [
+                    {
+                        "keyword": "cold brew"
+                    }
+                ],
+                "content_html": "<p>Cold brew <scr<!-- c -->ipt>alert(1)</script>is simple.</p><p>Use <<b>strong>coarse grounds</<b>strong> for cold brew.</p><scr<script></script>ipt>bad()</script><p>Then wait.</p>"
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "warn",
+                        "value": 16
+                    },
+                    "description_length": {
+                        "status": "warn",
+                        "value": 69
+                    },
+                    "content_length": {
+                        "status": "warn",
+                        "value": 16
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "sentence_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "pass",
+                        "value": 33
+                    },
+                    "passive_voice": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "consecutive_starters": {
+                        "status": "pass",
+                        "value": 1
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "cold brew",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 25
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 0
+                            },
+                            "kw_in_conclusion": {
+                                "status": "warn",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 72,
+                "seo": 62,
+                "readability": 100,
+                "status": "needs_work"
+            }
+        }
+    ]
+}

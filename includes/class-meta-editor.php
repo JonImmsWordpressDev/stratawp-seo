@@ -13,6 +13,21 @@ class SWPS_Meta_Editor {
 
 	private bool $conflict = false;
 
+	/**
+	 * Publishes from the block editor sidebar whose auto-generation waits for
+	 * the REST meta save, keyed by post ID: array( new status, old status ).
+	 *
+	 * @var array<int,array{0:string,1:string}>
+	 */
+	private static array $deferred_generation = array();
+
+	/**
+	 * True while a deferred generation runs, so it is not deferred again.
+	 *
+	 * @var bool
+	 */
+	private bool $replaying = false;
+
 	public function __construct() {
 		// Detect conflicting SEO plugins.
 		if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) ) {
@@ -42,6 +57,7 @@ class SWPS_Meta_Editor {
 		// Auto-generate meta on publish if setting is enabled.
 		if ( get_option( 'swps_meta_auto_generate', 0 ) ) {
 			add_action( 'transition_post_status', array( $this, 'maybe_auto_generate' ), 10, 3 );
+			add_action( 'init', array( $this, 'register_generation_replay' ), 30 );
 		}
 
 		// Admin notice if conflict detected.
@@ -64,6 +80,10 @@ class SWPS_Meta_Editor {
 		$post_types = $this->get_enabled_post_types();
 
 		foreach ( $post_types as $post_type ) {
+			// The block editor sidebar replaces this metabox where it is active.
+			if ( SWPS_Editor_Sidebar::active_for( $post_type ) ) {
+				continue;
+			}
 			add_meta_box(
 				'swps_meta_editor',
 				__( 'StrataWP SEO', 'stratawp-seo' ),
@@ -528,6 +548,18 @@ class SWPS_Meta_Editor {
 			return;
 		}
 
+		// The block editor sends its meta after wp_update_post(), so text
+		// generated now would be overwritten by the editor's stale fields.
+		// Wait until the REST meta is saved, then run.
+		if ( ! $this->replaying && defined( 'REST_REQUEST' ) && REST_REQUEST && SWPS_Editor_Sidebar::active_for( $post->post_type ) ) {
+			self::$deferred_generation[ $post->ID ] = array( $new_status, $old_status );
+			// Custom REST routes that publish never fire rest_after_insert.
+			if ( ! has_action( 'shutdown', array( $this, 'replay_pending_generation' ) ) ) {
+				add_action( 'shutdown', array( $this, 'replay_pending_generation' ) );
+			}
+			return;
+		}
+
 		// Only generate if both fields are empty.
 		$existing_title = get_post_meta( $post->ID, '_swps_meta_title', true );
 		$existing_desc  = get_post_meta( $post->ID, '_swps_meta_description', true );
@@ -586,9 +618,55 @@ class SWPS_Meta_Editor {
 	}
 
 	/**
+	 * Hook the replay after REST saves meta (priority 30) for every REST post type.
+	 */
+	public function register_generation_replay(): void {
+		foreach ( get_post_types( array( 'show_in_rest' => true ), 'names' ) as $type ) {
+			add_action( "rest_after_insert_{$type}", array( $this, 'replay_auto_generate' ), 30 );
+		}
+	}
+
+	/**
+	 * Runs a generation deferred by maybe_auto_generate() once REST has saved
+	 * the post meta.
+	 *
+	 * @param WP_Post $post Inserted or updated post.
+	 */
+	public function replay_auto_generate( WP_Post $post ): void {
+		if ( ! isset( self::$deferred_generation[ $post->ID ] ) ) {
+			return;
+		}
+		list( $new_status, $old_status ) = self::$deferred_generation[ $post->ID ];
+		unset( self::$deferred_generation[ $post->ID ] );
+
+		$fresh = get_post( $post->ID );
+		if ( ! $fresh instanceof WP_Post ) {
+			return;
+		}
+		$this->replaying = true;
+		try {
+			$this->maybe_auto_generate( $new_status, $old_status, $fresh );
+		} finally {
+			$this->replaying = false;
+		}
+	}
+
+	/**
+	 * Runs any deferred generation that no rest_after_insert hook picked up.
+	 */
+	public function replay_pending_generation(): void {
+		foreach ( array_keys( self::$deferred_generation ) as $post_id ) {
+			$post = get_post( $post_id );
+			if ( $post instanceof WP_Post ) {
+				$this->replay_auto_generate( $post );
+			}
+		}
+	}
+
+	/**
 	 * Get post types where the meta editor is enabled.
 	 */
-	private function get_enabled_post_types(): array {
+	public static function get_enabled_post_types(): array {
 		$saved = get_option( 'swps_meta_editor_post_types', '' );
 
 		if ( is_array( $saved ) && ! empty( $saved ) ) {

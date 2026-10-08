@@ -1,0 +1,17 @@
+{
+  "name": "stratawp-seo",
+  "version": "0.0.0",
+  "scripts": {
+    "build": "wp-scripts build --webpack-src-dir=src/editor --output-path=admin/editor",
+    "start": "wp-scripts start --webpack-src-dir=src/editor --output-path=admin/editor",
+    "test:js": "wp-scripts test-unit-js src/editor",
+    "verify:build": "npm run build && git diff --exit-code -- admin/editor",
+    "test:e2e": "playwright test"
+  },
+  "private": true,
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@wordpress/scripts": "^35.0.0",
+    "@wordpress/url": "^4.48.1"
+  }
+}

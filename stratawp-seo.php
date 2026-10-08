@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.31.2
+ * Version: 4.32.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.31.2' );
+define( 'SWPS_VERSION', '4.32.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -234,6 +234,16 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-github-updater.php';
 // v4.0 admin shell.
 require_once SWPS_PLUGIN_DIR . 'includes/class-user-prefs.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-modules.php';
+
+// Block editor sidebar.
+require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-sidebar.php';
+require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-text.php';
+require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-check-registry.php';
+require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-check-engine.php';
+require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-input.php';
+require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-rest.php';
+require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-fix.php';
+require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-snapshots.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-admin-shell.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-dashboard.php';
 
@@ -461,6 +471,16 @@ final class StrataWP_SEO {
 			$this->rate_limiter
 		);
 		$this->aeo_editor_panel  = new SWPS_AEO_Editor_Panel( $this->aeo_scorer );
+		new SWPS_Editor_Sidebar();
+		new SWPS_Editor_Rest(
+			$this->api,
+			$this->cost_tracker,
+			$this->aeo_optimizer,
+			$this->citation_tracker,
+			$this->search_console,
+			$this->keyword_tracker
+		);
+		new SWPS_Editor_Snapshots( $this->search_console );
 
 		// Question coverage engine (v4.17) — weekly GSC question demand mining.
 		$this->question_coverage = new SWPS_Question_Coverage( $this->search_console, $this->topic_queue );
@@ -1488,6 +1508,7 @@ final class StrataWP_SEO {
  * Activation hook.
  */
 function swps_activate(): void {
+	SWPS_Editor_Sidebar::on_activate();
 	$defaults = array(
 		'ai_provider'                 => 'anthropic',
 		'image_provider'              => 'unsplash',
