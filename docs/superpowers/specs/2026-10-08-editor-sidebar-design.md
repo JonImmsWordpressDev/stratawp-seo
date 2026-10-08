@@ -36,9 +36,10 @@ Success looks like:
 ### Build tooling
 
 - Add `package.json` with `@wordpress/scripts`. Sources in `src/editor/`,
-  output in `build/editor/`.
-- `build/` is committed so the wp.org zip and release zip need no Node step on
-  the user's side.
+  output in `admin/editor/` (not `build/`: `bin/build-zip.sh` uses `build/` as
+  its zip output directory and excludes it from the packaged zips).
+- `admin/editor/` is committed so the wp.org zip and release zip need no Node
+  step on the user's side.
 - `.github/workflows/release.yml` gains `npm ci && npm run build` before
   packaging. A CI check fails if `build/` does not match the sources.
 
@@ -53,6 +54,11 @@ Document tab showing the score badge. Panels:
 4. Readability
 5. AI visibility
 6. Schema (detected type and validation status)
+7. Advanced (canonical URL, robots, breadcrumb title, social title,
+   description and image, sitemap exclude, priority and change frequency).
+   These fields live in the classic metabox today. Because the metabox is
+   hidden in the block editor, the sidebar must carry them or they become
+   unreachable.
 
 ### Two-tier analysis
 
@@ -182,7 +188,7 @@ separate spec.
 - Parity test: shared fixtures through PHP and JS, identical results.
 - Playwright smoke test on the local site: open editor, type, score moves,
   apply a rule fix, undo it.
-- phpcs and phpstan stay green. CI verifies `build/` matches sources.
+- phpcs and phpstan stay green. CI verifies `admin/editor/` matches sources.
 
 ## Rollout
 
