@@ -13,6 +13,7 @@ import ScoreBadge from './ScoreBadge';
 import SearchPreview from './SearchPreview';
 import KeywordsPanel from './KeywordsPanel';
 import ChecksPanel from './ChecksPanel';
+import AdvancedPanel from './AdvancedPanel';
 
 export default function Sidebar() {
 	const title = __( 'StrataWP SEO', 'stratawp-seo' );
@@ -66,6 +67,10 @@ export default function Sidebar() {
 
 					<PanelBody title={ __( 'Readability', 'stratawp-seo' ) } initialOpen={ false }>
 						<ChecksPanel output={ analysis.output } registry={ registry } group="readability" />
+					</PanelBody>
+
+					<PanelBody title={ __( 'Advanced', 'stratawp-seo' ) } initialOpen={ false }>
+						<AdvancedPanel />
 					</PanelBody>
 				</div>
 			</PluginSidebar>
