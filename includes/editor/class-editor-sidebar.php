@@ -183,18 +183,6 @@ class SWPS_Editor_Sidebar {
 					'auth_callback'     => $auth,
 				)
 			);
-
-			// Readable in the editor (for the old versus new score note), never writable over REST.
-			register_post_meta(
-				$type,
-				'_swps_seo_score_value',
-				array(
-					'type'          => 'integer',
-					'single'        => true,
-					'show_in_rest'  => true,
-					'auth_callback' => '__return_false',
-				)
-			);
 		}
 	}
 
@@ -253,17 +241,33 @@ class SWPS_Editor_Sidebar {
 		$post_type = $screen && $screen->post_type ? $screen->post_type : 'post';
 
 		return array(
-			'enabled'    => true,
-			'toggleUrl'  => $this->toggle_url( false ),
-			'registry'   => SWPS_Editor_Check_Registry::for_js(),
-			'preset'     => SWPS_Editor_Input::preset( $post_type ),
-			'host'       => (string) wp_parse_url( home_url(), PHP_URL_HOST ),
-			'lang'       => get_locale(),
-			'siteTitle'  => get_bloginfo( 'name' ),
-			'aeoEnabled' => (bool) get_option( SWPS_AEO_Scorer::OPTION_COVERAGE_ENABLED ),
-			'canManage'  => current_user_can( 'manage_options' ),
-			'fixCost'    => $this->estimate_fix_cost(),
+			'enabled'     => true,
+			'toggleUrl'   => $this->toggle_url( false ),
+			'registry'    => SWPS_Editor_Check_Registry::for_js(),
+			'preset'      => SWPS_Editor_Input::preset( $post_type ),
+			'host'        => (string) wp_parse_url( home_url(), PHP_URL_HOST ),
+			'lang'        => get_locale(),
+			'siteTitle'   => get_bloginfo( 'name' ),
+			'aeoEnabled'  => (bool) get_option( SWPS_AEO_Scorer::OPTION_COVERAGE_ENABLED ),
+			'canManage'   => current_user_can( 'manage_options' ),
+			'fixCost'     => $this->estimate_fix_cost(),
+			'legacyScore' => $this->legacy_score(),
 		);
+	}
+
+	/**
+	 * The score the older scorer saved for this post, for the old versus new
+	 * score note. Passed here rather than over REST: a read only REST meta
+	 * key is sent back by the editor on every save and the save then fails
+	 * the edit_post_meta check.
+	 */
+	private function legacy_score(): ?int {
+		$post_id = (int) get_the_ID();
+		if ( $post_id <= 0 ) {
+			return null;
+		}
+		$score = (int) get_post_meta( $post_id, '_swps_seo_score_value', true );
+		return $score > 0 ? $score : null;
 	}
 
 	/**

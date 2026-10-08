@@ -11,7 +11,6 @@ import {
 import { useAnalysis } from '../hooks/useAnalysis';
 import { useDeep } from '../hooks/useDeep';
 import { useKeywords } from '../hooks/useKeywords';
-import { usePostMeta } from '../hooks/usePostMeta';
 import ScoreBadge from './ScoreBadge';
 import SearchPreview from './SearchPreview';
 import KeywordsPanel from './KeywordsPanel';
@@ -24,7 +23,6 @@ import AnswerButton from './AnswerButton';
 
 export default function Sidebar() {
 	const title = __( 'StrataWP SEO', 'stratawp-seo' );
-	const { meta } = usePostMeta();
 	const deep = useDeep();
 	const analysis = useAnalysis( deep.data ? deep.data.unique : {} );
 	const dirty = useSelect( ( select ) => select( 'core/editor' ).isEditedPostDirty(), [] );
@@ -47,19 +45,19 @@ export default function Sidebar() {
 			setSelected( Math.max( 0, activeIndex - 1 ) );
 		}
 	};
-	const registry = ( window.swpsEditor || {} ).registry;
+	const { registry, legacyScore = null } = window.swpsEditor || {};
 
 	return (
 		<>
 			<PluginSidebarMoreMenuItem target="stratawp-seo">{ title }</PluginSidebarMoreMenuItem>
 
 			<PluginDocumentSettingPanel name="swps-score" title={ title }>
-				<ScoreBadge score={ analysis.score } legacy={ meta._swps_seo_score_value } aeo={ deep.data && deep.data.aeo ? deep.data.aeo.total : null } />
+				<ScoreBadge score={ analysis.score } legacy={ legacyScore } aeo={ deep.data && deep.data.aeo ? deep.data.aeo.total : null } />
 			</PluginDocumentSettingPanel>
 
 			<PluginSidebar name="stratawp-seo" title={ title } icon="search">
 				<div className="swps-editor">
-					<ScoreBadge score={ analysis.score } legacy={ meta._swps_seo_score_value } aeo={ deep.data && deep.data.aeo ? deep.data.aeo.total : null } />
+					<ScoreBadge score={ analysis.score } legacy={ legacyScore } aeo={ deep.data && deep.data.aeo ? deep.data.aeo.total : null } />
 
 					<PanelBody title={ __( 'Search preview', 'stratawp-seo' ) } initialOpen>
 						<SearchPreview input={ analysis.input } />
