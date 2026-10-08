@@ -79,3 +79,15 @@
 
 .swps-advanced__heading { margin: 16px 0 8px; font-size: 13px; }
 .swps-advanced__switch { margin-top: 16px; font-size: 12px; }
+
+.swps-ai__score { display: flex; align-items: center; gap: 8px; strong { font-size: 24px; } }
+.swps-ai__dims, .swps-ai__queries, .swps-suggest__list { margin: 8px 0; padding: 0; list-style: none; }
+.swps-ai__dims li { display: flex; justify-content: space-between; padding: 2px 0; }
+.swps-query { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; }
+.swps-query--answered span:first-child { color: #007017; }
+.swps-query--partial span:first-child { color: #996800; }
+.swps-query--missing span:first-child { color: #b32d2e; }
+.swps-query__q { flex: 1; }
+.swps-suggest__actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.swps-suggest__list li { display: flex; align-items: center; gap: 8px; }
+.swps-suggest__list li span { flex: 1; }

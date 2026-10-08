@@ -233,6 +233,7 @@ class SWPS_Editor_Sidebar {
 			'lang'       => get_locale(),
 			'siteTitle'  => get_bloginfo( 'name' ),
 			'aeoEnabled' => (bool) get_option( SWPS_AEO_Scorer::OPTION_COVERAGE_ENABLED ),
+			'canManage'  => current_user_can( 'manage_options' ),
 		);
 	}
 

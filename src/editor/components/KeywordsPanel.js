@@ -2,6 +2,7 @@ import { __ } from '@wordpress/i18n';
 import { useState } from '@wordpress/element';
 import { Button, TextControl } from '@wordpress/components';
 import { useKeywords } from '../hooks/useKeywords';
+import KeywordSuggestions from './KeywordSuggestions';
 
 function summary( output, registry, index ) {
 	if ( ! output || ! output.keywords[ index ] || ! output.keywords[ index ].keyword ) {
@@ -76,6 +77,7 @@ export default function KeywordsPanel( { output, activeIndex, onSelect, onRemove
 					{ __( 'Show checks for the focus keyword', 'stratawp-seo' ) }
 				</Button>
 			) }
+			<KeywordSuggestions />
 			{ children }
 		</div>
 	);
