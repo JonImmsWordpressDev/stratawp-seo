@@ -138,7 +138,12 @@ class SWPS_Editor_Snapshots {
 			);
 			delete_post_meta( $post->ID, self::META_PENDING );
 		} catch ( \Throwable $e ) {
-			// Proof is best effort; never break the writer's save.
+			// Proof is best effort; never break the writer's save. Pending fixes stay for the next save.
+			do_action( 'swps_snapshot_failed', $post, $e );
+			if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( sprintf( 'StrataWP SEO: proof snapshot failed for post %d: %s', $post->ID, $e->getMessage() ) );
+			}
 			return;
 		}
 	}

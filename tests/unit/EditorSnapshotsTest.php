@@ -71,5 +71,7 @@ final class EditorSnapshotsTest extends TestCase {
 		);
 		$this->assertNull( SWPS_Editor_Snapshots::pick_keyword_row( $rows, 'nitro' ) );
 		$this->assertNull( SWPS_Editor_Snapshots::pick_keyword_row( array(), 'nitro' ) );
+		$this->assertNull( SWPS_Editor_Snapshots::pick_keyword_row( array( array( 'keys' => array( '' ), 'clicks' => 1 ) ), '' ) );
+		$this->assertNull( SWPS_Editor_Snapshots::pick_keyword_row( array( array( 'keys' => array( '' ), 'clicks' => 1 ) ), '  ' ) );
 	}
 }
