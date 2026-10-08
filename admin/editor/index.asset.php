@@ -11,7 +11,8 @@
 		'wp-element',
 		'wp-escape-html',
 		'wp-i18n',
-		'wp-plugins'
+		'wp-plugins',
+		'wp-url'
 	),
-	'version' => '131f8215dc92f6cefb87'
+	'version' => '9e94cfb8fba764e802e8'
 );

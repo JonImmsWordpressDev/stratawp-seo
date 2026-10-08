@@ -90,4 +90,15 @@ describe( 'buildRuleCtx', () => {
 		const ctx = buildRuleCtx( { keyword: 'cold brew', input, status: 'draft', savedStatus: 'publish' } );
 		expect( ruleFix( 'kw_in_slug', ctx ) ).toBeNull();
 	} );
+
+	it( 'gives the slug fix the real edited slug, not the slug derived for the checks', () => {
+		const ctx = buildRuleCtx( {
+			keyword: 'iced coffee',
+			input: { ...input, slug: 'cold-brew-coffee-guide', edited_slug: '' },
+			status: 'draft',
+			savedStatus: 'draft',
+		} );
+		expect( ctx.slug ).toBe( '' );
+		expect( ruleFix( 'kw_in_slug', ctx ) ).toEqual( { kind: 'slug', value: 'iced-coffee', original: '' } );
+	} );
 } );

@@ -21,7 +21,9 @@ test( 'sidebar scores live, applies a rule fix and undoes it', async ( { page } 
 
 	// First match is the pinned top-bar button.
 	await page.getByRole( 'button', { name: 'StrataWP SEO' } ).first().click();
-	await page.getByLabel( 'Focus keyword' ).fill( 'cold brew coffee' );
+	// Not in the title, so the slug WordPress derives from the title fails
+	// the check and the Fix has something to set.
+	await page.getByLabel( 'Focus keyword' ).fill( 'iced coffee' );
 
 	// The score appears within the debounce window.
 	await expect( page.getByTestId( 'swps-score' ).first() ).toBeVisible();

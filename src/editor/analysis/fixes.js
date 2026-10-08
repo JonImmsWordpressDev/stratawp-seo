@@ -39,12 +39,13 @@ export function trimToSentence( text, max ) {
 
 /**
  * Build the context ruleFix reads from the analysis input and the two post
- * statuses. Kept pure so the wiring is testable without React.
+ * statuses. Kept pure so the wiring is testable without React. The slug is
+ * the real edited one: input.slug may be derived from the title for drafts.
  */
 export function buildRuleCtx( { keyword, input, status, savedStatus } ) {
 	return {
 		keyword,
-		slug: input.slug,
+		slug: input.edited_slug ?? input.slug,
 		title: input.title,
 		metaTitle: input.meta_title,
 		metaDescription: input.meta_description,
