@@ -39,7 +39,8 @@ const TRANSITIONS = [
 	'in fact',
 	'in summary',
 ];
-const TRANSITION_RE = new RegExp( '\\b(?:' + TRANSITIONS.join( '|' ) + ')\\b', 'i' );
+const escapeRegExp = ( value ) => value.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' );
+const TRANSITION_RE = new RegExp( '\\b(?:' + TRANSITIONS.map( escapeRegExp ).join( '|' ) + ')\\b', 'i' );
 const PASSIVE_RE = /\b(?:is|are|was|were|be|been|being)\s+(?:\w+ed|\w+en)\b/i;
 
 const KEYWORD_IDS = [
@@ -58,6 +59,15 @@ const KEYWORD_IDS = [
 const rnd = ( x ) => Math.floor( x + 0.5 );
 const r = ( status, value = null ) => ( { status, value } );
 const has = ( haystack, needleLower ) => T.lower( haystack ).includes( needleLower );
+const countMatches = ( haystack, needle ) => {
+	const text = T.lower( haystack );
+	const search = T.lower( needle );
+	if ( search === '' ) {
+		return 0;
+	}
+	const matches = text.match( new RegExp( escapeRegExp( search ), 'gi' ) );
+	return matches ? matches.length : 0;
+};
 
 export function normalize( input ) {
 	const preset = {
@@ -262,7 +272,7 @@ function keywordChecks( row, inp, c ) {
 		: r( 'na' );
 
 	if ( c.wordbased && c.wordCount > 0 ) {
-		const occ = T.lower( c.text ).split( k ).length - 1;
+		const occ = countMatches( c.text, kw );
 		const kwords = Math.max( 1, T.words( kw ).length );
 		const percent = ( ( occ * kwords ) / c.wordCount ) * 100;
 		const density = Math.floor( percent * 100 + 0.5 ) / 100;
