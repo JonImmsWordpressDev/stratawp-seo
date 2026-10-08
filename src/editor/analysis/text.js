@@ -38,19 +38,27 @@ export const hostKey = ( h ) => lower( trim( h ) ).replace( /^www\./, '' );
 export const charLength = ( s ) => Array.from( s ).length;
 
 export function plain( html ) {
+	let sanitized = html;
+	let previous;
+
+	do {
+		previous = sanitized;
+		sanitized = sanitized
+			.replace( /<!--[\s\S]*?-->/g, ' ' )
+			.replace( /<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ' )
+			.replace( /\[\/?[a-z_][\w-]*(?:\s[^\]]*)?\]/gi, ' ' )
+			.replace( /<[^>]*>/g, '' );
+	} while ( sanitized !== previous );
+
 	return trim(
-		html
-		.replace( /<!--[\s\S]*?-->/g, ' ' )
-		.replace( /<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ' )
-		.replace(
-			/<\/(?:p|div|h[1-6]|li|blockquote|tr|ul|ol)>|<br\s*\/?>/gi,
-			'\n'
-		)
-		.replace( /\[\/?[a-z_][\w-]*(?:\s[^\]]*)?\]/gi, ' ' )
-		.replace( /<[^>]*>/g, '' )
-		.replace( /&(amp|nbsp|quot|#039|#8217|lt|gt);/g, ( m, k ) => ENTITIES[ k ] )
-		.replace( /[ \t\u00a0]+/g, ' ' )
-		.replace( / *\n[ \n]*/g, '\n' )
+		sanitized
+			.replace(
+				/<\/(?:p|div|h[1-6]|li|blockquote|tr|ul|ol)>|<br\s*\/?>/gi,
+				'\n'
+			)
+			.replace( /&(amp|nbsp|quot|#039|#8217|lt|gt);/g, ( m, k ) => ENTITIES[ k ] )
+			.replace( /[ \t\u00a0]+/g, ' ' )
+			.replace( / *\n[ \n]*/g, '\n' )
 	);
 }
 
