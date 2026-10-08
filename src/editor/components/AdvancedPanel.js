@@ -37,7 +37,8 @@ const CHANGEFREQ = [
 
 export default function AdvancedPanel() {
 	const { meta, setKey } = usePostMeta();
-	const toggleUrl = ( window.swpsEditor || {} ).toggleUrl;
+	// Switching back needs manage_options, so only offer it to those who have it.
+	const { toggleUrl, canManage } = window.swpsEditor || {};
 
 	return (
 		<div className="swps-advanced">
@@ -105,7 +106,7 @@ export default function AdvancedPanel() {
 				onChange={ ( v ) => setKey( '_swps_sitemap_changefreq', v ) }
 			/>
 
-			{ toggleUrl && (
+			{ canManage && toggleUrl && (
 				<p className="swps-advanced__switch">
 					<a href={ toggleUrl }>
 						{ __( 'Use the classic editor panel instead', 'stratawp-seo' ) }

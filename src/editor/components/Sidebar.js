@@ -52,12 +52,12 @@ export default function Sidebar() {
 			<PluginSidebarMoreMenuItem target="stratawp-seo">{ title }</PluginSidebarMoreMenuItem>
 
 			<PluginDocumentSettingPanel name="swps-score" title={ title }>
-				<ScoreBadge score={ analysis.score } legacy={ legacyScore } aeo={ deep.data && deep.data.aeo ? deep.data.aeo.total : null } />
+				<ScoreBadge score={ analysis.score } legacy={ legacyScore } error={ analysis.error } aeo={ deep.data && deep.data.aeo ? deep.data.aeo.total : null } />
 			</PluginDocumentSettingPanel>
 
 			<PluginSidebar name="stratawp-seo" title={ title } icon="search">
 				<div className="swps-editor">
-					<ScoreBadge score={ analysis.score } legacy={ legacyScore } aeo={ deep.data && deep.data.aeo ? deep.data.aeo.total : null } />
+					<ScoreBadge score={ analysis.score } legacy={ legacyScore } error={ analysis.error } aeo={ deep.data && deep.data.aeo ? deep.data.aeo.total : null } />
 
 					<PanelBody title={ __( 'Search preview', 'stratawp-seo' ) } initialOpen>
 						<SearchPreview input={ analysis.input } />

@@ -7,7 +7,14 @@ const LABELS = {
 	no_keyword: __( 'Add a focus keyword', 'stratawp-seo' ),
 };
 
-export default function ScoreBadge( { score, legacy, aeo = null } ) {
+export default function ScoreBadge( { score, legacy, aeo = null, error = null } ) {
+	if ( ! score && error ) {
+		return (
+			<p className="swps-editor__muted">
+				{ __( 'Analysis could not run. It will retry after your next edit.', 'stratawp-seo' ) }
+			</p>
+		);
+	}
 	if ( ! score ) {
 		return (
 			<p className="swps-editor__muted">{ __( 'Analyzing', 'stratawp-seo' ) }</p>
