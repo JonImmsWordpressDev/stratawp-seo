@@ -61,6 +61,8 @@ EXCLUDES=(
   --exclude='.idea' --exclude='.vscode' --exclude='.mcp.json'
   --exclude='.DS_Store' --exclude='**/.DS_Store'
   --exclude='.github-release'
+  # The JS tests import fixtures from /tests, which the wporg zip drops.
+  --exclude='/src/editor/__tests__'
 )
 
 # Dev tooling: useful in the repo, noise in the directory. Anchored with a
@@ -75,6 +77,7 @@ if [ "$TARGET" = wporg ]; then
     --exclude='/phpstan.neon' --exclude='/phpstan.neon.dist'
     --exclude='/phpstan-baseline.neon'
     --exclude='/package.json' --exclude='/package-lock.json'
+    --exclude='/babel.config.js' --exclude='/jest.config.js'
     --exclude='/pnpm-lock.yaml' --exclude='/.gitignore'
     --exclude='/.gitattributes' --exclude='/.editorconfig'
   )
@@ -110,6 +113,7 @@ has "vendor/fullcalendar.global.min.js" || fail "bundled FullCalendar missing"
 has "admin/fonts/"           || fail "bundled fonts missing"
 has "admin/editor/index.js"  || fail "editor sidebar bundle missing"
 has "admin/editor/index.asset.php" || fail "editor sidebar asset manifest missing"
+! has "$SLUG/src/editor/__tests__/" || fail "src/editor/__tests__ leaked into the build"
 
 if [ "$TARGET" = github ]; then
   has '.github-release' || fail "provenance marker missing — self-updater would be dead"
