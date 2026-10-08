@@ -1,0 +1,119 @@
+[
+	{
+		"name": "good-post",
+		"input": {
+			"title": "How to make cold brew coffee at home",
+			"slug": "cold-brew-coffee",
+			"content_html": "<!-- wp:paragraph --><p>Cold brew coffee is easier to make at home than most people expect. It takes a coarse grind, cold water and patience.</p><!-- /wp:paragraph --><!-- wp:heading --><h2>How to make cold brew coffee</h2><!-- /wp:heading --><!-- wp:paragraph --><p>Add the grounds to a jar, pour in water and wait. However, the wait is the hard part. Therefore plan ahead and start the night before. Read our <a href=\"/grinding-guide\">grinding guide</a> or the <a href=\"https://en.wikipedia.org/wiki/Cold_brew\">cold brew article</a>.</p><!-- /wp:paragraph --><img src=\"jar.jpg\" alt=\"A jar of cold brew coffee\"><!-- wp:paragraph --><p>Strain it, dilute it and enjoy. Cold brew coffee keeps for a week in the fridge.</p><!-- /wp:paragraph -->",
+			"meta_title": "",
+			"meta_description": "Learn how to make cold brew coffee at home with a coarse grind and cold water.",
+			"lang": "en_US",
+			"host": "example.com",
+			"preset": { "min_words": 20 },
+			"keywords": [ { "keyword": "cold brew coffee", "used_elsewhere": false } ]
+		}
+	},
+	{
+		"name": "empty-keyword",
+		"input": {
+			"title": "Untitled draft",
+			"slug": "",
+			"content_html": "<p>A short first paragraph with no keyword chosen yet. It has two sentences. And a third one.</p>",
+			"meta_title": "",
+			"meta_description": "",
+			"lang": "en",
+			"host": "example.com",
+			"keywords": [ { "keyword": "" } ]
+		}
+	},
+	{
+		"name": "japanese",
+		"input": {
+			"title": "テストの書き方",
+			"slug": "test",
+			"content_html": "<p>これはテストです。日本語の文章です。三つ目の文です。</p>",
+			"meta_title": "",
+			"meta_description": "テストの書き方を説明します。",
+			"lang": "ja",
+			"host": "example.com",
+			"keywords": [ { "keyword": "テスト" } ]
+		}
+	},
+	{
+		"name": "blocks-and-shortcodes",
+		"input": {
+			"title": "Gallery tips & tricks",
+			"slug": "gallery-tips",
+			"content_html": "<!-- wp:paragraph {\"className\":\"gallery tips\"} --><p>Hello [gallery ids=\"1,2\"] world &amp; friends. These gallery tips help.</p><!-- /wp:paragraph --><!-- wp:shortcode -->[contact-form]<!-- /wp:shortcode -->",
+			"meta_title": "Gallery tips",
+			"meta_description": "Short description about gallery tips for your site.",
+			"lang": "en",
+			"host": "example.com",
+			"preset": { "min_words": 5 },
+			"keywords": [ { "keyword": "gallery tips", "used_elsewhere": null } ]
+		}
+	},
+	{
+		"name": "accents",
+		"input": {
+			"title": "Café au lait at home",
+			"slug": "cafe-au-lait",
+			"content_html": "<p>Un café au lait est simple. Le café au lait se prépare avec du lait chaud et du café fort.</p><h2>Le café au lait parfait</h2><p>Servez le café au lait chaud.</p><p>Bonne dégustation avec ce café au lait.</p>",
+			"meta_title": "",
+			"meta_description": "Comment préparer un café au lait parfait à la maison, étape par étape et sans effort.",
+			"lang": "fr_FR",
+			"host": "example.com",
+			"preset": { "min_words": 10 },
+			"keywords": [ { "keyword": "café au lait", "used_elsewhere": false } ]
+		}
+	},
+	{
+		"name": "stuffed",
+		"input": {
+			"title": "Espresso espresso espresso",
+			"slug": "espresso",
+			"content_html": "<p>espresso espresso espresso espresso espresso espresso espresso espresso espresso espresso word word word word word word word word word word</p>",
+			"meta_title": "",
+			"meta_description": "espresso",
+			"lang": "en",
+			"host": "example.com",
+			"preset": { "min_words": 10 },
+			"keywords": [ { "keyword": "espresso" } ]
+		}
+	},
+	{
+		"name": "related-keywords",
+		"input": {
+			"title": "Cold brew vs iced coffee: what is the difference",
+			"slug": "cold-brew-vs-iced-coffee",
+			"content_html": "<p>Cold brew is steeped for hours. Iced coffee is brewed hot and then cooled. The difference is taste.</p><h2>Cold brew</h2><p>Smooth and low in acid.</p><h3>Iced coffee</h3><p>Bright and sharp, so it suits milk.</p>",
+			"meta_title": "",
+			"meta_description": "Cold brew and iced coffee taste different because of how they are made. Here is how to choose.",
+			"lang": "en",
+			"host": "example.com",
+			"preset": { "min_words": 20 },
+			"keywords": [
+				{ "keyword": "cold brew", "used_elsewhere": false },
+				{ "keyword": "iced coffee", "used_elsewhere": true },
+				{ "keyword": "nitro coffee", "used_elsewhere": null }
+			]
+		}
+	},
+	{
+		"name": "long-passive-no-headings",
+		"content_repeat": {
+			"text": "The report was written by the committee and it was reviewed by the board before the results were shared with everyone who had been waiting for an answer about the new policy. ",
+			"times": 12
+		},
+		"input": {
+			"title": "Committee report",
+			"slug": "committee-report",
+			"content_html": "",
+			"meta_title": "",
+			"meta_description": "A report about the committee.",
+			"lang": "en",
+			"host": "example.com",
+			"keywords": [ { "keyword": "committee report" } ]
+		}
+	}
+]
