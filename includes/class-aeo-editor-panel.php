@@ -29,11 +29,12 @@ class SWPS_AEO_Editor_Panel {
 	 * Register the classic-editor metabox for each configured post type.
 	 */
 	public function register_metabox(): void {
-		if ( SWPS_Editor_Sidebar::hide_classic_metaboxes() ) {
-			return;
-		}
 		$types = (array) get_option( 'swps_aeo_post_types', array( 'post', 'page' ) );
 		foreach ( $types as $type ) {
+			// The block editor sidebar shows the AEO score where it is active.
+			if ( SWPS_Editor_Sidebar::active_for( (string) $type ) ) {
+				continue;
+			}
 			add_meta_box(
 				'swps-aeo-panel',
 				__( 'AEO Score', 'stratawp-seo' ),

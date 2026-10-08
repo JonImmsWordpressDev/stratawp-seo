@@ -52,35 +52,56 @@ class SWPS_Editor_Sidebar {
 	}
 
 	/**
-	 * True when the classic SEO and AEO metaboxes should not register because
-	 * the sidebar replaces them on this screen.
+	 * Path to the compiled bundle's asset manifest.
 	 */
-	public static function hide_classic_metaboxes(): bool {
-		if ( ! self::is_enabled() || ! function_exists( 'get_current_screen' ) ) {
+	private static function asset_file(): string {
+		return SWPS_PLUGIN_DIR . 'admin/editor/index.asset.php';
+	}
+
+	/**
+	 * True when the sidebar can serve this post type: it is turned on, the
+	 * meta editor feature is on and covers the type, the type exposes meta
+	 * over REST (custom-fields support), and the compiled bundle exists.
+	 * Ignores the current screen, so it also answers for REST requests and
+	 * meta registration at init.
+	 *
+	 * @param string $post_type Post type slug.
+	 */
+	public static function available_for( string $post_type ): bool {
+		return self::is_enabled()
+			&& (bool) get_option( 'swps_meta_editor_enabled', 1 )
+			&& in_array( $post_type, SWPS_Meta_Editor::get_enabled_post_types(), true )
+			&& post_type_supports( $post_type, 'custom-fields' )
+			&& is_readable( self::asset_file() );
+	}
+
+	/**
+	 * The one predicate that decides whether the sidebar replaces the classic
+	 * SEO and AEO metaboxes for a post type. When a screen exists it must be
+	 * the block editor on a post screen (not the Site Editor or widgets), so
+	 * classic editor screens keep their metaboxes.
+	 *
+	 * @param string $post_type Post type slug.
+	 */
+	public static function active_for( string $post_type ): bool {
+		if ( ! self::available_for( $post_type ) ) {
 			return false;
 		}
-		$screen = get_current_screen();
-		return $screen instanceof WP_Screen && $screen->is_block_editor();
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( $screen instanceof WP_Screen ) {
+			return 'post' === $screen->base && $screen->is_block_editor();
+		}
+		return true;
 	}
 
 	public function enqueue(): void {
-		if ( ! self::is_enabled() ) {
-			return;
-		}
 		// Post editor only. The Site Editor and widgets editor also fire this
 		// hook, but they have no post to analyse.
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		if ( ! $screen || 'post' !== $screen->base || ! $screen->is_block_editor() ) {
+		if ( ! $screen instanceof WP_Screen || ! self::active_for( (string) $screen->post_type ) ) {
 			return;
 		}
-		if ( ! in_array( $screen->post_type, SWPS_Meta_Editor::get_enabled_post_types(), true ) ) {
-			return;
-		}
-		$asset_file = SWPS_PLUGIN_DIR . 'admin/editor/index.asset.php';
-		if ( ! is_readable( $asset_file ) ) {
-			return;
-		}
-		$asset = include $asset_file;
+		$asset = include self::asset_file();
 
 		wp_enqueue_script(
 			'swps-editor',
@@ -112,13 +133,10 @@ class SWPS_Editor_Sidebar {
 
 	/**
 	 * Expose the SEO fields to the block editor through REST. Only registered
-	 * when the sidebar is on, so nothing changes for sites that have not
-	 * opted in.
+	 * for post types the sidebar serves, so nothing changes for sites that
+	 * have not opted in.
 	 */
 	public function register_meta(): void {
-		if ( ! self::is_enabled() ) {
-			return;
-		}
 
 		$auth = static function ( $allowed, $meta_key, $post_id ): bool {
 			return current_user_can( 'edit_post', (int) $post_id );
@@ -140,6 +158,9 @@ class SWPS_Editor_Sidebar {
 		);
 
 		foreach ( SWPS_Meta_Editor::get_enabled_post_types() as $type ) {
+			if ( ! self::available_for( $type ) ) {
+				continue;
+			}
 			foreach ( $strings as $key => $sanitize ) {
 				register_post_meta(
 					$type,
