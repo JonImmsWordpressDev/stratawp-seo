@@ -18,6 +18,9 @@ const ENTITIES = {
 	gt: '>',
 };
 
+// PHP trim() default set only (JS String.trim() also strips NBSP, U+3000 etc).
+export const trim = ( s ) => s.replace( /^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, '' );
+
 export const lower = ( s ) => s.toLowerCase();
 
 export const fold = ( s ) =>
@@ -30,12 +33,13 @@ export const slugify = ( s ) =>
 		.replace( /[^\p{L}\p{N}]+/gu, '-' )
 		.replace( /^-+|-+$/g, '' );
 
-export const hostKey = ( h ) => lower( h.trim() ).replace( /^www\./, '' );
+export const hostKey = ( h ) => lower( trim( h ) ).replace( /^www\./, '' );
 
 export const charLength = ( s ) => Array.from( s ).length;
 
 export function plain( html ) {
-	return html
+	return trim(
+		html
 		.replace( /<!--[\s\S]*?-->/g, ' ' )
 		.replace( /<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ' )
 		.replace(
@@ -47,7 +51,7 @@ export function plain( html ) {
 		.replace( /&(amp|nbsp|quot|#039|#8217|lt|gt);/g, ( m, k ) => ENTITIES[ k ] )
 		.replace( /[ \t\u00a0]+/g, ' ' )
 		.replace( / *\n[ \n]*/g, '\n' )
-		.trim();
+	);
 }
 
 export const words = ( text ) =>
@@ -57,7 +61,7 @@ export function sentences( text ) {
 	const out = [];
 	text.split( '\n' ).forEach( ( line ) => {
 		line.split( /(?<=[.!?])\s+/u ).forEach( ( part ) => {
-			const t = part.trim();
+			const t = trim( part );
 			if ( t !== '' && words( t ).length > 0 ) {
 				out.push( t );
 			}
@@ -78,7 +82,7 @@ export function paragraphs( html ) {
 		plain( html )
 			.split( '\n' )
 			.forEach( ( line ) => {
-				const t = line.trim();
+				const t = trim( line );
 				if ( t !== '' ) {
 					out.push( t );
 				}
@@ -105,7 +109,7 @@ export function imageAlts( html ) {
 		if ( a ) {
 			alt = ( a[ 1 ] ?? '' ) !== '' ? a[ 1 ] : a[ 2 ] ?? '';
 		}
-		out.push( alt.trim() );
+		out.push( trim( alt ) );
 	}
 	return out;
 }
@@ -117,7 +121,7 @@ export function linkCounts( html, host ) {
 	for ( const m of html.matchAll(
 		/<a\b[^>]*?(?<![\w-])href\s*=\s*(?:"([^"]*)"|'([^']*)')/gi
 	) ) {
-		const href = ( ( m[ 1 ] ?? '' ) !== '' ? m[ 1 ] : m[ 2 ] ?? '' ).trim();
+		const href = trim( ( m[ 1 ] ?? '' ) !== '' ? m[ 1 ] : m[ 2 ] ?? '' );
 		if ( href === '' || /^(#|mailto:|tel:|javascript:)/i.test( href ) ) {
 			continue;
 		}

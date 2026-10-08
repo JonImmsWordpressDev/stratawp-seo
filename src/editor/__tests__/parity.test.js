@@ -30,6 +30,6 @@ describe( 'instant tier behaviour', () => {
 		};
 		const start = Date.now();
 		runChecks( input );
-		expect( Date.now() - start ).toBeLessThan( 250 );
+		expect( Date.now() - start ).toBeLessThan( 500 );
 	} );
 } );

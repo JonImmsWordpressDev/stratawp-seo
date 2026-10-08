@@ -1325,6 +1325,552 @@
                 "readability": 20,
                 "status": "needs_work"
             }
+        },
+        {
+            "name": "nbsp-padding",
+            "input": {
+                "title": " Cold brew guide for beginners ",
+                "slug": "cold-brew-guide",
+                "content_html": "<p>Cold brew is simple. It needs time.</p>",
+                "meta_title": " ",
+                "meta_description": " Learn cold brew with a short guide that covers grind and time. ",
+                "lang": "en",
+                "host": "example.com",
+                "preset": {
+                    "min_words": 5
+                },
+                "keywords": [
+                    {
+                        "keyword": " cold brew "
+                    },
+                    {
+                        "keyword": " "
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "warn",
+                        "value": 1
+                    },
+                    "description_length": {
+                        "status": "warn",
+                        "value": 64
+                    },
+                    "content_length": {
+                        "status": "pass",
+                        "value": 7
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "sentence_length": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "passive_voice": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "consecutive_starters": {
+                        "status": "na",
+                        "value": null
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": " cold brew ",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 0
+                            },
+                            "kw_title_position": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_conclusion": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    },
+                    {
+                        "keyword": " ",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 0
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 0
+                            },
+                            "kw_in_conclusion": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 64,
+                "seo": 51,
+                "readability": 100,
+                "status": "needs_work"
+            }
+        },
+        {
+            "name": "crlf-quotes-links",
+            "input": {
+                "title": "Windows line endings",
+                "slug": "windows-line-endings",
+                "content_html": "<p>First line of text.\r\nSecond line of text. Third sentence here.</p>\r\n<p>Another paragraph.\r\nWith a break.</p>\r\n<img src='a.jpg' alt='windows line endings'>\r\n<img src=\"b.jpg\">\r\n<a href='/local'>local</a> <a href=\"https://www.example.com/page\">own www</a> <a href=\"//other.org/x\">proto relative</a> <a href='mailto:a@b.c'>mail</a> <a href=\"#top\">top</a>",
+                "meta_title": "",
+                "meta_description": "A description about windows line endings that is long enough to pass.",
+                "lang": "en",
+                "host": "EXAMPLE.com",
+                "preset": {
+                    "min_words": 5
+                },
+                "keywords": [
+                    {
+                        "keyword": "windows line endings",
+                        "used_elsewhere": false
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "warn",
+                        "value": 20
+                    },
+                    "description_length": {
+                        "status": "warn",
+                        "value": 69
+                    },
+                    "content_length": {
+                        "status": "pass",
+                        "value": 23
+                    },
+                    "internal_links": {
+                        "status": "pass",
+                        "value": 2
+                    },
+                    "external_links": {
+                        "status": "pass",
+                        "value": 1
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "warn",
+                        "value": 1
+                    },
+                    "sentence_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "pass",
+                        "value": 50
+                    },
+                    "passive_voice": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "consecutive_starters": {
+                        "status": "pass",
+                        "value": 1
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "windows line endings",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 0
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 0
+                            },
+                            "kw_in_conclusion": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "pass",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 82,
+                "seo": 77,
+                "readability": 100,
+                "status": "good"
+            }
+        },
+        {
+            "name": "empty-title",
+            "input": {
+                "title": "",
+                "slug": "",
+                "content_html": "<p>Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while.</p>",
+                "meta_title": "",
+                "meta_description": "",
+                "lang": "en",
+                "host": "example.com",
+                "keywords": [
+                    {
+                        "keyword": "filler words"
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "fail",
+                        "value": 0
+                    },
+                    "description_length": {
+                        "status": "fail",
+                        "value": 0
+                    },
+                    "content_length": {
+                        "status": "fail",
+                        "value": 100
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "sentence_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "pass",
+                        "value": 100
+                    },
+                    "passive_voice": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "consecutive_starters": {
+                        "status": "warn",
+                        "value": 10
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "filler words",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 20
+                            },
+                            "kw_title_position": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_conclusion": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 41,
+                "seo": 23,
+                "readability": 90,
+                "status": "poor"
+            }
+        },
+        {
+            "name": "late-keyword-density",
+            "input": {
+                "title": "A long and winding title that eventually mentions espresso",
+                "slug": "winding-espresso",
+                "content_html": "<p>Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Plain filler words keep this paragraph going for a while. Espresso is mentioned once.</p><img src=\"x.jpg\" alt=\"\"><img src=\"y.jpg\" alt=\"cup\">",
+                "meta_title": "",
+                "meta_description": "A medium description about the topic of this long winding page for readers.",
+                "lang": "en",
+                "host": "example.com",
+                "preset": {
+                    "min_words": 20
+                },
+                "keywords": [
+                    {
+                        "keyword": "espresso"
+                    }
+                ]
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "pass",
+                        "value": 58
+                    },
+                    "description_length": {
+                        "status": "pass",
+                        "value": 75
+                    },
+                    "content_length": {
+                        "status": "pass",
+                        "value": 104
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "warn",
+                        "value": 1
+                    },
+                    "sentence_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "pass",
+                        "value": 91
+                    },
+                    "passive_voice": {
+                        "status": "pass",
+                        "value": 9
+                    },
+                    "consecutive_starters": {
+                        "status": "warn",
+                        "value": 10
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "espresso",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "fail",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "pass",
+                                "value": 0.96
+                            },
+                            "kw_title_position": {
+                                "status": "warn",
+                                "value": 50
+                            },
+                            "kw_in_conclusion": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 76,
+                "seo": 72,
+                "readability": 90,
+                "status": "good"
+            }
         }
     ]
 }

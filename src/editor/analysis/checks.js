@@ -72,13 +72,16 @@ export function normalize( input ) {
 		preset[ k ] = Math.trunc( Number( preset[ k ] ) ) || 0;
 	} );
 
-	let keywords = ( input.keywords || [] ).map( ( row ) => ( {
-		keyword: String( row.keyword ?? '' ).trim(),
-		used_elsewhere:
-			row.used_elsewhere === undefined || row.used_elsewhere === null
-				? null
-				: Boolean( row.used_elsewhere ),
-	} ) );
+	let keywords = ( Array.isArray( input.keywords ) ? input.keywords : [] ).map( ( raw ) => {
+		const row = raw ?? {};
+		return {
+			keyword: T.trim( String( row.keyword ?? '' ) ),
+			used_elsewhere:
+				row.used_elsewhere === undefined || row.used_elsewhere === null
+					? null
+					: Boolean( row.used_elsewhere ),
+		};
+	} );
 	if ( ! keywords.length ) {
 		keywords = [ { keyword: '', used_elsewhere: null } ];
 	}
@@ -101,7 +104,7 @@ function context( inp ) {
 	const text = T.plain( html );
 	const sentences = T.sentences( text );
 	return {
-		title: inp.meta_title.trim() !== '' ? inp.meta_title : inp.title,
+		title: T.trim( inp.meta_title ) !== '' ? inp.meta_title : inp.title,
 		text,
 		wordCount: T.words( text ).length,
 		wordbased: ! /^(ja|zh|ko|th)/i.test( inp.lang ),
@@ -119,13 +122,13 @@ function globalChecks( inp, c ) {
 	const p = inp.preset;
 	const g = {};
 
-	const tl = T.charLength( c.title.trim() );
+	const tl = T.charLength( T.trim( c.title ) );
 	g.title_length =
 		tl === 0
 			? r( 'fail', 0 )
 			: r( tl >= p.title_min && tl <= p.title_max ? 'pass' : 'warn', tl );
 
-	const dl = T.charLength( inp.meta_description.trim() );
+	const dl = T.charLength( T.trim( inp.meta_description ) );
 	g.description_length =
 		dl === 0
 			? r( 'fail', 0 )
@@ -234,7 +237,7 @@ function keywordChecks( row, inp, c ) {
 
 	res.kw_in_title = r( has( c.title, k ) ? 'pass' : 'fail' );
 
-	const desc = inp.meta_description.trim();
+	const desc = T.trim( inp.meta_description );
 	res.kw_in_description = r( desc !== '' && has( desc, k ) ? 'pass' : 'fail' );
 
 	const slugKw = T.slugify( kw );
