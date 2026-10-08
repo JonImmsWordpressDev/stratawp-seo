@@ -243,6 +243,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-check-engine.php';
 require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-input.php';
 require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-rest.php';
 require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-fix.php';
+require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-snapshots.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-admin-shell.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-dashboard.php';
 
@@ -479,6 +480,7 @@ final class StrataWP_SEO {
 			$this->search_console,
 			$this->keyword_tracker
 		);
+		new SWPS_Editor_Snapshots( $this->search_console );
 
 		// Question coverage engine (v4.17) — weekly GSC question demand mining.
 		$this->question_coverage = new SWPS_Question_Coverage( $this->search_console, $this->topic_queue );

@@ -227,6 +227,44 @@ class SWPS_Editor_Rest {
 				),
 			)
 		);
+
+		$check_ids = array_merge(
+			array_column( SWPS_Editor_Check_Registry::all(), 'id' ),
+			array( 'aeo_answer' )
+		);
+
+		register_rest_route(
+			self::NS,
+			'/editor/applied',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'applied' ),
+				'permission_callback' => array( $this, 'can_edit' ),
+				'args'                => array(
+					'post_id'  => $post_id,
+					'check_id' => array(
+						'type'     => 'string',
+						'required' => true,
+						'enum'     => $check_ids,
+					),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Remember that a fix was applied so the next published save can snapshot it.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function applied( WP_REST_Request $request ) {
+		$post_id = (int) $request['post_id'];
+		update_post_meta(
+			$post_id,
+			SWPS_Editor_Snapshots::META_PENDING,
+			SWPS_Editor_Snapshots::add_pending( get_post_meta( $post_id, SWPS_Editor_Snapshots::META_PENDING, true ), (string) $request['check_id'] )
+		);
+		return rest_ensure_response( array( 'ok' => true ) );
 	}
 
 	/**
