@@ -220,7 +220,7 @@ class SWPS_Editor_Rest {
 		$subscores = array();
 		foreach ( array( 'extractability', 'markup', 'authority', 'coverage' ) as $dim ) {
 			$v                 = $raw[ $dim ] ?? '';
-			$subscores[ $dim ] = ( '' === $v || null === $v ) ? null : (int) $v;
+			$subscores[ $dim ] = '' === $v ? null : (int) $v;
 		}
 		$total   = $meta['total'] ?? '';
 		$scanned = (int) ( $meta['scanned'] ?? 0 );
@@ -228,7 +228,7 @@ class SWPS_Editor_Rest {
 		$out = array(
 			'enabled'     => (bool) ( $meta['enabled'] ?? false ),
 			'scanned'     => $scanned > 0 ? $scanned : null,
-			'total'       => ( '' === $total || null === $total ) ? null : (int) $total,
+			'total'       => '' === $total ? null : (int) $total,
 			'subscores'   => $subscores,
 			'sub_queries' => is_array( $meta['sub_queries'] ?? null ) ? array_values( $meta['sub_queries'] ) : array(),
 			'stale'       => (bool) ( $meta['stale'] ?? false ),
