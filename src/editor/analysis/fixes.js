@@ -38,6 +38,23 @@ export function trimToSentence( text, max ) {
 }
 
 /**
+ * Build the context ruleFix reads from the analysis input and the two post
+ * statuses. Kept pure so the wiring is testable without React.
+ */
+export function buildRuleCtx( { keyword, input, status, savedStatus } ) {
+	return {
+		keyword,
+		slug: input.slug,
+		title: input.title,
+		metaTitle: input.meta_title,
+		metaDescription: input.meta_description,
+		status,
+		savedStatus,
+		preset: input.preset,
+	};
+}
+
+/**
  * Deterministic fixes that need no AI. Returns null when the fix does not
  * apply, so the sidebar shows no button.
  */

@@ -4,7 +4,7 @@ import { useState } from '@wordpress/element';
 import { useRegistry, useSelect } from '@wordpress/data';
 import { Button, Notice } from '@wordpress/components';
 import FixDiff from './FixDiff';
-import { ruleFix } from '../analysis/fixes';
+import { buildRuleCtx, ruleFix } from '../analysis/fixes';
 import { paragraphs } from '../analysis/text';
 import { findParagraphBlock, useApplyFix } from '../hooks/useApplyFix';
 
@@ -30,15 +30,7 @@ export default function FixButton( { def, res, keyword, input } ) {
 
 	let rule = null;
 	if ( def.fix === 'rule' ) {
-		rule = ruleFix( def.id, {
-			keyword,
-			slug: input.slug,
-			title: input.title,
-			metaTitle: input.meta_title,
-			metaDescription: input.meta_description,
-			status,
-			preset: input.preset,
-		} );
+		rule = ruleFix( def.id, buildRuleCtx( { keyword, input, status, savedStatus } ) );
 		if ( ! rule ) {
 			return null;
 		}

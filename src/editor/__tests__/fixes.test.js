@@ -1,4 +1,4 @@
-import { ruleFix } from '../analysis/fixes';
+import { ruleFix, buildRuleCtx } from '../analysis/fixes';
 import { charLength } from '../analysis/text';
 
 describe( 'ruleFix', () => {
@@ -61,5 +61,33 @@ describe( 'ruleFix', () => {
 
 	it( 'returns null for checks without a rule fix', () => {
 		expect( ruleFix( 'kw_density', {} ) ).toBeNull();
+	} );
+} );
+
+describe( 'buildRuleCtx', () => {
+	const input = {
+		slug: 'x',
+		title: 'T',
+		meta_title: 'MT',
+		meta_description: 'MD',
+		preset: { title_max: 60 },
+	};
+
+	it( 'forwards both statuses and the input fields', () => {
+		expect( buildRuleCtx( { keyword: 'cold brew', input, status: 'draft', savedStatus: 'publish' } ) ).toEqual( {
+			keyword: 'cold brew',
+			slug: 'x',
+			title: 'T',
+			metaTitle: 'MT',
+			metaDescription: 'MD',
+			status: 'draft',
+			savedStatus: 'publish',
+			preset: { title_max: 60 },
+		} );
+	} );
+
+	it( 'keeps the slug fix hidden for a published post switched to draft unsaved', () => {
+		const ctx = buildRuleCtx( { keyword: 'cold brew', input, status: 'draft', savedStatus: 'publish' } );
+		expect( ruleFix( 'kw_in_slug', ctx ) ).toBeNull();
 	} );
 } );
