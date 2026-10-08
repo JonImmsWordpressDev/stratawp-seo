@@ -50,6 +50,28 @@ class SWPS_Editor_Input {
 	}
 
 	/**
+	 * Reads the older comma separated _swps_secondary_keywords string as a
+	 * related keywords list.
+	 *
+	 * @return string[]
+	 */
+	public static function parse_legacy_secondary( string $secondary ): array {
+		return self::sanitize_related( explode( ',', $secondary ) );
+	}
+
+	/**
+	 * True when a related keywords list should overwrite the legacy string.
+	 * An unchanged list is left alone so a legacy string holding more keywords
+	 * than the sidebar shows survives until the writer edits the list.
+	 *
+	 * @param mixed[] $new_related       Related keywords being saved.
+	 * @param string  $current_secondary Current legacy secondary string.
+	 */
+	public static function should_mirror( array $new_related, string $current_secondary ): bool {
+		return self::sanitize_related( $new_related ) !== self::parse_legacy_secondary( $current_secondary );
+	}
+
+	/**
 	 * Thresholds for a post type. Posts keep honouring the existing
 	 * swps_seo_score_content_min option.
 	 *

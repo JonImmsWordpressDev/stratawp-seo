@@ -27,4 +27,36 @@ final class EditorInputTest extends TestCase {
 		$this->assertSame( 'a, b', SWPS_Editor_Input::secondary_string( array( 'a', 'b' ) ) );
 		$this->assertSame( '', SWPS_Editor_Input::secondary_string( array() ) );
 	}
+
+	public function test_parse_legacy_secondary_splits_and_sanitizes(): void {
+		$this->assertSame(
+			array( 'cold brew', 'iced coffee', 'latte' ),
+			SWPS_Editor_Input::parse_legacy_secondary( ' cold brew,iced coffee , , Cold Brew,<i>latte</i>' )
+		);
+		$this->assertSame( array(), SWPS_Editor_Input::parse_legacy_secondary( '' ) );
+		$this->assertSame( array(), SWPS_Editor_Input::parse_legacy_secondary( ' , ,' ) );
+	}
+
+	public function test_parse_legacy_secondary_caps_at_max_related(): void {
+		$this->assertSame( array( 'a', 'b', 'c', 'd' ), SWPS_Editor_Input::parse_legacy_secondary( 'a, b, c, d, e, f' ) );
+	}
+
+	public function test_should_mirror_skips_when_list_matches_legacy_string(): void {
+		$this->assertFalse( SWPS_Editor_Input::should_mirror( array( 'a', 'b' ), 'a, b' ) );
+		$this->assertFalse( SWPS_Editor_Input::should_mirror( array( ' a ', 'b', 'A' ), 'a,b' ) );
+		$this->assertFalse( SWPS_Editor_Input::should_mirror( array(), '' ) );
+	}
+
+	public function test_should_mirror_preserves_long_legacy_string_until_list_changes(): void {
+		// Five legacy keywords parse to the first four, which is what the
+		// sidebar shows and sends back unchanged.
+		$this->assertFalse( SWPS_Editor_Input::should_mirror( array( 'a', 'b', 'c', 'd' ), 'a, b, c, d, e' ) );
+		$this->assertTrue( SWPS_Editor_Input::should_mirror( array( 'a', 'b', 'c' ), 'a, b, c, d, e' ) );
+	}
+
+	public function test_should_mirror_when_list_differs(): void {
+		$this->assertTrue( SWPS_Editor_Input::should_mirror( array( 'a', 'c' ), 'a, b' ) );
+		$this->assertTrue( SWPS_Editor_Input::should_mirror( array(), 'a, b' ) );
+		$this->assertTrue( SWPS_Editor_Input::should_mirror( array( 'a' ), '' ) );
+	}
 }

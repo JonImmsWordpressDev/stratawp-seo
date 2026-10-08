@@ -23,6 +23,7 @@ class SWPS_Editor_Sidebar {
 		add_action( 'init', array( $this, 'register_meta' ), 20 );
 		add_action( 'added_post_meta', array( $this, 'mirror_related' ), 10, 4 );
 		add_action( 'updated_post_meta', array( $this, 'mirror_related' ), 10, 4 );
+		add_filter( 'default_post_metadata', array( __CLASS__, 'default_related' ), 10, 4 );
 	}
 
 	/**
@@ -210,11 +211,38 @@ class SWPS_Editor_Sidebar {
 		if ( SWPS_Editor_Input::META_RELATED !== $meta_key ) {
 			return;
 		}
-		update_post_meta(
-			(int) $post_id,
-			'_swps_secondary_keywords',
-			SWPS_Editor_Input::secondary_string( SWPS_Editor_Input::sanitize_related( $meta_value ) )
-		);
+		$related   = SWPS_Editor_Input::sanitize_related( $meta_value );
+		$secondary = (string) get_post_meta( (int) $post_id, '_swps_secondary_keywords', true );
+		if ( ! SWPS_Editor_Input::should_mirror( $related, $secondary ) ) {
+			return;
+		}
+		update_post_meta( (int) $post_id, '_swps_secondary_keywords', SWPS_Editor_Input::secondary_string( $related ) );
+	}
+
+	/**
+	 * Posts that predate the related keywords list read it from the legacy
+	 * secondary keywords string, so the sidebar shows those values and does
+	 * not send back an empty list that would wipe them.
+	 *
+	 * @param mixed  $value     Default value.
+	 * @param int    $object_id Post ID.
+	 * @param string $meta_key  Meta key.
+	 * @param bool   $single    Whether a single value was requested.
+	 * @return mixed
+	 */
+	public static function default_related( $value, $object_id, $meta_key, $single ) {
+		static $running = false;
+		if ( SWPS_Editor_Input::META_RELATED !== $meta_key || $running ) {
+			return $value;
+		}
+		$running = true;
+		$legacy  = SWPS_Editor_Input::parse_legacy_secondary( (string) get_post_meta( (int) $object_id, '_swps_secondary_keywords', true ) );
+		$running = false;
+		if ( array() === $legacy ) {
+			return $value;
+		}
+		// REST reads with $single false and takes the first row as the value.
+		return $single ? $legacy : array( $legacy );
 	}
 
 	/**
