@@ -1871,6 +1871,256 @@
                 "readability": 90,
                 "status": "good"
             }
+        },
+        {
+            "name": "consecutive-paragraphs",
+            "input": {
+                "title": "Cold brew basics",
+                "slug": "cold-brew-basics",
+                "meta_title": "",
+                "meta_description": "A short guide to the basics of cold brew coffee for new home brewers.",
+                "lang": "en",
+                "host": "example.com",
+                "preset": {
+                    "min_words": 20
+                },
+                "keywords": [
+                    {
+                        "keyword": "cold brew"
+                    }
+                ],
+                "content_html": "<p>Cold brew is simple.</p><p>It needs time. Patience helps.</p><div>Grind coarse.</div><ul><li>Water.</li><li>Coffee.</li></ul><p>Cold brew keeps well.</p>"
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "warn",
+                        "value": 16
+                    },
+                    "description_length": {
+                        "status": "warn",
+                        "value": 69
+                    },
+                    "content_length": {
+                        "status": "warn",
+                        "value": 17
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "sentence_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "fail",
+                        "value": 0
+                    },
+                    "passive_voice": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "consecutive_starters": {
+                        "status": "pass",
+                        "value": 1
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "cold brew",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 23.53
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 0
+                            },
+                            "kw_in_conclusion": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 69,
+                "seo": 65,
+                "readability": 80,
+                "status": "needs_work"
+            }
+        },
+        {
+            "name": "reforming-markup",
+            "input": {
+                "title": "Cold brew basics",
+                "slug": "cold-brew-basics",
+                "meta_title": "",
+                "meta_description": "A short guide to the basics of cold brew coffee for new home brewers.",
+                "lang": "en",
+                "host": "example.com",
+                "preset": {
+                    "min_words": 20
+                },
+                "keywords": [
+                    {
+                        "keyword": "cold brew"
+                    }
+                ],
+                "content_html": "<p>Cold brew <scr<!-- c -->ipt>alert(1)</script>is simple.</p><p>Use <<b>strong>coarse grounds</<b>strong> for cold brew.</p><scr<script></script>ipt>bad()</script><p>Then wait.</p>"
+            },
+            "output": {
+                "global": {
+                    "title_length": {
+                        "status": "warn",
+                        "value": 16
+                    },
+                    "description_length": {
+                        "status": "warn",
+                        "value": 69
+                    },
+                    "content_length": {
+                        "status": "warn",
+                        "value": 16
+                    },
+                    "internal_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "external_links": {
+                        "status": "warn",
+                        "value": 0
+                    },
+                    "subheading_distribution": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "image_alt_missing": {
+                        "status": "na",
+                        "value": null
+                    },
+                    "sentence_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "paragraph_length": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "transition_words": {
+                        "status": "pass",
+                        "value": 33
+                    },
+                    "passive_voice": {
+                        "status": "pass",
+                        "value": 0
+                    },
+                    "consecutive_starters": {
+                        "status": "pass",
+                        "value": 1
+                    }
+                },
+                "keywords": [
+                    {
+                        "keyword": "cold brew",
+                        "results": {
+                            "kw_in_title": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_description": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_slug": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_intro": {
+                                "status": "pass",
+                                "value": null
+                            },
+                            "kw_in_subheading": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_in_image_alt": {
+                                "status": "na",
+                                "value": null
+                            },
+                            "kw_density": {
+                                "status": "fail",
+                                "value": 25
+                            },
+                            "kw_title_position": {
+                                "status": "pass",
+                                "value": 0
+                            },
+                            "kw_in_conclusion": {
+                                "status": "warn",
+                                "value": null
+                            },
+                            "kw_unique": {
+                                "status": "na",
+                                "value": null
+                            }
+                        }
+                    }
+                ]
+            },
+            "score": {
+                "overall": 72,
+                "seo": 62,
+                "readability": 100,
+                "status": "needs_work"
+            }
         }
     ]
 }

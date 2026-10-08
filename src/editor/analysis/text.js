@@ -37,25 +37,32 @@ export const hostKey = ( h ) => lower( trim( h ) ).replace( /^www\./, '' );
 
 export const charLength = ( s ) => Array.from( s ).length;
 
-export function plain( html ) {
-	let sanitized = html;
-	let previous;
+// Same cap as SWPS_Editor_Text::PLAIN_MAX_PASSES.
+const PLAIN_MAX_PASSES = 10;
 
+export function plain( html ) {
+	let text = html;
+	let previous;
+	let passes = 0;
+
+	// Repeat until stable so re-forming markup (`<<b>script>`, `<scr<!-- -->ipt>`)
+	// cannot survive a single pass. Step order must match the PHP source.
 	do {
-		previous = sanitized;
-		sanitized = sanitized
+		previous = text;
+		text = text
 			.replace( /<!--[\s\S]*?-->/g, ' ' )
 			.replace( /<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ' )
-			.replace( /\[\/?[a-z_][\w-]*(?:\s[^\]]*)?\]/gi, ' ' )
-			.replace( /<[^>]*>/g, '' );
-	} while ( sanitized !== previous );
-
-	return trim(
-		sanitized
 			.replace(
 				/<\/(?:p|div|h[1-6]|li|blockquote|tr|ul|ol)>|<br\s*\/?>/gi,
 				'\n'
 			)
+			.replace( /\[\/?[a-z_][\w-]*(?:\s[^\]]*)?\]/gi, ' ' )
+			.replace( /<[^>]*>/g, '' );
+		passes++;
+	} while ( text !== previous && passes < PLAIN_MAX_PASSES );
+
+	return trim(
+		text
 			.replace( /&(amp|nbsp|quot|#039|#8217|lt|gt);/g, ( m, k ) => ENTITIES[ k ] )
 			.replace( /[ \t\u00a0]+/g, ' ' )
 			.replace( / *\n[ \n]*/g, '\n' )

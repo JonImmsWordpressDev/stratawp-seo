@@ -1,4 +1,4 @@
-import { trim } from '../analysis/text';
+import { trim, plain } from '../analysis/text';
 import { runChecks, normalize } from '../analysis/checks';
 
 describe( 'trim (PHP trim() semantics)', () => {
@@ -31,5 +31,23 @@ describe( 'normalize and runChecks input tolerance', () => {
 			keyword: '',
 			used_elsewhere: null,
 		} );
+	} );
+} );
+
+describe( 'plain (PHP plain() parity)', () => {
+	it( 'turns block closers into newlines before stripping tags', () => {
+		expect( plain( '<p>One.</p><p>Two.</p>' ) ).toBe( 'One.\nTwo.' );
+		expect( plain( '<h2>Title</h2><p>Body<br>line</p>' ) ).toBe( 'Title\nBody\nline' );
+	} );
+
+	it( 'leaves no markup behind for re-forming input', () => {
+		expect( plain( '<<b>script>alert(1)</<b>script>x' ) ).not.toContain( '<' );
+		[
+			'<scr<!-- c -->ipt>alert(1)</script>',
+			'<scr<script></script>ipt>alert(1)</script>',
+		].forEach( ( html ) => {
+			expect( plain( html ) ).not.toMatch( /</ );
+		} );
+		expect( plain( '<scr<!-- c -->ipt>alert(1)</script>x' ) ).toBe( 'alert(1)x' );
 	} );
 } );

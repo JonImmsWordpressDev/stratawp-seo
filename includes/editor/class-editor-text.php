@@ -14,6 +14,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class SWPS_Editor_Text {
 
+	/**
+	 * Max sanitising passes in plain(); mirrored in the JS PLAIN_MAX_PASSES.
+	 */
+	private const PLAIN_MAX_PASSES = 10;
+
 	private const FOLD_FROM = 'àáâãäåçèéêëìíîïñòóôõöùúûüýÿ';
 	private const FOLD_TO   = 'aaaaaaceeeeiiiinooooouuuuyy';
 
@@ -44,11 +49,19 @@ class SWPS_Editor_Text {
 	 * Strip block comments, scripts, shortcodes and tags; decode a few entities.
 	 */
 	public static function plain( string $html ): string {
-		$html = (string) preg_replace( '/<!--.*?-->/s', ' ', $html );
-		$html = (string) preg_replace( '#<(script|style)\b[^>]*>.*?</\1>#is', ' ', $html );
-		$html = (string) preg_replace( '#</(?:p|div|h[1-6]|li|blockquote|tr|ul|ol)>|<br\s*/?>#i', "\n", $html );
-		$html = (string) preg_replace( '/\[\/?[a-z_][\w-]*(?:\s[^\]]*)?\]/i', ' ', $html );
-		$text = (string) preg_replace( '/<[^>]*>/', '', $html );
+		// Repeat until stable so re-forming markup cannot survive one pass. Keep the
+		// step order identical to src/editor/analysis/text.js.
+		$text   = $html;
+		$passes = 0;
+		do {
+			$previous = $text;
+			$text     = (string) preg_replace( '/<!--.*?-->/s', ' ', $text );
+			$text     = (string) preg_replace( '#<(script|style)\b[^>]*>.*?</\1>#is', ' ', $text );
+			$text     = (string) preg_replace( '#</(?:p|div|h[1-6]|li|blockquote|tr|ul|ol)>|<br\s*/?>#i', "\n", $text );
+			$text     = (string) preg_replace( '/\[\/?[a-z_][\w-]*(?:\s[^\]]*)?\]/i', ' ', $text );
+			$text     = (string) preg_replace( '/<[^>]*>/', '', $text );
+			++$passes;
+		} while ( $text !== $previous && $passes < self::PLAIN_MAX_PASSES );
 		$text = (string) preg_replace_callback(
 			'/&(amp|nbsp|quot|#039|#8217|lt|gt);/',
 			static function ( array $m ): string {
