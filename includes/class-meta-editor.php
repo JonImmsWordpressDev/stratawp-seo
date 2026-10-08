@@ -61,6 +61,9 @@ class SWPS_Meta_Editor {
 	 * Register the SEO metabox on configured post types.
 	 */
 	public function register_metabox(): void {
+		if ( SWPS_Editor_Sidebar::hide_classic_metaboxes() ) {
+			return;
+		}
 		$post_types = $this->get_enabled_post_types();
 
 		foreach ( $post_types as $post_type ) {

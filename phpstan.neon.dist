@@ -15,6 +15,7 @@ parameters:
         - vendor/*
         - node_modules/*
         - build/*
+        - admin/editor/*
 
     parallel:
         maximumNumberOfProcesses: 4

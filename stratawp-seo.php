@@ -234,6 +234,9 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-github-updater.php';
 // v4.0 admin shell.
 require_once SWPS_PLUGIN_DIR . 'includes/class-user-prefs.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-modules.php';
+
+// Block editor sidebar.
+require_once SWPS_PLUGIN_DIR . 'includes/editor/class-editor-sidebar.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-admin-shell.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-dashboard.php';
 
@@ -461,6 +464,7 @@ final class StrataWP_SEO {
 			$this->rate_limiter
 		);
 		$this->aeo_editor_panel  = new SWPS_AEO_Editor_Panel( $this->aeo_scorer );
+		new SWPS_Editor_Sidebar();
 
 		// Question coverage engine (v4.17) — weekly GSC question demand mining.
 		$this->question_coverage = new SWPS_Question_Coverage( $this->search_console, $this->topic_queue );
@@ -1488,6 +1492,7 @@ final class StrataWP_SEO {
  * Activation hook.
  */
 function swps_activate(): void {
+	SWPS_Editor_Sidebar::on_activate();
 	$defaults = array(
 		'ai_provider'                 => 'anthropic',
 		'image_provider'              => 'unsplash',

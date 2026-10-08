@@ -29,6 +29,9 @@ class SWPS_AEO_Editor_Panel {
 	 * Register the classic-editor metabox for each configured post type.
 	 */
 	public function register_metabox(): void {
+		if ( SWPS_Editor_Sidebar::hide_classic_metaboxes() ) {
+			return;
+		}
 		$types = (array) get_option( 'swps_aeo_post_types', array( 'post', 'page' ) );
 		foreach ( $types as $type ) {
 			add_meta_box(
