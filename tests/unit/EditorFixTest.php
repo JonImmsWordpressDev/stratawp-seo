@@ -130,6 +130,32 @@ final class EditorFixTest extends TestCase {
 		$this->assertFalse( SWPS_Editor_Fix::target_matches( '', 'kw_in_intro', 'Anything' ) );
 	}
 
+	public function test_entity_encoded_markup_is_rejected_for_every_kind(): void {
+		$payloads = array(
+			'&lt;script&gt;alert(1)&lt;/script&gt; cold brew coffee made at home with patience and tools',
+			'&lt;img src=x onerror=alert(1)&gt; cold brew coffee made at home with patience and tools',
+		);
+		$checks   = array( 'kw_in_title', 'kw_in_description', 'kw_in_intro', 'aeo_answer' );
+
+		foreach ( $checks as $check ) {
+			foreach ( $payloads as $payload ) {
+				$res = SWPS_Editor_Fix::validate( $check, 'cold brew', $this->ctx(), array( 'value' => $payload ) );
+				$this->assertFalse( $res['ok'], $check . ' accepted ' . $payload );
+				$this->assertSame( 'swps_fix_unsafe', $res['code'], $check );
+			}
+		}
+	}
+
+	public function test_raw_img_with_handler_is_rejected_for_every_kind(): void {
+		$value  = '<img src=x onerror=alert(1)> cold brew coffee made at home with patience and tools';
+		$checks = array( 'kw_in_title', 'kw_in_description', 'kw_in_intro', 'aeo_answer' );
+
+		foreach ( $checks as $check ) {
+			$res = SWPS_Editor_Fix::validate( $check, 'cold brew', $this->ctx(), array( 'value' => $value ) );
+			$this->assertFalse( $res['ok'], $check );
+		}
+	}
+
 	public function test_prompts_name_the_keyword_and_demand_json(): void {
 		$p = SWPS_Editor_Fix::build_prompt( 'kw_in_intro', 'cold brew coffee', $this->ctx() );
 

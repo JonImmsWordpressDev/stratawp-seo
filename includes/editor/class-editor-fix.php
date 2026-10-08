@@ -102,6 +102,17 @@ class SWPS_Editor_Fix {
 		}
 
 		$plain  = SWPS_Editor_Text::plain( $value );
+		if ( 'meta_title' === $kind || 'meta_description' === $kind ) {
+			// Meta values are plain text. plain() decodes entities after stripping tags,
+			// so encoded markup would come back as real markup.
+			if ( false !== strpbrk( $value . $plain, '<>' ) ) {
+				return self::bad( 'swps_fix_unsafe', __( 'The suggestion contained markup that is not allowed.', 'stratawp-seo' ) );
+			}
+		} elseif ( preg_match( '/<\s*[a-z!\/]/i', $plain ) ) {
+			// Real tags are already stripped, so any tag left was entity-encoded.
+			return self::bad( 'swps_fix_unsafe', __( 'The suggestion contained markup that is not allowed.', 'stratawp-seo' ) );
+		}
+
 		$has_kw = '' !== $keyword && false !== mb_strpos( SWPS_Editor_Text::lower( $plain ), SWPS_Editor_Text::lower( $keyword ) );
 
 		switch ( $kind ) {

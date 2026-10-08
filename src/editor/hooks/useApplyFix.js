@@ -4,7 +4,9 @@ import { useCallback } from '@wordpress/element';
 import { useDispatch, useRegistry, useSelect } from '@wordpress/data';
 import { createBlock } from '@wordpress/blocks';
 import { usePostMeta } from './usePostMeta';
+import { escapeHTML } from '@wordpress/escape-html';
 import { plain } from '../analysis/text';
+import { isLiveStatus } from '../analysis/fixes';
 
 /**
  * Find the core/paragraph block whose visible text is exactly `text`.
@@ -37,9 +39,25 @@ export function useApplyFix() {
 		( proposal ) => {
 			try {
 				switch ( proposal.kind ) {
-					case 'slug':
+					case 'slug': {
+						const editor = registry.select( 'core/editor' );
+						if (
+							isLiveStatus(
+								editor.getEditedPostAttribute( 'status' ),
+								editor.getCurrentPostAttribute( 'status' )
+							)
+						) {
+							return {
+								ok: false,
+								message: __(
+									'This post is live, so its URL is not changed automatically.',
+									'stratawp-seo'
+								),
+							};
+						}
 						editPost( { slug: proposal.value } );
 						break;
+					}
 					case 'meta_title':
 						setKey( '_swps_meta_title', proposal.value );
 						break;
@@ -60,20 +78,38 @@ export function useApplyFix() {
 						break;
 					}
 					case 'insert': {
+						// Top level only: nested roots (lists, buttons, locked containers)
+						// can silently refuse part of the insert.
 						const store = registry.select( 'core/block-editor' );
+						const dispatch = registry.dispatch( 'core/block-editor' );
 						const selected = store.getSelectedBlockClientId();
-						const root = selected ? store.getBlockRootClientId( selected ) : '';
 						const index = selected
-							? store.getBlockIndex( selected ) + 1
+							? store.getBlockIndex( store.getBlockHierarchyRootClientId( selected ) ) + 1
 							: store.getBlockCount();
-						registry.dispatch( 'core/block-editor' ).insertBlocks(
-							[
-								createBlock( 'core/heading', { level: 3, content: proposal.heading } ),
-								createBlock( 'core/paragraph', { content: proposal.value } ),
-							],
-							index,
-							root || ''
-						);
+						const before = store.getBlockCount();
+						const blocks = [
+							createBlock( 'core/heading', {
+								level: 3,
+								content: escapeHTML( String( proposal.heading ?? '' ) ),
+							} ),
+							createBlock( 'core/paragraph', { content: proposal.value } ),
+						];
+						dispatch.insertBlocks( blocks, index, '' );
+						if ( store.getBlockCount() !== before + 2 ) {
+							const added = blocks
+								.map( ( b ) => b.clientId )
+								.filter( ( id ) => store.getBlock( id ) );
+							if ( added.length ) {
+								dispatch.removeBlocks( added );
+							}
+							return {
+								ok: false,
+								message: __(
+									'The answer could not be inserted here. Nothing was changed.',
+									'stratawp-seo'
+								),
+							};
+						}
 						break;
 					}
 					default:

@@ -10,8 +10,9 @@
 		'wp-edit-post',
 		'wp-editor',
 		'wp-element',
+		'wp-escape-html',
 		'wp-i18n',
 		'wp-plugins'
 	),
-	'version' => '80ffff0d2b968920293e'
+	'version' => 'ada84df0d019e127fe63'
 );

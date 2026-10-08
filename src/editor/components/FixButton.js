@@ -16,6 +16,10 @@ export default function FixButton( { def, res, keyword, input } ) {
 		( select ) => select( 'core/editor' ).getEditedPostAttribute( 'status' ),
 		[]
 	);
+	const savedStatus = useSelect(
+		( select ) => select( 'core/editor' ).getCurrentPostAttribute( 'status' ),
+		[]
+	);
 	const [ proposal, setProposal ] = useState( null );
 	const [ busy, setBusy ] = useState( false );
 	const [ error, setError ] = useState( null );

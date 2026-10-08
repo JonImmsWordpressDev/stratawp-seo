@@ -13,6 +13,28 @@ describe( 'ruleFix', () => {
 		expect( ruleFix( 'kw_in_slug', { keyword: 'cold brew', slug: 'x', status: 'future' } ) ).toBeNull();
 	} );
 
+	it( 'never rewrites the slug of a private post', () => {
+		expect( ruleFix( 'kw_in_slug', { keyword: 'cold brew', slug: 'x', status: 'private' } ) ).toBeNull();
+	} );
+
+	it( 'treats a post as live when the saved status is live even if the edited status is draft', () => {
+		expect(
+			ruleFix( 'kw_in_slug', { keyword: 'cold brew', slug: 'x', status: 'draft', savedStatus: 'publish' } )
+		).toBeNull();
+		expect(
+			ruleFix( 'kw_in_slug', { keyword: 'cold brew', slug: 'x', status: 'draft', savedStatus: 'future' } )
+		).toBeNull();
+		expect(
+			ruleFix( 'kw_in_slug', { keyword: 'cold brew', slug: 'x', status: 'draft', savedStatus: 'private' } )
+		).toBeNull();
+	} );
+
+	it( 'allows the slug fix for pending and draft saved posts', () => {
+		expect(
+			ruleFix( 'kw_in_slug', { keyword: 'cold brew', slug: 'x', status: 'pending', savedStatus: 'draft' } )
+		).toEqual( { kind: 'slug', value: 'cold-brew', original: 'x' } );
+	} );
+
 	it( 'has no slug fix when the slug already matches', () => {
 		expect( ruleFix( 'kw_in_slug', { keyword: 'cold brew', slug: 'cold-brew', status: 'draft' } ) ).toBeNull();
 	} );

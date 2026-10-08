@@ -1,5 +1,14 @@
 import { charLength, slugify } from './text';
 
+const LIVE_STATUSES = [ 'publish', 'future', 'private' ];
+
+/**
+ * True when changing the URL could break inbound links. Checks the edited and
+ * the saved status so an unsaved switch to draft cannot unlock a live post.
+ */
+export const isLiveStatus = ( ...statuses ) =>
+	statuses.some( ( status ) => LIVE_STATUSES.includes( status ) );
+
 const cutChars = ( s, n ) => Array.from( s ).slice( 0, n ).join( '' );
 
 export function trimToWords( text, max ) {
@@ -40,13 +49,14 @@ export function ruleFix( checkId, ctx ) {
 		metaTitle = '',
 		metaDescription = '',
 		status = 'draft',
+		savedStatus = null,
 		preset = {},
 	} = ctx;
 
 	if ( checkId === 'kw_in_slug' ) {
 		const next = slugify( keyword );
 		// Changing the URL of a live post breaks inbound links.
-		if ( status === 'publish' || status === 'future' || ! next || next === slug ) {
+		if ( isLiveStatus( status, savedStatus ) || ! next || next === slug ) {
 			return null;
 		}
 		return { kind: 'slug', value: next, original: slug };
