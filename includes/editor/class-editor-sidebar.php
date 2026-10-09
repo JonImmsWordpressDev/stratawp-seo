@@ -18,6 +18,7 @@ class SWPS_Editor_Sidebar {
 	public function __construct() {
 		add_action( 'init', array( __CLASS__, 'seed_rollout_default' ), 1 );
 		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue' ) );
+		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_prompt' ) );
 		add_action( 'admin_post_' . self::TOGGLE_ACTION, array( $this, 'handle_toggle' ) );
 		add_action( 'admin_notices', array( $this, 'maybe_show_notice' ) );
 		add_action( 'init', array( $this, 'register_meta' ), 20 );
@@ -59,17 +60,26 @@ class SWPS_Editor_Sidebar {
 	}
 
 	/**
-	 * True when the sidebar can serve this post type: it is turned on, the
-	 * meta editor feature is on and covers the type, the type exposes meta
-	 * over REST (custom-fields support), and the compiled bundle exists.
-	 * Ignores the current screen, so it also answers for REST requests and
-	 * meta registration at init.
+	 * True when the sidebar is turned on and can serve this post type (see
+	 * can_serve()). Ignores the current screen, so it also answers for REST
+	 * requests and meta registration at init.
 	 *
 	 * @param string $post_type Post type slug.
 	 */
 	public static function available_for( string $post_type ): bool {
-		return self::is_enabled()
-			&& (bool) get_option( 'swps_meta_editor_enabled', 1 )
+		return self::is_enabled() && self::can_serve( $post_type );
+	}
+
+	/**
+	 * True when the sidebar could serve this post type if it were turned on:
+	 * the meta editor feature is on and covers the type, the type exposes meta
+	 * over REST (custom-fields support), and the compiled bundle exists. Does
+	 * not check the rollout setting, so the turn-on prompt can use it.
+	 *
+	 * @param string $post_type Post type slug.
+	 */
+	public static function can_serve( string $post_type ): bool {
+		return (bool) get_option( 'swps_meta_editor_enabled', 1 )
 			&& in_array( $post_type, SWPS_Meta_Editor::get_enabled_post_types(), true )
 			&& post_type_supports( $post_type, 'custom-fields' )
 			&& is_readable( self::asset_file() );
@@ -304,17 +314,33 @@ class SWPS_Editor_Sidebar {
 		return $cost > 0 ? round( $cost, 4 ) : null;
 	}
 
+	/**
+	 * Raw toggle URL with a literal `&`. Deliberately not wp_nonce_url(), which
+	 * HTML-escapes its result and breaks the link when placed in JavaScript or
+	 * JSON. Escape with esc_url() at HTML output sites only.
+	 */
 	private function toggle_url( bool $enable ): string {
-		return wp_nonce_url(
-			add_query_arg(
-				array(
-					'action' => self::TOGGLE_ACTION,
-					'enable' => $enable ? '1' : '0',
-				),
-				admin_url( 'admin-post.php' )
+		return self::build_toggle_url( admin_url( 'admin-post.php' ), $enable, wp_create_nonce( self::TOGGLE_ACTION ) );
+	}
+
+	/**
+	 * Pure builder for the toggle URL. No WordPress calls, no HTML escaping.
+	 *
+	 * @param string $base   Base URL, with or without a query string.
+	 * @param bool   $enable Whether the link turns the sidebar on.
+	 * @param string $nonce  Nonce value for the `_wpnonce` parameter.
+	 */
+	public static function build_toggle_url( string $base, bool $enable, string $nonce ): string {
+		$query = http_build_query(
+			array(
+				'action'   => self::TOGGLE_ACTION,
+				'enable'   => $enable ? '1' : '0',
+				'_wpnonce' => $nonce,
 			),
-			self::TOGGLE_ACTION
+			'',
+			'&'
 		);
+		return $base . ( false === strpos( $base, '?' ) ? '?' : '&' ) . $query;
 	}
 
 	public function handle_toggle(): void {
@@ -328,12 +354,68 @@ class SWPS_Editor_Sidebar {
 		exit;
 	}
 
+	/**
+	 * JavaScript (no script tags) that shows the "Turn it on" snackbar notice
+	 * once per browser session. Pure: calls no WordPress function.
+	 *
+	 * @param string $message Notice text.
+	 * @param string $label   Action label.
+	 * @param string $url     Action URL.
+	 */
+	public static function prompt_script( string $message, string $label, string $url ): string {
+		$flags   = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
+		$message = json_encode( $message, $flags );
+		$label   = json_encode( $label, $flags );
+		$url     = json_encode( $url, $flags );
+
+		return "( function () {\n"
+			. "\ttry {\n"
+			. "\t\tif ( window.sessionStorage.getItem( 'swpsTurnOnShown' ) ) {\n"
+			. "\t\t\treturn;\n"
+			. "\t\t}\n"
+			. "\t\twindow.sessionStorage.setItem( 'swpsTurnOnShown', '1' );\n"
+			. "\t} catch ( e ) {}\n"
+			. "\twp.domReady( function () {\n"
+			. "\t\twp.data.dispatch( 'core/notices' ).createInfoNotice( {$message}, {\n"
+			. "\t\t\tid: 'swps-turn-on-sidebar',\n"
+			. "\t\t\tisDismissible: true,\n"
+			. "\t\t\tactions: [ { label: {$label}, url: {$url} } ]\n"
+			. "\t\t} );\n"
+			. "\t} );\n"
+			. '} )();';
+	}
+
+	/**
+	 * Shows the turn-on prompt inside the block editor, where admin notices
+	 * are hidden. Administrators only, when the sidebar is off.
+	 */
+	public function enqueue_prompt(): void {
+		if ( self::is_enabled() || ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen instanceof WP_Screen
+			|| 'post' !== $screen->base
+			|| ! $screen->is_block_editor()
+			|| ! self::can_serve( (string) $screen->post_type ) ) {
+			return;
+		}
+		wp_add_inline_script(
+			'wp-edit-post',
+			self::prompt_script(
+				__( 'StrataWP SEO has a new editor sidebar with live analysis, multiple keywords and AI fixes.', 'stratawp-seo' ),
+				__( 'Turn it on', 'stratawp-seo' ),
+				$this->toggle_url( true )
+			)
+		);
+	}
+
 	public function maybe_show_notice(): void {
 		if ( self::is_enabled() || ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		if ( ! $screen || ! $screen->is_block_editor() ) {
+		if ( ! $screen || 'plugins' !== $screen->id ) {
 			return;
 		}
 		printf(
