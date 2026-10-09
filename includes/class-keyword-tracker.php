@@ -321,6 +321,12 @@ class SWPS_Keyword_Tracker {
 
 		$response = $api->chat( 'You are an SEO keyword research expert. Return only valid JSON.', $prompt, 2048 );
 
+		// Count the spend toward the monthly budget (usage may exist even on error).
+		$usage = SWPS_Cost_Tracker::usable_usage( $api->get_last_usage() );
+		if ( null !== $usage ) {
+			( new SWPS_Cost_Tracker() )->track( (string) get_option( 'swps_model', '' ), $usage['input'], $usage['output'] );
+		}
+
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}

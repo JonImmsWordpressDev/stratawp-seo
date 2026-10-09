@@ -25,8 +25,12 @@ class SWPS_AEO_Coverage_Scorer {
 	/** @var object|null Anything with chat_json(string, string, int): array|WP_Error */
 	private $provider;
 
-	public function __construct( $provider = null ) {
-		$this->provider = $provider;
+	/** @var SWPS_Cost_Tracker|null Optional tracker so scoring spend counts toward the AI budget. */
+	private $cost_tracker;
+
+	public function __construct( $provider = null, ?SWPS_Cost_Tracker $cost_tracker = null ) {
+		$this->provider     = $provider;
+		$this->cost_tracker = $cost_tracker;
 	}
 
 	/**
@@ -76,6 +80,14 @@ class SWPS_AEO_Coverage_Scorer {
 		);
 
 		$response = $this->provider->chat_json( $system, $user, 600 );
+
+		if ( null !== $this->cost_tracker && is_array( $response ) ) {
+			$usage = SWPS_Cost_Tracker::usable_usage( $response['_usage'] ?? null );
+			if ( null !== $usage ) {
+				$model = function_exists( 'get_option' ) ? (string) get_option( 'swps_model', '' ) : '';
+				$this->cost_tracker->track( $model, $usage['input'], $usage['output'] );
+			}
+		}
 
 		if ( $response instanceof WP_Error ) {
 			return array(

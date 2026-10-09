@@ -1809,6 +1809,9 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 
 ## Changelog
 
+### v4.32.1 (October 2026)
+- **Fixed:** AI keyword suggestions and AI visibility re-scoring were not counted toward the monthly AI budget, so the cap could not stop them. Both now record their token usage.
+
 ### v4.32.0 (October 2026)
 - **New:** a block editor sidebar replaces the SEO and AEO metaboxes in the block editor. It analyses as you type (SEO checks and readability, grouped into problems, improvements and good), supports a focus keyword plus up to four related keywords, previews the search result on desktop and mobile, and shows the AI visibility score, the questions an answer engine would ask, schema found in the content and AI citation status for the post.
 - **New:** Fix buttons. Deterministic fixes (keyword slug for drafts, trimming a long title or description) apply instantly; AI fixes (keyword in the title, description, introduction or conclusion, and "Add an answer" for missing AI visibility questions) show a before and after diff and write nothing until you press Apply. Every fix goes through the editor, so Undo reverses it. AI fixes respect the monthly AI budget and are cost tracked.
