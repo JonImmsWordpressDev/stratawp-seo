@@ -18,6 +18,7 @@ class SWPS_Editor_Sidebar {
 	public function __construct() {
 		add_action( 'init', array( __CLASS__, 'seed_rollout_default' ), 1 );
 		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue' ) );
+		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_prompt' ) );
 		add_action( 'admin_post_' . self::TOGGLE_ACTION, array( $this, 'handle_toggle' ) );
 		add_action( 'admin_notices', array( $this, 'maybe_show_notice' ) );
 		add_action( 'init', array( $this, 'register_meta' ), 20 );
@@ -328,12 +329,68 @@ class SWPS_Editor_Sidebar {
 		exit;
 	}
 
+	/**
+	 * JavaScript (no script tags) that shows the "Turn it on" snackbar notice
+	 * once per browser session. Pure: calls no WordPress function.
+	 *
+	 * @param string $message Notice text.
+	 * @param string $label   Action label.
+	 * @param string $url     Action URL.
+	 */
+	public static function prompt_script( string $message, string $label, string $url ): string {
+		$flags   = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
+		$message = json_encode( $message, $flags );
+		$label   = json_encode( $label, $flags );
+		$url     = json_encode( $url, $flags );
+
+		return "( function () {\n"
+			. "\ttry {\n"
+			. "\t\tif ( window.sessionStorage.getItem( 'swpsTurnOnShown' ) ) {\n"
+			. "\t\t\treturn;\n"
+			. "\t\t}\n"
+			. "\t\twindow.sessionStorage.setItem( 'swpsTurnOnShown', '1' );\n"
+			. "\t} catch ( e ) {}\n"
+			. "\twp.domReady( function () {\n"
+			. "\t\twp.data.dispatch( 'core/notices' ).createInfoNotice( {$message}, {\n"
+			. "\t\t\tid: 'swps-turn-on-sidebar',\n"
+			. "\t\t\tisDismissible: true,\n"
+			. "\t\t\tactions: [ { label: {$label}, url: {$url} } ]\n"
+			. "\t\t} );\n"
+			. "\t} );\n"
+			. '} )();';
+	}
+
+	/**
+	 * Shows the turn-on prompt inside the block editor, where admin notices
+	 * are hidden. Administrators only, when the sidebar is off.
+	 */
+	public function enqueue_prompt(): void {
+		if ( self::is_enabled() || ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen instanceof WP_Screen
+			|| 'post' !== $screen->base
+			|| ! $screen->is_block_editor()
+			|| ! self::available_for( (string) $screen->post_type ) ) {
+			return;
+		}
+		wp_add_inline_script(
+			'wp-edit-post',
+			self::prompt_script(
+				__( 'StrataWP SEO has a new editor sidebar with live analysis, multiple keywords and AI fixes.', 'stratawp-seo' ),
+				__( 'Turn it on', 'stratawp-seo' ),
+				$this->toggle_url( true )
+			)
+		);
+	}
+
 	public function maybe_show_notice(): void {
 		if ( self::is_enabled() || ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		if ( ! $screen || ! $screen->is_block_editor() ) {
+		if ( ! $screen || 'plugins' !== $screen->id ) {
 			return;
 		}
 		printf(

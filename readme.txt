@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.32.1
+Stable tag: 4.32.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -425,6 +425,10 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.32.2 =
+* Fixed: sites upgraded from earlier versions could not see the prompt to turn on the new editor sidebar, because WordPress hides admin notices inside the block editor. The prompt now appears inside the editor (to administrators, once per browser session) and on the Plugins screen.
+* Fixed: the older "AEO Score" sidebar no longer loads next to the new editor sidebar, so there is a single AI visibility panel and opening a post no longer triggers a background AEO score.
 
 = 4.32.1 =
 * Fixed: AI keyword suggestions and AI visibility re-scoring were not counted toward the monthly AI budget, so the cap could not stop them. Both now record their token usage.

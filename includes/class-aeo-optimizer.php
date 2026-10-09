@@ -109,7 +109,15 @@ class SWPS_AEO_Optimizer {
 		}
 
 		// Editor-panel assets (Task 17/18). Optimizer enqueues them on post edit screens.
+		// Skipped when the block editor sidebar is active: it carries its own AI
+		// visibility panel, and this script scores the post on every open.
+		$screen    = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		$post_type = $screen instanceof WP_Screen ? (string) $screen->post_type : '';
+		$sidebar   = '' !== $post_type
+			&& class_exists( 'SWPS_Editor_Sidebar' )
+			&& SWPS_Editor_Sidebar::active_for( $post_type );
 		if ( in_array( $hook, array( 'post.php', 'post-new.php' ), true )
+			&& ! $sidebar
 			&& file_exists( SWPS_PLUGIN_DIR . 'admin/js/aeo-editor-panel.js' ) ) {
 			wp_enqueue_style( 'swps-aeo', SWPS_PLUGIN_URL . 'admin/css/aeo.css', array(), $this->asset_ver( 'admin/css/aeo.css' ) );
 			wp_enqueue_script(
