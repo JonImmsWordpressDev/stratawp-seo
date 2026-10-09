@@ -14,6 +14,32 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SWPS_Cost_Tracker {
 
 	/**
+	 * Normalise a provider usage array into trackable token counts.
+	 *
+	 * Pure helper (no WordPress calls).
+	 *
+	 * @param mixed $usage Array with input_tokens/output_tokens, or anything else.
+	 * @return array{input:int,output:int}|null Null when there is nothing to record.
+	 */
+	public static function usable_usage( $usage ): ?array {
+		if ( ! is_array( $usage ) || ! isset( $usage['input_tokens'], $usage['output_tokens'] ) ) {
+			return null;
+		}
+		if ( ! is_numeric( $usage['input_tokens'] ) || ! is_numeric( $usage['output_tokens'] ) ) {
+			return null;
+		}
+		$input  = max( 0, (int) $usage['input_tokens'] );
+		$output = max( 0, (int) $usage['output_tokens'] );
+		if ( 0 === $input && 0 === $output ) {
+			return null;
+		}
+		return array(
+			'input'  => $input,
+			'output' => $output,
+		);
+	}
+
+	/**
 	 * Track token usage for a generation.
 	 *
 	 * @param string $model         Model identifier.

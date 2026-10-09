@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.32.0
+Stable tag: 4.32.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -425,6 +425,9 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.32.1 =
+* Fixed: AI keyword suggestions and AI visibility re-scoring were not counted toward the monthly AI budget, so the cap could not stop them. Both now record their token usage.
 
 = 4.32.0 =
 * New: a block editor sidebar replaces the SEO and AEO metaboxes in the block editor. It analyses as you type (SEO checks and readability, grouped into problems, improvements and good), supports a focus keyword plus up to four related keywords, previews the search result on desktop and mobile, and shows the AI visibility score, the questions an answer engine would ask, schema found in the content and AI citation status for the post.

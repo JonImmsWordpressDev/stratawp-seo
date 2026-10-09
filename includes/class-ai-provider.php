@@ -19,6 +19,15 @@ abstract class SWPS_AI_Provider {
 	protected ?array $last_usage = null;
 
 	/**
+	 * Token usage recorded by the most recent chat() call, if any.
+	 *
+	 * @return array|null Array with input_tokens/output_tokens, or null.
+	 */
+	public function get_last_usage(): ?array {
+		return $this->last_usage;
+	}
+
+	/**
 	 * Stop reason from the last API call (e.g., 'end_turn', 'max_tokens').
 	 * Set by providers after successful calls.
 	 */
