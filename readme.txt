@@ -428,6 +428,7 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 
 = 4.32.2 =
 * Fixed: sites upgraded from earlier versions could not see the prompt to turn on the new editor sidebar, because WordPress hides admin notices inside the block editor. The prompt now appears inside the editor (to administrators, once per browser session) and on the Plugins screen.
+* Fixed: the "Use the classic editor panel instead" link in the sidebar's Advanced panel opened a "link has expired" error.
 * Fixed: the older "AEO Score" sidebar no longer loads next to the new editor sidebar, so there is a single AI visibility panel and opening a post no longer triggers a background AEO score.
 
 = 4.32.1 =

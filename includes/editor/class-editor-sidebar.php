@@ -314,17 +314,33 @@ class SWPS_Editor_Sidebar {
 		return $cost > 0 ? round( $cost, 4 ) : null;
 	}
 
+	/**
+	 * Raw toggle URL with a literal `&`. Deliberately not wp_nonce_url(), which
+	 * HTML-escapes its result and breaks the link when placed in JavaScript or
+	 * JSON. Escape with esc_url() at HTML output sites only.
+	 */
 	private function toggle_url( bool $enable ): string {
-		return wp_nonce_url(
-			add_query_arg(
-				array(
-					'action' => self::TOGGLE_ACTION,
-					'enable' => $enable ? '1' : '0',
-				),
-				admin_url( 'admin-post.php' )
+		return self::build_toggle_url( admin_url( 'admin-post.php' ), $enable, wp_create_nonce( self::TOGGLE_ACTION ) );
+	}
+
+	/**
+	 * Pure builder for the toggle URL. No WordPress calls, no HTML escaping.
+	 *
+	 * @param string $base   Base URL, with or without a query string.
+	 * @param bool   $enable Whether the link turns the sidebar on.
+	 * @param string $nonce  Nonce value for the `_wpnonce` parameter.
+	 */
+	public static function build_toggle_url( string $base, bool $enable, string $nonce ): string {
+		$query = http_build_query(
+			array(
+				'action'   => self::TOGGLE_ACTION,
+				'enable'   => $enable ? '1' : '0',
+				'_wpnonce' => $nonce,
 			),
-			self::TOGGLE_ACTION
+			'',
+			'&'
 		);
+		return $base . ( false === strpos( $base, '?' ) ? '?' : '&' ) . $query;
 	}
 
 	public function handle_toggle(): void {

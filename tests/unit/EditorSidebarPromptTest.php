@@ -52,4 +52,24 @@ class EditorSidebarPromptTest extends TestCase {
 
 		$this->assertStringContainsString( 'createInfoNotice(', $js );
 	}
+
+	public function test_build_toggle_url_is_raw_and_round_trips(): void {
+		$url = SWPS_Editor_Sidebar::build_toggle_url( 'https://example.test/wp-admin/admin-post.php', true, 'abc123' );
+
+		$this->assertStringNotContainsString( '&amp;', $url );
+		$this->assertStringNotContainsString( '#038;', $url );
+		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $q );
+		$this->assertSame( 'swps_editor_sidebar_toggle', $q['action'] );
+		$this->assertSame( '1', $q['enable'] );
+		$this->assertSame( 'abc123', $q['_wpnonce'] );
+	}
+
+	public function test_build_toggle_url_disable_and_existing_query(): void {
+		$url = SWPS_Editor_Sidebar::build_toggle_url( 'https://example.test/x.php?foo=bar', false, 'n' );
+
+		$this->assertStringStartsWith( 'https://example.test/x.php?foo=bar&', $url );
+		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $q );
+		$this->assertSame( 'bar', $q['foo'] );
+		$this->assertSame( '0', $q['enable'] );
+	}
 }
