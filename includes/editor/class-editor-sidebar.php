@@ -60,17 +60,26 @@ class SWPS_Editor_Sidebar {
 	}
 
 	/**
-	 * True when the sidebar can serve this post type: it is turned on, the
-	 * meta editor feature is on and covers the type, the type exposes meta
-	 * over REST (custom-fields support), and the compiled bundle exists.
-	 * Ignores the current screen, so it also answers for REST requests and
-	 * meta registration at init.
+	 * True when the sidebar is turned on and can serve this post type (see
+	 * can_serve()). Ignores the current screen, so it also answers for REST
+	 * requests and meta registration at init.
 	 *
 	 * @param string $post_type Post type slug.
 	 */
 	public static function available_for( string $post_type ): bool {
-		return self::is_enabled()
-			&& (bool) get_option( 'swps_meta_editor_enabled', 1 )
+		return self::is_enabled() && self::can_serve( $post_type );
+	}
+
+	/**
+	 * True when the sidebar could serve this post type if it were turned on:
+	 * the meta editor feature is on and covers the type, the type exposes meta
+	 * over REST (custom-fields support), and the compiled bundle exists. Does
+	 * not check the rollout setting, so the turn-on prompt can use it.
+	 *
+	 * @param string $post_type Post type slug.
+	 */
+	public static function can_serve( string $post_type ): bool {
+		return (bool) get_option( 'swps_meta_editor_enabled', 1 )
 			&& in_array( $post_type, SWPS_Meta_Editor::get_enabled_post_types(), true )
 			&& post_type_supports( $post_type, 'custom-fields' )
 			&& is_readable( self::asset_file() );
@@ -372,7 +381,7 @@ class SWPS_Editor_Sidebar {
 		if ( ! $screen instanceof WP_Screen
 			|| 'post' !== $screen->base
 			|| ! $screen->is_block_editor()
-			|| ! self::available_for( (string) $screen->post_type ) ) {
+			|| ! self::can_serve( (string) $screen->post_type ) ) {
 			return;
 		}
 		wp_add_inline_script(
