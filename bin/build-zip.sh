@@ -77,7 +77,7 @@ if [ "$TARGET" = wporg ]; then
     --exclude='/phpstan.neon' --exclude='/phpstan.neon.dist'
     --exclude='/phpstan-baseline.neon'
     --exclude='/package.json' --exclude='/package-lock.json'
-    --exclude='/babel.config.js' --exclude='/jest.config.js'
+    --exclude='/babel.config.js' --exclude='/vitest.config.mjs'
     --exclude='/pnpm-lock.yaml' --exclude='/.gitignore'
     --exclude='/.gitattributes' --exclude='/.editorconfig'
   )
