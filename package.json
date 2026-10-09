@@ -4,19 +4,17 @@
   "scripts": {
     "build": "wp-scripts build --webpack-src-dir=src/editor --output-path=admin/editor",
     "start": "wp-scripts start --webpack-src-dir=src/editor --output-path=admin/editor",
-    "test:js": "wp-scripts test-unit-jest src/editor",
+    "test:js": "wp-scripts test-unit-js src/editor",
     "verify:build": "npm run build && git diff --exit-code -- admin/editor",
     "test:e2e": "playwright test"
   },
   "private": true,
   "devDependencies": {
     "@playwright/test": "^1.64.0",
-    "@wordpress/jest-preset-default": "^14.2.0",
     "@wordpress/scripts": "^36.1.0",
     "@wordpress/url": "^4.48.1",
-    "babel-jest": "^30.5.0",
-    "jest": "^30.5.0",
-    "jest-environment-jsdom": "^30.5.0"
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3"
   },
   "overrides": {
     "sockjs": {
@@ -24,6 +22,10 @@
     },
     "copy-webpack-plugin": {
       "serialize-javascript": "^7.0.5"
+    },
+    "markdownlint-cli": {
+      "js-yaml": "^5.4.1",
+      "smol-toml": "^1.9.0"
     }
   }
 }
