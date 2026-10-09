@@ -90,7 +90,7 @@ jobs:
         run: composer test
 
   editor-js:
-    name: Editor sidebar (Jest and committed build)
+    name: Editor sidebar (tests and committed build)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -99,7 +99,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - name: Jest
+      - name: Vitest
         run: npm run test:js
       - name: Committed build matches sources
         run: npm run verify:build
