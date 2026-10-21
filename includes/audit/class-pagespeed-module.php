@@ -37,7 +37,10 @@ class SWPS_PageSpeed_Module extends SWPS_Audit_Module {
 		$missing_lazy       = 0;
 
 		foreach ( $posts as $post ) {
-			$content = $post->post_content;
+			// Scan what visitors get: WordPress adds width/height and
+			// loading="lazy" to attachment images at render time, so raw
+			// post_content under-reports both.
+			$content = wp_filter_content_tags( $post->post_content, 'the_content' );
 
 			// Find all img tags.
 			if ( preg_match_all( '/<img[^>]*>/i', $content, $matches ) ) {
@@ -47,8 +50,9 @@ class SWPS_PageSpeed_Module extends SWPS_Audit_Module {
 						++$missing_dimensions;
 					}
 
-					// Check for lazy loading.
-					if ( false === stripos( $img_tag, 'loading=' ) ) {
+					// Check for lazy loading. A fetchpriority="high" image is the
+					// LCP candidate and is meant to load eagerly.
+					if ( false === stripos( $img_tag, 'loading=' ) && false === stripos( $img_tag, 'fetchpriority' ) ) {
 						++$missing_lazy;
 					}
 				}
@@ -77,9 +81,8 @@ class SWPS_PageSpeed_Module extends SWPS_Audit_Module {
 			);
 		}
 
-		// Note: WordPress 5.5+ adds lazy loading and 5.9+ adds dimensions automatically
-		// for images processed through wp_get_attachment_image(). Flag is still useful
-		// for manually inserted images.
+		// Counts above are post-render, so what remains are images WordPress
+		// cannot size: manually inserted ones with no attachment ID.
 
 		$score = 100;
 		if ( $missing_dimensions > 10 ) {
