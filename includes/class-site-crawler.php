@@ -171,6 +171,32 @@ class SWPS_Site_Crawler {
 	}
 
 	/**
+	 * Where a redirected fetch should be audited instead of under its own URL.
+	 *
+	 * A URL that redirects to a live internal page has no page facts of its
+	 * own; recording the destination's title, description and content under
+	 * the source URL reports every consolidated or moved post as a duplicate
+	 * of its target. Such URLs get fetch-level checks only (redirect chain)
+	 * and the destination is queued to be audited at its real URL.
+	 *
+	 * @param array  $fetch     fetch_url() result.
+	 * @param string $home_host Registrable home hostname, lower-case, no www.
+	 * @return string The internal destination URL, or '' when the fetch did
+	 *                not redirect, looped, ended broken, or left the site.
+	 */
+	public static function redirect_destination( array $fetch, string $home_host ): string {
+		if ( empty( $fetch['hops'] ) || ! empty( $fetch['loop'] ) ) {
+			return '';
+		}
+		$status = (int) ( $fetch['status'] ?? 0 );
+		if ( $status < 200 || $status >= 300 ) {
+			return '';
+		}
+		$final = (string) ( $fetch['final_url'] ?? '' );
+		return '' !== $final && self::is_internal( $final, $home_host ) ? $final : '';
+	}
+
+	/**
 	 * Determine whether a URL is internal (same registrable host as home).
 	 *
 	 * "Internal" means the host part of $url, after stripping a leading "www.",
@@ -735,7 +761,14 @@ class SWPS_Site_Crawler {
 			// page-level checks from running against those absent facts.
 			$content_type = strtolower( (string) $fetch['content_type'] );
 			$is_broken    = $fetch['status'] >= 400 || 0 === $fetch['status'];
-			$is_html      = ! $is_broken && ! empty( $fetch['body'] ) && str_contains( $content_type, 'text/html' );
+			$redirect_to  = self::redirect_destination( $fetch, $home_host );
+			$is_html      = '' === $redirect_to && ! $is_broken && ! empty( $fetch['body'] ) && str_contains( $content_type, 'text/html' );
+
+			if ( '' !== $redirect_to ) {
+				// Audited at the destination, which is queued below. The
+				// sentinel type keeps classify() to fetch-level checks.
+				$content_type = 'application/x-redirect';
+			}
 
 			if ( $is_html ) {
 				// Parse against the post-redirect URL so relative hrefs on a
@@ -827,9 +860,11 @@ class SWPS_Site_Crawler {
 				}
 			}
 
-			// Enqueue new internal links (depth + 1, capped).
+			// Enqueue new internal links (depth + 1, capped). A redirected
+			// URL contributes its destination instead of any links.
+			$enqueue = '' !== $redirect_to ? array( $redirect_to ) : $page['links'];
 			if ( $depth < self::MAX_DEPTH ) {
-				foreach ( $page['links'] as $link ) {
+				foreach ( $enqueue as $link ) {
 					if ( ! self::is_internal( $link, $home_host ) ) {
 						continue;
 					}

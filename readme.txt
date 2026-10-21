@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.32.2
+Stable tag: 4.32.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -425,6 +425,12 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.32.3 =
+* Fixed: Site Audit recorded a URL that redirects to another page as a page in its own right, carrying the destination's title, description and content. Every moved or consolidated post was reported as a duplicate title and description of its target, and its page-level warnings were counted twice. Redirected URLs now get the redirect checks only, and the destination is audited at its own URL.
+* Fixed: the SEO Audit PageSpeed check read raw post content, so images WordPress gives width, height and loading="lazy" when the page renders were reported as missing them. It now checks the rendered image tags, and no longer counts the eagerly loaded LCP image as missing lazy loading.
+* Fixed: on personal-brand sites with Local SEO turned on, the Person schema pointed worksFor at the LocalBusiness node on every page, but that node is only output on the front page. Every other page carried a reference to a node that did not exist. worksFor is now only added where the LocalBusiness node is.
+* Fixed: Site Audit no longer flags very small scripts and stylesheets (under 2 KB) as unminified. Minifying them saves next to nothing, and WordPress core's small .min.js files were reported by mistake.
 
 = 4.32.2 =
 * Fixed: sites upgraded from earlier versions could not see the prompt to turn on the new editor sidebar, because WordPress hides admin notices inside the block editor. The prompt now appears inside the editor (to administrators, once per browser session) and on the Plugins screen.
