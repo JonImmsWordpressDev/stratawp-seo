@@ -509,4 +509,64 @@ class SiteCrawlerTest extends TestCase {
 		$rows_excluded = SWPS_Site_Crawler::classify( $fetch, $page, 'example.com', array( 'missing_viewport' ) );
 		$this->assertNotContains( 'missing_viewport', array_column( $rows_excluded, 'type' ) );
 	}
+
+	// -------------------------------------------------------------------------
+	// redirect_destination — redirected URLs are audited at their destination
+	// -------------------------------------------------------------------------
+
+	public function test_redirect_destination_returns_internal_final_url(): void {
+		$fetch = array(
+			'url'       => 'https://example.com/old/',
+			'status'    => 200,
+			'hops'      => array( array( 'url' => 'https://example.com/old/', 'status' => 301 ) ),
+			'loop'      => false,
+			'final_url' => 'https://example.com/blog/new/',
+		);
+		$this->assertSame( 'https://example.com/blog/new/', SWPS_Site_Crawler::redirect_destination( $fetch, 'example.com' ) );
+	}
+
+	public function test_redirect_destination_empty_without_hops(): void {
+		$fetch = array(
+			'url'       => 'https://example.com/page/',
+			'status'    => 200,
+			'hops'      => array(),
+			'loop'      => false,
+			'final_url' => 'https://example.com/page/',
+		);
+		$this->assertSame( '', SWPS_Site_Crawler::redirect_destination( $fetch, 'example.com' ) );
+	}
+
+	public function test_redirect_destination_empty_when_redirect_ends_broken(): void {
+		// A redirect into a 410 stays a broken link on the source URL.
+		$fetch = array(
+			'url'       => 'https://example.com/old/',
+			'status'    => 410,
+			'hops'      => array( array( 'url' => 'https://example.com/old/', 'status' => 301 ) ),
+			'loop'      => false,
+			'final_url' => 'https://example.com/gone/',
+		);
+		$this->assertSame( '', SWPS_Site_Crawler::redirect_destination( $fetch, 'example.com' ) );
+	}
+
+	public function test_redirect_destination_empty_for_external_target(): void {
+		$fetch = array(
+			'url'       => 'https://example.com/out/',
+			'status'    => 200,
+			'hops'      => array( array( 'url' => 'https://example.com/out/', 'status' => 302 ) ),
+			'loop'      => false,
+			'final_url' => 'https://other.org/',
+		);
+		$this->assertSame( '', SWPS_Site_Crawler::redirect_destination( $fetch, 'example.com' ) );
+	}
+
+	public function test_redirect_destination_empty_on_loop(): void {
+		$fetch = array(
+			'url'       => 'https://example.com/a/',
+			'status'    => 0,
+			'hops'      => array( array( 'url' => 'https://example.com/a/', 'status' => 302 ) ),
+			'loop'      => true,
+			'final_url' => 'https://example.com/b/',
+		);
+		$this->assertSame( '', SWPS_Site_Crawler::redirect_destination( $fetch, 'example.com' ) );
+	}
 }
