@@ -29,6 +29,9 @@
     },
     "cssnano": {
       "postcss-selector-parser": "^7.1.6"
+    },
+    "micromark-extension-math": {
+      "katex": "^0.18.2"
     }
   }
 }
