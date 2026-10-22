@@ -21,6 +21,31 @@
         return (str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;');
     }
 
+    function errorText(res, fallback) {
+        if (res && res.data && typeof res.data === 'object') return res.data.message || fallback;
+        return (res && res.data) || fallback;
+    }
+
+    /**
+     * POST a redirect action. If the server refuses a homepage/blog-index
+     * target (a soft 404 to Google), ask before retrying with the override.
+     */
+    function postRedirect(params) {
+        const send = extra => fetch(ajaxUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(Object.assign({ nonce: nonce }, params, extra)),
+        }).then(r => r.json());
+
+        return send({}).then(res => {
+            const isHub = !res.success && res.data && res.data.code === 'swps_redirect_hub_target';
+            if (isHub && confirm(res.data.message + '\n\nRedirect there anyway?')) {
+                return send({ allow_hub: 1 });
+            }
+            return res;
+        });
+    }
+
     // -------------------------------------------------------------------------
     // Redirects list
     // -------------------------------------------------------------------------
@@ -124,6 +149,7 @@
                             <option value="301">301 Permanent</option>
                             <option value="302">302 Temporary</option>
                             <option value="307">307 Temporary (preserve method)</option>
+                            <option value="410">410 Gone (no replacement)</option>
                         </select>
                     </label>
                     <button class="button button-primary swps-inline-redirect-save"
@@ -188,27 +214,21 @@
         const target = formRow.querySelector('.swps-inline-target').value.trim();
         const type = formRow.querySelector('.swps-inline-type').value;
 
-        if (!target) {
+        if (!target && type !== '410') {
             alert('Please enter a target URL.');
             return;
         }
 
-        fetch(ajaxUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                action: 'swps_add_redirect',
-                nonce: nonce,
-                source: sourceUrl,
-                target: target,
-                type: type,
-                is_regex: 0,
-            }),
+        postRedirect({
+            action: 'swps_add_redirect',
+            source: sourceUrl,
+            target: target,
+            type: type,
+            is_regex: 0,
         })
-            .then(r => r.json())
             .then(res => {
                 if (!res.success) {
-                    alert(res.data || 'Error adding redirect.');
+                    alert(errorText(res, 'Error adding redirect.'));
                     return;
                 }
                 // Dismiss the 404 entry after successfully creating the redirect.
@@ -266,19 +286,14 @@
             const type = document.getElementById('swps-redirect-type').value;
             const isRegex = document.getElementById('swps-redirect-regex').checked ? 1 : 0;
 
-            fetch(ajaxUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ action: 'swps_add_redirect', nonce, source, target, type, is_regex: isRegex }),
-            })
-                .then(r => r.json())
+            postRedirect({ action: 'swps_add_redirect', source, target, type, is_regex: isRegex })
                 .then(res => {
                     if (res.success) {
                         document.getElementById('swps-redirect-source').value = '';
                         document.getElementById('swps-redirect-target').value = '';
                         loadRedirects();
                     } else {
-                        alert(res.data || 'Error adding redirect');
+                        alert(errorText(res, 'Error adding redirect'));
                     }
                 });
         });
@@ -366,24 +381,35 @@
         document.getElementById('swps-bulk-redirect-confirm')?.addEventListener('click', function () {
             const ids = Array.from(document.querySelectorAll('.swps-404-checkbox:checked')).map(cb => cb.value);
             const targetInput = document.getElementById('swps-bulk-redirect-target');
+            const typeSelect = document.getElementById('swps-bulk-redirect-type');
             const target = targetInput ? targetInput.value.trim() : '';
+            const type = typeSelect ? typeSelect.value : '301';
 
-            if (ids.length === 0 || !target) return;
+            if (ids.length === 0 || (!target && type !== '410')) return;
 
-            const params = new URLSearchParams({ action: 'swps_bulk_redirect_404s', nonce, target });
-            ids.forEach(id => params.append('ids[]', id));
+            const params = { action: 'swps_bulk_redirect_404s', target, type };
+            ids.forEach((id, i) => { params['ids[' + i + ']'] = id; });
 
-            fetch(ajaxUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: params,
-            }).then(() => {
+            postRedirect(params).then(res => {
+                if (!res.success) {
+                    alert(errorText(res, 'Error creating redirects.'));
+                    return;
+                }
+                if (res.data && res.data.errors && res.data.errors.length) {
+                    alert(res.data.errors.join('\n'));
+                }
                 const wrap = document.getElementById('swps-bulk-redirect-target-wrap');
                 if (wrap) wrap.style.display = 'none';
                 if (targetInput) targetInput.value = '';
                 loadRedirects();
                 load404s();
             });
+        });
+
+        // Bulk redirect — a 410 needs no target.
+        document.getElementById('swps-bulk-redirect-type')?.addEventListener('change', function () {
+            const targetInput = document.getElementById('swps-bulk-redirect-target');
+            if (targetInput) targetInput.style.display = this.value === '410' ? 'none' : '';
         });
 
         // Bulk redirect — cancel.

@@ -256,7 +256,8 @@ class SWPS_Cannibalization_Admin {
 		}
 
 		$redirect_manager = stratawp_seo()->redirect_manager;
-		$redirect_id      = $redirect_manager->add_redirect( $loser_path, $winner_path, 301 );
+		// The winner is a live page chosen by the user, so the homepage is a valid merge target.
+		$redirect_id      = $redirect_manager->add_redirect( $loser_path, $winner_path, 301, false, true );
 
 		if ( is_wp_error( $redirect_id ) ) {
 			wp_send_json_error( array( 'message' => $redirect_id->get_error_message() ) );

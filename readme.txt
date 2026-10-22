@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.32.3
+Stable tag: 4.32.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -425,6 +425,12 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.32.4 =
+* Fixed: Redirects could send removed URLs to the homepage or the blog index, which Google reports as soft 404s and which hides the page's real status. Those targets are now refused from the Redirects screen, the 404 bulk action and the add-redirect ability, with a prompt to pick a related page or use 410 Gone. You can still confirm the redirect when the hub page really is the right destination.
+* Added: the 404 bulk action can now mark the selected URLs 410 Gone, and the inline redirect form offers 410 as well.
+* Fixed: the 404 bulk action cleared every selected 404 entry even when its redirect failed. Only entries that now have a rule are cleared, and failures are shown.
+* Fixed: the Redirects list showed only the newest 100 rules, so older rules could not be seen or deleted from the screen. It now lists up to 1000.
 
 = 4.32.3 =
 * Fixed: Site Audit recorded a URL that redirects to another page as a page in its own right, carrying the destination's title, description and content. Every moved or consolidated post was reported as a duplicate title and description of its target, and its page-level warnings were counted twice. Redirected URLs now get the redirect checks only, and the destination is audited at its own URL.

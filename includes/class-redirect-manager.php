@@ -184,18 +184,22 @@ class SWPS_Redirect_Manager {
 		$new_path = wp_parse_url( get_permalink( $post_id ), PHP_URL_PATH );
 
 		if ( $old_path && $new_path && $old_path !== $new_path ) {
-			$this->add_redirect( $old_path, $new_path, 301 );
+			// The new path is the same live post, even when it is the posts page.
+			$this->add_redirect( $old_path, $new_path, 301, false, true );
 		}
 	}
 
 	/**
 	 * Add a redirect.
+	 *
+	 * @param bool $allow_hub Permit a redirect to the homepage or blog index,
+	 *                        which validate_redirect() otherwise refuses.
 	 */
-	public function add_redirect( string $source, string $target, int $type = 301, bool $is_regex = false ): int|false|WP_Error {
+	public function add_redirect( string $source, string $target, int $type = 301, bool $is_regex = false, bool $allow_hub = false ): int|false|WP_Error {
 		global $wpdb;
 		$table = $wpdb->prefix . self::REDIRECTS_TABLE;
 
-		$validation = $this->validate_redirect( $source, $target, $type, $is_regex );
+		$validation = $this->validate_redirect( $source, $target, $type, $is_regex, $allow_hub );
 		if ( is_wp_error( $validation ) ) {
 			return $validation;
 		}
@@ -226,7 +230,7 @@ class SWPS_Redirect_Manager {
 	/**
 	 * Validate and normalize redirect data before storage.
 	 */
-	private function validate_redirect( string $source, string $target, int $type, bool $is_regex ): array|WP_Error {
+	private function validate_redirect( string $source, string $target, int $type, bool $is_regex, bool $allow_hub = false ): array|WP_Error {
 		$allowed_types = array( 301, 302, 307, 410 );
 		if ( ! in_array( $type, $allowed_types, true ) ) {
 			return new WP_Error( 'swps_invalid_redirect_type', __( 'Invalid redirect type.', 'stratawp-seo' ) );
@@ -252,6 +256,11 @@ class SWPS_Redirect_Manager {
 
 		if ( 410 !== $type && ! $is_regex && $this->paths_match( $source, $target ) ) {
 			return new WP_Error( 'swps_redirect_loop', __( 'Source and target cannot resolve to the same path.', 'stratawp-seo' ) );
+		}
+
+		if ( 410 !== $type && ! $is_regex && ! $allow_hub
+			&& self::is_hub_target( $target, $this->hub_paths(), (string) wp_parse_url( home_url(), PHP_URL_HOST ) ) ) {
+			return new WP_Error( 'swps_redirect_hub_target', self::hub_target_message() );
 		}
 
 		return array(
@@ -334,6 +343,68 @@ class SWPS_Redirect_Manager {
 	}
 
 	/**
+	 * Whether a redirect target is the homepage or blog index.
+	 *
+	 * Google treats a removed URL that 301s to a hub page as a soft 404, so
+	 * these targets are refused unless the caller explicitly overrides.
+	 * Off-site targets never count.
+	 *
+	 * @param string             $target    Normalized target URL or path.
+	 * @param array<int, string> $hub_paths Hub paths, e.g. array( '/', '/blog/' ).
+	 * @param string             $home_host This site's host, for full-URL targets.
+	 */
+	public static function is_hub_target( string $target, array $hub_paths, string $home_host = '' ): bool {
+		if ( '' === $target ) {
+			return false;
+		}
+
+		$host = wp_parse_url( $target, PHP_URL_HOST );
+		if ( $host && strtolower( (string) $host ) !== strtolower( $home_host ) ) {
+			return false;
+		}
+
+		$path = wp_parse_url( $target, PHP_URL_PATH );
+		$path = '/' . trim( strtolower( is_string( $path ) ? $path : '' ), '/' );
+		$path = '/' === $path ? '/' : $path . '/';
+
+		foreach ( $hub_paths as $hub ) {
+			$hub = '/' . trim( strtolower( $hub ), '/' );
+			$hub = '/' === $hub ? '/' : $hub . '/';
+			if ( $hub === $path ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Error text shown when a redirect to a hub page is refused.
+	 */
+	public static function hub_target_message(): string {
+		return __( 'Redirecting a removed URL to the homepage or blog index makes Google treat it as a soft 404. Redirect it to a page on the same topic, or use 410 Gone if it has no replacement.', 'stratawp-seo' );
+	}
+
+	/**
+	 * Paths that count as hub pages: the site root and the posts page.
+	 *
+	 * @return array<int, string>
+	 */
+	private function hub_paths(): array {
+		$paths = array( (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH ) );
+
+		$posts_page = (int) get_option( 'page_for_posts' );
+		if ( $posts_page > 0 ) {
+			$permalink = get_permalink( $posts_page );
+			if ( $permalink ) {
+				$paths[] = (string) wp_parse_url( $permalink, PHP_URL_PATH );
+			}
+		}
+
+		return array_values( array_unique( array_filter( $paths ) ) );
+	}
+
+	/**
 	 * Compare source and target paths after trimming trailing slashes.
 	 */
 	private function paths_match( string $source, string $target ): bool {
@@ -378,18 +449,24 @@ class SWPS_Redirect_Manager {
 			wp_send_json_error( 'Unauthorized' );
 		}
 
-		$source   = sanitize_text_field( wp_unslash( $_POST['source'] ?? '' ) );
-		$target   = sanitize_text_field( wp_unslash( $_POST['target'] ?? '' ) );
-		$type     = (int) ( $_POST['type'] ?? 301 );
-		$is_regex = ! empty( $_POST['is_regex'] );
+		$source    = sanitize_text_field( wp_unslash( $_POST['source'] ?? '' ) );
+		$target    = sanitize_text_field( wp_unslash( $_POST['target'] ?? '' ) );
+		$type      = (int) ( $_POST['type'] ?? 301 );
+		$is_regex  = ! empty( $_POST['is_regex'] );
+		$allow_hub = ! empty( $_POST['allow_hub'] );
 
 		if ( empty( $source ) ) {
 			wp_send_json_error( 'Source URL is required.' );
 		}
 
-		$id = $this->add_redirect( $source, $target, $type, $is_regex );
+		$id = $this->add_redirect( $source, $target, $type, $is_regex, $allow_hub );
 		if ( is_wp_error( $id ) ) {
-			wp_send_json_error( $id->get_error_message() );
+			wp_send_json_error(
+				array(
+					'code'    => $id->get_error_code(),
+					'message' => $id->get_error_message(),
+				)
+			);
 		}
 
 		if ( false === $id ) {
@@ -423,7 +500,9 @@ class SWPS_Redirect_Manager {
 
 		global $wpdb;
 		$table     = $wpdb->prefix . self::REDIRECTS_TABLE;
-		$redirects = $wpdb->get_results( "SELECT * FROM {$table} ORDER BY created_at DESC LIMIT 100" );
+		// A low cap hid older rules from the admin list entirely; 1000 covers
+		// any realistic hand-managed table.
+		$redirects = $wpdb->get_results( "SELECT * FROM {$table} ORDER BY created_at DESC LIMIT 1000" );
 
 		wp_send_json_success( $redirects );
 	}
@@ -580,12 +659,25 @@ class SWPS_Redirect_Manager {
 			wp_send_json_error( 'Unauthorized' );
 		}
 
-		$ids    = array_map( 'absint', (array) ( $_POST['ids'] ?? array() ) );
-		$ids    = array_filter( $ids );
-		$target = sanitize_text_field( wp_unslash( $_POST['target'] ?? '' ) );
+		$ids       = array_map( 'absint', (array) ( $_POST['ids'] ?? array() ) );
+		$ids       = array_filter( $ids );
+		$target    = sanitize_text_field( wp_unslash( $_POST['target'] ?? '' ) );
+		$type      = 410 === (int) ( $_POST['type'] ?? 301 ) ? 410 : 301;
+		$allow_hub = ! empty( $_POST['allow_hub'] );
 
-		if ( empty( $ids ) || empty( $target ) ) {
+		if ( empty( $ids ) || ( 301 === $type && empty( $target ) ) ) {
 			wp_send_json_error( 'IDs and target are required.' );
+		}
+
+		// Check once up front so a hub target fails before any rule is written.
+		if ( 301 === $type && ! $allow_hub
+			&& self::is_hub_target( $target, $this->hub_paths(), (string) wp_parse_url( home_url(), PHP_URL_HOST ) ) ) {
+			wp_send_json_error(
+				array(
+					'code'    => 'swps_redirect_hub_target',
+					'message' => self::hub_target_message(),
+				)
+			);
 		}
 
 		global $wpdb;
@@ -602,27 +694,32 @@ class SWPS_Redirect_Manager {
 
 		$created = 0;
 		$errors  = array();
+		$handled = array();
 
 		foreach ( $rows as $row ) {
 			$source = wp_parse_url( $row->url, PHP_URL_PATH );
 			if ( $source ) {
-				$result = $this->add_redirect( $source, $target, 301 );
+				$result = $this->add_redirect( $source, $target, $type, false, $allow_hub );
 				if ( is_wp_error( $result ) ) {
 					$errors[] = $result->get_error_message();
 				} elseif ( $result ) {
 					++$created;
+					$handled[] = (int) $row->id;
 				}
 			}
 		}
 
-		// Delete the processed 404 entries.
-        // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
-		$wpdb->query(
-			$wpdb->prepare(
-				"DELETE FROM {$table} WHERE id IN ({$placeholders})",
-				...$ids
-			)
-		);
+		// Clear only the 404 entries that now have a rule, so failures stay visible.
+		if ( $handled ) {
+			$placeholders = implode( ',', array_fill( 0, count( $handled ), '%d' ) );
+            // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+			$wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM {$table} WHERE id IN ({$placeholders})",
+					...$handled
+				)
+			);
+		}
 
 		wp_send_json_success(
 			array(

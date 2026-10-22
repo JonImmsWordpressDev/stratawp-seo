@@ -173,4 +173,38 @@ class RedirectNormalizeTest extends TestCase {
 	public function test_target_rejects_unsafe_scheme(): void {
 		$this->assertSame( '', $this->invoke( 'normalize_target_url', 'javascript:alert(1)', 301 ) );
 	}
+
+	// -------------------------------------------------------------------------
+	// is_hub_target
+	// -------------------------------------------------------------------------
+
+	/**
+	 * @dataProvider hub_target_cases
+	 */
+	public function test_is_hub_target( string $target, bool $expected ): void {
+		$this->assertSame(
+			$expected,
+			SWPS_Redirect_Manager::is_hub_target( $target, array( '/', '/blog/' ), 'jonimms.com' )
+		);
+	}
+
+	public static function hub_target_cases(): array {
+		return array(
+			'blog index'                  => array( '/blog/', true ),
+			'blog index without slash'    => array( '/blog', true ),
+			'blog index full url'         => array( 'https://jonimms.com/blog/', true ),
+			'blog index mixed-case host'  => array( 'https://JonImms.com/Blog/', true ),
+			'site root'                   => array( '/', true ),
+			'site root full url'          => array( 'https://jonimms.com', true ),
+			'post under blog'             => array( '/blog/some-post/', false ),
+			'tag archive'                 => array( '/blog/tag/php/', false ),
+			'other page'                  => array( '/services/', false ),
+			'off-site blog index'         => array( 'https://example.com/blog/', false ),
+			'empty target (410)'          => array( '', false ),
+		);
+	}
+
+	public function test_is_hub_target_with_no_posts_page(): void {
+		$this->assertFalse( SWPS_Redirect_Manager::is_hub_target( '/blog/', array( '/' ), 'jonimms.com' ) );
+	}
 }
