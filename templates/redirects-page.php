@@ -77,7 +77,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<button class="swps-btn swps-btn-secondary" id="swps-bulk-dismiss-404s" style="padding:4px 10px;font-size:11px"><?php esc_html_e( 'Dismiss Selected', 'stratawp-seo' ); ?></button>
 			<button class="swps-btn swps-btn-secondary" id="swps-bulk-redirect-404s" style="padding:4px 10px;font-size:11px"><?php esc_html_e( 'Redirect Selected to...', 'stratawp-seo' ); ?></button>
 			<span id="swps-bulk-redirect-target-wrap" style="display:none;">
-				<input type="text" id="swps-bulk-redirect-target" class="regular-text" placeholder="<?php esc_attr_e( '/target-page', 'stratawp-seo' ); ?>">
+				<select id="swps-bulk-redirect-type">
+					<option value="301"><?php esc_html_e( '301 to a related page', 'stratawp-seo' ); ?></option>
+					<option value="410"><?php esc_html_e( '410 Gone (no replacement)', 'stratawp-seo' ); ?></option>
+				</select>
+				<input type="text" id="swps-bulk-redirect-target" class="regular-text" placeholder="<?php esc_attr_e( '/related-post/', 'stratawp-seo' ); ?>">
 				<button class="swps-btn swps-btn-grad" id="swps-bulk-redirect-confirm" style="padding:4px 10px;font-size:11px"><?php esc_html_e( 'Go', 'stratawp-seo' ); ?></button>
 				<button class="swps-btn swps-btn-secondary" id="swps-bulk-redirect-cancel" style="padding:4px 10px;font-size:11px"><?php esc_html_e( 'Cancel', 'stratawp-seo' ); ?></button>
 			</span>

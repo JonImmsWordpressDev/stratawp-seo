@@ -250,19 +250,20 @@ trait SWPS_Ability_Defs {
 			array(
 				'name'          => 'stratawp-seo/add-redirect',
 				'label'         => __( 'Add Redirect', 'stratawp-seo' ),
-				'description'   => __( 'Add a URL redirect. The redirect ID is returned so delete-redirect can undo it.', 'stratawp-seo' ),
+				'description'   => __( 'Add a URL redirect. The redirect ID is returned so delete-redirect can undo it. Redirects to the homepage or blog index are refused because Google treats them as soft 404s: point a removed URL at a page on the same topic, or use type 410 when it has no replacement. Set allow_hub_target only when the hub page is genuinely the right destination.', 'stratawp-seo' ),
 				'write'         => true,
 				'input_schema'  => array(
 					'type'       => 'object',
 					'required'   => array( 'source', 'target' ),
 					'properties' => array(
-						'source'   => array( 'type' => 'string' ),
-						'target'   => array( 'type' => 'string' ),
-						'type'     => array(
+						'source'           => array( 'type' => 'string' ),
+						'target'           => array( 'type' => 'string' ),
+						'type'             => array(
 							'type' => 'integer',
 							'enum' => array( 301, 302, 307, 410 ),
 						),
-						'is_regex' => array( 'type' => 'boolean' ),
+						'is_regex'         => array( 'type' => 'boolean' ),
+						'allow_hub_target' => array( 'type' => 'boolean' ),
 					),
 				),
 				'output_schema' => array(
@@ -534,9 +535,10 @@ trait SWPS_Ability_Defs {
 		$source   = sanitize_text_field( $input['source'] ?? '' );
 		$target   = sanitize_text_field( $input['target'] ?? '' );
 		$type     = (int) ( $input['type'] ?? 301 );
-		$is_regex = (bool) ( $input['is_regex'] ?? false );
+		$is_regex  = (bool) ( $input['is_regex'] ?? false );
+		$allow_hub = (bool) ( $input['allow_hub_target'] ?? false );
 
-		$result = stratawp_seo()->redirect_manager->add_redirect( $source, $target, $type, $is_regex );
+		$result = stratawp_seo()->redirect_manager->add_redirect( $source, $target, $type, $is_regex, $allow_hub );
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
