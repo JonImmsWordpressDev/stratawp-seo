@@ -2111,3 +2111,5 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 ## License
 
 StrataWP SEO is licensed under the [GPL v2 or later](https://www.gnu.org/licenses/gpl-2.0.html).
+
+Built by [Jon Imms](https://jonimms.com/services/custom-wordpress-development/). [Project page](https://jonimms.com/stratawp-seo/) and [launch recap](https://jonimms.com/blog/stratawp-seo-launch-recap-github-stars/).
