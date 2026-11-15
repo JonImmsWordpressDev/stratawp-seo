@@ -100,6 +100,60 @@ class SWPS_Generator {
 	 * @return array|WP_Error Post data on success, error on failure.
 	 */
 	public function generate_post( string $topic = '', string $template = 'auto', array $brief = array(), array $options = array() ): array|WP_Error {
+		$claim = $this->claim_generation_slot( ! empty( $options['continue_batch'] ) );
+		if ( is_wp_error( $claim ) ) {
+			SWPS_Hooks::do_generation_failed( $claim, $topic, $template );
+			return $claim;
+		}
+
+		$result = null;
+		try {
+			$result = $this->run_generate_post( $topic, $template, $brief, $options );
+			return $result;
+		} finally {
+			// Every exit — success, WP_Error, or an exception — frees the
+			// running lock; only a success leaves a cooldown behind.
+			$this->rate_limiter->release( null !== $result && ! is_wp_error( $result ) );
+		}
+	}
+
+	/**
+	 * Take the generation lock, or explain why not.
+	 *
+	 * @param bool $continue_batch True for the 2nd..Nth post of one batch request:
+	 *                             skips the double-click cooldown, never a running generation.
+	 * @return true|WP_Error
+	 */
+	private function claim_generation_slot( bool $continue_batch ) {
+		if ( $this->rate_limiter->acquire( $continue_batch ) ) {
+			return true;
+		}
+		if ( $this->rate_limiter->is_running() ) {
+			return new WP_Error(
+				'swps_rate_limited',
+				__( 'Another generation is already running. Try again when it finishes.', 'stratawp-seo' ),
+				array( 'running' => true )
+			);
+		}
+		$remaining = $this->rate_limiter->get_remaining_seconds();
+		return new WP_Error(
+			'swps_rate_limited',
+			/* translators: %d: seconds remaining */
+			sprintf( __( 'Rate limited. Please wait %d seconds before generating again.', 'stratawp-seo' ), $remaining ),
+			array( 'retry_after' => $remaining )
+		);
+	}
+
+	/**
+	 * Body of generate_post(); the caller holds the generation lock.
+	 *
+	 * @param string $topic    Optional topic.
+	 * @param string $template Content template slug.
+	 * @param array  $brief    Normalized content brief.
+	 * @param array  $options  Raw generation options.
+	 * @return array|WP_Error
+	 */
+	private function run_generate_post( string $topic, string $template, array $brief, array $options ): array|WP_Error {
 		$options = $this->normalize_options( $options );
 
 		// Image generation (especially Gemini) can take several minutes per post.
@@ -124,19 +178,6 @@ class SWPS_Generator {
 		// Fire before_generate action.
 		SWPS_Hooks::do_before_generate( $topic, $template );
 
-		// Check rate limit.
-		if ( ! $this->rate_limiter->can_generate() ) {
-			$remaining = $this->rate_limiter->get_remaining_seconds();
-			$error     = new WP_Error(
-				'swps_rate_limited',
-				/* translators: %d: seconds remaining */
-				sprintf( __( 'Rate limited. Please wait %d seconds before generating again.', 'stratawp-seo' ), $remaining )
-			);
-			SWPS_Hooks::do_generation_failed( $error, $topic, $template );
-			return $error;
-		}
-
-		// Build prompts and call AI.
 		$ai_result = $this->call_ai( $topic, $template, $brief, $options );
 
 		if ( is_wp_error( $ai_result ) ) {
@@ -161,9 +202,6 @@ class SWPS_Generator {
 				return $error;
 			}
 		}
-
-		// Lock rate limiter.
-		$this->rate_limiter->lock();
 
 		// Validate required fields.
 		$required = array( 'title', 'content_html', 'meta_description', 'slug' );
@@ -206,32 +244,28 @@ class SWPS_Generator {
 	 * @return array|WP_Error AI result data or error.
 	 */
 	public function preview_content( string $topic = '', string $template = 'auto', array $brief = array(), array $options = array() ): array|WP_Error {
-		$options = $this->normalize_options( $options );
-
-		// Check rate limit.
-		if ( ! $this->rate_limiter->can_generate() ) {
-			$remaining = $this->rate_limiter->get_remaining_seconds();
-			return new WP_Error(
-				'swps_rate_limited',
-				/* translators: %d: seconds remaining */
-				sprintf( __( 'Rate limited. Please wait %d seconds.', 'stratawp-seo' ), $remaining )
-			);
+		$claim = $this->claim_generation_slot( false );
+		if ( is_wp_error( $claim ) ) {
+			return $claim;
 		}
 
-		$ai_result = $this->call_ai( $topic, $template, $brief, $options );
+		$ai_result = null;
+		try {
+			$options   = $this->normalize_options( $options );
+			$ai_result = $this->call_ai( $topic, $template, $brief, $options );
 
-		if ( is_wp_error( $ai_result ) ) {
+			if ( is_wp_error( $ai_result ) ) {
+				return $ai_result;
+			}
+
+			$ai_result['content_type']    = $options['content_type'];
+			$ai_result['sources']         = $this->last_sources_report;
+			$ai_result['dropped_sources'] = $this->last_dropped_sources;
+
 			return $ai_result;
+		} finally {
+			$this->rate_limiter->release( is_array( $ai_result ) );
 		}
-
-		// Lock rate limiter.
-		$this->rate_limiter->lock();
-
-		$ai_result['content_type']    = $options['content_type'];
-		$ai_result['sources']         = $this->last_sources_report;
-		$ai_result['dropped_sources'] = $this->last_dropped_sources;
-
-		return $ai_result;
 	}
 
 	/**

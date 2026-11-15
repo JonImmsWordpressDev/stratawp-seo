@@ -209,9 +209,18 @@ class SWPS_Background_Processor {
 		$plugin   = stratawp_seo();
 		$template = get_post_meta( $topic_id, '_swps_template', true ) ?: 'auto';
 
-		$result = $plugin->generator->generate_post( $topic->post_title, $template );
+		// Queued topics are one batch the user started, so the double-click
+		// cooldown doesn't apply between them; a running generation still does.
+		$result = $plugin->generator->generate_post( $topic->post_title, $template, array(), array( 'continue_batch' => true ) );
 
 		if ( is_wp_error( $result ) ) {
+			if ( 'swps_rate_limited' === $result->get_error_code() ) {
+				// Another generation is mid-flight. Not the topic's fault:
+				// requeue it and try again shortly.
+				$queue->update_status( $topic_id, 'queued' );
+				$this->schedule_generation( $topic_id, 60 );
+				return;
+			}
 			if ( 'swps_budget_exceeded' === $result->get_error_code() ) {
 				// Not the topic's fault — return it to the queue untouched.
 				$queue->update_status( $topic_id, 'queued' );

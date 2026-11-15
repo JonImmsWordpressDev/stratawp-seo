@@ -1169,7 +1169,10 @@ class SWPS_Site_Crawler {
 			'sslverify'   => false,
 		);
 
-		$response = wp_remote_head( $url, $args );
+		// The safe variants refuse private, loopback and link-local targets:
+		// a link in published content must never make the server probe its
+		// own network (169.254.169.254, 127.0.0.1, 10.x...).
+		$response = wp_safe_remote_head( $url, $args );
 
 		if ( is_wp_error( $response ) ) {
 			return 0;
@@ -1179,7 +1182,7 @@ class SWPS_Site_Crawler {
 
 		// GET fallback when HEAD is blocked.
 		if ( in_array( $status, array( 403, 405, 429 ), true ) ) {
-			$response2 = wp_remote_get( $url, $args );
+			$response2 = wp_safe_remote_get( $url, $args );
 			if ( ! is_wp_error( $response2 ) ) {
 				$status = (int) wp_remote_retrieve_response_code( $response2 );
 			}

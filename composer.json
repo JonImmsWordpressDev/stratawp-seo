@@ -14,14 +14,17 @@
         "php": ">=8.0"
     },
     "require-dev": {
-        "squizlabs/php_codesniffer": "^3.10",
-        "wp-coding-standards/wpcs": "^3.1",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
         "phpcompatibility/phpcompatibility-wp": "^2.1",
         "phpcsstandards/phpcsutils": "^1.0",
-        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
         "phpstan/phpstan": "^1.12",
+        "phpunit/phpunit": "^9.6",
+        "roots/wordpress-no-content": "7.1.3",
+        "squizlabs/php_codesniffer": "^3.10",
         "szepeviktor/phpstan-wordpress": "^1.3",
-        "phpunit/phpunit": "^9.6"
+        "wp-coding-standards/wpcs": "^3.1",
+        "wp-phpunit/wp-phpunit": "7.1.3",
+        "yoast/phpunit-polyfills": "^1.1"
     },
     "autoload": {
         "classmap": [
@@ -49,7 +52,8 @@
             "@lint",
             "@analyze"
         ],
-        "test": "phpunit"
+        "test": "phpunit",
+        "test:integration": "phpunit -c phpunit-integration.xml.dist"
     },
     "scripts-descriptions": {
         "lint": "Run PHP_CodeSniffer against the WordPress coding standard.",
@@ -57,6 +61,7 @@
         "analyze": "Run PHPStan static analysis.",
         "analyze:baseline": "Regenerate the PHPStan baseline of pre-existing issues.",
         "check": "Run lint + static analysis (the CI quality gate).",
-        "test": "Run PHPUnit unit tests (pure-PHP scorers; no WP bootstrap)."
+        "test": "Run PHPUnit unit tests (pure-PHP scorers; no WP bootstrap).",
+        "test:integration": "Run the WordPress integration suite (needs MySQL; see tests/integration/wp-tests-config.php)."
     }
 }

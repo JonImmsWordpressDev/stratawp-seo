@@ -61,6 +61,10 @@ EXCLUDES=(
   --exclude='.idea' --exclude='.vscode' --exclude='.mcp.json'
   --exclude='.DS_Store' --exclude='**/.DS_Store'
   --exclude='.github-release'
+  # Integration-test toolchain: a full WordPress core and its test library
+  # (~120MB) that a local `composer install` puts in vendor/. Never shipped.
+  --exclude='/vendor/roots' --exclude='/vendor/wp-phpunit' --exclude='/vendor/yoast'
+  --exclude='/phpunit-integration.xml.dist'
   # The JS tests import fixtures from /tests, which the wporg zip drops.
   --exclude='/src/editor/__tests__'
 )

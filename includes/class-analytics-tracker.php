@@ -140,13 +140,34 @@ class SWPS_Analytics_Tracker {
 	 * AJAX handler: Record a page hit.
 	 */
 	public function ajax_track(): void {
-		check_ajax_referer( 'swps_track', 'nonce' );
-
+		// No nonce on purpose. Every visitor is handed the same anonymous
+		// nonce, so it proves nothing about who is calling — and pages served
+		// from a page cache carry a nonce that expires after 12-24h, which
+		// silently stopped all tracking on cached sites. What protects the
+		// table instead: same-site Origin, a real published post, a same-site
+		// page URL, and a per-visitor cap.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing
 		global $wpdb;
 
-		$post_id      = absint( $_POST['post_id'] ?? 0 );
-		$page_url     = esc_url_raw( $_POST['page_url'] ?? '' );
-		$referrer     = esc_url_raw( $_POST['referrer'] ?? '' );
+		$server   = $_SERVER; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- only compared, never stored or echoed.
+		$home     = home_url();
+		$post_id  = absint( $_POST['post_id'] ?? 0 );
+		$page_url = esc_url_raw( wp_unslash( (string) ( $_POST['page_url'] ?? '' ) ) );
+		$referrer = esc_url_raw( wp_unslash( (string) ( $_POST['referrer'] ?? '' ) ) );
+
+		if ( ! self::origin_allowed( (string) ( $server['HTTP_ORIGIN'] ?? '' ), $home )
+			|| ! self::same_site_url( $page_url, $home )
+			|| ( $post_id > 0 && 'publish' !== get_post_status( $post_id ) ) ) {
+			self::respond_ignored();
+			return;
+		}
+
+		$ip = SWPS_Crawler_Verification::client_ip( $server, (string) get_option( 'swps_trusted_proxy_header', 'none' ) );
+		if ( ! $this->within_visitor_cap( $ip ) ) {
+			self::respond_ignored();
+			return;
+		}
+
 		$time_on_page = min( absint( $_POST['time_on_page'] ?? 0 ), 3600 );
 		$scroll_depth = min( absint( $_POST['scroll_depth'] ?? 0 ), 100 );
 		$is_bounce    = absint( $_POST['is_bounce'] ?? 1 ) ? 1 : 0;
@@ -192,7 +213,77 @@ class SWPS_Analytics_Tracker {
 				'%s',
 			)
 		);
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
+		wp_send_json_success();
+	}
+
+	/** Hits one visitor (salted IP hash) may record per window. */
+	public const VISITOR_CAP = 60;
+
+	/** Window for VISITOR_CAP, in seconds. */
+	public const VISITOR_WINDOW = 600;
+
+	/**
+	 * Pure: may a tracking ping with this Origin header be recorded?
+	 *
+	 * Browsers send Origin on every POST, including sendBeacon, so a page on
+	 * another site can't make visitors' browsers pad our numbers. An absent
+	 * Origin (old browsers, non-browser clients) is allowed; the other
+	 * checks still apply.
+	 *
+	 * @param string $origin Origin header value, '' when absent.
+	 * @param string $home   home_url().
+	 */
+	public static function origin_allowed( string $origin, string $home ): bool {
+		if ( '' === $origin ) {
+			return true;
+		}
+		$o = wp_parse_url( $origin );
+		$h = wp_parse_url( $home );
+		if ( empty( $o['host'] ) || empty( $h['host'] ) ) {
+			return false;
+		}
+		return strtolower( $o['host'] ) === strtolower( $h['host'] )
+			&& (int) ( $o['port'] ?? 0 ) === (int) ( $h['port'] ?? 0 );
+	}
+
+	/**
+	 * Pure: is $url a page on this site (same host as home)?
+	 *
+	 * @param string $url  Candidate page URL.
+	 * @param string $home home_url().
+	 */
+	public static function same_site_url( string $url, string $home ): bool {
+		$u = wp_parse_url( $url );
+		$h = wp_parse_url( $home );
+		return ! empty( $u['host'] ) && ! empty( $h['host'] ) && strtolower( $u['host'] ) === strtolower( $h['host'] );
+	}
+
+	/**
+	 * Count this hit against the visitor's cap; false once over it.
+	 *
+	 * Keyed by a salted hash so raw IPs are never stored.
+	 *
+	 * @param string $ip Client IP.
+	 */
+	private function within_visitor_cap( string $ip ): bool {
+		if ( '' === $ip ) {
+			return true;
+		}
+		$key   = 'swps_trk_' . substr( hash_hmac( 'sha256', $ip, wp_salt( 'nonce' ) ), 0, 24 );
+		$count = (int) get_transient( $key );
+		if ( $count >= self::VISITOR_CAP ) {
+			return false;
+		}
+		set_transient( $key, $count + 1, self::VISITOR_WINDOW );
+		return true;
+	}
+
+	/**
+	 * Same reply as a recorded hit, so a flood can't probe which rule tripped.
+	 */
+	private static function respond_ignored(): void {
 		wp_send_json_success();
 	}
 
