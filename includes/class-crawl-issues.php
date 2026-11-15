@@ -119,7 +119,7 @@ class SWPS_Crawl_Issues {
 			run_id         BIGINT UNSIGNED NOT NULL,
 			type           VARCHAR(50)     NOT NULL DEFAULT '',
 			url            VARCHAR(2083)   NOT NULL DEFAULT '',
-			detail         LONGTEXT        NOT NULL DEFAULT '',
+			detail         LONGTEXT        NOT NULL,
 			severity       VARCHAR(10)     NOT NULL DEFAULT 'warning',
 			post_id        BIGINT UNSIGNED             DEFAULT NULL,
 			object_type    VARCHAR(10)                 DEFAULT NULL,

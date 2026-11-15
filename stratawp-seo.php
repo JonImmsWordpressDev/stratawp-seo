@@ -22,6 +22,32 @@ define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 
+/*
+ * Fast path for the front-end pageview ping.
+ *
+ * Every tracked pageview posts once to admin-ajax.php. Building the whole
+ * plugin for that (~150 classes, ~70 services) made each pageview cost a
+ * second full plugin boot. The ping needs four self-contained classes, so
+ * load only those and stop. PHP still hoists this file's functions, so
+ * stratawp_seo() is declared, but nothing may call it during the ping: the
+ * classes it builds are not loaded. (Nothing in the plugin does.)
+ */
+$swps_is_track_ping = defined( 'DOING_AJAX' ) && DOING_AJAX
+	&& isset( $_REQUEST['action'] ) && 'swps_track' === $_REQUEST['action']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- routing only; the handler validates.
+if ( $swps_is_track_ping ) {
+	require_once SWPS_PLUGIN_DIR . 'includes/class-hooks.php';
+	require_once SWPS_PLUGIN_DIR . 'includes/class-ai-referrals.php';
+	require_once SWPS_PLUGIN_DIR . 'includes/class-crawler-verification.php';
+	require_once SWPS_PLUGIN_DIR . 'includes/class-analytics-tracker.php';
+	add_action(
+		'plugins_loaded',
+		static function (): void {
+			new SWPS_Analytics_Tracker();
+		}
+	);
+	return;
+}
+
 /**
  * Autoload plugin classes.
  *
@@ -727,7 +753,9 @@ final class StrataWP_SEO {
 				'current_ai_provider'  => get_option( 'swps_ai_provider', 'anthropic' ),
 				'current_model'        => get_option( 'swps_model', '' ),
 				'templates'            => SWPS_Templates::get_options(),
-				'rate_limit_remaining' => $this->rate_limiter->get_remaining_seconds(),
+				// A running generation has no meaningful countdown (it ends when
+				// it ends); a click then gets "already running" from the server.
+				'rate_limit_remaining' => $this->rate_limiter->is_running() ? 0 : $this->rate_limiter->get_remaining_seconds(),
 				'min_content_score'    => get_option( 'swps_min_content_score', 0 ),
 				'generate_url'         => admin_url( 'admin.php?page=swps-generate' ),
 				'brief_max_length'     => SWPS_Content_Brief::MAX_BRIEF_LENGTH,
@@ -865,7 +893,9 @@ final class StrataWP_SEO {
 		$results  = array();
 
 		for ( $i = 0; $i < $count; $i++ ) {
-			$result = $this->generator->generate_post( '', $template );
+			// One request for N posts: the double-click cooldown applies to the
+			// request, not to each post inside it.
+			$result = $this->generator->generate_post( '', $template, array(), array( 'continue_batch' => $i > 0 ) );
 
 			if ( is_wp_error( $result ) ) {
 				$results[] = array(

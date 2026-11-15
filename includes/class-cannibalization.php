@@ -80,7 +80,7 @@ class SWPS_Cannibalization {
 			id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			query_hash  VARCHAR(64)     NOT NULL DEFAULT '',
 			query       VARCHAR(255)    NOT NULL DEFAULT '',
-			pages       LONGTEXT        NOT NULL DEFAULT '',
+			pages       LONGTEXT        NOT NULL,
 			severity    VARCHAR(10)     NOT NULL DEFAULT 'cannibal',
 			status      VARCHAR(10)     NOT NULL DEFAULT 'open',
 			undo_json   LONGTEXT                 DEFAULT NULL,

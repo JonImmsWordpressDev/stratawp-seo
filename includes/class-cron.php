@@ -92,15 +92,16 @@ class SWPS_Cron {
 				}
 			}
 
-			$result = $this->generator->generate_post( $topic, $template );
+			$result = $this->generator->generate_post( $topic, $template, array(), array( 'continue_batch' => $i > 0 ) );
 
 			if ( is_wp_error( $result ) ) {
 				++$failed;
 				error_log( '[StrataWP SEO Cron] Generation failed: ' . $result->get_error_message() );
 
-				// Budget exhausted: every remaining post would fail too. Put
-				// the topic back in the queue untouched and stop the batch.
-				if ( 'swps_budget_exceeded' === $result->get_error_code() ) {
+				// Budget exhausted, or another generation holds the lock: every
+				// remaining post would fail too, and neither is the topic's
+				// fault. Put it back in the queue untouched and stop the batch.
+				if ( in_array( $result->get_error_code(), array( 'swps_budget_exceeded', 'swps_rate_limited' ), true ) ) {
 					if ( $topic_id && $this->queue ) {
 						$this->queue->update_status( $topic_id, 'queued' );
 					}

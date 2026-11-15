@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Integration suite: boots real WordPress against a throwaway MySQL database.
+  Run with `composer test:integration` (see tests/integration/wp-tests-config.php
+  for the WP_TESTS_DB_* env vars). The unit suite stays in phpunit.xml.dist.
+-->
+<phpunit
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+    bootstrap="tests/integration/bootstrap.php"
+    colors="true"
+    cacheResultFile=".phpunit.cache/integration-results"
+    beStrictAboutOutputDuringTests="false"
+    failOnWarning="true"
+    verbose="true">
+    <testsuites>
+        <testsuite name="integration">
+            <directory suffix="Test.php">tests/integration</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>
