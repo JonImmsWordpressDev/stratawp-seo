@@ -77,7 +77,7 @@ if [ "$TARGET" = wporg ]; then
     --exclude='/tests' --exclude='/e2e' --exclude='/playwright.config.js' --exclude='/bin'
     --exclude='/vendor' --exclude='/composer.json' --exclude='/composer.lock'
     --exclude='/phpunit.xml' --exclude='/phpunit.xml.dist'
-    --exclude='/phpcs.xml' --exclude='/phpcs.xml.dist'
+    --exclude='/phpcs.xml' --exclude='/phpcs.xml.dist' --exclude='/phpcs.baseline.xml'
     --exclude='/phpstan.neon' --exclude='/phpstan.neon.dist'
     --exclude='/phpstan-baseline.neon'
     --exclude='/package.json' --exclude='/package-lock.json'

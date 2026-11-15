@@ -15,6 +15,7 @@
     },
     "require-dev": {
         "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "digitalrevolution/php-codesniffer-baseline": "^1.1",
         "phpcompatibility/phpcompatibility-wp": "^2.1",
         "phpcsstandards/phpcsutils": "^1.0",
         "phpstan/phpstan": "^1.12",
@@ -35,7 +36,8 @@
     },
     "config": {
         "allow-plugins": {
-            "dealerdirect/phpcodesniffer-composer-installer": true
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "digitalrevolution/php-codesniffer-baseline": true
         },
         "optimize-autoloader": true,
         "platform": {
@@ -53,7 +55,8 @@
             "@analyze"
         ],
         "test": "phpunit",
-        "test:integration": "phpunit -c phpunit-integration.xml.dist"
+        "test:integration": "phpunit -c phpunit-integration.xml.dist",
+        "lint:baseline": "phpcs --report=\\\\DR\\\\CodeSnifferBaseline\\\\Reports\\\\Baseline --report-file=phpcs.baseline.xml || true"
     },
     "scripts-descriptions": {
         "lint": "Run PHP_CodeSniffer against the WordPress coding standard.",
@@ -62,6 +65,7 @@
         "analyze:baseline": "Regenerate the PHPStan baseline of pre-existing issues.",
         "check": "Run lint + static analysis (the CI quality gate).",
         "test": "Run PHPUnit unit tests (pure-PHP scorers; no WP bootstrap).",
-        "test:integration": "Run the WordPress integration suite (needs MySQL; see tests/integration/wp-tests-config.php)."
+        "test:integration": "Run the WordPress integration suite (needs MySQL; see tests/integration/wp-tests-config.php).",
+        "lint:baseline": "Regenerate phpcs.baseline.xml (pre-existing findings the CI gate ignores). Run after fixing old findings so the baseline shrinks."
     }
 }
