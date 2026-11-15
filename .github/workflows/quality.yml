@@ -61,7 +61,9 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          composer lint -- --report=checkstyle | cs2pr
+          # -q: phpcs.xml.dist turns on progress output (arg "ps"), which
+          # would otherwise wrap the checkstyle XML and break cs2pr.
+          composer lint -- -q --report=checkstyle | cs2pr
 
   static-analysis:
     name: PHPStan
