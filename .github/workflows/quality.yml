@@ -42,9 +42,10 @@ jobs:
   coding-standards:
     name: PHPCS (WordPress)
     runs-on: ubuntu-latest
-    # Advisory until the legacy WPCS backlog is cleared (run `composer
-    # lint:fix`, commit, then flip this to a hard gate). PHPStan + the
-    # syntax matrix are the enforcing gates in the meantime.
+    # Hard gate. Findings that predate the gate are listed in
+    # phpcs.baseline.xml and ignored; any NEW finding fails the build.
+    # Fixing old ones? Regenerate the baseline so it shrinks:
+    #   composer lint:baseline
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -56,8 +57,13 @@ jobs:
         run: composer validate --strict --no-check-publish
       - uses: ramsey/composer-install@v3
       - name: Run PHP_CodeSniffer
-        continue-on-error: true
-        run: composer lint -- --report=checkstyle | cs2pr
+        # pipefail: a PHPCS crash must fail the job, not vanish behind cs2pr.
+        shell: bash
+        run: |
+          set -o pipefail
+          # -q: phpcs.xml.dist turns on progress output (arg "ps"), which
+          # would otherwise wrap the checkstyle XML and break cs2pr.
+          composer lint -- -q --report=checkstyle | cs2pr
 
   static-analysis:
     name: PHPStan

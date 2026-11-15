@@ -24,6 +24,8 @@
     <arg name="colors"/>
     <arg value="ps"/>
     <arg name="parallel" value="8"/>
+    <!-- Relative paths in reports, so phpcs.baseline.xml matches on any machine. -->
+    <arg name="basepath" value="."/>
 
     <!-- WordPress coding standard (Core + Extra + Docs). -->
     <rule ref="WordPress">
