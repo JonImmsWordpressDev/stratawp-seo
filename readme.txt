@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.32.4
+Stable tag: 4.33.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -425,6 +425,14 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.33.0 =
+* Fixed: Bulk generate and autopilot runs set to more than one post per run failed every post after the first with "Rate limited", and the autopilot counted each of those as a failed attempt against the topic. A batch now generates every post, and the cooldown between generations only applies to separate requests.
+* Fixed: two generations started at the same moment (a double-click, or a manual generation while the autopilot ran) could both run and both be billed. Only one generation runs at a time now. A failed generation no longer leaves a cooldown behind, so you can retry straight away.
+* Fixed: on sites with page caching, pageview analytics silently stopped recording once a cached page was more than about a day old. Tracking now works on cached pages, refuses hits sent from other sites or for unpublished posts, and caps how many hits one visitor can record.
+* Improved: each tracked pageview's background request now loads only the analytics code instead of the whole plugin, so tracking costs your server much less.
+* Fixed: Site Audit's external link checker no longer follows links in your content to private or internal network addresses.
+* Fixed: sites on MySQL 8 logged a database error each time the plugin checked its keyword cannibalization and site crawl tables. The table definitions are corrected; no data is affected.
 
 = 4.32.4 =
 * Fixed: Redirects could send removed URLs to the homepage or the blog index, which Google reports as soft 404s and which hides the page's real status. Those targets are now refused from the Redirects screen, the 404 bulk action and the add-redirect ability, with a prompt to pick a related page or use 410 Gone. You can still confirm the redirect when the hub page really is the right destination.
