@@ -210,6 +210,13 @@ class SWPS_Schema {
 			return;
 		}
 
+		// FAQ markup must mirror visible questions; drop stored summary
+		// questions that are not on the page (and the node if none remain).
+		$decoded = SWPS_Schema_Graph::filter_faq_to_visible( $decoded, (string) get_post_field( 'post_content', $post_id ) );
+		if ( empty( $decoded ) ) {
+			return;
+		}
+
 		/**
 		 * Filter the AEO-generated schema array before output.
 		 *
@@ -588,8 +595,13 @@ class SWPS_Schema {
 		$items = array();
 		$url   = (string) ( is_singular() ? get_permalink() : '' );
 
+		// Root crumb uses the same brand name as the WebSite node.
+		$root_name = (string) get_option( 'swps_schema_name', '' );
+		if ( '' === trim( $root_name ) ) {
+			$root_name = get_bloginfo( 'name' );
+		}
 		$items[] = array(
-			'name' => get_bloginfo( 'name' ),
+			'name' => $root_name,
 			'url'  => home_url( '/' ),
 		);
 
