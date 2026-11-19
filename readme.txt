@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.33.0
+Stable tag: 4.34.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -425,6 +425,12 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= 4.34.0 =
+* Fixed: FAQ structured data from the AEO optimizer is now emitted only for questions that actually appear on the page. Older runs stored a single summary question that was not on the page, which Google treats as markup that does not match visible content. Questions that are on the page are unaffected.
+* Fixed: on hosts where PHP prints floats at full precision, the business latitude and longitude in Local SEO schema came out as long numbers such as 41.256500000000002614. They are now output as short decimals (up to 6 places).
+* Improved: US and Canadian business phone numbers saved without a country code are output in schema as +1-XXX-XXX-XXXX, as Google recommends. Numbers that already start with + and numbers from other countries are output as entered.
+* Fixed: the first breadcrumb in BreadcrumbList schema now uses the Schema name setting, the same name as the WebSite node, instead of always using the WordPress site title.
 
 = 4.33.0 =
 * Fixed: Bulk generate and autopilot runs set to more than one post per run failed every post after the first with "Rate limited", and the autopilot counted each of those as a failed attempt against the topic. A batch now generates every post, and the cooldown between generations only applies to separate requests.

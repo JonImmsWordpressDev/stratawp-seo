@@ -361,6 +361,118 @@ class SWPS_Schema_Graph {
 		return empty( $normalized['mainEntity'] ) ? array() : $normalized;
 	}
 
+	/**
+	 * Keep only the FAQPage questions whose text appears on the page.
+	 *
+	 * Google requires FAQ structured data to mirror content the visitor can
+	 * see. Older AEO runs stored single-question FAQPage blobs (a summary
+	 * question that is not on the page), which validators flag as markup
+	 * that does not match visible content. Matching is case-, punctuation-
+	 * and whitespace-insensitive. Non-FAQPage schema is returned unchanged.
+	 *
+	 * @param array  $schema       Decoded schema array.
+	 * @param string $visible_text Page text (HTML allowed; tags are stripped).
+	 * @return array Schema with unmatched questions removed, or an empty
+	 *               array when no question is visible.
+	 */
+	public static function filter_faq_to_visible( array $schema, string $visible_text ): array {
+		if ( 'FAQPage' !== ( $schema['@type'] ?? '' ) ) {
+			return $schema;
+		}
+
+		$haystack = self::match_text( $visible_text );
+		$entities = $schema['mainEntity'] ?? array();
+		if ( isset( $entities['@type'] ) ) {
+			$entities = array( $entities );
+		}
+
+		$kept = array();
+		foreach ( (array) $entities as $entity ) {
+			if ( ! is_array( $entity ) ) {
+				continue;
+			}
+			$needle = self::match_text( (string) ( $entity['name'] ?? '' ) );
+			if ( '' !== $needle && false !== strpos( $haystack, $needle ) ) {
+				$kept[] = $entity;
+			}
+		}
+
+		if ( empty( $kept ) ) {
+			return array();
+		}
+
+		$schema['mainEntity'] = $kept;
+		return $schema;
+	}
+
+	/**
+	 * Lower-case, tag-free, punctuation-free text with single spaces, for
+	 * loose "does this phrase appear" comparisons.
+	 *
+	 * @param string $text Raw text or HTML.
+	 * @return string
+	 */
+	private static function match_text( string $text ): string {
+		$text = html_entity_decode( wp_strip_all_tags( $text ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		$text = strtolower( $text );
+		$text = (string) preg_replace( '/[^a-z0-9]+/', ' ', $text );
+		return trim( $text );
+	}
+
+	/**
+	 * Format a stored latitude or longitude for JSON-LD.
+	 *
+	 * Casting to float lets hosts with serialize_precision = 17 print values
+	 * like 41.256500000000002614. Returning a short decimal string avoids that
+	 * (schema.org accepts Number or Text). Values are rounded to 6 places,
+	 * about 0.1 m, which is more precision than any business address needs.
+	 *
+	 * @param mixed $value Stored coordinate.
+	 * @return string Formatted coordinate, or '' when not a valid number.
+	 */
+	public static function format_coordinate( mixed $value ): string {
+		if ( ! is_numeric( $value ) ) {
+			return '';
+		}
+		$formatted = rtrim( rtrim( sprintf( '%.6F', round( (float) $value, 6 ) ), '0' ), '.' );
+		return '-0' === $formatted ? '0' : $formatted;
+	}
+
+	/**
+	 * Format a phone number for schema.org telephone.
+	 *
+	 * Google recommends including the country code. Numbers already starting
+	 * with "+" are kept as entered. A 10-digit number (or 11 digits starting
+	 * with 1) in a NANP country (US, CA) becomes +1-XXX-XXX-XXXX. Anything
+	 * else is returned trimmed, unchanged, because guessing another country's
+	 * format would be worse than leaving it alone.
+	 *
+	 * @param string $phone   Stored phone number.
+	 * @param string $country Business country (ISO code or name).
+	 * @return string
+	 */
+	public static function format_telephone( string $phone, string $country = '' ): string {
+		$phone = trim( $phone );
+		if ( '' === $phone || str_starts_with( $phone, '+' ) ) {
+			return $phone;
+		}
+
+		$nanp = in_array( strtoupper( trim( $country ) ), array( '', 'US', 'USA', 'UNITED STATES', 'CA', 'CAN', 'CANADA' ), true );
+		if ( ! $nanp ) {
+			return $phone;
+		}
+
+		$digits = (string) preg_replace( '/\D+/', '', $phone );
+		if ( 11 === strlen( $digits ) && '1' === $digits[0] ) {
+			$digits = substr( $digits, 1 );
+		}
+		if ( 10 !== strlen( $digits ) ) {
+			return $phone;
+		}
+
+		return sprintf( '+1-%s-%s-%s', substr( $digits, 0, 3 ), substr( $digits, 3, 3 ), substr( $digits, 6 ) );
+	}
+
 	// -------------------------------------------------------------------------
 	// Output
 	// -------------------------------------------------------------------------

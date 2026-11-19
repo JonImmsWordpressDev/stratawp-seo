@@ -298,7 +298,7 @@ class SWPS_Local_SEO {
 		}
 
 		if ( '' !== trim( $d['phone'] ) ) {
-			$schema['telephone'] = $d['phone'];
+			$schema['telephone'] = SWPS_Schema_Graph::format_telephone( (string) $d['phone'], (string) $d['country'] );
 		}
 		if ( '' !== trim( $d['email'] ) ) {
 			$schema['email'] = $d['email'];
@@ -323,11 +323,13 @@ class SWPS_Local_SEO {
 			$schema['address'] = $address;
 		}
 
-		if ( '' !== $d['latitude'] && '' !== $d['longitude'] ) {
+		$lat = SWPS_Schema_Graph::format_coordinate( $d['latitude'] );
+		$lng = SWPS_Schema_Graph::format_coordinate( $d['longitude'] );
+		if ( '' !== $lat && '' !== $lng ) {
 			$schema['geo'] = array(
 				'@type'     => 'GeoCoordinates',
-				'latitude'  => (float) $d['latitude'],
-				'longitude' => (float) $d['longitude'],
+				'latitude'  => $lat,
+				'longitude' => $lng,
 			);
 		}
 
