@@ -1962,7 +1962,7 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 ### v4.6.0 — May 2026
 - New: AEO Optimize (score + bulk page + editor panel + dynamic schema for 5 new types)
 - New: 6 REST endpoints under `/swps/v1/aeo/*`
-- New: 5 filter hooks for extensibility
+- New: 4 filter hooks for extensibility
 - Improvement: Dashboard AEO health tile + Bot Analytics deep-link
 - Developer: PHPUnit setup for pure-PHP scorer unit tests
 
