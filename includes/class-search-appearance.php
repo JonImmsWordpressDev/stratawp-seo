@@ -121,6 +121,23 @@ class SWPS_Search_Appearance {
 	}
 
 	/**
+	 * Choose the social image for a non-singular view.
+	 *
+	 * Pure so the precedence rule is unit-testable without WordPress: an
+	 * explicit per-object override wins, otherwise the site-level fallback
+	 * (schema logo or site icon) stands.
+	 *
+	 * @param string $fallback Site-level image URL.
+	 * @param string $override Per-object image URL, may be empty.
+	 * @return string
+	 */
+	public static function resolve_social_image( string $fallback, string $override ): string {
+		$override = trim( $override );
+
+		return '' !== $override ? $override : $fallback;
+	}
+
+	/**
 	 * Filter the document title parts array.
 	 */
 	public function filter_title_parts( array $title_parts ): array {
@@ -245,6 +262,20 @@ class SWPS_Search_Appearance {
 				$desc     = ! empty( $og_desc ) ? $og_desc : $desc;
 				$image    = ! empty( $og_image ) ? $og_image : $image;
 			}
+		}
+
+		// Posts-page social override. is_home() is never is_singular(), so Meta
+		// Editor's per-post path never runs here and the Social Image stored on
+		// page_for_posts was ignored -- every share of the blog index fell back
+		// to the site logo. Mirrors the term-override branch above, and the
+		// is_home() branches resolve_description() and get_title_template()
+		// already have.
+		if ( is_home() && ! is_front_page() ) {
+			$posts_page_id = (int) get_option( 'page_for_posts' );
+			$image         = self::resolve_social_image(
+				$image,
+				$posts_page_id ? (string) get_post_meta( $posts_page_id, '_swps_social_image', true ) : ''
+			);
 		}
 
 		printf( '<meta property="og:type" content="website" />' . "\n" );
