@@ -290,6 +290,13 @@ class SWPS_Local_SEO {
 			'url'   => home_url( '/' ),
 		);
 
+		// Describe the business with the site description already used for
+		// llms.txt and AI context, so it is maintained in one place.
+		$description = SWPS_Schema_Graph::business_description( (string) get_option( 'swps_site_description', '' ) );
+		if ( '' !== $description ) {
+			$schema['description'] = $description;
+		}
+
 		// Connect the business to the site entity so the node is linked in the graph.
 		if ( 'Person' === get_option( 'swps_schema_entity_type', 'Organization' ) ) {
 			$schema['founder'] = array( '@id' => SWPS_Schema_Graph::org_id() );

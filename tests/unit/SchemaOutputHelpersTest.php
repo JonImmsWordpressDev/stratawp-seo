@@ -92,6 +92,27 @@ class SchemaOutputHelpersTest extends TestCase {
 		$this->assertSame( '+1-416-555-0100', SWPS_Schema_Graph::format_telephone( '416.555.0100', 'CA' ) );
 	}
 
+	public function test_business_description_plain_text(): void {
+		$this->assertSame(
+			'Jon Imms is a freelance WordPress developer in Omaha.',
+			SWPS_Schema_Graph::business_description( "<p>Jon Imms is a   freelance\nWordPress developer in Omaha.</p>" )
+		);
+		$this->assertSame( '', SWPS_Schema_Graph::business_description( "  \n " ) );
+	}
+
+	public function test_business_description_cuts_at_a_sentence(): void {
+		$text = 'Jon Imms builds custom WordPress sites for small businesses in Omaha. He also maintains open-source tools. ' . str_repeat( 'More words here. ', 30 );
+		$out  = SWPS_Schema_Graph::business_description( $text, 120 );
+		$this->assertSame( 'Jon Imms builds custom WordPress sites for small businesses in Omaha. He also maintains open-source tools.', $out );
+	}
+
+	public function test_business_description_falls_back_to_a_word_boundary(): void {
+		$out = SWPS_Schema_Graph::business_description( str_repeat( 'word ', 100 ), 50 );
+		$this->assertStringEndsWith( '…', $out );
+		$this->assertLessThanOrEqual( 51, mb_strlen( $out ) );
+		$this->assertStringNotContainsString( 'wor…', $out );
+	}
+
 	public function test_format_telephone_leaves_other_numbers_alone(): void {
 		$this->assertSame( '+44 20 7946 0958', SWPS_Schema_Graph::format_telephone( ' +44 20 7946 0958 ', 'GB' ) );
 		$this->assertSame( '020 7946 0958', SWPS_Schema_Graph::format_telephone( '020 7946 0958', 'GB' ) );

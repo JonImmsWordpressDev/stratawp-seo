@@ -473,6 +473,31 @@ class SWPS_Schema_Graph {
 		return sprintf( '+1-%s-%s-%s', substr( $digits, 0, 3 ), substr( $digits, 3, 3 ), substr( $digits, 6 ) );
 	}
 
+	/**
+	 * Turn the site description setting into a schema.org description.
+	 *
+	 * Plain text with collapsed whitespace. When longer than $max characters it
+	 * is cut at the last full sentence that fits (or at a word if no sentence
+	 * fits), so the business node never carries a sentence fragment.
+	 *
+	 * @param string $text Raw site description (may contain HTML).
+	 * @param int    $max  Maximum length in characters.
+	 * @return string Description, or '' when empty.
+	 */
+	public static function business_description( string $text, int $max = 300 ): string {
+		$text = html_entity_decode( wp_strip_all_tags( $text ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		$text = trim( (string) preg_replace( '/\s+/u', ' ', $text ) );
+		if ( '' === $text || mb_strlen( $text ) <= $max ) {
+			return $text;
+		}
+		$cut = mb_substr( $text, 0, $max );
+		if ( preg_match( '/^(.*[.!?])\s/us', $cut . ' ', $m ) && mb_strlen( $m[1] ) >= 40 ) {
+			return $m[1];
+		}
+		$space = mb_strrpos( $cut, ' ' );
+		return rtrim( false === $space ? $cut : mb_substr( $cut, 0, $space ), ' ,;:' ) . '…';
+	}
+
 	// -------------------------------------------------------------------------
 	// Output
 	// -------------------------------------------------------------------------
