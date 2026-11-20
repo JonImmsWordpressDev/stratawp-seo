@@ -2,6 +2,17 @@
 /**
  * WordPress hooks (filters and actions) for extensibility.
  *
+ * AEO Optimize filters. These are applied inside the AEO classes rather
+ * than through this class; this block is the central reference.
+ *
+ *   - swps_aeo_subscores   ( array $subscores, array $ctx )                 Per-dimension sub-scores, before weighting. SWPS_AEO_Scorer.
+ *   - swps_aeo_score       ( int $total, array $ctx, array $subscores )     Final weighted AEO score. SWPS_AEO_Scorer.
+ *   - swps_aeo_proposal    ( array $proposal, int $post_id )                AI-returned optimization proposal, before it is stored. SWPS_AEO_Optimizer.
+ *   - swps_aeo_schema_json ( array $json, string $type, null $post_id )     Generated schema JSON, before validation. Third argument is always null. SWPS_AEO_Schema_Generator.
+ *
+ * swps_aeo_dimensions was announced in the 4.6.0 changelog but has never
+ * been applied anywhere, so filtering it does nothing.
+ *
  * @package StrataWP_SEO
  */
 
