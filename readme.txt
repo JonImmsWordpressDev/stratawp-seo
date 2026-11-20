@@ -81,7 +81,7 @@ It can replace Yoast/RankMath/AIOSEO outright, or coexist with them (schema and 
 * **Bulk optimize page** — re-scan all posts in chunks, filter by score threshold, review per-post AI proposals in a diff modal, apply with snapshot/undo
 * **Live editor panel** — Gutenberg sidebar + classic metabox show the current AEO score and sub-scores, with one-click "Re-score" and "Improve AEO"
 * **Dynamic schema generation** — AI-generated HowTo, Recipe, Product, Review, and FAQPage JSON-LD, validated before output; defers to Yoast / RankMath / AIOSEO automatically
-* **6 REST endpoints** under /swps/v1/aeo/* plus 5 filter hooks for extensibility
+* **6 REST endpoints** under /swps/v1/aeo/* plus 4 filter hooks for extensibility
 * **Dashboard tile** — average AEO score and % of posts above threshold
 * **Deep-linked from AI Bot Analytics** — jump from any AEO gap-report row straight into the optimizer
 
@@ -731,7 +731,7 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 * New: Live AEO Score panel in the post editor (Gutenberg sidebar + classic metabox).
 * New: Dynamic JSON-LD schema generation for HowTo, Recipe, Product, Review, and QAPage. Coexists with Yoast / RankMath / AIOSEO (defers automatically; per-site override via swps_schema_override option).
 * New: 6 REST endpoints under /swps/v1/aeo/* for external/programmatic access.
-* New: 5 filter hooks for extensibility (swps_aeo_score, swps_aeo_subscores, swps_aeo_proposal, swps_aeo_schema_json, swps_aeo_dimensions).
+* New: 4 filter hooks for extensibility (swps_aeo_score, swps_aeo_subscores, swps_aeo_proposal, swps_aeo_schema_json).
 * Improvement: Dashboard "AEO health (avg)" tile shows average score and % above threshold.
 * Improvement: AI Bot Analytics gap-report rows now deep-link into the AEO Optimizer for one-click optimization.
 * Developer: Minimal PHPUnit setup for unit-testable pure-PHP scorers. Run `composer test`.
