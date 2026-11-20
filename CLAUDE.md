@@ -20,3 +20,14 @@ owner, with no AI attribution of any kind:
   and `Stable tag:` in `readme.txt` (plus a changelog entry).
 - Merging a version bump to `main` triggers `.github/workflows/release.yml`,
   which builds the plugin zip and publishes a GitHub release automatically.
+
+## Specs
+
+- Every new design spec in `docs/superpowers/specs/` starts with a
+  **Product gate** section, directly under the title and date. The template
+  and scoring rules are in `docs/product-gate.md`.
+- Score the gate before writing the implementation plan. Any row scoring 0
+  means fill it in, or ask Jon whether to drop the feature. Don't plan around
+  the gap.
+- If the spec calls a model at runtime, include the AI rows (eval set,
+  guardrails, run cost per month).
