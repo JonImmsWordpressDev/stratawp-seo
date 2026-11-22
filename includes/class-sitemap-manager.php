@@ -237,8 +237,8 @@ class SWPS_Sitemap_Manager {
 	 * Render the <url> entries of a Google News sitemap.
 	 *
 	 * @param array<int, array{loc: string, title: string, published: int}> $items       Articles, newest first.
-	 * @param string                                                         $publication Publication name.
-	 * @param string                                                         $language    ISO 639 code from news_language_code().
+	 * @param string                                                        $publication Publication name.
+	 * @param string                                                        $language    ISO 639 code from news_language_code().
 	 */
 	public static function render_news_entries( array $items, string $publication, string $language ): string {
 		$out = '';
@@ -443,7 +443,7 @@ class SWPS_Sitemap_Manager {
 			printf(
 				"<sitemap>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n</sitemap>\n",
 				esc_url( home_url( '/google-news-sitemap.xml' ) ),
-				$this->get_site_lastmod()
+				esc_xml( $this->get_site_lastmod() )
 			);
 		}
 
