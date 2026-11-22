@@ -137,7 +137,7 @@ It can replace Yoast/RankMath/AIOSEO outright, or coexist with them (schema and 
 
 = Full Sitemap System =
 
-* **Sitemap index** — post type, taxonomy, and author sub-sitemaps
+* **Sitemap index** — post type, taxonomy, and author sub-sitemaps, plus an opt-in Google News sitemap
 * **Per-URL control** — configurable priority and changefreq per URL
 * **Image sitemap entries** — image metadata included in sitemap output
 * **IndexNow integration** — auto-generated key served at /{key}.txt, auto-submit on publish/update/delete with a 60-second debounce, per-post and bulk resubmit, and a recent-activity log (auto-paused outside production)

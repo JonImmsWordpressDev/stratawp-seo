@@ -60,6 +60,24 @@ class SWPS_Sitemap_Admin {
 
 		register_setting(
 			'swps_sitemap_settings',
+			'swps_sitemap_news_enabled',
+			array(
+				'sanitize_callback' => function ( $value ) {
+					return $value ? 1 : 0;
+				},
+			)
+		);
+
+		register_setting(
+			'swps_sitemap_settings',
+			'swps_sitemap_news_name',
+			array(
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		register_setting(
+			'swps_sitemap_settings',
 			'swps_auto_redirect_slug_change',
 			array(
 				'sanitize_callback' => function ( $value ) {

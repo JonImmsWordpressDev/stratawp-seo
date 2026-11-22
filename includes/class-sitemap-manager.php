@@ -3,7 +3,7 @@
  * Full XML Sitemap Manager.
  *
  * Generates sitemap index with sub-sitemaps for post types, taxonomies,
- * and authors. Supports per-URL priority/changefreq and image entries.
+ * authors and (opt-in) Google News. Supports per-URL priority/changefreq and image entries.
  *
  * @package StrataWP_SEO
  */
@@ -13,6 +13,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class SWPS_Sitemap_Manager {
+
+	/**
+	 * Query var value for the Google News sitemap. Served at
+	 * /google-news-sitemap.xml rather than /news-sitemap.xml so it can never
+	 * shadow a public post type or taxonomy named `news`.
+	 */
+	const NEWS_TYPE = 'google-news';
+
+	/**
+	 * Google News only reads articles published in the last two days, and
+	 * caps a news sitemap at 1,000 URLs.
+	 */
+	const NEWS_WINDOW_SECONDS = 2 * DAY_IN_SECONDS;
+	const NEWS_MAX_URLS       = 1000;
 
 	private function get_urls_per_sitemap(): int {
 		return max( 100, min( 50000, (int) get_option( 'swps_sitemap_urls_per_page', 1000 ) ) );
@@ -184,6 +198,66 @@ class SWPS_Sitemap_Manager {
 			|| (bool) get_option( 'swps_noindex_author', 0 );
 	}
 
+	/**
+	 * Whether the opt-in Google News sitemap is switched on.
+	 */
+	public static function is_news_sitemap_enabled(): bool {
+		return (bool) get_option( 'swps_sitemap_news_enabled', 0 );
+	}
+
+	/**
+	 * Publication name for <news:name>. Must match the name Google News knows
+	 * the site by, so it defaults to the site title.
+	 */
+	public static function get_news_publication_name(): string {
+		$name = trim( (string) get_option( 'swps_sitemap_news_name', '' ) );
+		return '' !== $name ? $name : (string) get_bloginfo( 'name' );
+	}
+
+	/**
+	 * Convert a WordPress locale (en_US, pt_BR, zh_TW) to the ISO 639 code
+	 * Google News expects in <news:language>. Chinese is the one language
+	 * Google wants with a region: zh-cn (simplified) or zh-tw (traditional).
+	 *
+	 * @param string $locale WordPress locale, e.g. from get_locale().
+	 */
+	public static function news_language_code( string $locale ): string {
+		$locale = strtolower( str_replace( '-', '_', trim( $locale ) ) );
+		if ( '' === $locale ) {
+			return 'en';
+		}
+		if ( str_starts_with( $locale, 'zh' ) ) {
+			return in_array( $locale, array( 'zh_tw', 'zh_hk', 'zh_mo' ), true ) ? 'zh-tw' : 'zh-cn';
+		}
+		$parts = explode( '_', $locale );
+		return $parts[0];
+	}
+
+	/**
+	 * Render the <url> entries of a Google News sitemap.
+	 *
+	 * @param array<int, array{loc: string, title: string, published: int}> $items       Articles, newest first.
+	 * @param string                                                         $publication Publication name.
+	 * @param string                                                         $language    ISO 639 code from news_language_code().
+	 */
+	public static function render_news_entries( array $items, string $publication, string $language ): string {
+		$out = '';
+		foreach ( array_slice( $items, 0, self::NEWS_MAX_URLS ) as $item ) {
+			$out .= "<url>\n";
+			$out .= sprintf( "  <loc>%s</loc>\n", esc_url( $item['loc'] ) );
+			$out .= "  <news:news>\n";
+			$out .= "    <news:publication>\n";
+			$out .= sprintf( "      <news:name>%s</news:name>\n", esc_xml( $publication ) );
+			$out .= sprintf( "      <news:language>%s</news:language>\n", esc_xml( $language ) );
+			$out .= "    </news:publication>\n";
+			$out .= sprintf( "    <news:publication_date>%s</news:publication_date>\n", gmdate( 'Y-m-d\TH:i:s+00:00', (int) $item['published'] ) );
+			$out .= sprintf( "    <news:title>%s</news:title>\n", esc_xml( $item['title'] ) );
+			$out .= "  </news:news>\n";
+			$out .= "</url>\n";
+		}
+		return $out;
+	}
+
 	public function __construct() {
 		// Disable WP core sitemaps to prevent conflict detection from blocking us.
 		add_filter( 'wp_sitemaps_enabled', '__return_false' );
@@ -209,6 +283,9 @@ class SWPS_Sitemap_Manager {
 
 		// Post type sitemaps.
 		add_rewrite_rule( '([a-z0-9_-]+)-sitemap(\d*)\.xml$', 'index.php?swps_sitemap=$matches[1]&swps_sitemap_page=$matches[2]', 'top' );
+
+		// Google News sitemap.
+		add_rewrite_rule( 'google-news-sitemap\.xml$', 'index.php?swps_sitemap=' . self::NEWS_TYPE, 'top' );
 
 		// Author sitemap.
 		add_rewrite_rule( 'author-sitemap\.xml$', 'index.php?swps_sitemap=author', 'top' );
@@ -274,6 +351,12 @@ class SWPS_Sitemap_Manager {
 				exit;
 			}
 			$this->render_author_sitemap();
+		} elseif ( self::NEWS_TYPE === $type ) {
+			if ( ! self::is_news_sitemap_enabled() ) {
+				status_header( 404 );
+				exit;
+			}
+			$this->render_news_sitemap();
 		} else {
 			// Check if it's a taxonomy.
 			$taxonomies = get_taxonomies( array( 'public' => true ) );
@@ -351,6 +434,15 @@ class SWPS_Sitemap_Manager {
 			printf(
 				"<sitemap>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n</sitemap>\n",
 				esc_url( home_url( '/author-sitemap.xml' ) ),
+				$this->get_site_lastmod()
+			);
+		}
+
+		// Google News sitemap (opt-in).
+		if ( self::is_news_sitemap_enabled() ) {
+			printf(
+				"<sitemap>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n</sitemap>\n",
+				esc_url( home_url( '/google-news-sitemap.xml' ) ),
 				$this->get_site_lastmod()
 			);
 		}
@@ -508,6 +600,73 @@ class SWPS_Sitemap_Manager {
 			echo "</url>\n";
 		}
 
+		echo '</urlset>';
+	}
+
+	/**
+	 * Post types whose articles go in the Google News sitemap.
+	 *
+	 * @return string[]
+	 */
+	private function get_news_post_types(): array {
+		/**
+		 * Filter the post types included in the Google News sitemap.
+		 *
+		 * @param string[] $post_types Default: array( 'post' ).
+		 */
+		$post_types = (array) apply_filters( 'swps_news_sitemap_post_types', array( 'post' ) );
+		return array_values(
+			array_filter(
+				array_map( 'strval', $post_types ),
+				fn( string $pt ): bool => ! self::is_post_type_hidden_from_sitemap( $pt )
+			)
+		);
+	}
+
+	/**
+	 * Render the Google News sitemap: indexable articles published in the
+	 * last 48 hours, newest first. An empty <urlset> is valid when nothing
+	 * was published in the window.
+	 */
+	private function render_news_sitemap(): void {
+		$items      = array();
+		$post_types = $this->get_news_post_types();
+
+		if ( $post_types ) {
+			$posts = get_posts(
+				array(
+					'post_type'      => $post_types,
+					'post_status'    => 'publish',
+					'posts_per_page' => self::NEWS_MAX_URLS,
+					'orderby'        => 'date',
+					'order'          => 'DESC',
+					'no_found_rows'  => true,
+					'date_query'     => array(
+						array(
+							'column' => 'post_date_gmt',
+							'after'  => gmdate( 'Y-m-d H:i:s', time() - self::NEWS_WINDOW_SECONDS ),
+						),
+					),
+				)
+			);
+
+			foreach ( $posts as $post ) {
+				if ( ! self::is_post_indexable( $post ) ) {
+					continue;
+				}
+				$items[] = array(
+					'loc'       => (string) get_permalink( $post ),
+					'title'     => wp_strip_all_tags( get_the_title( $post ) ),
+					'published' => (int) get_post_time( 'U', true, $post ),
+				);
+			}
+		}
+
+		echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+		echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n";
+		echo '        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">' . "\n";
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- every value is escaped in render_news_entries().
+		echo self::render_news_entries( $items, self::get_news_publication_name(), self::news_language_code( (string) get_locale() ) );
 		echo '</urlset>';
 	}
 
