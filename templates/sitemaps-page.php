@@ -69,6 +69,29 @@ if ( ! defined( 'ABSPATH' ) ) {
 					</td>
 				</tr>
 				<tr>
+					<th><label for="swps_sitemap_news_enabled"><?php esc_html_e( 'Google News Sitemap', 'stratawp-seo' ); ?></label></th>
+					<td>
+						<input type="hidden" name="swps_sitemap_news_enabled" value="0">
+						<input type="checkbox" id="swps_sitemap_news_enabled" name="swps_sitemap_news_enabled" value="1" <?php checked( get_option( 'swps_sitemap_news_enabled' ), 1 ); ?>>
+						<p class="description">
+							<?php
+							printf(
+								/* translators: %s: Google News sitemap URL. */
+								esc_html__( 'Lists posts published in the last 48 hours at %s and adds it to the sitemap index. Only useful for sites included in Google News.', 'stratawp-seo' ),
+								'<code>' . esc_html( home_url( '/google-news-sitemap.xml' ) ) . '</code>'
+							);
+							?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th><label for="swps_sitemap_news_name"><?php esc_html_e( 'News Publication Name', 'stratawp-seo' ); ?></label></th>
+					<td>
+						<input type="text" id="swps_sitemap_news_name" name="swps_sitemap_news_name" value="<?php echo esc_attr( get_option( 'swps_sitemap_news_name', '' ) ); ?>" class="regular-text" placeholder="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>">
+						<p class="description"><?php esc_html_e( 'Must match the publication name in Google News. Leave empty to use the site title.', 'stratawp-seo' ); ?></p>
+					</td>
+				</tr>
+				<tr>
 					<th><label for="swps_auto_redirect_slug_change"><?php esc_html_e( 'Auto-Redirect on Slug Change', 'stratawp-seo' ); ?></label></th>
 					<td>
 						<input type="hidden" name="swps_auto_redirect_slug_change" value="0">
