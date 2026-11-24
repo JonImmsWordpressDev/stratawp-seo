@@ -190,6 +190,22 @@ class SWPS_Sitemap_Manager {
 	}
 
 	/**
+	 * Where a request for WordPress core's sitemap index should go instead.
+	 *
+	 * Core's root rewrite maps /sitemap.xml (and /wp-sitemap.xml) to
+	 * `sitemap=index`, and redirect_canonical() then sends /sitemap.xml to
+	 * /wp-sitemap.xml. With core sitemaps switched off that URL is a 404, so
+	 * crawlers that guess /sitemap.xml land on a dead end. Point them at the
+	 * index this plugin serves. Other core sitemap routes are left alone.
+	 *
+	 * @param string $core_sitemap The core `sitemap` query var.
+	 * @return string|null Redirect target, or null to leave the request alone.
+	 */
+	public static function core_sitemap_redirect_target( string $core_sitemap ): ?string {
+		return 'index' === $core_sitemap ? home_url( '/sitemap_index.xml' ) : null;
+	}
+
+	/**
 	 * Whether author archives are kept out of the sitemap: excluded outright,
 	 * or noindexed (a sitemap must not advertise noindex URLs).
 	 */
@@ -319,13 +335,21 @@ class SWPS_Sitemap_Manager {
 	 * Serve the appropriate sitemap based on the query var.
 	 */
 	public function serve_sitemap(): void {
-		$type = get_query_var( 'swps_sitemap', '' );
-		if ( empty( $type ) ) {
+		// Skip if another SEO plugin is actively handling sitemaps.
+		if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) ) {
 			return;
 		}
 
-		// Skip if another SEO plugin is actively handling sitemaps.
-		if ( defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) ) {
+		// Runs before redirect_canonical() (priority 10), which would send
+		// /sitemap.xml on to the disabled core index.
+		$core_target = self::core_sitemap_redirect_target( (string) get_query_var( 'sitemap', '' ) );
+		if ( null !== $core_target ) {
+			wp_redirect( $core_target, 301 );
+			exit;
+		}
+
+		$type = get_query_var( 'swps_sitemap', '' );
+		if ( empty( $type ) ) {
 			return;
 		}
 
