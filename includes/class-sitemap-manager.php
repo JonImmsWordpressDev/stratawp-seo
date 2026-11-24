@@ -344,7 +344,7 @@ class SWPS_Sitemap_Manager {
 		// /sitemap.xml on to the disabled core index.
 		$core_target = self::core_sitemap_redirect_target( (string) get_query_var( 'sitemap', '' ) );
 		if ( null !== $core_target ) {
-			wp_redirect( $core_target, 301 );
+			wp_safe_redirect( $core_target, 301 );
 			exit;
 		}
 
