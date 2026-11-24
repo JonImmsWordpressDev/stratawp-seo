@@ -95,4 +95,28 @@ class SitemapUrlTest extends TestCase {
 			);
 		}
 	}
+
+	/**
+	 * /sitemap.xml resolves to core's `sitemap=index`, which
+	 * redirect_canonical() sends to the disabled /wp-sitemap.xml (a 404).
+	 * It must go to the index this plugin serves instead.
+	 */
+	public function test_core_sitemap_index_redirects_to_plugin_index(): void {
+		$this->assertSame(
+			'https://example.com/sitemap_index.xml',
+			SWPS_Sitemap_Manager::core_sitemap_redirect_target( 'index' )
+		);
+	}
+
+	/**
+	 * Requests that are not for core's index are left alone.
+	 */
+	public function test_other_core_sitemap_routes_are_not_redirected(): void {
+		foreach ( array( '', 'posts', 'taxonomies', 'users' ) as $core_sitemap ) {
+			$this->assertNull(
+				SWPS_Sitemap_Manager::core_sitemap_redirect_target( $core_sitemap ),
+				"Core sitemap '{$core_sitemap}' must not be redirected."
+			);
+		}
+	}
 }
