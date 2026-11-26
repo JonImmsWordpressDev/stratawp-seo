@@ -22,7 +22,7 @@ class SitemapCacheTest extends TestCase {
 		$GLOBALS['swps_test_transients']   = array();
 		$GLOBALS['swps_test_post_objects'] = array();
 		foreach ( array( 3, 5, 8 ) as $id ) {
-			$GLOBALS['swps_test_post_objects'][ $id ] = (object) array( 'ID' => $id );
+			$GLOBALS['swps_test_post_objects'][ $id ] = (object) array( 'ID' => $id, 'post_status' => 'publish', 'post_type' => 'post' );
 		}
 	}
 
@@ -41,7 +41,7 @@ class SitemapCacheTest extends TestCase {
 	private function add_posts( int $count ): void {
 		$GLOBALS['swps_test_post_objects'] = array();
 		for ( $id = 1; $id <= $count; $id++ ) {
-			$GLOBALS['swps_test_post_objects'][ $id ] = (object) array( 'ID' => $id );
+			$GLOBALS['swps_test_post_objects'][ $id ] = (object) array( 'ID' => $id, 'post_status' => 'publish', 'post_type' => 'post' );
 		}
 	}
 

@@ -136,6 +136,66 @@ class SitemapIndexableTest extends TestCase {
 		$this->assertFalse( SWPS_Sitemap_Manager::is_post_indexable( $this->post( 4, 'publish', 'product' ) ) );
 	}
 
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_password_protected_post_is_not_indexable(): void {
+		$post                = $this->post( 5 );
+		$post->post_password = 'secret';
+		$this->assertFalse( SWPS_Sitemap_Manager::is_post_indexable( $post ) );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_cross_canonical_post_is_not_indexable(): void {
+		$GLOBALS['swps_test_permalinks'][6]                       = 'https://example.com/post-a/';
+		$GLOBALS['swps_test_postmeta'][6]['_swps_canonical_url'] = 'https://example.com/post-b/';
+		$this->assertFalse( SWPS_Sitemap_Manager::is_post_indexable( $this->post( 6 ) ) );
+	}
+
+	/**
+	 * A canonical that only differs by scheme, host case or trailing slash
+	 * still points at the post itself.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_self_canonical_post_is_indexable(): void {
+		$GLOBALS['swps_test_permalinks'][7]                       = 'https://example.com/post-a/';
+		$GLOBALS['swps_test_postmeta'][7]['_swps_canonical_url'] = 'http://Example.com/post-a';
+		$this->assertTrue( SWPS_Sitemap_Manager::is_post_indexable( $this->post( 7 ) ) );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_cross_canonical_term_is_not_indexable(): void {
+		$GLOBALS['swps_test_term_links'][8]                       = 'https://example.com/category/a/';
+		$GLOBALS['swps_test_termmeta'][8]['_swps_canonical_url'] = 'https://example.com/category/b/';
+		$this->assertFalse( SWPS_Sitemap_Manager::is_term_indexable( 8, 'category' ) );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_self_canonical_term_is_indexable(): void {
+		$GLOBALS['swps_test_term_links'][9]                       = 'https://example.com/category/a/';
+		$GLOBALS['swps_test_termmeta'][9]['_swps_canonical_url'] = 'https://example.com/category/a/';
+		$this->assertTrue( SWPS_Sitemap_Manager::is_term_indexable( 9, 'category' ) );
+	}
+
+	public function test_is_same_url_keeps_path_and_query_significant(): void {
+		$this->assertTrue( SWPS_Sitemap_Manager::is_same_url( 'https://example.com/a/#top', 'https://example.com/a' ) );
+		$this->assertFalse( SWPS_Sitemap_Manager::is_same_url( 'https://example.com/a/', 'https://example.com/b/' ) );
+		$this->assertFalse( SWPS_Sitemap_Manager::is_same_url( 'https://example.com/a/?p=2', 'https://example.com/a/' ) );
+		$this->assertFalse( SWPS_Sitemap_Manager::is_same_url( 'https://other.com/a/', 'https://example.com/a/' ) );
+	}
+
 	public function test_indexable_term_is_indexable(): void {
 		$this->assertTrue( SWPS_Sitemap_Manager::is_term_indexable( 1, 'category' ) );
 	}
