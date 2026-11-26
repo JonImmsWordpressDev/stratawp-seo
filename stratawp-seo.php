@@ -320,6 +320,13 @@ final class StrataWP_SEO {
 	public SWPS_Citation_Tracker $citation_tracker;
 
 	/**
+	 * Optional category base removal.
+	 *
+	 * @var SWPS_Term_Base
+	 */
+	public SWPS_Term_Base $term_base;
+
+	/**
 	 * AI citation tracker admin (AJAX + settings).
 	 *
 	 * @var SWPS_Citation_Admin
@@ -332,12 +339,6 @@ final class StrataWP_SEO {
 	public SWPS_Taxonomy_Meta $taxonomy_meta;
 	public SWPS_Sitemap_Manager $sitemap_manager;
 	public SWPS_Search_Appearance $search_appearance;
-	/**
-	 * Optional category base removal.
-	 *
-	 * @var SWPS_Term_Base
-	 */
-	public SWPS_Term_Base $term_base;
 	public SWPS_Breadcrumbs $breadcrumbs;
 	public SWPS_Redirect_Manager $redirect_manager;
 	public SWPS_Post_List_SEO $post_list_seo;
