@@ -1,6 +1,6 @@
 <?php
 /**
- * Trait SWPS_Crawl_Ability_Defs — Site Crawl ability definitions for SWPS_Abilities.
+ * Trait SWPS_Crawl_Ability_Defs: Site Crawl ability definitions for SWPS_Abilities.
  *
  * Kept apart from SWPS_Ability_Defs so neither file grows past 500 lines.
  * The callbacks delegate to SWPS_Crawl_Abilities.

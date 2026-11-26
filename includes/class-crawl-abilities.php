@@ -1,6 +1,6 @@
 <?php
 /**
- * SWPS_Crawl_Abilities — Site Crawl operations exposed as abilities.
+ * SWPS_Crawl_Abilities: Site Crawl operations exposed as abilities.
  *
  * Backs the run-site-crawl, get-crawl-issues, apply-crawl-fix and
  * get-canonical-status abilities. Every WordPress or crawler call goes
