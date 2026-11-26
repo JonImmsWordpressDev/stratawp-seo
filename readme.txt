@@ -282,7 +282,7 @@ It can replace Yoast/RankMath/AIOSEO outright, or coexist with them (schema and 
 
 = Machine Access (v4.19) =
 
-* **13 governed abilities** (queue topics, generate posts, run audits, AEO scan/propose/apply/undo, manage redirects, read stats) registered with the WP Abilities API (WordPress 6.9+) and exposed via REST
+* **17 governed abilities** (queue topics, generate posts, run audits, run a Site Crawl and apply its fixes, check a URL's canonical status, AEO scan/propose/apply/undo, manage redirects, read stats) registered with the WP Abilities API (WordPress 6.9+) and exposed via REST
 * **Write abilities are off by default** — per-ability toggles plus an activity log of every call
 * **Standard WordPress auth** — application passwords work out of the box for external agents
 
@@ -425,6 +425,9 @@ No. One AI provider key (Anthropic, OpenAI, Google, or xAI) unlocks everything A
 By default, nothing is lost: uninstalling only clears scheduled tasks and caches, so your settings, analytics, keywords, redirects, backlinks, topics, and voice profiles all survive a delete + reinstall. For a true clean removal, enable Remove Data on Uninstall under Settings → Advanced before deleting — then everything the plugin ever stored is permanently wiped.
 
 == Changelog ==
+
+= Unreleased =
+* Added: Site Crawl is now available to AI agents through Machine Access. Four new abilities: run-site-crawl queues a crawl and returns its ID (refused while one is running), get-crawl-issues returns the latest crawl's issues by check with paging and the fixers that apply to each, apply-crawl-fix applies one fix through the same Fix-It path as the button (so it can be undone on the Site Audit screen), and get-canonical-status reports a URL's or post's canonical, robots directives and sitemap inclusion. Like the other write abilities, run-site-crawl and apply-crawl-fix are off until you turn them on.
 
 = 4.35.1 =
 * Fixed: the Social Image set on the page assigned to "Posts page" was ignored, so every share of the blog index fell back to the site logo. This shares the root cause of the title fix above: the posts page is never is_singular(), so the per-post Open Graph path never ran for it, and the non-singular output carried no is_home() branch for the image. og:image and twitter:image on the posts page now use that page's Social Image when one is set, and still fall back to the schema logo or site icon when it is not. Other archives are unaffected.
