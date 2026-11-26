@@ -906,7 +906,7 @@ final class StrataWP_SEO {
 		}
 
 		$count    = min( (int) ( $_POST['count'] ?? 1 ), 5 );
-		$template = sanitize_text_field( $_POST['template'] ?? 'auto' );
+		$template = sanitize_text_field( wp_unslash( $_POST['template'] ?? 'auto' ) );
 		$brand    = isset( $_POST['brand_mentions'] ) && is_scalar( $_POST['brand_mentions'] ) && '' !== $_POST['brand_mentions']
 			? SWPS_Generator::normalize_brand_mentions( sanitize_key( wp_unslash( (string) $_POST['brand_mentions'] ) ) )
 			: null;

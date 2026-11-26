@@ -38,9 +38,6 @@ $gen_tone_label    = '' !== $gen_style_preview
 	: ucfirst( $gen_tone );
 $gen_settings_url  = admin_url( 'admin.php?page=swps-settings' );
 
-// Site default for the per-post brand mention override (Settings > Writing Preferences).
-$gen_brand_mentions = SWPS_Generator::normalize_brand_mentions( null );
-
 // Custom content brief (optional, multiline) and its "help me write my brief" fields.
 $gen_brief_max         = SWPS_Content_Brief::MAX_BRIEF_LENGTH;
 $gen_brief_field_max   = SWPS_Content_Brief::MAX_FIELD_LENGTH;
@@ -235,7 +232,7 @@ $gen_parent_dropdown  = wp_dropdown_pages(
 				<div id="swps-brand-mentions-group" class="swps-form-group swps-form-group-inline">
 					<label for="swps-brand-mentions"><?php esc_html_e( 'Brand mentions', 'stratawp-seo' ); ?></label>
 					<select id="swps-brand-mentions" <?php echo ! $has_api_key ? 'disabled' : ''; ?>>
-						<option value=""><?php echo esc_html( sprintf( /* translators: %s: the brand mention mode configured in settings. */ __( 'Use my default (%s)', 'stratawp-seo' ), ucfirst( $gen_brand_mentions ) ) ); ?></option>
+						<option value=""><?php echo esc_html( sprintf( /* translators: %s: the brand mention mode configured in settings. */ __( 'Use my default (%s)', 'stratawp-seo' ), ucfirst( SWPS_Generator::normalize_brand_mentions( null ) ) ) ); ?></option>
 						<option value="full"><?php esc_html_e( 'Full: weave in my product and CTA', 'stratawp-seo' ); ?></option>
 						<option value="limited"><?php esc_html_e( 'Limited: 2-3 light mentions', 'stratawp-seo' ); ?></option>
 						<option value="none"><?php esc_html_e( 'None: purely educational', 'stratawp-seo' ); ?></option>
