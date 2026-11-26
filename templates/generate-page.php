@@ -532,6 +532,10 @@ $gen_parent_dropdown  = wp_dropdown_pages(
 				<td><strong><?php esc_html_e( 'Sources:', 'stratawp-seo' ); ?></strong></td>
 				<td><ul id="swps-result-sources" class="swps-result-sources"></ul></td>
 			</tr>
+			<tr id="swps-result-removed-links-row" style="display: none;">
+				<td><strong><?php esc_html_e( 'Unverified Links:', 'stratawp-seo' ); ?></strong></td>
+				<td><span id="swps-result-removed-links-count"></span><ul id="swps-result-removed-links" class="swps-result-sources"></ul></td>
+			</tr>
 			<tr id="swps-result-cost-row" style="display: none;">
 				<td><strong><?php esc_html_e( 'Cost:', 'stratawp-seo' ); ?></strong></td>
 				<td id="swps-result-cost"></td>
