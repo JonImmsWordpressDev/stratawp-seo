@@ -391,7 +391,7 @@ class SWPS_Sitemap_Manager {
 	 * @param WP_Post|null $post    Post object.
 	 */
 	public function on_save_post( $post_id, $post = null ): void {
-		if ( $post && 'revision' === ( $post->post_type ?? '' ) ) {
+		if ( $post && 'revision' === $post->post_type ) {
 			return;
 		}
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
@@ -830,11 +830,14 @@ class SWPS_Sitemap_Manager {
 		if ( empty( $priority ) ) {
 			$priority = 'page' === $post_type ? '0.8' : '0.6';
 		}
-		$changefreq = get_post_meta( $post->ID, '_swps_sitemap_changefreq', true ) ?: 'weekly';
+		$changefreq = get_post_meta( $post->ID, '_swps_sitemap_changefreq', true );
+		if ( empty( $changefreq ) ) {
+			$changefreq = 'weekly';
+		}
 
 		echo "<url>\n";
 		printf( "  <loc>%s</loc>\n", esc_url( get_permalink( $post ) ) );
-		printf( "  <lastmod>%s</lastmod>\n", gmdate( 'Y-m-d\TH:i:s+00:00', $modified ) );
+		printf( "  <lastmod>%s</lastmod>\n", esc_xml( gmdate( 'Y-m-d\TH:i:s+00:00', $modified ) ) );
 		printf( "  <changefreq>%s</changefreq>\n", esc_xml( $changefreq ) );
 		printf( "  <priority>%s</priority>\n", esc_attr( $priority ) );
 
