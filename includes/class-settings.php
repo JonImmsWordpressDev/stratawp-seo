@@ -505,6 +505,18 @@ class SWPS_Settings {
 		);
 
 		$this->add_field(
+			'brand_mentions',
+			__( 'Brand Mentions', 'stratawp-seo' ),
+			'select',
+			'swps_writing_section',
+			array(
+				'options'     => SWPS_Generator::brand_mention_modes(),
+				'default'     => SWPS_Generator::BRAND_MENTIONS_FULL,
+				'description' => __( 'How much generated posts promote your own products or services. Educational posts tend to earn more links and AI citations. Used by scheduled runs and the queue; the Generate Content form can override it per post. Pages are not affected.', 'stratawp-seo' ),
+			)
+		);
+
+		$this->add_field(
 			'target_keywords',
 			__( 'Target Keywords', 'stratawp-seo' ),
 			'textarea',

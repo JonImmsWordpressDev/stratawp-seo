@@ -109,6 +109,11 @@ class SWPS_REST_API {
 						'sanitize_callback' => array( 'SWPS_Source_Material', 'sanitize' ),
 						'default'           => '',
 					),
+					'brand_mentions' => array(
+						'type'        => 'string',
+						'enum'        => array( 'full', 'limited', 'none' ),
+						'description' => __( 'How much a post promotes the site\'s own offer: full, limited or none (defaults to Settings). Ignored for pages.', 'stratawp-seo' ),
+					),
 				),
 			)
 		);
@@ -621,6 +626,9 @@ class SWPS_REST_API {
 			'parent_id'    => (int) $request->get_param( 'parent_id' ),
 			'sources'      => (string) $request->get_param( 'sources' ),
 		);
+		if ( null !== $request->get_param( 'brand_mentions' ) ) {
+			$options['brand_mentions'] = (string) $request->get_param( 'brand_mentions' );
+		}
 
 		$raw_images = array();
 		if ( null !== $request->get_param( 'featured_image' ) ) {

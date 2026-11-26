@@ -48,6 +48,8 @@
     const $bulkGroup         = $('#swps-bulk-group');
     const $featuredImage     = $('#swps-featured-image');
     const $contentImages     = $('#swps-content-images');
+    const $brandMentions     = $('#swps-brand-mentions');
+    const $brandGroup        = $('#swps-brand-mentions-group');
     const $toneSelect        = $('#swps-tone');
     const $generateBtnLabel  = $('#swps-generate-btn-label');
 
@@ -434,6 +436,7 @@
         if ($parentSelect.length) { data.parent_id = data.content_type === 'page' ? ($parentSelect.val() || '0') : '0'; }
         if ($featuredImage.length) { data.featured_image = $featuredImage.is(':checked') ? '1' : '0'; }
         if ($contentImages.length) { data.content_images = String(parseInt($contentImages.val(), 10) || 0); }
+        if ($brandMentions.length && data.content_type === 'post' && $brandMentions.val()) { data.brand_mentions = $brandMentions.val(); }
         return data;
     }
 
@@ -459,6 +462,7 @@
         populateTemplates(type);
         $parentGroup.prop('hidden', type !== 'page');
         $bulkGroup.prop('hidden', type === 'page');
+        $brandGroup.prop('hidden', type === 'page');
         $bulkBtn.toggle(type !== 'page');
         if ($generateBtnLabel.length) {
             $generateBtnLabel.text(type === 'page' ? 'Generate Page' : 'Generate Post');
@@ -572,6 +576,9 @@
             }
             if (typeof data.content_images !== 'undefined' && $contentImages.length && !$contentImages.prop('disabled')) {
                 $contentImages.val(parseInt(data.content_images, 10) || 0);
+            }
+            if (data.brand_mentions && $brandMentions.length) {
+                $brandMentions.val(data.brand_mentions);
             }
             updateImageSummary();
             updateToneSummary();
@@ -845,6 +852,7 @@
                 nonce: swpsAdmin.nonce,
                 count: count,
                 template: template,
+                brand_mentions: $brandMentions.length ? ($brandMentions.val() || '') : '',
             },
             timeout: 600000, // 10 minute timeout for bulk.
             success: function(response) {
