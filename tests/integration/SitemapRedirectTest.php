@@ -10,6 +10,9 @@ class SitemapRedirectTest extends WP_UnitTestCase {
 	public function set_up(): void {
 		parent::set_up();
 		$this->set_permalink_structure( '/%postname%/' );
+		// The test case resets public query vars between tests, which drops
+		// core's `sitemap` var. A real request registers it on init.
+		wp_sitemaps_get_server()->register_rewrites();
 		StrataWP_SEO::instance()->sitemap_manager->register_rewrite_rules();
 		flush_rewrite_rules( false );
 		add_filter( 'wp_redirect', array( $this, 'capture_redirect' ), 10, 2 );
