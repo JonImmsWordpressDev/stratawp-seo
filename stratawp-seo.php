@@ -336,12 +336,6 @@ final class StrataWP_SEO {
 	public SWPS_Redirect_Manager $redirect_manager;
 	public SWPS_Post_List_SEO $post_list_seo;
 	public SWPS_Sitemap_Admin $sitemap_admin;
-	/**
-	 * Rewrite rule health check (Site Health test and rebuild action).
-	 *
-	 * @var SWPS_Rewrite_Health
-	 */
-	public SWPS_Rewrite_Health $rewrite_health;
 	public SWPS_IndexNow $indexnow;
 	public SWPS_Internal_Links $internal_links;
 	public SWPS_Internal_Links_Admin $internal_links_admin;
@@ -472,8 +466,8 @@ final class StrataWP_SEO {
 		$this->breadcrumbs           = new SWPS_Breadcrumbs();
 		$this->redirect_manager      = new SWPS_Redirect_Manager();
 		$this->sitemap_admin         = new SWPS_Sitemap_Admin();
-		$this->rewrite_health        = new SWPS_Rewrite_Health();
 		$this->indexnow              = new SWPS_IndexNow();
+		new SWPS_Rewrite_Health(); // Registers the Site Health test and the rebuild action.
 
 		if ( is_admin() ) {
 			$this->post_list_seo = new SWPS_Post_List_SEO( $this->content_scorer );
