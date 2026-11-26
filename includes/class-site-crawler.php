@@ -24,6 +24,7 @@ require_once __DIR__ . '/crawl-checks/class-minify-heuristic.php';
 require_once __DIR__ . '/crawl-checks/class-checks-content.php';
 require_once __DIR__ . '/crawl-checks/class-checks-image-alt.php';
 require_once __DIR__ . '/crawl-checks/class-checks-aggregate.php';
+require_once __DIR__ . '/crawl-checks/class-checks-sitemap.php';
 require_once __DIR__ . '/crawl-checks/class-crawl-score.php';
 
 /**
@@ -65,6 +66,9 @@ class SWPS_Site_Crawler {
 
 	/** Maximum crawl depth from seed. */
 	public const MAX_DEPTH = 5;
+
+	/** Maximum sitemap XML documents (index plus children) read per run. */
+	private const MAX_SITEMAP_FETCHES = 50;
 
 	/** Query-string URL cap per unique path (crawl-trap guard). */
 	private const QS_CAP_PER_PATH = 2;
@@ -536,7 +540,9 @@ class SWPS_Site_Crawler {
 	 *                          final_url (string, post-redirect URL; falls back to url).
 	 * @param array  $page      Result of parse_html() on the response body. The caller may
 	 *                          enrich it with post_id (int) and sitemap_excluded (bool) for
-	 *                          the noindex-in-sitemap check (pure callers pass fixtures), and
+	 *                          the noindex-in-sitemap check (pure callers pass fixtures), with
+	 *                          sitemap (array{lastmod: string, post_id: int}) when the URL came
+	 *                          from the sitemap, for the sitemap audit checks, and
 	 *                          should carry the response content_type (string) through so
 	 *                          page-level checks are skipped for non-HTML resources; an absent
 	 *                          content_type key is treated as HTML for backward compatibility.
@@ -560,9 +566,24 @@ class SWPS_Site_Crawler {
 			)
 		);
 
+		$registered = SWPS_Crawl_Check_Registry::all( $excluded );
+
+		// Sitemap checks run first, whatever the URL answered, so a sitemap
+		// URL that redirects or errors is still recorded.
+		$issues = array();
+		if ( isset( $facts['sitemap'] ) ) {
+			foreach ( $registered as $check ) {
+				if ( in_array( $check->id(), SWPS_Sitemap_Audit::CHECK_IDS, true ) ) {
+					$issue = $check->check_page( $facts );
+					if ( null !== $issue ) {
+						$issues[] = $issue;
+					}
+				}
+			}
+		}
+
 		// Fetch-level checks always run; loop and broken results end evaluation.
 		$fetch_checks = array( new SWPS_Check_Redirect_Loop(), new SWPS_Check_Broken_Link(), new SWPS_Check_Redirect_Chain() );
-		$issues       = array();
 		foreach ( $fetch_checks as $check ) {
 			$issue = $check->check_page( $facts );
 			if ( null !== $issue ) {
@@ -586,8 +607,9 @@ class SWPS_Site_Crawler {
 		}
 
 		$page_checks = array_filter(
-			SWPS_Crawl_Check_Registry::all( $excluded ),
+			$registered,
 			static fn( SWPS_Crawl_Check $c ) => ! in_array( $c->id(), array( 'redirect_loop', 'broken_link', 'redirect_chain' ), true )
+				&& ! in_array( $c->id(), SWPS_Sitemap_Audit::CHECK_IDS, true )
 		);
 
 		return array_merge( $issues, SWPS_Crawl_Check_Registry::run_page_checks( $facts, array_values( $page_checks ) ) );
@@ -627,13 +649,27 @@ class SWPS_Site_Crawler {
 			'external_checked' => 0,
 			'started_at'       => gmdate( 'Y-m-d H:i:s' ),
 			'qs_path_counts'   => array(),
+			'sitemap_urls'     => array(),
 		);
 		update_option( self::OPT_STATE, $state, false );
 
-		// Seed queue from sitemap post URLs.
-		$seeds     = $this->get_seed_urls();
 		$table     = $wpdb->prefix . SWPS_Crawl_Issues::TABLE_QUEUE;
 		$home_host = self::get_home_host();
+
+		// URLs the sitemap actually lists (with their lastmod) are seeded
+		// first so the internal cap never crowds them out; the sitemap audit
+		// checks look them up by normalized URL in process_chunk().
+		$sitemap_seeds = array();
+		foreach ( $this->get_sitemap_entries( $internal_cap, $home_host ) as $entry ) {
+			$norm = self::normalize_url( $entry['loc'], $home_host );
+			if ( '' === $norm || isset( $state['sitemap_urls'][ $norm ] ) ) {
+				continue;
+			}
+			$state['sitemap_urls'][ $norm ] = $entry['lastmod'];
+			$sitemap_seeds[]                = $entry['loc'];
+		}
+
+		$seeds = array_merge( $sitemap_seeds, $this->get_seed_urls() );
 
 		foreach ( $seeds as $url ) {
 			if ( $state['internal_queued'] >= $internal_cap ) {
@@ -813,6 +849,15 @@ class SWPS_Site_Crawler {
 			// Carries through to classify()'s $facts merge regardless of
 			// branch, so its content-type gate always has a real value.
 			$page['content_type'] = $content_type;
+
+			// Sitemap entry for the sitemap audit checks (sitemap URLs only).
+			$sitemap_norm = self::normalize_url( $url, $home_host );
+			if ( '' !== $sitemap_norm && isset( $state['sitemap_urls'][ $sitemap_norm ] ) ) {
+				$page['sitemap'] = array(
+					'lastmod' => (string) $state['sitemap_urls'][ $sitemap_norm ],
+					'post_id' => (int) url_to_postid( $url ),
+				);
+			}
 
 			// Classify and store issues.
 			$target = SWPS_Crawl_Target::resolve( $url );
@@ -1336,6 +1381,60 @@ class SWPS_Site_Crawler {
 		}
 
 		return array_values( array_unique( array_filter( $urls ) ) );
+	}
+
+	/**
+	 * Read the advertised XML sitemap (index plus internal child sitemaps)
+	 * and return its URL entries, at most $limit of them.
+	 *
+	 * Reads what crawlers actually get rather than rebuilding the list from
+	 * the database, so a broken lastmod or a stale URL in the served XML is
+	 * what gets audited. A sitemap that cannot be fetched or parsed yields
+	 * no entries and the sitemap checks simply do not run.
+	 *
+	 * @param int    $limit     Maximum URL entries to return.
+	 * @param string $home_host Home host.
+	 * @return array<int, array{loc: string, lastmod: string}>
+	 */
+	private function get_sitemap_entries( int $limit, string $home_host ): array {
+		if ( $limit <= 0 || ! class_exists( 'SWPS_Sitemap_Manager' ) ) {
+			return array();
+		}
+
+		$entries = array();
+		$pending = array( SWPS_Sitemap_Manager::get_sitemap_url() );
+		$seen    = array();
+		$fetches = 0;
+		$found   = 0;
+
+		while ( ! empty( $pending ) && $found < $limit && $fetches < self::MAX_SITEMAP_FETCHES ) {
+			$sitemap_url = (string) array_shift( $pending );
+			$norm        = self::normalize_url( $sitemap_url, $home_host );
+			if ( '' === $norm || isset( $seen[ $norm ] ) || ! self::is_internal( $sitemap_url, $home_host ) ) {
+				continue;
+			}
+			$seen[ $norm ] = true;
+			++$fetches;
+
+			$fetch = $this->fetch_url( $sitemap_url );
+			if ( 200 !== (int) $fetch['status'] || '' === (string) $fetch['body'] ) {
+				continue;
+			}
+
+			$parsed = SWPS_Sitemap_Audit::parse_sitemap_xml( (string) $fetch['body'] );
+			foreach ( $parsed['sitemaps'] as $child ) {
+				$pending[] = $child;
+			}
+			foreach ( $parsed['urls'] as $entry ) {
+				if ( $found >= $limit ) {
+					break;
+				}
+				$entries[] = $entry;
+				++$found;
+			}
+		}
+
+		return $entries;
 	}
 
 	/**

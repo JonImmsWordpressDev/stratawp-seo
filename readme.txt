@@ -427,6 +427,7 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 == Changelog ==
 
 = Unreleased =
+* Added: Site Crawl now audits the sitemap itself. It reads the URLs your XML sitemap lists and flags the ones that redirect, return an error (404, 500 or no response), point their canonical tag at a different URL, or carry an impossible last-modified date (unreadable, before 2000 such as the 1970 date a missing value produces, or in the future). Sitemap URLs are crawled first so the crawl limit never skips them. Where the post is known, the redirect, error and canonical findings offer the one-click "Exclude from sitemap" fix.
 * Added: four alt text quality checks in Site Crawl, next to the missing alt check. They flag alt text that looks like a file name or camera default (such as IMG_1234, DSC0001, screenshot-2026-01-02 or hero_banner.jpg), alt text over 150 characters, keyword-stuffed alt text (the same word three or more times, or a comma-separated keyword list), and the same alt text used on five or more different image files across the site. Each issue lists the image and the page it is on. Decorative images with empty alt text are never flagged, and one image reused on many pages does not count as a duplicate.
 
 = 4.35.1 =
