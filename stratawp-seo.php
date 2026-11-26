@@ -219,6 +219,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-taxonomy-meta.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-sitemap-manager.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rewrite-health.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-search-appearance.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-term-base.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-breadcrumbs.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-redirect-manager.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-redirect-admin.php';
@@ -321,6 +322,13 @@ final class StrataWP_SEO {
 	 * @var SWPS_Citation_Tracker
 	 */
 	public SWPS_Citation_Tracker $citation_tracker;
+
+	/**
+	 * Optional category base removal.
+	 *
+	 * @var SWPS_Term_Base
+	 */
+	public SWPS_Term_Base $term_base;
 
 	/**
 	 * AI citation tracker admin (AJAX + settings).
@@ -466,6 +474,7 @@ final class StrataWP_SEO {
 		$this->taxonomy_meta         = new SWPS_Taxonomy_Meta();
 		$this->sitemap_manager       = new SWPS_Sitemap_Manager();
 		$this->search_appearance     = new SWPS_Search_Appearance();
+		$this->term_base             = new SWPS_Term_Base();
 		$this->breadcrumbs           = new SWPS_Breadcrumbs();
 		$this->redirect_manager      = new SWPS_Redirect_Manager();
 		$this->sitemap_admin         = new SWPS_Sitemap_Admin();
