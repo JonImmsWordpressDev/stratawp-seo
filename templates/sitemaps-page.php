@@ -8,16 +8,23 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+// phpcs:disable WordPress.Security.NonceVerification.Recommended -- read-only view state.
+$swps_preview_file = isset( $_GET['swps_preview'] ) ? sanitize_text_field( wp_unslash( $_GET['swps_preview'] ) ) : '';
+$swps_preview_tab  = isset( $_GET['swps_preview'] );
+$swps_preview_page = isset( $_GET['swps_preview_page'] ) ? absint( $_GET['swps_preview_page'] ) : 1;
+// phpcs:enable WordPress.Security.NonceVerification.Recommended
 ?>
 <div class="wrap swps-sitemaps-page">
 	<h1><?php esc_html_e( 'Sitemaps', 'stratawp-seo' ); ?></h1>
 
 	<h2 class="nav-tab-wrapper">
-		<a href="#dashboard" class="nav-tab nav-tab-active" data-tab="dashboard"><?php esc_html_e( 'Dashboard', 'stratawp-seo' ); ?></a>
+		<a href="#dashboard" class="nav-tab<?php echo $swps_preview_tab ? '' : ' nav-tab-active'; ?>" data-tab="dashboard"><?php esc_html_e( 'Dashboard', 'stratawp-seo' ); ?></a>
+		<a href="#preview" class="nav-tab<?php echo $swps_preview_tab ? ' nav-tab-active' : ''; ?>" data-tab="preview"><?php esc_html_e( 'Preview', 'stratawp-seo' ); ?></a>
 		<a href="#settings" class="nav-tab" data-tab="settings"><?php esc_html_e( 'Settings', 'stratawp-seo' ); ?></a>
 	</h2>
 
-	<div id="tab-dashboard" class="swps-tab-content" data-tab="dashboard">
+	<div id="tab-dashboard" class="swps-tab-content" data-tab="dashboard"<?php echo $swps_preview_tab ? ' style="display:none;"' : ''; ?>>
 		<div class="postbox">
 			<div class="inside">
 				<h3><?php esc_html_e( 'Sitemap Index', 'stratawp-seo' ); ?></h3>
@@ -48,6 +55,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</table>
 
 		<?php require SWPS_PLUGIN_DIR . 'templates/indexnow-panel.php'; ?>
+	</div>
+
+	<div id="tab-preview" class="swps-tab-content" data-tab="preview"<?php echo $swps_preview_tab ? '' : ' style="display:none;"'; ?>>
+		<?php require SWPS_PLUGIN_DIR . 'templates/sitemap-preview.php'; ?>
 	</div>
 
 	<div id="tab-settings" class="swps-tab-content" data-tab="settings" style="display:none;">
