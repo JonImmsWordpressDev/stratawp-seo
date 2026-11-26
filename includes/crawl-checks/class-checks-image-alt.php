@@ -149,7 +149,7 @@ class SWPS_Alt_Text_Quality {
 			}
 		}
 
-		$parts = array_values( array_filter( array_map( 'trim', explode( ',', $alt ) ), 'strlen' ) );
+		$parts = array_values( array_filter( array_map( 'trim', explode( ',', $alt ) ), static fn( string $part ): bool => '' !== $part ) );
 		if ( count( $parts ) < self::KEYWORD_LIST_PARTS ) {
 			return false;
 		}
