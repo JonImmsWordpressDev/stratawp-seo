@@ -30,6 +30,12 @@ function get_taxonomies( $args = array() ) {
 function get_terms( $args = array() ) {
 	return array();
 }
+function wp_count_terms( $args = array() ) {
+	return 0;
+}
+function is_taxonomy_hierarchical( $taxonomy ) {
+	return 'category' === $taxonomy;
+}
 function is_wp_error( $thing ) {
 	return false;
 }

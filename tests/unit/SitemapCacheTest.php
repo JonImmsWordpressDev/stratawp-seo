@@ -127,7 +127,8 @@ class SitemapCacheTest extends TestCase {
 
 		$xml = $manager->get_sitemap_xml( 'post', 99 );
 
-		$this->assertStringContainsString( '<urlset', (string) $xml );
+		// Past the last page is a 404 (issue #139), and nothing is cached.
+		$this->assertNull( $xml );
 		$this->assertSame( array(), $GLOBALS['swps_test_transients'] );
 	}
 

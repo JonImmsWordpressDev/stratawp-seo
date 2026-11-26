@@ -64,6 +64,32 @@ class SWPS_Sitemap_Manager {
 	private function get_urls_per_sitemap(): int {
 		return max( 100, min( 50000, (int) get_option( 'swps_sitemap_urls_per_page', 1000 ) ) );
 	}
+
+	/**
+	 * Number of sub-sitemap pages for a URL count. Always at least 1.
+	 *
+	 * @param int $count    Items to list.
+	 * @param int $per_page URLs per sitemap.
+	 */
+	public static function page_count( int $count, int $per_page ): int {
+		return max( 1, (int) ceil( max( 0, $count ) / max( 1, $per_page ) ) );
+	}
+
+	/**
+	 * Query offset for a 1-based sitemap page.
+	 *
+	 * @param int $page     Page number, 1-based.
+	 * @param int $per_page URLs per sitemap.
+	 */
+	public static function page_offset( int $page, int $per_page ): int {
+		return ( max( 1, $page ) - 1 ) * max( 1, $per_page );
+	}
+
+	/**
+	 * Whether a post type is left out of the sitemap.
+	 *
+	 * @param string $post_type Post type name.
+	 */
 	private static function is_post_type_hidden_from_sitemap( string $post_type ): bool {
 		return 'attachment' === $post_type
 			|| (bool) get_option( "swps_sitemap_exclude_{$post_type}", 0 )
@@ -449,15 +475,15 @@ class SWPS_Sitemap_Manager {
 			return null;
 		}
 
-		$is_post_type = $this->is_post_type_sitemap( $type );
-		if ( ! $is_post_type ) {
+		if ( ! $this->is_paged_type( $type ) ) {
 			$page = 1;
+		} elseif ( $page > $this->get_sitemap_page_count( $type ) ) {
+			// A page past the last one is a 404, so made-up page numbers
+			// cannot fill the options table with transients either.
+			return null;
 		}
 
-		// Only pages that exist are cached, so requests for made-up page
-		// numbers cannot fill the options table with transients.
-		$cacheable = self::is_cacheable_type( $type )
-			&& ( ! $is_post_type || $page <= $this->get_post_type_page_count( $type ) );
+		$cacheable = self::is_cacheable_type( $type );
 		if ( $cacheable ) {
 			$key    = self::cache_key( $type, $page );
 			$cached = get_transient( $key );
@@ -509,12 +535,34 @@ class SWPS_Sitemap_Manager {
 	}
 
 	/**
+	 * Whether a sitemap type is split into pages: post type and taxonomy
+	 * sitemaps are, the index, author and news sitemaps are not.
+	 *
+	 * @param string $type Sitemap type.
+	 */
+	private function is_paged_type( string $type ): bool {
+		return ! in_array( $type, array( 'index', 'author', self::NEWS_TYPE ), true );
+	}
+
+	/**
+	 * Number of pages a post type or taxonomy sitemap has.
+	 *
+	 * @param string $type Post type or taxonomy.
+	 */
+	private function get_sitemap_page_count( string $type ): int {
+		if ( $this->is_post_type_sitemap( $type ) ) {
+			return $this->get_post_type_page_count( $type );
+		}
+		return self::page_count( $this->get_taxonomy_term_count( $type ), $this->get_urls_per_sitemap() );
+	}
+
+	/**
 	 * Number of sub-sitemap pages the index lists for a post type.
 	 *
 	 * @param string $post_type Post type.
 	 */
 	private function get_post_type_page_count( string $post_type ): int {
-		return max( 1, (int) ceil( $this->get_post_type_count( $post_type ) / $this->get_urls_per_sitemap() ) );
+		return self::page_count( $this->get_post_type_count( $post_type ), $this->get_urls_per_sitemap() );
 	}
 
 	/**
@@ -533,7 +581,7 @@ class SWPS_Sitemap_Manager {
 		} elseif ( $this->is_post_type_sitemap( $type ) ) {
 			$this->render_post_type_sitemap( $type, $page );
 		} else {
-			$this->render_taxonomy_sitemap( $type );
+			$this->render_taxonomy_sitemap( $type, $page );
 		}
 	}
 
@@ -702,22 +750,20 @@ class SWPS_Sitemap_Manager {
 				continue;
 			}
 
-			$terms = get_terms(
-				array(
-					'taxonomy'   => $tax,
-					'hide_empty' => true,
-					'number'     => 1,
-				)
-			);
-			if ( empty( $terms ) || is_wp_error( $terms ) ) {
+			$count = $this->get_taxonomy_term_count( $tax );
+			if ( $count < 1 ) {
 				continue;
 			}
 
-			printf(
-				"<sitemap>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n</sitemap>\n",
-				esc_url( home_url( "/{$tax}-sitemap.xml" ) ),
-				$this->get_site_lastmod()
-			);
+			$pages = self::page_count( $count, $this->get_urls_per_sitemap() );
+			for ( $i = 1; $i <= $pages; $i++ ) {
+				$suffix = $i > 1 ? $i : '';
+				printf(
+					"<sitemap>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n</sitemap>\n",
+					esc_url( home_url( "/{$tax}-sitemap{$suffix}.xml" ) ),
+					esc_xml( $this->get_site_lastmod() )
+				);
+			}
 		}
 
 		// Author sitemap.
@@ -749,7 +795,7 @@ class SWPS_Sitemap_Manager {
 			return;
 		}
 
-		$offset = ( $page - 1 ) * $this->get_urls_per_sitemap();
+		$offset = self::page_offset( $page, $this->get_urls_per_sitemap() );
 
 		$post_ids    = get_posts(
 			array(
@@ -895,19 +941,22 @@ class SWPS_Sitemap_Manager {
 
 	/**
 	 * Render a taxonomy sub-sitemap.
+	 *
+	 * @param string $taxonomy Taxonomy name.
+	 * @param int    $page     1-based page number.
 	 */
-	private function render_taxonomy_sitemap( string $taxonomy ): void {
+	private function render_taxonomy_sitemap( string $taxonomy, int $page = 1 ): void {
 		if ( self::is_taxonomy_hidden_from_sitemap( $taxonomy ) ) {
 			return;
 		}
 
-		$terms = get_terms(
-			array(
-				'taxonomy'   => $taxonomy,
-				'hide_empty' => true,
-				'number'     => $this->get_urls_per_sitemap(),
-			)
+		$args  = $this->taxonomy_sitemap_query_args( $taxonomy ) + array(
+			'number'  => $this->get_urls_per_sitemap(),
+			'offset'  => self::page_offset( $page, $this->get_urls_per_sitemap() ),
+			'orderby' => 'term_id',
+			'order'   => 'ASC',
 		);
+		$terms = get_terms( $args );
 
 		echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 		echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
@@ -1085,6 +1134,39 @@ class SWPS_Sitemap_Manager {
 				$post_type
 			)
 		);
+	}
+
+	/**
+	 * Shared get_terms() args for a taxonomy sitemap, so the page count and
+	 * the pages themselves select the same terms.
+	 *
+	 * @param string $taxonomy Taxonomy name.
+	 * @return array<string, mixed>
+	 */
+	private function taxonomy_sitemap_query_args( string $taxonomy ): array {
+		return array(
+			'taxonomy'   => $taxonomy,
+			'hide_empty' => true,
+		);
+	}
+
+	/**
+	 * Count the terms a taxonomy sitemap lists.
+	 *
+	 * For hierarchical taxonomies get_terms() also keeps empty parents of
+	 * non-empty children, which a 'count' query does not, so count the IDs
+	 * the sitemap query itself returns.
+	 *
+	 * @param string $taxonomy Taxonomy name.
+	 */
+	private function get_taxonomy_term_count( string $taxonomy ): int {
+		$args = $this->taxonomy_sitemap_query_args( $taxonomy );
+		if ( is_taxonomy_hierarchical( $taxonomy ) ) {
+			$ids = get_terms( $args + array( 'fields' => 'ids' ) );
+			return is_array( $ids ) ? count( $ids ) : 0;
+		}
+		$count = wp_count_terms( $args );
+		return is_wp_error( $count ) ? 0 : (int) $count;
 	}
 
 	/**
