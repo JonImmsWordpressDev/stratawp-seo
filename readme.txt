@@ -426,6 +426,9 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 
 == Changelog ==
 
+= Unreleased =
+* Added: an optional setting under Search Appearance to remove the category base from URLs, so /category/news/ becomes /news/. It is off by default and can also be turned on for other public hierarchical taxonomies. Child terms (/news/local/), pagination and feeds work without the base, old /category/... URLs 301-redirect to the new ones while the setting is on, and sitemaps, canonicals and breadcrumbs use the new URLs. A page or post with the same slug always wins, and the settings page lists any terms that collide. No rewrite rules are added, so nothing is flushed when the setting or a term changes.
+
 = 4.35.1 =
 * Fixed: the Social Image set on the page assigned to "Posts page" was ignored, so every share of the blog index fell back to the site logo. This shares the root cause of the title fix above: the posts page is never is_singular(), so the per-post Open Graph path never ran for it, and the non-singular output carried no is_home() branch for the image. og:image and twitter:image on the posts page now use that page's Social Image when one is set, and still fall back to the schema logo or site icon when it is not. Other archives are unaffected.
 

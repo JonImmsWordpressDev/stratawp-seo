@@ -1216,6 +1216,7 @@ class SWPS_Settings {
 		register_setting( 'swps_search_appearance', 'swps_desc_template_homepage', array( 'sanitize_callback' => 'sanitize_textarea_field' ) );
 		register_setting( 'swps_search_appearance', 'swps_noindex_author', array( 'sanitize_callback' => 'absint' ) );
 		register_setting( 'swps_search_appearance', 'swps_noindex_date', array( 'sanitize_callback' => 'absint' ) );
+		register_setting( 'swps_search_appearance', SWPS_Term_Base::OPTION, array( 'sanitize_callback' => array( 'SWPS_Term_Base', 'sanitize' ) ) );
 
 		// Breadcrumb settings.
 		register_setting( 'swps_search_appearance', 'swps_breadcrumbs_enabled', array( 'sanitize_callback' => 'absint' ) );

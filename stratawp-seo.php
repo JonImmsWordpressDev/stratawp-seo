@@ -217,6 +217,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-rss-optimizer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-taxonomy-meta.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-sitemap-manager.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-search-appearance.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-term-base.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-breadcrumbs.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-redirect-manager.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-redirect-admin.php';
@@ -331,6 +332,12 @@ final class StrataWP_SEO {
 	public SWPS_Taxonomy_Meta $taxonomy_meta;
 	public SWPS_Sitemap_Manager $sitemap_manager;
 	public SWPS_Search_Appearance $search_appearance;
+	/**
+	 * Optional category base removal.
+	 *
+	 * @var SWPS_Term_Base
+	 */
+	public SWPS_Term_Base $term_base;
 	public SWPS_Breadcrumbs $breadcrumbs;
 	public SWPS_Redirect_Manager $redirect_manager;
 	public SWPS_Post_List_SEO $post_list_seo;
@@ -462,6 +469,7 @@ final class StrataWP_SEO {
 		$this->taxonomy_meta         = new SWPS_Taxonomy_Meta();
 		$this->sitemap_manager       = new SWPS_Sitemap_Manager();
 		$this->search_appearance     = new SWPS_Search_Appearance();
+		$this->term_base             = new SWPS_Term_Base();
 		$this->breadcrumbs           = new SWPS_Breadcrumbs();
 		$this->redirect_manager      = new SWPS_Redirect_Manager();
 		$this->sitemap_admin         = new SWPS_Sitemap_Admin();
