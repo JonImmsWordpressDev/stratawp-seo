@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.35.1
+Stable tag: 4.36.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -426,7 +426,9 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 
 == Changelog ==
 
-= Unreleased =
+= 4.36.0 =
+* Fixed: /sitemap.xml and /wp-sitemap.xml led to a 404 (or, on some sites, a chain of two redirects) because WordPress sends them to its own sitemap, which the plugin turns off. Both now go straight to /sitemap_index.xml with a single 301, so crawlers and Search Console that guess /sitemap.xml find the sitemap.
+* Added: an opt-in Google News sitemap at /google-news-sitemap.xml, switched on from the Sitemaps screen. It lists indexable posts published in the last two days (up to 1000), with the publication name (the site title unless you set one) and language Google News expects.
 * Added: Site Crawl now audits the sitemap itself. It reads the URLs your XML sitemap lists and flags the ones that redirect, return an error (404, 500 or no response), point their canonical tag at a different URL, or carry an impossible last-modified date (unreadable, before 2000 such as the 1970 date a missing value produces, or in the future). Sitemap URLs are crawled first so the crawl limit never skips them. Where the post is known, the redirect, error and canonical findings offer the one-click "Exclude from sitemap" fix.
 * Added: a Preview tab on the Sitemaps screen. Browsers no longer style XML sitemaps (Chrome dropped XSLT), so pick any sitemap from the index and see its URLs, last-modified dates and image counts as a paged table, with a link to the raw XML. Admins only. Crawlers still get the same plain XML at the same URLs.
 * Improved: sitemaps are now cached (in the object cache when your host has one), so large sites no longer rebuild every sitemap on every crawler request. The cache is cleared whenever a post is saved, published, trashed or deleted, a term or author changes, a post's sitemap or noindex setting changes, or sitemap, noindex or permalink settings change. The Google News sitemap is not cached because its 48-hour window moves on its own. Large post type sitemaps are also built in batches of 200 posts, so memory stays flat even at 50,000 URLs per sitemap.
