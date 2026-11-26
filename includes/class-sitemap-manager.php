@@ -44,8 +44,8 @@ class SWPS_Sitemap_Manager {
 	}
 
 	/**
-	 * Canonical "is this URL part of the sitemap" predicate, shared with IndexNow.
-	 * Mirrors the inline skip logic in render_post_type_sitemap().
+	 * Canonical "is this URL part of the sitemap" predicate, shared with IndexNow
+	 * and render_post_type_sitemap().
 	 *
 	 * @param WP_Post|object $post Post object with ID, post_status, post_type.
 	 */
@@ -66,11 +66,19 @@ class SWPS_Sitemap_Manager {
 		if ( ! empty( $robots ) && str_contains( (string) $robots, 'noindex' ) ) {
 			return false;
 		}
+		// Crawlers only see the password form.
+		if ( '' !== (string) ( $post->post_password ?? '' ) ) {
+			return false;
+		}
+		$canonical = (string) get_post_meta( $post->ID, '_swps_canonical_url', true );
+		if ( '' !== $canonical && ! self::is_same_url( $canonical, (string) get_permalink( $post ) ) ) {
+			return false;
+		}
 		return true;
 	}
 
 	/**
-	 * Term eligibility, mirroring render_taxonomy_sitemap()'s inline checks.
+	 * Term eligibility, shared with IndexNow and render_taxonomy_sitemap().
 	 * Also rejects terms whose taxonomy is hidden from the sitemap, so this
 	 * is a self-contained, taxonomy-aware public API (later tasks call it
 	 * directly on term-change hooks).
@@ -89,7 +97,34 @@ class SWPS_Sitemap_Manager {
 		if ( ! empty( $robots ) && str_contains( (string) $robots, 'noindex' ) ) {
 			return false;
 		}
+		$canonical = (string) get_term_meta( $term_id, '_swps_canonical_url', true );
+		if ( '' !== $canonical ) {
+			$link = get_term_link( $term_id, $taxonomy );
+			if ( is_wp_error( $link ) || ! self::is_same_url( $canonical, (string) $link ) ) {
+				return false;
+			}
+		}
 		return true;
+	}
+
+	/**
+	 * Whether a canonical override points at the URL itself. Ignores scheme,
+	 * host case, a trailing slash and any fragment; the path and query must match.
+	 */
+	public static function is_same_url( string $a, string $b ): bool {
+		return self::comparable_url( $a ) === self::comparable_url( $b );
+	}
+
+	private static function comparable_url( string $url ): string {
+		$parts = wp_parse_url( trim( $url ) );
+		if ( ! is_array( $parts ) ) {
+			return $url;
+		}
+		$host  = strtolower( (string) ( $parts['host'] ?? '' ) );
+		$port  = isset( $parts['port'] ) ? ':' . $parts['port'] : '';
+		$path  = rtrim( (string) ( $parts['path'] ?? '' ), '/' );
+		$query = isset( $parts['query'] ) ? '?' . $parts['query'] : '';
+		return $host . $port . $path . $query;
 	}
 
 	/**
@@ -523,15 +558,7 @@ class SWPS_Sitemap_Manager {
 				continue;
 			}
 
-			// Keep in sync with SWPS_Sitemap_Manager::is_post_indexable().
-			// Respect exclusions.
-			if ( get_post_meta( $post->ID, '_swps_sitemap_exclude', true ) ) {
-				continue;
-			}
-
-			// Respect noindex.
-			$robots = get_post_meta( $post->ID, '_swps_robots', true );
-			if ( ! empty( $robots ) && str_contains( (string) $robots, 'noindex' ) ) {
+			if ( ! self::is_post_indexable( $post ) ) {
 				continue;
 			}
 
@@ -580,14 +607,7 @@ class SWPS_Sitemap_Manager {
 
 		if ( ! is_wp_error( $terms ) ) {
 			foreach ( $terms as $term ) {
-				// Keep in sync with SWPS_Sitemap_Manager::is_term_indexable().
-				// Respect exclusions.
-				if ( get_term_meta( $term->term_id, '_swps_sitemap_exclude', true ) ) {
-					continue;
-				}
-
-				$robots = get_term_meta( $term->term_id, '_swps_robots', true );
-				if ( ! empty( $robots ) && str_contains( (string) $robots, 'noindex' ) ) {
+				if ( ! self::is_term_indexable( (int) $term->term_id, $taxonomy ) ) {
 					continue;
 				}
 

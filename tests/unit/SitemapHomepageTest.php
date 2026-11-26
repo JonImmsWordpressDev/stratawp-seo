@@ -100,8 +100,8 @@ class SitemapHomepageTest extends TestCase {
 		);
 		// Front page (ID 2, permalink = home_url('/')) plus a normal page.
 		$GLOBALS['swps_test_posts']      = array(
-			(object) array( 'ID' => 2 ),
-			(object) array( 'ID' => 5 ),
+			(object) array( 'ID' => 2, 'post_status' => 'publish', 'post_type' => 'page' ),
+			(object) array( 'ID' => 5, 'post_status' => 'publish', 'post_type' => 'page' ),
 		);
 		$GLOBALS['swps_test_permalinks'] = array(
 			2 => home_url( '/' ),
@@ -130,7 +130,7 @@ class SitemapHomepageTest extends TestCase {
 			'show_on_front'               => 'posts',
 			'swps_sitemap_exclude_images' => 1,
 		);
-		$GLOBALS['swps_test_posts']      = array( (object) array( 'ID' => 5 ) );
+		$GLOBALS['swps_test_posts']      = array( (object) array( 'ID' => 5, 'post_status' => 'publish', 'post_type' => 'page' ) );
 		$GLOBALS['swps_test_permalinks'] = array( 5 => home_url( '/about/' ) );
 
 		$xml = $this->render_page_sitemap();
