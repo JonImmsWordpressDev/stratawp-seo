@@ -238,6 +238,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-analyzer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-content-brief.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-image-plan.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-source-material.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-link-verifier.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-generator.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-cron.php';
 
