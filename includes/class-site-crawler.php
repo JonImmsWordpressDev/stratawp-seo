@@ -22,6 +22,7 @@ require_once __DIR__ . '/crawl-checks/class-checks-legacy-page.php';
 require_once __DIR__ . '/crawl-checks/class-checks-head.php';
 require_once __DIR__ . '/crawl-checks/class-minify-heuristic.php';
 require_once __DIR__ . '/crawl-checks/class-checks-content.php';
+require_once __DIR__ . '/crawl-checks/class-checks-image-alt.php';
 require_once __DIR__ . '/crawl-checks/class-checks-aggregate.php';
 require_once __DIR__ . '/crawl-checks/class-checks-sitemap.php';
 require_once __DIR__ . '/crawl-checks/class-crawl-score.php';
@@ -323,7 +324,7 @@ class SWPS_Site_Crawler {
 	 *
 	 * @param string $html     Full HTML source of the page.
 	 * @param string $base_url Absolute URL used to resolve relative hrefs.
-	 * @return array{links:string[],images:string[],canonical:?string,h1_count:int,has_noindex:bool,mixed:string[],title:string,meta_desc:string,has_viewport:bool,has_doctype:bool,has_charset:bool,has_lang:bool,word_count:int,text_bytes:int,script_srcs:string[],style_hrefs:string[],images_missing_alt:string[],hreflangs:array,has_schema:bool,nofollow_internal:string[],is_challenge:bool,is_archive:bool,is_paginated:bool}
+	 * @return array{links:string[],images:string[],canonical:?string,h1_count:int,has_noindex:bool,mixed:string[],title:string,meta_desc:string,has_viewport:bool,has_doctype:bool,has_charset:bool,has_lang:bool,word_count:int,text_bytes:int,script_srcs:string[],style_hrefs:string[],images_missing_alt:string[],image_alts:array,hreflangs:array,has_schema:bool,nofollow_internal:string[],is_challenge:bool,is_archive:bool,is_paginated:bool}
 	 */
 	public static function parse_html( string $html, string $base_url ): array {
 		$result = array(
@@ -344,6 +345,7 @@ class SWPS_Site_Crawler {
 			'script_srcs'        => array(),
 			'style_hrefs'        => array(),
 			'images_missing_alt' => array(),
+			'image_alts'         => array(),
 			'hreflangs'          => array(),
 			'has_schema'         => false,
 			'nofollow_internal'  => array(),
@@ -415,6 +417,14 @@ class SWPS_Site_Crawler {
 				}
 				if ( ! $img->hasAttribute( 'alt' ) ) {
 					$result['images_missing_alt'][] = $abs;
+				} else {
+					$alt = SWPS_Alt_Text_Quality::normalize( $img->getAttribute( 'alt' ) );
+					if ( '' !== $alt ) {
+						$result['image_alts'][] = array(
+							'src' => $abs,
+							'alt' => $alt,
+						);
+					}
 				}
 			}
 		}
@@ -886,6 +896,7 @@ class SWPS_Site_Crawler {
 						'canonical'         => $page['canonical'],
 						'internal_links'    => self::internal_links_normalized( $page['links'], $home_host ),
 						'unminified_assets' => $page['unminified_assets'],
+						'image_alts'        => $page['image_alts'],
 					)
 				);
 			} elseif ( $is_broken ) {
