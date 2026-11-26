@@ -52,6 +52,11 @@ class SWPS_Sitemap_Manager {
 		return ( max( 1, $page ) - 1 ) * max( 1, $per_page );
 	}
 
+	/**
+	 * Whether a post type is left out of the sitemap.
+	 *
+	 * @param string $post_type Post type name.
+	 */
 	private static function is_post_type_hidden_from_sitemap( string $post_type ): bool {
 		return 'attachment' === $post_type
 			|| (bool) get_option( "swps_sitemap_exclude_{$post_type}", 0 )
@@ -475,7 +480,7 @@ class SWPS_Sitemap_Manager {
 				printf(
 					"<sitemap>\n  <loc>%s</loc>\n  <lastmod>%s</lastmod>\n</sitemap>\n",
 					esc_url( home_url( "/{$tax}-sitemap{$suffix}.xml" ) ),
-					$this->get_site_lastmod()
+					esc_xml( $this->get_site_lastmod() )
 				);
 			}
 		}
