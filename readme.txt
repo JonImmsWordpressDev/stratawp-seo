@@ -426,6 +426,10 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 
 == Changelog ==
 
+= Unreleased =
+* Fixed: after a plugin update, the one-time rewrite rule rebuild could run on any request, including Heartbeat, REST, cron or a visitor's page view. Some plugins only register their rewrite rules in wp-admin, so a rebuild there could drop their rules and make sitemaps, category or shop URLs 404. The rebuild now waits for a normal admin page load (or WP-CLI). The Sitemap audit fix also leaves the rebuild to the next admin page load.
+* Added: a "Rewrite rules" Site Health test and a Sitemap audit check. Both request the sitemap index, a post type sitemap and a category archive from your own site, and if any returns 404 they report that the rewrite rules look broken. Site Health offers a one-click "Rebuild permalinks" button.
+
 = 4.35.1 =
 * Fixed: the Social Image set on the page assigned to "Posts page" was ignored, so every share of the blog index fell back to the site logo. This shares the root cause of the title fix above: the posts page is never is_singular(), so the per-post Open Graph path never ran for it, and the non-singular output carried no is_home() branch for the image. og:image and twitter:image on the posts page now use that page's Social Image when one is set, and still fall back to the schema logo or site icon when it is not. Other archives are unaffected.
 
