@@ -40,10 +40,23 @@ class SWPS_Autopilot_Guardian {
 		}
 		check_admin_referer( 'swps_dismiss_budget_notice' );
 
-		update_option( 'swps_budget_notice_dismissed_' . gmdate( 'Y_m' ), 1, false );
+		$state = sanitize_key( wp_unslash( $_GET['swps_dismiss_budget_notice'] ) );
+		update_option( self::budget_dismiss_key( $state, gmdate( 'Y_m' ) ), 1, false );
 
 		wp_safe_redirect( remove_query_arg( array( 'swps_dismiss_budget_notice', '_wpnonce' ) ) );
 		exit;
+	}
+
+	/**
+	 * Option that records a dismissed budget notice for one month. The
+	 * "exceeded" notice has its own key, so dismissing the 80% warning does
+	 * not hide the later "budget reached" notice.
+	 *
+	 * @param string $state Notice state: 'warning' or 'exceeded'.
+	 * @param string $month Month as Y_m, e.g. 2026_11.
+	 */
+	public static function budget_dismiss_key( string $state, string $month ): string {
+		return ( 'exceeded' === $state ? 'swps_budget_exceeded_notice_dismissed_' : 'swps_budget_notice_dismissed_' ) . $month;
 	}
 
 	/**
@@ -93,7 +106,8 @@ class SWPS_Autopilot_Guardian {
 	}
 
 	/**
-	 * One dismissible warning per month once spend crosses 80% of budget.
+	 * A warning once spend crosses 80% of budget, then an error once it is
+	 * reached. Each can be dismissed for the rest of the month.
 	 */
 	public function maybe_warn_budget(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -113,15 +127,18 @@ class SWPS_Autopilot_Guardian {
 			return;
 		}
 
-		$dismiss_key = 'swps_budget_notice_dismissed_' . gmdate( 'Y_m' );
-
-		if ( 'warning' === $state && get_option( $dismiss_key ) ) {
+		if ( get_option( self::budget_dismiss_key( $state, gmdate( 'Y_m' ) ) ) ) {
 			return;
 		}
 
+		$dismiss_url = wp_nonce_url(
+			add_query_arg( 'swps_dismiss_budget_notice', $state ),
+			'swps_dismiss_budget_notice'
+		);
+
 		if ( 'exceeded' === $state ) {
 			printf(
-				'<div class="notice notice-error"><p><strong>%s</strong> %s</p></div>',
+				'<div class="notice notice-error"><p><strong>%s</strong> %s <a href="%s">%s</a></p></div>',
 				esc_html__( 'StrataWP SEO: monthly AI budget reached.', 'stratawp-seo' ),
 				esc_html(
 					sprintf(
@@ -130,15 +147,12 @@ class SWPS_Autopilot_Guardian {
 						number_format_i18n( $spent, 2 ),
 						number_format_i18n( $budget, 2 )
 					)
-				)
+				),
+				esc_url( $dismiss_url ),
+				esc_html__( 'Dismiss for this month', 'stratawp-seo' )
 			);
 			return;
 		}
-
-		$dismiss_url = wp_nonce_url(
-			add_query_arg( 'swps_dismiss_budget_notice', 1 ),
-			'swps_dismiss_budget_notice'
-		);
 		printf(
 			'<div class="notice notice-warning"><p><strong>%s</strong> %s <a href="%s">%s</a></p></div>',
 			esc_html__( 'StrataWP SEO: approaching monthly AI budget.', 'stratawp-seo' ),
