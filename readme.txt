@@ -426,6 +426,9 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 
 == Changelog ==
 
+= Unreleased =
+* Added: Site Crawl now audits the sitemap itself. It reads the URLs your XML sitemap lists and flags the ones that redirect, return an error (404, 500 or no response), point their canonical tag at a different URL, or carry an impossible last-modified date (unreadable, before 2000 such as the 1970 date a missing value produces, or in the future). Sitemap URLs are crawled first so the crawl limit never skips them. Where the post is known, the redirect, error and canonical findings offer the one-click "Exclude from sitemap" fix.
+
 = 4.35.1 =
 * Fixed: the Social Image set on the page assigned to "Posts page" was ignored, so every share of the blog index fell back to the site logo. This shares the root cause of the title fix above: the posts page is never is_singular(), so the per-post Open Graph path never ran for it, and the non-singular output carried no is_home() branch for the image. og:image and twitter:image on the posts page now use that page's Social Image when one is set, and still fall back to the schema logo or site icon when it is not. Other archives are unaffected.
 
