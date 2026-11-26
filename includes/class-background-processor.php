@@ -226,6 +226,11 @@ class SWPS_Background_Processor {
 				$queue->update_status( $topic_id, 'queued' );
 				return;
 			}
+			if ( SWPS_Overlap_Checker::ERROR_CODE === $result->get_error_code() ) {
+				// The site already covers this topic: park it, never retry.
+				SWPS_Overlap_Checker::park_topic( $topic_id, $result, $queue );
+				return;
+			}
 			SWPS_Autopilot_Guardian::handle_topic_failure( $topic_id, $result, $queue );
 			return;
 		}

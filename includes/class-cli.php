@@ -25,10 +25,14 @@ class SWPS_CLI {
 	 * default: auto
 	 * ---
 	 *
+	 * [--force]
+	 * : Generate even when the topic overlaps an existing post or a page that already ranks for it.
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     wp swps generate "Best practices for WordPress security"
 	 *     wp swps generate --template=listicle
+	 *     wp swps generate "WordPress security checklist" --force
 	 *
 	 * @param array $args       Positional arguments.
 	 * @param array $assoc_args Named arguments.
@@ -48,7 +52,15 @@ class SWPS_CLI {
 		}
 
 		$plugin = stratawp_seo();
-		$result = $plugin->generator->generate_post( $topic, $template );
+		$result = $plugin->generator->generate_post( $topic, $template, array(), array( 'allow_overlap' => ! empty( $assoc_args['force'] ) ) );
+
+		if ( is_wp_error( $result ) && SWPS_Overlap_Checker::ERROR_CODE === $result->get_error_code() ) {
+			$data = (array) $result->get_error_data();
+			foreach ( (array) ( $data['overlaps'] ?? array() ) as $overlap ) {
+				WP_CLI::warning( SWPS_Overlap_Checker::summarize( array( $overlap ) ) . ( '' !== $overlap['url'] && 'ranking' !== $overlap['type'] ? ' ' . $overlap['url'] : '' ) );
+			}
+			WP_CLI::error( 'Skipped: the topic overlaps existing content. Re-run with --force to generate anyway.' );
+		}
 
 		if ( is_wp_error( $result ) ) {
 			WP_CLI::error( $result->get_error_message() );
