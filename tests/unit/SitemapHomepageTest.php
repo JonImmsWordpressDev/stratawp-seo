@@ -28,7 +28,30 @@ if ( ! function_exists( 'get_option' ) ) {
 }
 if ( ! function_exists( 'get_posts' ) ) {
 	function get_posts( $args = array() ) {
-		return $GLOBALS['swps_test_posts'] ?? array();
+		$posts = $GLOBALS['swps_test_posts'] ?? array();
+		if ( 'ids' === ( $args['fields'] ?? '' ) ) {
+			return array_map( fn( $p ) => is_object( $p ) ? $p->ID : $p, $posts );
+		}
+		return $posts;
+	}
+}
+if ( ! function_exists( 'get_post' ) ) {
+	function get_post( $id ) {
+		return $GLOBALS['swps_test_post_objects'][ $id ] ?? null;
+	}
+}
+if ( ! function_exists( '_prime_post_caches' ) ) {
+	function _prime_post_caches( $ids, $update_term_cache = true, $update_meta_cache = true ) {
+	}
+}
+if ( ! function_exists( 'wp_using_ext_object_cache' ) ) {
+	function wp_using_ext_object_cache( $using = null ) {
+		return false;
+	}
+}
+if ( ! function_exists( 'wp_cache_delete' ) ) {
+	function wp_cache_delete( $key, $group = '' ) {
+		return true;
 	}
 }
 if ( ! function_exists( 'get_permalink' ) ) {
@@ -103,6 +126,10 @@ class SitemapHomepageTest extends TestCase {
 			(object) array( 'ID' => 2, 'post_status' => 'publish', 'post_type' => 'page' ),
 			(object) array( 'ID' => 5, 'post_status' => 'publish', 'post_type' => 'page' ),
 		);
+		$GLOBALS['swps_test_post_objects'] = array(
+			2 => $GLOBALS['swps_test_posts'][0],
+			5 => $GLOBALS['swps_test_posts'][1],
+		);
 		$GLOBALS['swps_test_permalinks'] = array(
 			2 => home_url( '/' ),
 			5 => home_url( '/about/' ),
@@ -130,7 +157,8 @@ class SitemapHomepageTest extends TestCase {
 			'show_on_front'               => 'posts',
 			'swps_sitemap_exclude_images' => 1,
 		);
-		$GLOBALS['swps_test_posts']      = array( (object) array( 'ID' => 5, 'post_status' => 'publish', 'post_type' => 'page' ) );
+		$GLOBALS['swps_test_posts']        = array( (object) array( 'ID' => 5, 'post_status' => 'publish', 'post_type' => 'page' ) );
+		$GLOBALS['swps_test_post_objects'] = array( 5 => $GLOBALS['swps_test_posts'][0] );
 		$GLOBALS['swps_test_permalinks'] = array( 5 => home_url( '/about/' ) );
 
 		$xml = $this->render_page_sitemap();

@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.0', '8.1', '8.2', '8.3', '8.4']
+        php: ['8.0', '8.1', '8.2', '8.3', '8.4', '8.5']
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -84,7 +84,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.0', '8.1', '8.2', '8.3', '8.4']
+        php: ['8.0', '8.1', '8.2', '8.3', '8.4', '8.5']
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -97,13 +97,30 @@ jobs:
 
   # Real WordPress + MySQL: locks, AJAX/REST handlers, permissions, schema,
   # uninstall — everything the stubbed unit suite can't reach.
+  # WordPress matrix: the latest 7.0.x and 7.1.x releases, plus nightly
+  # (the next major's beta/RC). Nightly only warns: continue-on-error.
   integration-tests:
-    name: WordPress integration (PHP ${{ matrix.php }})
+    name: WordPress ${{ matrix.wp }} integration (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.prerelease }}
     strategy:
       fail-fast: false
       matrix:
         php: ['8.0', '8.4']
+        wp: ['7.0', '7.1', 'nightly']
+        include:
+          - wp: '7.0'
+            core: '~7.0.0'
+            tests: '~7.0.0'
+            prerelease: false
+          - wp: '7.1'
+            core: '~7.1.0'
+            tests: '~7.1.0'
+            prerelease: false
+          - wp: 'nightly'
+            core: 'dev-main'
+            tests: 'dev-master'
+            prerelease: true
     services:
       mysql:
         image: mysql:8.0
@@ -123,6 +140,14 @@ jobs:
           extensions: mysqli
           coverage: none
       - uses: ramsey/composer-install@v3
+      - name: Install WordPress ${{ matrix.wp }}
+        run: >-
+          composer require --dev --with-all-dependencies
+          --no-interaction --no-progress
+          "roots/wordpress-no-content:${{ matrix.core }}"
+          "wp-phpunit/wp-phpunit:${{ matrix.tests }}"
+      - name: Show WordPress version
+        run: grep "^\$wp_version" vendor/roots/wordpress-no-content/wp-includes/version.php
       - name: Run integration suite
         env:
           WP_TESTS_DB_HOST: 127.0.0.1:3306

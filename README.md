@@ -1300,6 +1300,7 @@ stratawp-seo/
 │   ├── class-competitors.php          Competitor watch: daily RSS/sitemap scans, homepage title/H1/schema diffs
 │   ├── class-content-scorer.php       Quality scoring for generated content
 │   ├── class-cost-tracker.php         Per-provider/model token + USD tracking
+│   ├── class-crawl-abilities.php      Site Crawl ability callbacks (run crawl, issues, apply fix, canonical status)
 │   ├── class-crawl-budget-report.php  Crawl-budget-by-post-type queries + daily reconciliation
 │   ├── class-crawl-files.php          Crawlers & Files page: edit /llms.txt (auto/custom) and /robots.txt (auto/append/replace)
 │   ├── class-crawl-issues.php         Site-crawl issue storage (status, resolution, ignore lists)
@@ -1366,6 +1367,7 @@ stratawp-seo/
 │   ├── class-visibility-funnel.php    AEO × crawl × visit joins; funnel stage rates for dashboard/queue
 │   ├── class-voice-profile.php        Voice profile CPT + system prompt injection
 │   ├── trait-ability-defs.php         Definitions of the 13 abilities (schemas, write flags, callbacks)
+│   ├── trait-crawl-ability-defs.php   Definitions of the 4 Site Crawl abilities (run crawl, issues, apply fix, canonical status)
 │   ├── trait-digest-send.php          Digest email template rendering + send
 │   │
 │   ├── aeo/                      4 AEO sub-scorers
@@ -1699,7 +1701,7 @@ SWPS_Image_Provider (abstract)
 
 ### Abilities (`SWPS_Abilities` / `SWPS_Abilities_REST` / `SWPS_Abilities_Settings`)
 
-- 13 abilities defined in `trait-ability-defs.php` with input/output schemas and write flags. Execution pipeline: enabled-check → schema validation → callback → activity log. Registered with the WP Abilities API on `wp_abilities_api_init` (WP 6.9+) and always exposed via `GET /abilities` + `POST /abilities/{name}/run`. Reads default on, writes default off.
+- 17 abilities defined in `trait-ability-defs.php` and, for Site Crawl, `trait-crawl-ability-defs.php` (callbacks in `SWPS_Crawl_Abilities`), with input/output schemas and write flags. Execution pipeline: enabled-check → schema validation → callback → activity log. Registered with the WP Abilities API on `wp_abilities_api_init` (WP 6.9+) and always exposed via `GET /abilities` + `POST /abilities/{name}/run`. Reads default on, writes default off.
 
 ### Onboarding (`SWPS_Onboarding`)
 

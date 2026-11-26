@@ -65,6 +65,12 @@ class SWPS_Crawler_Verification {
 	private const TRANSIENT_NOTICE = 'swps_crawler_reconcile_notice';
 
 	/**
+	 * Fingerprint of the findings the admin last dismissed. The notice stays
+	 * hidden until the findings change.
+	 */
+	private const OPT_NOTICE_DISMISSED = 'swps_crawler_reconcile_notice_dismissed';
+
+	/**
 	 * RDNS batch size per hourly run.
 	 */
 	private const RDNS_BATCH = 50;
@@ -82,7 +88,41 @@ class SWPS_Crawler_Verification {
 		add_action( self::CRON_RANGES, array( $this, 'fetch_ip_ranges' ) );
 		add_action( self::CRON_RDNS, array( $this, 'run_rdns_batch' ) );
 		add_action( self::CRON_RECONCILE, array( $this, 'run_reconciliation' ) );
+		add_action( 'admin_init', array( $this, 'maybe_dismiss_reconcile_notice' ), 5 );
 		add_action( 'admin_notices', array( $this, 'maybe_show_reconcile_notice' ) );
+	}
+
+	/**
+	 * Stable fingerprint of a findings set, independent of bot order.
+	 *
+	 * @param array<string, mixed> $findings Findings with disallowed_crawling and spoofed_bots lists.
+	 */
+	public static function notice_fingerprint( array $findings ): string {
+		$parts = array();
+		foreach ( array( 'disallowed_crawling', 'spoofed_bots' ) as $key ) {
+			$bots = array_map( 'strval', (array) ( $findings[ $key ] ?? array() ) );
+			sort( $bots );
+			$parts[ $key ] = array_values( array_unique( $bots ) );
+		}
+		return md5( (string) json_encode( $parts ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- pure helper, unit-tested without WordPress.
+	}
+
+	/**
+	 * Handle the reconciliation notice's dismiss link before output.
+	 */
+	public function maybe_dismiss_reconcile_notice(): void {
+		if ( ! isset( $_GET['swps_dismiss_reconcile_notice'] ) || ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		check_admin_referer( 'swps_dismiss_reconcile_notice' );
+
+		$findings = get_transient( self::TRANSIENT_NOTICE );
+		if ( is_array( $findings ) ) {
+			update_option( self::OPT_NOTICE_DISMISSED, self::notice_fingerprint( $findings ), false );
+		}
+
+		wp_safe_redirect( remove_query_arg( array( 'swps_dismiss_reconcile_notice', '_wpnonce' ) ) );
+		exit;
 	}
 
 	/**
@@ -669,7 +709,7 @@ class SWPS_Crawler_Verification {
 
 	/**
 	 * Render an admin notice when the reconciliation transient is set.
-	 * The notice is rendered once; admins can dismiss it.
+	 * Dismissing it hides it until the findings change.
 	 */
 	public function maybe_show_reconcile_notice(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -678,6 +718,10 @@ class SWPS_Crawler_Verification {
 
 		$findings = get_transient( self::TRANSIENT_NOTICE );
 		if ( ! is_array( $findings ) || ( empty( $findings['disallowed_crawling'] ) && empty( $findings['spoofed_bots'] ) ) ) {
+			return;
+		}
+
+		if ( get_option( self::OPT_NOTICE_DISMISSED ) === self::notice_fingerprint( $findings ) ) {
 			return;
 		}
 
@@ -699,14 +743,15 @@ class SWPS_Crawler_Verification {
 			);
 		}
 
-		echo '<div class="notice notice-warning is-dismissible">';
+		echo '<div class="notice notice-warning">';
 		echo '<p><strong>' . esc_html__( 'StrataWP SEO — Crawler Reconciliation', 'stratawp-seo' ) . '</strong></p>';
 		echo '<ul>';
 		foreach ( $lines as $line ) {
 			echo '<li>' . wp_kses( $line, array( 'strong' => array() ) ) . '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
 		echo '</ul>';
-		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=swps-analytics' ) ) . '">' . esc_html__( 'View Crawl Budget Report', 'stratawp-seo' ) . '</a></p>';
+		$dismiss_url = wp_nonce_url( add_query_arg( 'swps_dismiss_reconcile_notice', 1 ), 'swps_dismiss_reconcile_notice' );
+		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=swps-analytics' ) ) . '">' . esc_html__( 'View Crawl Budget Report', 'stratawp-seo' ) . '</a> | <a href="' . esc_url( $dismiss_url ) . '">' . esc_html__( 'Dismiss until the findings change', 'stratawp-seo' ) . '</a></p>';
 		echo '</div>';
 	}
 

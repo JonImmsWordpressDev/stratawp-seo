@@ -347,6 +347,21 @@
             $sourcesRow.hide();
         }
 
+        // Links the verifier unwrapped (anchor text kept).
+        var $removedRow  = $('#swps-result-removed-links-row');
+        var $removedList = $('#swps-result-removed-links');
+        $removedList.empty();
+        var removed = Array.isArray(data.removed_links) ? data.removed_links : [];
+        if (removed.length) {
+            $('#swps-result-removed-links-count').text(removed.length + (removed.length === 1 ? ' unverified link removed' : ' unverified links removed') + ' (anchor text kept)');
+            removed.forEach(function(link) {
+                $removedList.append($('<li>').addClass('swps-source-failed').append($('<span>').addClass('dashicons dashicons-dismiss')).append($('<span>').text(link.url)));
+            });
+            $removedRow.show();
+        } else {
+            $removedRow.hide();
+        }
+
         // Cost info.
         if (data.cost) {
             $('#swps-result-cost').text('$' + parseFloat(data.cost).toFixed(4));

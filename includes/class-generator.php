@@ -68,6 +68,13 @@ class SWPS_Generator {
 	private array $last_dropped_sources = array();
 
 	/**
+	 * Internal-link candidate URLs given to the prompt in the last call_ai().
+	 *
+	 * @var string[]
+	 */
+	private array $last_linkable_urls = array();
+
+	/**
 	 * Constructor.
 	 *
 	 * @param SWPS_AI_Provider       $api AI API provider.
@@ -217,12 +224,36 @@ class SWPS_Generator {
 			}
 		}
 
+		// Unwrap links the model may have invented before anything is saved.
+		$removed_links = $this->verify_links( $ai_result );
+
 		// Create the WordPress post.
 		$post_data = $this->create_wp_post( $ai_result, $template, $options );
 
 		if ( is_wp_error( $post_data ) ) {
 			SWPS_Hooks::do_generation_failed( $post_data, $topic, $template );
 			return $post_data;
+		}
+
+		$post_data['removed_links'] = $removed_links;
+		if ( ! empty( $removed_links ) ) {
+			update_post_meta( (int) $post_data['post_id'], SWPS_Link_Verifier::META_KEY, $removed_links );
+			$this->log(
+				sprintf(
+					'Removed %d unverified link(s) from #%d: %s',
+					count( $removed_links ),
+					(int) $post_data['post_id'],
+					implode(
+						'; ',
+						array_map(
+							static function ( array $link ): string {
+								return $link['url'] . ' (' . SWPS_Link_Verifier::reason_label( $link['reason'] ) . ')';
+							},
+							$removed_links
+						)
+					)
+				)
+			);
 		}
 
 		$post_data['sources']         = $this->last_sources_report;
@@ -380,6 +411,8 @@ class SWPS_Generator {
 		// Gather site context (limit posts to keep prompt under timeout threshold).
 		$site_context   = $this->analyzer->build_context_for_prompt( 20 );
 		$linkable_posts = $this->analyzer->get_linkable_posts();
+
+		$this->last_linkable_urls = array_values( array_filter( array_map( 'strval', array_column( $linkable_posts, 'url' ) ) ) );
 
 		// Get user preferences.
 		$niche             = get_option( 'swps_site_niche', '' );
@@ -747,6 +780,58 @@ PROMPT;
 		$prompt .= $is_page ? 'Generate the page now. Respond with JSON only.' : 'Generate the blog post now. Respond with JSON only.';
 
 		return $prompt;
+	}
+
+	/**
+	 * Unwrap links in the AI result that cannot be verified, and drop them
+	 * from the model-reported link lists. See SWPS_Link_Verifier.
+	 *
+	 * @param array $ai_result Parsed AI result, changed in place.
+	 * @return array<int, array{url: string, anchor: string, reason: string}> Removed links.
+	 */
+	private function verify_links( array &$ai_result ): array {
+		$site_host = SWPS_Link_Verifier::host_key( (string) home_url() );
+		$deadline  = microtime( true ) + SWPS_Link_Verifier::CHECK_BUDGET;
+
+		$result = SWPS_Link_Verifier::verify(
+			(string) $ai_result['content_html'],
+			array(
+				'site_host'        => $site_host,
+				'internal_urls'    => $this->last_linkable_urls,
+				'source_urls'      => array_column( $this->last_sources_report, 'url' ),
+				'max_checks'       => SWPS_Link_Verifier::MAX_EXTERNAL_CHECKS,
+				'resolve_internal' => static function ( string $href ): bool {
+					$url     = 0 === strpos( $href, '/' ) && 0 !== strpos( $href, '//' ) ? home_url( $href ) : $href;
+					$post_id = url_to_postid( $url );
+					return $post_id > 0 && 'publish' === get_post_status( $post_id );
+				},
+				'check_external'   => static function ( string $url ) use ( $deadline ): ?bool {
+					if ( microtime( true ) >= $deadline ) {
+						return null;
+					}
+					$args     = array(
+						'timeout'     => SWPS_Link_Verifier::CHECK_TIMEOUT,
+						'redirection' => 3,
+					);
+					$response = wp_safe_remote_head( $url, $args );
+					$code     = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
+					if ( ( $code < 200 || $code >= 400 ) && microtime( true ) < $deadline ) {
+						$response = wp_safe_remote_get( $url, $args + array( 'limit_response_size' => 4096 ) );
+						$code     = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
+					}
+					return $code >= 200 && $code < 400;
+				},
+			)
+		);
+
+		$ai_result['content_html'] = $result['html'];
+		foreach ( array( 'internal_links_used', 'external_links' ) as $field ) {
+			if ( isset( $ai_result[ $field ] ) ) {
+				$ai_result[ $field ] = SWPS_Link_Verifier::filter_link_list( $ai_result[ $field ], $result['removed'], $site_host );
+			}
+		}
+
+		return $result['removed'];
 	}
 
 	/**

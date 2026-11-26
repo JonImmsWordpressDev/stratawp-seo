@@ -74,6 +74,30 @@ class SWPS_Sitemap_Module extends SWPS_Audit_Module {
 
 		$indexed = count( $posts ) - $noindex_count;
 
+		$health = SWPS_Rewrite_Health::check();
+		if ( $health['broken'] ) {
+			foreach ( $health['broken'] as $label ) {
+				$issues[] = array(
+					'post_id' => null,
+					'type'    => 'rewrite',
+					'message' => sprintf(
+						/* translators: 1: what was checked (e.g. Sitemap index), 2: URL. */
+						__( 'Rewrite rules look broken: %1$s (%2$s) returns 404. Rebuild permalinks to fix it.', 'stratawp-seo' ),
+						$label,
+						$health['checked'][ $label ]['url']
+					),
+					'fixable' => true,
+				);
+			}
+
+			return array(
+				'score'   => 0,
+				'status'  => 'fail',
+				'issues'  => $issues,
+				'summary' => __( 'Rewrite rules look broken.', 'stratawp-seo' ),
+			);
+		}
+
 		return array(
 			'score'   => 100,
 			'status'  => 'pass',
@@ -84,17 +108,28 @@ class SWPS_Sitemap_Module extends SWPS_Audit_Module {
 
 	public function auto_fix( array $issues ): array {
 		update_option( 'swps_audit_auto_sitemap', 1 );
-		flush_rewrite_rules();
+
+		// This runs in a REST request, where plugins that only register their
+		// rewrite rules in wp-admin have not done so; flushing here could drop
+		// them. Mark the flush pending instead: SWPS_Sitemap_Manager runs it on
+		// the next normal admin page load.
+		delete_option( 'swps_rewrite_version' );
+		delete_transient( SWPS_Rewrite_Health::CACHE_KEY );
+
+		$messages = array(
+			sprintf(
+				/* translators: %s: the canonical sitemap URL. */
+				__( 'SWPS sitemap generation enabled at %s.', 'stratawp-seo' ),
+				SWPS_Sitemap_Manager::get_sitemap_url()
+			),
+		);
+		if ( in_array( 'rewrite', array_column( $issues, 'type' ), true ) ) {
+			$messages[] = __( 'Permalinks will be rebuilt on your next admin page load.', 'stratawp-seo' );
+		}
 
 		return array(
 			'fixed'    => 1,
-			'messages' => array(
-				sprintf(
-					/* translators: %s: the canonical sitemap URL. */
-					__( 'SWPS sitemap generation enabled at %s.', 'stratawp-seo' ),
-					SWPS_Sitemap_Manager::get_sitemap_url()
-				),
-			),
+			'messages' => $messages,
 		);
 	}
 
