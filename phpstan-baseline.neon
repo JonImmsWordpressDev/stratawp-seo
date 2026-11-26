@@ -52,7 +52,7 @@ parameters:
 
 		-
 			message: "#^Call to static method error\\(\\) on an unknown class WP_CLI\\.$#"
-			count: 5
+			count: 6
 			path: includes/class-cli.php
 
 		-
@@ -63,6 +63,11 @@ parameters:
 		-
 			message: "#^Call to static method success\\(\\) on an unknown class WP_CLI\\.$#"
 			count: 5
+			path: includes/class-cli.php
+
+		-
+			message: "#^Call to static method warning\\(\\) on an unknown class WP_CLI\\.$#"
+			count: 1
 			path: includes/class-cli.php
 
 		-
