@@ -4,7 +4,7 @@ Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 4.35.1
+Stable tag: 4.36.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -426,7 +426,9 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 
 == Changelog ==
 
-= Unreleased =
+= 4.36.0 =
+* Fixed: /sitemap.xml and /wp-sitemap.xml led to a 404 (or, on some sites, a chain of two redirects) because WordPress sends them to its own sitemap, which the plugin turns off. Both now go straight to /sitemap_index.xml with a single 301, so crawlers and Search Console that guess /sitemap.xml find the sitemap.
+* Added: an opt-in Google News sitemap at /google-news-sitemap.xml, switched on from the Sitemaps screen. It lists indexable posts published in the last two days (up to 1000), with the publication name (the site title unless you set one) and language Google News expects.
 * Added: Site Crawl now audits the sitemap itself. It reads the URLs your XML sitemap lists and flags the ones that redirect, return an error (404, 500 or no response), point their canonical tag at a different URL, or carry an impossible last-modified date (unreadable, before 2000 such as the 1970 date a missing value produces, or in the future). Sitemap URLs are crawled first so the crawl limit never skips them. Where the post is known, the redirect, error and canonical findings offer the one-click "Exclude from sitemap" fix.
 * Added: a Site Crawl check for conflicting structured data. It reads every JSON-LD block on a page, whoever emits it, and flags two different Organization or WebSite nodes, one @id declared with conflicting @types, same-site @id references that point to no node on the page, a Person publisher on one node next to an Organization publisher on another, and blocks that fail to parse. Each finding names the block number and its first characters so you can find the plugin responsible. A LocalBusiness linked to the site Organization by parentOrganization is not a duplicate, and references to other sites (such as Wikidata) are not reported as dangling.
 
