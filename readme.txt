@@ -2,7 +2,7 @@
 Contributors: jonimms
 Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
-Tested up to: 6.8
+Tested up to: 7.1
 Requires PHP: 8.0
 Stable tag: 4.35.1
 License: GPLv2 or later
