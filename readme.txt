@@ -427,6 +427,7 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 == Changelog ==
 
 = Unreleased =
+* Added: Site Crawl now audits the sitemap itself. It reads the URLs your XML sitemap lists and flags the ones that redirect, return an error (404, 500 or no response), point their canonical tag at a different URL, or carry an impossible last-modified date (unreadable, before 2000 such as the 1970 date a missing value produces, or in the future). Sitemap URLs are crawled first so the crawl limit never skips them. Where the post is known, the redirect, error and canonical findings offer the one-click "Exclude from sitemap" fix.
 * Added: a Site Crawl check for conflicting structured data. It reads every JSON-LD block on a page, whoever emits it, and flags two different Organization or WebSite nodes, one @id declared with conflicting @types, same-site @id references that point to no node on the page, a Person publisher on one node next to an Organization publisher on another, and blocks that fail to parse. Each finding names the block number and its first characters so you can find the plugin responsible. A LocalBusiness linked to the site Organization by parentOrganization is not a duplicate, and references to other sites (such as Wikidata) are not reported as dangling.
 
 = 4.35.1 =
