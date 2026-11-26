@@ -569,13 +569,57 @@ class SWPS_Sitemap_Manager {
 	/**
 	 * Flush rewrite rules once per plugin version so users do not have to
 	 * manually re-save permalinks after every upgrade.
+	 *
+	 * Only on a normal admin page load or in WP-CLI. On Heartbeat, other
+	 * admin-ajax, cron, REST or front-end requests some plugins have not
+	 * registered their admin-only or conditional rules yet, so a flush there
+	 * can drop them (and 404 the sitemaps). The pending flush waits for the
+	 * next admin page load instead.
 	 */
 	public function maybe_flush_rewrites(): void {
 		if ( get_option( 'swps_rewrite_version' ) === SWPS_VERSION ) {
 			return;
 		}
+		if ( ! self::is_safe_flush_context( self::current_request_context() ) ) {
+			return;
+		}
 		update_option( 'swps_rewrite_version', SWPS_VERSION, false );
 		flush_rewrite_rules( false );
+		if ( class_exists( 'SWPS_Rewrite_Health' ) ) {
+			delete_transient( SWPS_Rewrite_Health::CACHE_KEY );
+		}
+	}
+
+	/**
+	 * What kind of request this is, for is_safe_flush_context().
+	 *
+	 * @return array{admin: bool, ajax: bool, cron: bool, rest: bool, cli: bool}
+	 */
+	public static function current_request_context(): array {
+		return array(
+			'admin' => is_admin(),
+			'ajax'  => wp_doing_ajax(),
+			'cron'  => wp_doing_cron(),
+			'rest'  => ( defined( 'REST_REQUEST' ) && REST_REQUEST )
+				|| ( function_exists( 'wp_is_serving_rest_request' ) && wp_is_serving_rest_request() ),
+			'cli'   => defined( 'WP_CLI' ) && WP_CLI,
+		);
+	}
+
+	/**
+	 * Whether a request may flush rewrite rules: WP-CLI, or an admin page
+	 * load that is not admin-ajax (Heartbeat), cron or REST.
+	 *
+	 * @param array{admin?: bool, ajax?: bool, cron?: bool, rest?: bool, cli?: bool} $context From current_request_context().
+	 */
+	public static function is_safe_flush_context( array $context ): bool {
+		if ( ! empty( $context['cli'] ) ) {
+			return true;
+		}
+		return ! empty( $context['admin'] )
+			&& empty( $context['ajax'] )
+			&& empty( $context['cron'] )
+			&& empty( $context['rest'] );
 	}
 
 	/**

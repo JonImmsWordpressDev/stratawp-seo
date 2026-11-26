@@ -216,6 +216,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-head-cleanup.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rss-optimizer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-taxonomy-meta.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-sitemap-manager.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-rewrite-health.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-search-appearance.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-breadcrumbs.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-redirect-manager.php';
@@ -468,6 +469,7 @@ final class StrataWP_SEO {
 		$this->redirect_manager      = new SWPS_Redirect_Manager();
 		$this->sitemap_admin         = new SWPS_Sitemap_Admin();
 		$this->indexnow              = new SWPS_IndexNow();
+		new SWPS_Rewrite_Health(); // Registers the Site Health test and the rebuild action.
 
 		if ( is_admin() ) {
 			$this->post_list_seo = new SWPS_Post_List_SEO( $this->content_scorer );
