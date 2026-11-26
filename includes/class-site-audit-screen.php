@@ -674,6 +674,20 @@ class SWPS_Site_Audit_Screen {
 			return esc_html__( 'Also on:', 'stratawp-seo' ) . ' ' . implode( ', ', $links ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $links entries are pre-escaped above.
 		}
 
+		if ( isset( $detail['summary'] ) && is_string( $detail['summary'] ) ) {
+			$html = esc_html( $detail['summary'] );
+			foreach ( SWPS_Schema_Conflict_Detector::block_snippets( $detail ) as $block => $snippet ) {
+				$html .= '<br>' . esc_html(
+					sprintf(
+						/* translators: %d: JSON-LD block number in page order */
+						__( 'Block %d:', 'stratawp-seo' ),
+						$block
+					)
+				) . ' <code>' . esc_html( $snippet ) . '</code>';
+			}
+			return $html;
+		}
+
 		if ( isset( $detail['length'] ) ) {
 			return esc_html(
 				sprintf(

@@ -1,0 +1,7 @@
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": "https://example.test/#org",
+  "name": "Example Company LLC",
+  "url": "https://example.test/"
+}

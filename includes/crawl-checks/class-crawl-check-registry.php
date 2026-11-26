@@ -52,6 +52,8 @@ class SWPS_Crawl_Check_Registry {
 		SWPS_Check_Duplicate_Description::class,
 		SWPS_Check_Orphan_Page::class,
 		SWPS_Check_Single_Incoming_Link::class,
+		// Structured data conflicts across JSON-LD blocks.
+		SWPS_Check_Schema_Conflict::class,
 	);
 
 	/**

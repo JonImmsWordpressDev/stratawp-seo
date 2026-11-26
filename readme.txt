@@ -426,6 +426,9 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 
 == Changelog ==
 
+= Unreleased =
+* Added: a Site Crawl check for conflicting structured data. It reads every JSON-LD block on a page, whoever emits it, and flags two different Organization or WebSite nodes, one @id declared with conflicting @types, same-site @id references that point to no node on the page, a Person publisher on one node next to an Organization publisher on another, and blocks that fail to parse. Each finding names the block number and its first characters so you can find the plugin responsible. A LocalBusiness linked to the site Organization by parentOrganization is not a duplicate, and references to other sites (such as Wikidata) are not reported as dangling.
+
 = 4.35.1 =
 * Fixed: the Social Image set on the page assigned to "Posts page" was ignored, so every share of the blog index fell back to the site logo. This shares the root cause of the title fix above: the posts page is never is_singular(), so the per-post Open Graph path never ran for it, and the non-singular output carried no is_home() branch for the image. og:image and twitter:image on the posts page now use that page's Social Image when one is set, and still fall back to the schema logo or site icon when it is not. Other archives are unaffected.
 

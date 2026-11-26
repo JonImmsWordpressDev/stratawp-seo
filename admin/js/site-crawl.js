@@ -30,7 +30,8 @@
         missing_h1:         'Missing H1',
         duplicate_h1:       'Duplicate H1',
         mixed_content:      'Mixed content',
-        noindex_in_sitemap: 'Noindexed URLs in sitemap'
+        noindex_in_sitemap: 'Noindexed URLs in sitemap',
+        schema_conflict:    'Conflicting structured data'
     };
 
     function ajax(action, data) {
@@ -144,6 +145,7 @@
         if (d.h1_count) { bits.push(d.h1_count + ' H1s'); }
         if (d.asset) { bits.push('asset: ' + d.asset); }
         if (d.found_on) { bits.push('found on ' + d.found_on); }
+        if (d.summary) { bits.push(d.summary); }
         return bits.join(' · ');
     }
 
