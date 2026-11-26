@@ -13,6 +13,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class SWPS_Sitemap_Admin {
 
+	/**
+	 * Rows per page in the sitemap preview table.
+	 */
+	const PREVIEW_PER_PAGE = 100;
+
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'register_menu' ), 20 );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
@@ -113,6 +118,141 @@ class SWPS_Sitemap_Admin {
 		}
 
 		include SWPS_PLUGIN_DIR . 'templates/sitemaps-page.php';
+	}
+
+	/**
+	 * Map a sub-sitemap file name to the type and page the manager renders.
+	 *
+	 * @param string $file File name, e.g. post-sitemap2.xml or author-sitemap.xml.
+	 * @return array{type: string, page: int}|null Null for anything else.
+	 */
+	public static function sitemap_file_request( string $file ): ?array {
+		if ( ! preg_match( '/^([a-z0-9_-]+)-sitemap(\d*)\.xml$/', $file, $m ) ) {
+			return null;
+		}
+		return array(
+			'type' => $m[1],
+			'page' => max( 1, (int) $m[2] ),
+		);
+	}
+
+	/**
+	 * Sub-sitemaps listed in a sitemap index.
+	 *
+	 * @param string $xml Sitemap index XML.
+	 * @return array<int, array{file: string, loc: string, lastmod: string}>
+	 */
+	public static function parse_index_entries( string $xml ): array {
+		$entries = array();
+		if ( ! preg_match_all( '#<sitemap>(.*?)</sitemap>#s', $xml, $blocks ) ) {
+			return $entries;
+		}
+		foreach ( $blocks[1] as $block ) {
+			$loc = self::xml_tag_value( $block, 'loc' );
+			if ( '' === $loc ) {
+				continue;
+			}
+			$path      = (string) wp_parse_url( $loc, PHP_URL_PATH );
+			$entries[] = array(
+				'file'    => basename( $path ),
+				'loc'     => $loc,
+				'lastmod' => self::xml_tag_value( $block, 'lastmod' ),
+			);
+		}
+		return $entries;
+	}
+
+	/**
+	 * One page of the <url> entries in a sitemap.
+	 *
+	 * @param string $xml    Sitemap XML.
+	 * @param int    $offset Entries to skip.
+	 * @param int    $limit  Entries to return.
+	 * @return array{total: int, rows: array<int, array{loc: string, lastmod: string, images: int}>}
+	 */
+	public static function parse_url_entries( string $xml, int $offset, int $limit ): array {
+		$rows = array();
+		if ( ! preg_match_all( '#<url>(.*?)</url>#s', $xml, $blocks ) ) {
+			return array(
+				'total' => 0,
+				'rows'  => $rows,
+			);
+		}
+		foreach ( array_slice( $blocks[1], max( 0, $offset ), max( 0, $limit ) ) as $block ) {
+			$rows[] = array(
+				'loc'     => self::xml_tag_value( $block, 'loc' ),
+				'lastmod' => self::xml_tag_value( $block, 'lastmod' ),
+				'images'  => substr_count( $block, '<image:image>' ),
+			);
+		}
+		return array(
+			'total' => count( $blocks[1] ),
+			'rows'  => $rows,
+		);
+	}
+
+	/**
+	 * Decoded text of the first <$tag> in an XML fragment, or ''.
+	 *
+	 * @param string $xml XML fragment.
+	 * @param string $tag Tag name.
+	 */
+	private static function xml_tag_value( string $xml, string $tag ): string {
+		if ( ! preg_match( '#<' . preg_quote( $tag, '#' ) . '>(.*?)</' . preg_quote( $tag, '#' ) . '>#s', $xml, $m ) ) {
+			return '';
+		}
+		return trim( html_entity_decode( $m[1], ENT_QUOTES | ENT_XML1, 'UTF-8' ) );
+	}
+
+	/**
+	 * Data for the Preview tab: the sub-sitemaps in the index and, when one
+	 * is selected, a page of its entries. Reads the same XML crawlers get.
+	 *
+	 * @param string $file  Selected sub-sitemap file name, or ''.
+	 * @param int    $paged Table page.
+	 * @return array<string, mixed>
+	 */
+	public function get_preview( string $file, int $paged ): array {
+		$manager  = StrataWP_SEO::instance()->sitemap_manager;
+		$sitemaps = self::parse_index_entries( (string) $manager->get_sitemap_xml( 'index' ) );
+		$preview  = array(
+			'sitemaps' => $sitemaps,
+			'selected' => null,
+			'total'    => 0,
+			'rows'     => array(),
+			'paged'    => 1,
+			'pages'    => 1,
+		);
+
+		// Only files the index lists can be previewed.
+		$selected = null;
+		foreach ( $sitemaps as $entry ) {
+			if ( $entry['file'] === $file ) {
+				$selected = $entry;
+				break;
+			}
+		}
+		$request = $selected ? self::sitemap_file_request( $selected['file'] ) : null;
+		if ( ! $request ) {
+			return $preview;
+		}
+
+		$xml = $manager->get_sitemap_xml( $request['type'], $request['page'] );
+		if ( null === $xml ) {
+			return $preview;
+		}
+
+		$total = (int) substr_count( $xml, '<url>' );
+		$pages = max( 1, (int) ceil( $total / self::PREVIEW_PER_PAGE ) );
+		$paged = min( max( 1, $paged ), $pages );
+		$page  = self::parse_url_entries( $xml, ( $paged - 1 ) * self::PREVIEW_PER_PAGE, self::PREVIEW_PER_PAGE );
+
+		$preview['selected'] = $selected;
+		$preview['total']    = $page['total'];
+		$preview['rows']     = $page['rows'];
+		$preview['paged']    = $paged;
+		$preview['pages']    = $pages;
+		return $preview;
 	}
 
 	/**

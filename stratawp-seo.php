@@ -248,6 +248,8 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-background-processor.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-model-cron.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rest-api.php';
 require_once SWPS_PLUGIN_DIR . 'includes/trait-ability-defs.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-abilities.php';
+require_once SWPS_PLUGIN_DIR . 'includes/trait-crawl-ability-defs.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-abilities.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-abilities-rest.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-abilities-settings.php';

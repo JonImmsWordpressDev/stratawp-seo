@@ -282,7 +282,7 @@ It can replace Yoast/RankMath/AIOSEO outright, or coexist with them (schema and 
 
 = Machine Access (v4.19) =
 
-* **13 governed abilities** (queue topics, generate posts, run audits, AEO scan/propose/apply/undo, manage redirects, read stats) registered with the WP Abilities API (WordPress 6.9+) and exposed via REST
+* **17 governed abilities** (queue topics, generate posts, run audits, run a Site Crawl and apply its fixes, check a URL's canonical status, AEO scan/propose/apply/undo, manage redirects, read stats) registered with the WP Abilities API (WordPress 6.9+) and exposed via REST
 * **Write abilities are off by default** — per-ability toggles plus an activity log of every call
 * **Standard WordPress auth** — application passwords work out of the box for external agents
 
