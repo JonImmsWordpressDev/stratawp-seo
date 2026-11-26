@@ -62,6 +62,8 @@ class SWPS_Crawl_Check_Registry {
 		SWPS_Check_Image_Alt_Too_Long::class,
 		SWPS_Check_Image_Alt_Stuffed::class,
 		SWPS_Check_Image_Alt_Duplicate_Sitewide::class,
+		// Structured data conflicts across JSON-LD blocks.
+		SWPS_Check_Schema_Conflict::class,
 	);
 
 	/**

@@ -38,7 +38,8 @@
         image_alt_filename:           'Alt text that looks like a file name',
         image_alt_too_long:           'Alt text over 150 characters',
         image_alt_stuffed:            'Keyword-stuffed alt text',
-        image_alt_duplicate_sitewide: 'Same alt text on many different images'
+        image_alt_duplicate_sitewide: 'Same alt text on many different images',
+        schema_conflict:    'Conflicting structured data'
     };
 
     function ajax(action, data) {
@@ -160,6 +161,7 @@
             bits.push('"' + d.alt + '" on ' + d.file_count + ' images');
             if (d.images && d.images.length) { bits.push(d.images.join(', ')); }
         }
+        if (d.summary) { bits.push(d.summary); }
         return bits.join(' · ');
     }
 

@@ -1,0 +1,8 @@
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "@id": "https://example.test/hello-world/#blogposting",
+  "headline": "Hello world",
+  "image": { "@id": "https://example.test/hello-world/#primaryimage" },
+  "publisher": { "@id": "https://example.test/#organization" }
+}

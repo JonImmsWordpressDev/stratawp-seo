@@ -23,6 +23,8 @@ require_once __DIR__ . '/crawl-checks/class-checks-head.php';
 require_once __DIR__ . '/crawl-checks/class-minify-heuristic.php';
 require_once __DIR__ . '/crawl-checks/class-checks-content.php';
 require_once __DIR__ . '/crawl-checks/class-checks-image-alt.php';
+require_once __DIR__ . '/crawl-checks/class-schema-conflict-detector.php';
+require_once __DIR__ . '/crawl-checks/class-check-schema-conflict.php';
 require_once __DIR__ . '/crawl-checks/class-checks-aggregate.php';
 require_once __DIR__ . '/crawl-checks/class-checks-sitemap.php';
 require_once __DIR__ . '/crawl-checks/class-crawl-score.php';
@@ -324,7 +326,7 @@ class SWPS_Site_Crawler {
 	 *
 	 * @param string $html     Full HTML source of the page.
 	 * @param string $base_url Absolute URL used to resolve relative hrefs.
-	 * @return array{links:string[],images:string[],canonical:?string,h1_count:int,has_noindex:bool,mixed:string[],title:string,meta_desc:string,has_viewport:bool,has_doctype:bool,has_charset:bool,has_lang:bool,word_count:int,text_bytes:int,script_srcs:string[],style_hrefs:string[],images_missing_alt:string[],image_alts:array,hreflangs:array,has_schema:bool,nofollow_internal:string[],is_challenge:bool,is_archive:bool,is_paginated:bool}
+	 * @return array{links:string[],images:string[],canonical:?string,h1_count:int,has_noindex:bool,mixed:string[],title:string,meta_desc:string,has_viewport:bool,has_doctype:bool,has_charset:bool,has_lang:bool,word_count:int,text_bytes:int,script_srcs:string[],style_hrefs:string[],images_missing_alt:string[],image_alts:array,hreflangs:array,has_schema:bool,jsonld_blocks:string[],nofollow_internal:string[],is_challenge:bool,is_archive:bool,is_paginated:bool}
 	 */
 	public static function parse_html( string $html, string $base_url ): array {
 		$result = array(
@@ -348,6 +350,7 @@ class SWPS_Site_Crawler {
 			'image_alts'         => array(),
 			'hreflangs'          => array(),
 			'has_schema'         => false,
+			'jsonld_blocks'      => array(),
 			'nofollow_internal'  => array(),
 			'is_challenge'       => false,
 			'is_archive'         => false,
@@ -434,6 +437,9 @@ class SWPS_Site_Crawler {
 			// Loop variable is a DOMElement script node.
 			if ( 'application/ld+json' === strtolower( $el->getAttribute( 'type' ) ) ) {
 				$result['has_schema'] = true;
+				if ( count( $result['jsonld_blocks'] ) < SWPS_Schema_Conflict_Detector::MAX_BLOCKS ) {
+					$result['jsonld_blocks'][] = (string) $el->textContent; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMNode native property, not a WP object.
+				}
 			}
 
 			$src = $el->getAttribute( 'src' );
