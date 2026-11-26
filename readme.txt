@@ -426,6 +426,10 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 
 == Changelog ==
 
+= Unreleased =
+* Added: a Preview tab on the Sitemaps screen. Browsers no longer style XML sitemaps (Chrome dropped XSLT), so pick any sitemap from the index and see its URLs, last-modified dates and image counts as a paged table, with a link to the raw XML. Admins only. Crawlers still get the same plain XML at the same URLs.
+* Improved: sitemaps are now cached (in the object cache when your host has one), so large sites no longer rebuild every sitemap on every crawler request. The cache is cleared whenever a post is saved, published, trashed or deleted, a term or author changes, a post's sitemap or noindex setting changes, or sitemap, noindex or permalink settings change. The Google News sitemap is not cached because its 48-hour window moves on its own. Large post type sitemaps are also built in batches of 200 posts, so memory stays flat even at 50,000 URLs per sitemap.
+
 = 4.35.1 =
 * Fixed: the Social Image set on the page assigned to "Posts page" was ignored, so every share of the blog index fell back to the site logo. This shares the root cause of the title fix above: the posts page is never is_singular(), so the per-post Open Graph path never ran for it, and the non-singular output carried no is_home() branch for the image. og:image and twitter:image on the posts page now use that page's Social Image when one is set, and still fall back to the schema logo or site icon when it is not. Other archives are unaffected.
 
