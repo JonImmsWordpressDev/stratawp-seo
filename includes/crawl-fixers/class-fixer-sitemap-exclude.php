@@ -1,6 +1,7 @@
 <?php
 /**
- * Fix-It fixer: remove noindex posts from sitemap.
+ * Fix-It fixer: remove noindexed, redirecting, broken or non-canonical posts
+ * from the sitemap.
  *
  * @package StrataWP_SEO
  */
@@ -20,7 +21,7 @@ class SWPS_Fixer_Sitemap_Exclude extends SWPS_Crawl_Fixer {
 	 * @return string[]
 	 */
 	public function check_ids(): array {
-		return array( 'noindex_in_sitemap' );
+		return array( 'noindex_in_sitemap', 'sitemap_url_redirects', 'sitemap_url_error', 'sitemap_url_noncanonical' );
 	}
 
 	/**
@@ -56,7 +57,7 @@ class SWPS_Fixer_Sitemap_Exclude extends SWPS_Crawl_Fixer {
 	}
 
 	/**
-	 * Exclude the noindexed post from the sitemap.
+	 * Exclude the post from the sitemap.
 	 *
 	 * @param array $issue    Decoded issue row.
 	 * @param array $accepted Unused.
