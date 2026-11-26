@@ -31,6 +31,9 @@ final class CrawlFixerRegistryTest extends TestCase {
 			'mixed_content',
 			'nofollow_internal_link',
 			'noindex_in_sitemap',
+			'sitemap_url_redirects',
+			'sitemap_url_error',
+			'sitemap_url_noncanonical',
 		);
 		$actual = SWPS_Crawl_Fixer_Registry::fixable_ids();
 		sort( $expected );

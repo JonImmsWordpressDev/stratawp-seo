@@ -427,6 +427,7 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 == Changelog ==
 
 = Unreleased =
+* Added: Site Crawl now audits the sitemap itself. It reads the URLs your XML sitemap lists and flags the ones that redirect, return an error (404, 500 or no response), point their canonical tag at a different URL, or carry an impossible last-modified date (unreadable, before 2000 such as the 1970 date a missing value produces, or in the future). Sitemap URLs are crawled first so the crawl limit never skips them. Where the post is known, the redirect, error and canonical findings offer the one-click "Exclude from sitemap" fix.
 * Added: a Preview tab on the Sitemaps screen. Browsers no longer style XML sitemaps (Chrome dropped XSLT), so pick any sitemap from the index and see its URLs, last-modified dates and image counts as a paged table, with a link to the raw XML. Admins only. Crawlers still get the same plain XML at the same URLs.
 * Improved: sitemaps are now cached (in the object cache when your host has one), so large sites no longer rebuild every sitemap on every crawler request. The cache is cleared whenever a post is saved, published, trashed or deleted, a term or author changes, a post's sitemap or noindex setting changes, or sitemap, noindex or permalink settings change. The Google News sitemap is not cached because its 48-hour window moves on its own. Large post type sitemaps are also built in batches of 200 posts, so memory stays flat even at 50,000 URLs per sitemap.
 
