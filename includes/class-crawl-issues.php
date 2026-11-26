@@ -293,9 +293,10 @@ class SWPS_Crawl_Issues {
 		foreach ( $rows as &$row ) {
 			$row['internal_links']    = json_decode( (string) $row['internal_links'], true ) ?: array();
 			$row['unminified_assets'] = json_decode( (string) $row['unminified_assets'], true ) ?: array();
-			$row['image_alts']        = json_decode( (string) ( $row['image_alts'] ?? '' ), true ) ?: array();
 			$row['flags']             = (int) $row['flags'];
 			$row['status_code']       = (int) $row['status_code'];
+			$image_alts               = json_decode( (string) ( $row['image_alts'] ?? '' ), true );
+			$row['image_alts']        = is_array( $image_alts ) ? $image_alts : array();
 		}
 		return $rows;
 	}

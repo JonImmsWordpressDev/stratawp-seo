@@ -15,6 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- one file per check family, like the other crawl-check files.
+
 /**
  * Pure alt text heuristics shared by the alt quality checks.
  */
