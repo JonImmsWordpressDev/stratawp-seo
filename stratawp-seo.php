@@ -906,11 +906,12 @@ final class StrataWP_SEO {
 		}
 
 		$count    = min( (int) ( $_POST['count'] ?? 1 ), 5 );
-		$template = sanitize_text_field( wp_unslash( $_POST['template'] ?? 'auto' ) );
-		$brand    = isset( $_POST['brand_mentions'] ) && is_scalar( $_POST['brand_mentions'] ) && '' !== $_POST['brand_mentions']
+		$template = sanitize_text_field( $_POST['template'] ?? 'auto' );
+		$results  = array();
+
+		$brand = isset( $_POST['brand_mentions'] ) && is_scalar( $_POST['brand_mentions'] ) && '' !== $_POST['brand_mentions']
 			? SWPS_Generator::normalize_brand_mentions( sanitize_key( wp_unslash( (string) $_POST['brand_mentions'] ) ) )
 			: null;
-		$results  = array();
 
 		for ( $i = 0; $i < $count; $i++ ) {
 			// One request for N posts: the double-click cooldown applies to the
