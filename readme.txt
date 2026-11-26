@@ -335,6 +335,19 @@ StrataWP SEO connects to external services **only when you configure them**, alw
 
 **GitHub (only for copies installed outside WordPress.org).** A build installed from a GitHub release checks https://api.github.com for a newer release so it can self-update. This sends nothing but the request itself. A copy installed from the WordPress.org directory does not make this request at all — see `admin/js/vendor/README.md` and the `swps_github_updater_enabled` filter — terms: https://docs.github.com/site-policy/github-terms/github-terms-of-service · privacy: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
 
+= Lean by design (draft) =
+
+Measured with `php bin/measure-footprint.php` on a fresh WordPress 7.1.5 site (PHP 8.3, Twenty Twenty-Five, default settings, one post), median of 15 runs with the plugin on and off:
+
+* Front end: 16 to 18 extra database queries per page view, and 1.2 KB (home page) to 3.2 KB (single post) more in `<head>`, most of it schema and meta tags.
+* Front-end assets: one script (the analytics tracker) on every page, plus one stylesheet on single posts.
+* Admin: 13 extra queries on the Posts list and 22 in the post editor.
+* Database: 18 custom tables, and 96 autoloaded options totalling about 330 bytes.
+* Notices: the two that can appear on any admin screen (AI budget, crawler reconciliation) show only to administrators and can be dismissed. The rest show only on StrataWP SEO screens, once after an action you took, or (the editor sidebar prompt) on the Plugins screen until the sidebar is turned on.
+* The plugin never installs or activates other plugins.
+
+Run the script on your own site to get numbers for your setup.
+
 == Installation ==
 
 1. Upload the `stratawp-seo` folder to `/wp-content/plugins/`
