@@ -30,7 +30,11 @@
         missing_h1:         'Missing H1',
         duplicate_h1:       'Duplicate H1',
         mixed_content:      'Mixed content',
-        noindex_in_sitemap: 'Noindexed URLs in sitemap'
+        noindex_in_sitemap: 'Noindexed URLs in sitemap',
+        image_alt_filename:           'Alt text that looks like a file name',
+        image_alt_too_long:           'Alt text over 150 characters',
+        image_alt_stuffed:            'Keyword-stuffed alt text',
+        image_alt_duplicate_sitewide: 'Same alt text on many different images'
     };
 
     function ajax(action, data) {
@@ -144,6 +148,12 @@
         if (d.h1_count) { bits.push(d.h1_count + ' H1s'); }
         if (d.asset) { bits.push('asset: ' + d.asset); }
         if (d.found_on) { bits.push('found on ' + d.found_on); }
+        if (d.alts) {
+            Object.keys(d.alts).forEach(function (src) { bits.push(src + ': "' + d.alts[src] + '"'); });
+        } else if (d.alt) {
+            bits.push('"' + d.alt + '" on ' + d.file_count + ' images');
+            if (d.images && d.images.length) { bits.push(d.images.join(', ')); }
+        }
         return bits.join(' · ');
     }
 

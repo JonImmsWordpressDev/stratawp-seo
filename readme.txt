@@ -426,6 +426,9 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 
 == Changelog ==
 
+= Unreleased =
+* Added: four alt text quality checks in Site Crawl, next to the missing alt check. They flag alt text that looks like a file name or camera default (such as IMG_1234, DSC0001, screenshot-2026-01-02 or hero_banner.jpg), alt text over 150 characters, keyword-stuffed alt text (the same word three or more times, or a comma-separated keyword list), and the same alt text used on five or more different image files across the site. Each issue lists the image and the page it is on. Decorative images with empty alt text are never flagged, and one image reused on many pages does not count as a duplicate.
+
 = 4.35.1 =
 * Fixed: the Social Image set on the page assigned to "Posts page" was ignored, so every share of the blog index fell back to the site logo. This shares the root cause of the title fix above: the posts page is never is_singular(), so the per-post Open Graph path never ran for it, and the non-singular output carried no is_home() branch for the image. og:image and twitter:image on the posts page now use that page's Social Image when one is set, and still fall back to the schema logo or site icon when it is not. Other archives are unaffected.
 

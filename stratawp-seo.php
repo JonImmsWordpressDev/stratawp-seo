@@ -186,6 +186,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-legacy-page.p
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-head.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-minify-heuristic.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-content.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-image-alt.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-aggregate.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-crawl-score.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-target.php';
