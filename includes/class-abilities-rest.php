@@ -110,6 +110,7 @@ class SWPS_Abilities_Rest {
 			$status_map = array(
 				'swps_ability_not_found' => 404,
 				'swps_ability_disabled'  => 403,
+				'swps_ability_forbidden' => 403,
 			);
 			$status     = $status_map[ $result->get_error_code() ] ?? 400;
 			return new WP_REST_Response(

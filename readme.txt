@@ -2,7 +2,7 @@
 Contributors: jonimms
 Tags: seo, ai, content generation, schema, aeo
 Requires at least: 6.0
-Tested up to: 6.8
+Tested up to: 7.1
 Requires PHP: 8.0
 Stable tag: 4.36.0
 License: GPLv2 or later
@@ -282,7 +282,7 @@ It can replace Yoast/RankMath/AIOSEO outright, or coexist with them (schema and 
 
 = Machine Access (v4.19) =
 
-* **13 governed abilities** (queue topics, generate posts, run audits, AEO scan/propose/apply/undo, manage redirects, read stats) registered with the WP Abilities API (WordPress 6.9+) and exposed via REST
+* **17 governed abilities** (queue topics, generate posts, run audits, run a Site Crawl and apply its fixes, check a URL's canonical status, AEO scan/propose/apply/undo, manage redirects, read stats) registered with the WP Abilities API (WordPress 6.9+) and exposed via REST
 * **Write abilities are off by default** — per-ability toggles plus an activity log of every call
 * **Standard WordPress auth** — application passwords work out of the box for external agents
 
@@ -334,6 +334,19 @@ StrataWP SEO connects to external services **only when you configure them**, alw
 **IndexNow (optional).** When IndexNow is enabled, the plugin submits the URL of a post or term you publish, update or delete — and your site's IndexNow key — to the IndexNow API, which shares it with participating search engines (Bing, Yandex, Seznam, Naver). Only URLs and the key are sent, never post content, and submissions are paused automatically outside production — terms and privacy: https://www.indexnow.org/faq · https://www.bing.com/webmasters/indexnow
 
 **GitHub (only for copies installed outside WordPress.org).** A build installed from a GitHub release checks https://api.github.com for a newer release so it can self-update. This sends nothing but the request itself. A copy installed from the WordPress.org directory does not make this request at all — see `admin/js/vendor/README.md` and the `swps_github_updater_enabled` filter — terms: https://docs.github.com/site-policy/github-terms/github-terms-of-service · privacy: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+
+= Lean by design (draft) =
+
+Measured with `php bin/measure-footprint.php` on a fresh WordPress 7.1.5 site (PHP 8.3, Twenty Twenty-Five, default settings, one post), median of 15 runs with the plugin on and off:
+
+* Front end: 16 to 18 extra database queries per page view, and 1.2 KB (home page) to 3.2 KB (single post) more in `<head>`, most of it schema and meta tags.
+* Front-end assets: one script (the analytics tracker) on every page, plus one stylesheet on single posts.
+* Admin: 13 extra queries on the Posts list and 22 in the post editor.
+* Database: 18 custom tables, and 96 autoloaded options totalling about 330 bytes.
+* Notices: the two that can appear on any admin screen (AI budget, crawler reconciliation) show only to administrators and can be dismissed. The rest show only on StrataWP SEO screens, once after an action you took, or (the editor sidebar prompt) on the Plugins screen until the sidebar is turned on.
+* The plugin never installs or activates other plugins.
+
+Run the script on your own site to get numbers for your setup.
 
 == Installation ==
 

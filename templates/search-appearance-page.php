@@ -109,6 +109,49 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</table>
 		<?php endforeach; ?>
 
+		<?php
+		$swps_base_taxonomies = SWPS_Term_Base::eligible_taxonomies();
+		$swps_base_enabled    = (array) get_option( SWPS_Term_Base::OPTION, array() );
+		if ( $swps_base_taxonomies ) :
+			?>
+			<h2><?php esc_html_e( 'Category Base', 'stratawp-seo' ); ?></h2>
+			<table class="form-table">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Remove the category base from URLs', 'stratawp-seo' ); ?></th>
+					<td>
+						<?php
+						foreach ( $swps_base_taxonomies as $swps_base_tax ) :
+							$swps_base_obj  = get_taxonomy( $swps_base_tax );
+							$swps_base_slug = SWPS_Term_Base::base( $swps_base_tax );
+							?>
+							<label style="display:block;margin-bottom:4px;">
+								<input type="checkbox" name="<?php echo esc_attr( SWPS_Term_Base::OPTION ); ?>[]" value="<?php echo esc_attr( $swps_base_tax ); ?>"
+									<?php checked( in_array( $swps_base_tax, $swps_base_enabled, true ) ); ?>>
+								<?php
+								/* translators: 1: taxonomy name, 2: URL base such as "category" */
+								echo esc_html( sprintf( __( '%1$s: remove /%2$s/ from URLs', 'stratawp-seo' ), $swps_base_obj->labels->name, $swps_base_slug ) );
+								?>
+							</label>
+						<?php endforeach; ?>
+						<p class="description"><?php esc_html_e( 'Off by default. /category/news/ becomes /news/, including child terms, pagination and feeds. Old URLs 301-redirect to the new ones while this is on, and sitemaps and canonicals use the new URLs. A page or post with the same slug always wins over a term. Has no effect with plain permalinks.', 'stratawp-seo' ); ?></p>
+						<?php
+						$swps_base_collisions = SWPS_Term_Base::collisions();
+						if ( $swps_base_collisions ) :
+							?>
+							<div class="notice notice-warning inline" style="margin-top:8px;">
+								<p><?php esc_html_e( 'These terms share a URL with a page or post. The page or post is shown there, so these term archives cannot be reached without the base. Change the term or page slug to fix it.', 'stratawp-seo' ); ?></p>
+								<ul style="list-style:disc;margin-left:20px;">
+									<?php foreach ( $swps_base_collisions as $swps_collision ) : ?>
+										<li><?php echo esc_html( $swps_collision['name'] . ' (/' . $swps_collision['path'] . '/)' ); ?></li>
+									<?php endforeach; ?>
+								</ul>
+							</div>
+						<?php endif; ?>
+					</td>
+				</tr>
+			</table>
+		<?php endif; ?>
+
 		<h2><?php esc_html_e( 'Special Pages', 'stratawp-seo' ); ?></h2>
 		<table class="form-table">
 			<tr>

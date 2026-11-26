@@ -25,7 +25,7 @@ class SWPS_Crawl_Issues {
 	public const TABLE_PAGES  = 'swps_crawl_pages';
 
 	/** Current schema version; bump whenever the DDL changes. */
-	public const DB_VERSION = '4';
+	public const DB_VERSION = '5';
 
 	/** Option key holding the installed schema version. */
 	public const OPT_DB_VER = 'swps_crawl_db_version';
@@ -149,6 +149,7 @@ class SWPS_Crawl_Issues {
 			canonical VARCHAR(500) DEFAULT NULL,
 			internal_links LONGTEXT,
 			unminified_assets TEXT,
+			image_alts LONGTEXT,
 			PRIMARY KEY  (id),
 			UNIQUE KEY idx_run_urlhash (run_id, url_hash),
 			KEY idx_run (run_id),
@@ -245,7 +246,8 @@ class SWPS_Crawl_Issues {
 	 * @param int   $run_id Current run ID.
 	 * @param array $row    Page row with keys: url, status_code, content_type, title, title_hash,
 	 *                       meta_desc_hash, desc_length, flags, word_count, html_bytes, text_bytes,
-	 *                       h1_count, canonical, internal_links (array→JSON), unminified_assets (array→JSON).
+	 *                       h1_count, canonical, internal_links (array→JSON), unminified_assets (array→JSON),
+	 *                       image_alts (array of {src, alt}→JSON).
 	 */
 	public static function insert_page( int $run_id, array $row ): void {
 		global $wpdb;
@@ -270,6 +272,7 @@ class SWPS_Crawl_Issues {
 				'canonical'         => isset( $row['canonical'] ) ? substr( (string) $row['canonical'], 0, 500 ) : null,
 				'internal_links'    => wp_json_encode( array_values( $row['internal_links'] ?? array() ) ),
 				'unminified_assets' => wp_json_encode( array_values( $row['unminified_assets'] ?? array() ) ),
+				'image_alts'        => wp_json_encode( array_values( $row['image_alts'] ?? array() ) ),
 			)
 		);
 	}
@@ -292,6 +295,8 @@ class SWPS_Crawl_Issues {
 			$row['unminified_assets'] = json_decode( (string) $row['unminified_assets'], true ) ?: array();
 			$row['flags']             = (int) $row['flags'];
 			$row['status_code']       = (int) $row['status_code'];
+			$image_alts               = json_decode( (string) ( $row['image_alts'] ?? '' ), true );
+			$row['image_alts']        = is_array( $image_alts ) ? $image_alts : array();
 		}
 		return $rows;
 	}

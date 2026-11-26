@@ -28,6 +28,39 @@ class SWPS_Sitemap_Manager {
 	const NEWS_WINDOW_SECONDS = 2 * DAY_IN_SECONDS;
 	const NEWS_MAX_URLS       = 1000;
 
+	/**
+	 * Rendered sitemaps are cached in transients (the object cache when one is
+	 * present). Keys carry a generation number; any content or settings change
+	 * bumps it, so every cached sitemap goes stale at once and old entries just
+	 * expire. Not a swps_sitemap_* name: changes to those options flush the
+	 * cache, and bumping must not flush itself.
+	 */
+	const CACHE_GEN_OPTION = 'swps_sitemap_gen';
+	const CACHE_TTL        = DAY_IN_SECONDS;
+
+	/**
+	 * Post objects loaded per batch while rendering a post type sitemap, so a
+	 * 50,000-URL sitemap never holds every post (and its content) at once.
+	 */
+	const RENDER_BATCH = 200;
+
+	/**
+	 * Post and term meta keys that change a sitemap entry.
+	 */
+	const CACHE_META_KEYS = array( '_swps_sitemap_exclude', '_swps_robots', '_swps_sitemap_priority', '_swps_sitemap_changefreq', '_thumbnail_id', '_wp_attachment_image_alt' );
+
+	/**
+	 * Core options that change sitemap URLs or content.
+	 */
+	const CACHE_CORE_OPTIONS = array( 'show_on_front', 'page_on_front', 'permalink_structure', 'category_base', 'tag_base', 'home', 'siteurl' );
+
+	/**
+	 * Whether the cache was already invalidated in this request.
+	 *
+	 * @var bool
+	 */
+	private bool $cache_flushed = false;
+
 	private function get_urls_per_sitemap(): int {
 		return max( 100, min( 50000, (int) get_option( 'swps_sitemap_urls_per_page', 1000 ) ) );
 	}
@@ -288,6 +321,220 @@ class SWPS_Sitemap_Manager {
 
 		// Serve sitemaps.
 		add_action( 'template_redirect', array( $this, 'serve_sitemap' ), 1 );
+
+		// Invalidate cached sitemaps when anything they list changes.
+		add_action( 'save_post', array( $this, 'on_save_post' ), 10, 2 );
+		add_action( 'deleted_post', array( $this, 'flush_cache' ) );
+		add_action( 'transition_post_status', array( $this, 'on_transition_post_status' ), 10, 2 );
+		foreach ( array( 'added_post_meta', 'updated_post_meta', 'deleted_post_meta', 'added_term_meta', 'updated_term_meta', 'deleted_term_meta' ) as $hook ) {
+			add_action( $hook, array( $this, 'on_meta_change' ), 10, 3 );
+		}
+		foreach ( array( 'created_term', 'edited_term', 'delete_term', 'user_register', 'profile_update', 'deleted_user' ) as $hook ) {
+			add_action( $hook, array( $this, 'flush_cache' ) );
+		}
+		foreach ( array( 'added_option', 'updated_option', 'deleted_option' ) as $hook ) {
+			add_action( $hook, array( $this, 'on_option_change' ) );
+		}
+	}
+
+	/**
+	 * Transient key for a rendered sitemap.
+	 *
+	 * @param string $type Sitemap type (index, a post type, a taxonomy, author).
+	 * @param int    $page Page number.
+	 */
+	public static function cache_key( string $type, int $page ): string {
+		$gen     = (int) get_option( self::CACHE_GEN_OPTION, 0 );
+		$version = defined( 'SWPS_VERSION' ) ? SWPS_VERSION : '';
+		return 'swps_sitemap_' . md5( $version . '|' . $gen . '|' . $type . '|' . $page );
+	}
+
+	/**
+	 * The Google News sitemap is not cached: its 48-hour window moves with
+	 * time, not with edits, and it is capped at 1,000 URLs anyway.
+	 *
+	 * @param string $type Sitemap type.
+	 */
+	public static function is_cacheable_type( string $type ): bool {
+		return self::NEWS_TYPE !== $type;
+	}
+
+	/**
+	 * Whether an option change affects sitemap output.
+	 *
+	 * @param string $option Option name.
+	 */
+	public static function is_sitemap_option( string $option ): bool {
+		if ( self::CACHE_GEN_OPTION === $option ) {
+			return false;
+		}
+		return str_starts_with( $option, 'swps_sitemap_' )
+			|| str_starts_with( $option, 'swps_noindex_' )
+			|| in_array( $option, self::CACHE_CORE_OPTIONS, true );
+	}
+
+	/**
+	 * Make every cached sitemap stale. Runs at most once per request.
+	 */
+	public function flush_cache(): void {
+		if ( $this->cache_flushed ) {
+			return;
+		}
+		$this->cache_flushed = true;
+		update_option( self::CACHE_GEN_OPTION, (int) get_option( self::CACHE_GEN_OPTION, 0 ) + 1, false );
+	}
+
+	/**
+	 * Flush on post save, ignoring revisions and autosaves.
+	 *
+	 * @param int          $post_id Post ID.
+	 * @param WP_Post|null $post    Post object.
+	 */
+	public function on_save_post( $post_id, $post = null ): void {
+		if ( $post && 'revision' === $post->post_type ) {
+			return;
+		}
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return;
+		}
+		$this->flush_cache();
+	}
+
+	/**
+	 * Flush when a post changes status (publish, unpublish, trash, restore).
+	 *
+	 * @param string $new_status New status.
+	 * @param string $old_status Old status.
+	 */
+	public function on_transition_post_status( $new_status, $old_status ): void {
+		if ( $new_status !== $old_status ) {
+			$this->flush_cache();
+		}
+	}
+
+	/**
+	 * Flush when post or term meta that shapes a sitemap entry changes.
+	 *
+	 * @param int|int[] $meta_ids  Meta ID(s).
+	 * @param int       $object_id Post or term ID.
+	 * @param string    $meta_key  Meta key.
+	 */
+	public function on_meta_change( $meta_ids, $object_id, $meta_key ): void {
+		if ( in_array( (string) $meta_key, self::CACHE_META_KEYS, true ) ) {
+			$this->flush_cache();
+		}
+	}
+
+	/**
+	 * Flush when a sitemap, noindex or permalink-related option changes.
+	 *
+	 * @param string $option Option name.
+	 */
+	public function on_option_change( $option ): void {
+		if ( self::is_sitemap_option( (string) $option ) ) {
+			$this->flush_cache();
+		}
+	}
+
+	/**
+	 * The XML for one sitemap, from cache when possible.
+	 *
+	 * @param string $type Sitemap type: index, author, google-news, a public taxonomy or post type.
+	 * @param int    $page Page number (post type sitemaps only).
+	 * @return string|null XML, or null when this type is not served (404).
+	 */
+	public function get_sitemap_xml( string $type, int $page = 1 ): ?string {
+		$page = max( 1, $page );
+		if ( ! $this->is_servable_type( $type ) ) {
+			return null;
+		}
+
+		$is_post_type = $this->is_post_type_sitemap( $type );
+		if ( ! $is_post_type ) {
+			$page = 1;
+		}
+
+		// Only pages that exist are cached, so requests for made-up page
+		// numbers cannot fill the options table with transients.
+		$cacheable = self::is_cacheable_type( $type )
+			&& ( ! $is_post_type || $page <= $this->get_post_type_page_count( $type ) );
+		if ( $cacheable ) {
+			$key    = self::cache_key( $type, $page );
+			$cached = get_transient( $key );
+			if ( is_string( $cached ) && '' !== $cached ) {
+				return $cached;
+			}
+		}
+
+		ob_start();
+		$this->render_type( $type, $page );
+		$xml = (string) ob_get_clean();
+
+		if ( $cacheable ) {
+			set_transient( $key, $xml, self::CACHE_TTL );
+		}
+		return $xml;
+	}
+
+	/**
+	 * Whether a sitemap type is served (anything else is a 404).
+	 *
+	 * @param string $type Sitemap type.
+	 */
+	private function is_servable_type( string $type ): bool {
+		if ( 'index' === $type ) {
+			return true;
+		}
+		if ( 'author' === $type ) {
+			return ! self::is_author_sitemap_hidden();
+		}
+		if ( self::NEWS_TYPE === $type ) {
+			return self::is_news_sitemap_enabled();
+		}
+		if ( in_array( $type, get_taxonomies( array( 'public' => true ) ), true ) && ! self::is_taxonomy_hidden_from_sitemap( $type ) ) {
+			return true;
+		}
+		return in_array( $type, get_post_types( array( 'public' => true ) ), true ) && ! self::is_post_type_hidden_from_sitemap( $type );
+	}
+
+	/**
+	 * Whether a type is a (paged) post type sitemap rather than the index,
+	 * author, news or a taxonomy sitemap.
+	 *
+	 * @param string $type Sitemap type.
+	 */
+	private function is_post_type_sitemap( string $type ): bool {
+		return ! in_array( $type, array( 'index', 'author', self::NEWS_TYPE ), true )
+			&& ! in_array( $type, get_taxonomies( array( 'public' => true ) ), true );
+	}
+
+	/**
+	 * Number of sub-sitemap pages the index lists for a post type.
+	 *
+	 * @param string $post_type Post type.
+	 */
+	private function get_post_type_page_count( string $post_type ): int {
+		return max( 1, (int) ceil( $this->get_post_type_count( $post_type ) / $this->get_urls_per_sitemap() ) );
+	}
+
+	/**
+	 * Echo the XML for a servable sitemap type.
+	 *
+	 * @param string $type Sitemap type.
+	 * @param int    $page Page number.
+	 */
+	private function render_type( string $type, int $page ): void {
+		if ( 'index' === $type ) {
+			$this->render_sitemap_index();
+		} elseif ( 'author' === $type ) {
+			$this->render_author_sitemap();
+		} elseif ( self::NEWS_TYPE === $type ) {
+			$this->render_news_sitemap();
+		} elseif ( $this->is_post_type_sitemap( $type ) ) {
+			$this->render_post_type_sitemap( $type, $page );
+		} else {
+			$this->render_taxonomy_sitemap( $type );
+		}
 	}
 
 	/**
@@ -322,13 +569,57 @@ class SWPS_Sitemap_Manager {
 	/**
 	 * Flush rewrite rules once per plugin version so users do not have to
 	 * manually re-save permalinks after every upgrade.
+	 *
+	 * Only on a normal admin page load or in WP-CLI. On Heartbeat, other
+	 * admin-ajax, cron, REST or front-end requests some plugins have not
+	 * registered their admin-only or conditional rules yet, so a flush there
+	 * can drop them (and 404 the sitemaps). The pending flush waits for the
+	 * next admin page load instead.
 	 */
 	public function maybe_flush_rewrites(): void {
 		if ( get_option( 'swps_rewrite_version' ) === SWPS_VERSION ) {
 			return;
 		}
+		if ( ! self::is_safe_flush_context( self::current_request_context() ) ) {
+			return;
+		}
 		update_option( 'swps_rewrite_version', SWPS_VERSION, false );
 		flush_rewrite_rules( false );
+		if ( class_exists( 'SWPS_Rewrite_Health' ) ) {
+			delete_transient( SWPS_Rewrite_Health::CACHE_KEY );
+		}
+	}
+
+	/**
+	 * What kind of request this is, for is_safe_flush_context().
+	 *
+	 * @return array{admin: bool, ajax: bool, cron: bool, rest: bool, cli: bool}
+	 */
+	public static function current_request_context(): array {
+		return array(
+			'admin' => is_admin(),
+			'ajax'  => wp_doing_ajax(),
+			'cron'  => wp_doing_cron(),
+			'rest'  => ( defined( 'REST_REQUEST' ) && REST_REQUEST )
+				|| ( function_exists( 'wp_is_serving_rest_request' ) && wp_is_serving_rest_request() ),
+			'cli'   => defined( 'WP_CLI' ) && WP_CLI,
+		);
+	}
+
+	/**
+	 * Whether a request may flush rewrite rules: WP-CLI, or an admin page
+	 * load that is not admin-ajax (Heartbeat), cron or REST.
+	 *
+	 * @param array{admin?: bool, ajax?: bool, cron?: bool, rest?: bool, cli?: bool} $context From current_request_context().
+	 */
+	public static function is_safe_flush_context( array $context ): bool {
+		if ( ! empty( $context['cli'] ) ) {
+			return true;
+		}
+		return ! empty( $context['admin'] )
+			&& empty( $context['ajax'] )
+			&& empty( $context['cron'] )
+			&& empty( $context['rest'] );
 	}
 
 	/**
@@ -367,37 +658,14 @@ class SWPS_Sitemap_Manager {
 		header( 'Content-Type: application/xml; charset=UTF-8' );
 		header( 'X-Robots-Tag: noindex' );
 
-		if ( 'index' === $type ) {
-			$this->render_sitemap_index();
-		} elseif ( 'author' === $type ) {
-			if ( self::is_author_sitemap_hidden() ) {
-				status_header( 404 );
-				exit;
-			}
-			$this->render_author_sitemap();
-		} elseif ( self::NEWS_TYPE === $type ) {
-			if ( ! self::is_news_sitemap_enabled() ) {
-				status_header( 404 );
-				exit;
-			}
-			$this->render_news_sitemap();
-		} else {
-			// Check if it's a taxonomy.
-			$taxonomies = get_taxonomies( array( 'public' => true ) );
-			if ( in_array( $type, $taxonomies, true ) && ! self::is_taxonomy_hidden_from_sitemap( $type ) ) {
-				$this->render_taxonomy_sitemap( $type );
-			} else {
-				// Post type sitemap.
-				$post_types = get_post_types( array( 'public' => true ) );
-				if ( in_array( $type, $post_types, true ) && ! self::is_post_type_hidden_from_sitemap( $type ) ) {
-					$this->render_post_type_sitemap( $type, $page );
-				} else {
-					status_header( 404 );
-					exit;
-				}
-			}
+		$xml = $this->get_sitemap_xml( (string) $type, $page );
+		if ( null === $xml ) {
+			status_header( 404 );
+			exit;
 		}
 
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- XML built by the render_* methods, which escape every value.
+		echo $xml;
 		exit;
 	}
 
@@ -415,8 +683,7 @@ class SWPS_Sitemap_Manager {
 				continue;
 			}
 
-			$count = $this->get_post_type_count( $pt );
-			$pages = max( 1, (int) ceil( $count / $this->get_urls_per_sitemap() ) );
+			$pages = $this->get_post_type_page_count( $pt );
 
 			for ( $i = 1; $i <= $pages; $i++ ) {
 				$suffix = $i > 1 ? $i : '';
@@ -484,7 +751,7 @@ class SWPS_Sitemap_Manager {
 
 		$offset = ( $page - 1 ) * $this->get_urls_per_sitemap();
 
-		$posts = get_posts(
+		$post_ids    = get_posts(
 			array(
 				'post_type'      => $post_type,
 				'post_status'    => 'publish',
@@ -493,8 +760,10 @@ class SWPS_Sitemap_Manager {
 				'orderby'        => 'modified',
 				'order'          => 'DESC',
 				'no_found_rows'  => true,
+				'fields'         => 'ids',
 			)
 		);
+		$with_images = ! get_option( 'swps_sitemap_exclude_images', 0 );
 
 		echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 		echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n";
@@ -517,46 +786,111 @@ class SWPS_Sitemap_Manager {
 			}
 		}
 
-		foreach ( $posts as $post ) {
-			// Skip the static front page; already emitted as the homepage URL.
-			if ( $front_page_id && (int) $post->ID === $front_page_id ) {
-				continue;
+		foreach ( array_chunk( array_map( 'intval', $post_ids ), self::RENDER_BATCH ) as $batch ) {
+			$loaded = $this->load_post_batch( $batch, $with_images );
+			foreach ( $batch as $post_id ) {
+				$post = get_post( $post_id );
+				if ( $post ) {
+					$this->render_post_entry( $post, $post_type, $front_page_id, $with_images );
+				}
 			}
-
-			// Keep in sync with SWPS_Sitemap_Manager::is_post_indexable().
-			// Respect exclusions.
-			if ( get_post_meta( $post->ID, '_swps_sitemap_exclude', true ) ) {
-				continue;
-			}
-
-			// Respect noindex.
-			$robots = get_post_meta( $post->ID, '_swps_robots', true );
-			if ( ! empty( $robots ) && str_contains( (string) $robots, 'noindex' ) ) {
-				continue;
-			}
-
-			$modified = get_post_modified_time( 'U', true, $post );
-			$priority = get_post_meta( $post->ID, '_swps_sitemap_priority', true );
-			if ( empty( $priority ) ) {
-				$priority = 'page' === $post_type ? '0.8' : '0.6';
-			}
-			$changefreq = get_post_meta( $post->ID, '_swps_sitemap_changefreq', true ) ?: 'weekly';
-
-			echo "<url>\n";
-			printf( "  <loc>%s</loc>\n", esc_url( get_permalink( $post ) ) );
-			printf( "  <lastmod>%s</lastmod>\n", gmdate( 'Y-m-d\TH:i:s+00:00', $modified ) );
-			printf( "  <changefreq>%s</changefreq>\n", esc_xml( $changefreq ) );
-			printf( "  <priority>%s</priority>\n", esc_attr( $priority ) );
-
-			// Image entries.
-			if ( ! get_option( 'swps_sitemap_exclude_images', 0 ) ) {
-				$this->render_image_entries( $post->ID );
-			}
-
-			echo "</url>\n";
+			$this->release_post_batch( $loaded );
 		}
 
 		echo '</urlset>';
+	}
+
+	/**
+	 * Load one batch of posts, their meta and (when needed) their featured
+	 * images in a few queries instead of several per post.
+	 *
+	 * @param int[] $post_ids    Post IDs.
+	 * @param bool  $with_images Whether image entries are rendered.
+	 * @return int[] Every post ID loaded, for release_post_batch().
+	 */
+	private function load_post_batch( array $post_ids, bool $with_images ): array {
+		_prime_post_caches( $post_ids, true, true );
+		if ( ! $with_images ) {
+			return $post_ids;
+		}
+		$thumb_ids = array();
+		foreach ( $post_ids as $post_id ) {
+			$thumb_id = (int) get_post_meta( $post_id, '_thumbnail_id', true );
+			if ( $thumb_id ) {
+				$thumb_ids[] = $thumb_id;
+			}
+		}
+		if ( $thumb_ids ) {
+			_prime_post_caches( $thumb_ids, false, true );
+		}
+		return array_merge( $post_ids, $thumb_ids );
+	}
+
+	/**
+	 * Drop a rendered batch from the in-memory cache so memory stays flat
+	 * across the sitemap. Skipped with a persistent object cache, where a
+	 * delete would also evict the shared copy.
+	 *
+	 * @param int[] $post_ids Post IDs from load_post_batch().
+	 */
+	private function release_post_batch( array $post_ids ): void {
+		if ( wp_using_ext_object_cache() ) {
+			return;
+		}
+		foreach ( $post_ids as $post_id ) {
+			wp_cache_delete( $post_id, 'posts' );
+			wp_cache_delete( $post_id, 'post_meta' );
+		}
+	}
+
+	/**
+	 * Echo one <url> entry of a post type sitemap.
+	 *
+	 * @param WP_Post|object $post          Post.
+	 * @param string         $post_type     Post type of the sitemap.
+	 * @param int            $front_page_id Static front page ID, or 0.
+	 * @param bool           $with_images   Whether to add image entries.
+	 */
+	private function render_post_entry( $post, string $post_type, int $front_page_id, bool $with_images ): void {
+		// Skip the static front page; already emitted as the homepage URL.
+		if ( $front_page_id && (int) $post->ID === $front_page_id ) {
+			return;
+		}
+
+		// Keep in sync with SWPS_Sitemap_Manager::is_post_indexable().
+		// Respect exclusions.
+		if ( get_post_meta( $post->ID, '_swps_sitemap_exclude', true ) ) {
+			return;
+		}
+
+		// Respect noindex.
+		$robots = get_post_meta( $post->ID, '_swps_robots', true );
+		if ( ! empty( $robots ) && str_contains( (string) $robots, 'noindex' ) ) {
+			return;
+		}
+
+		$modified = get_post_modified_time( 'U', true, $post );
+		$priority = get_post_meta( $post->ID, '_swps_sitemap_priority', true );
+		if ( empty( $priority ) ) {
+			$priority = 'page' === $post_type ? '0.8' : '0.6';
+		}
+		$changefreq = get_post_meta( $post->ID, '_swps_sitemap_changefreq', true );
+		if ( empty( $changefreq ) ) {
+			$changefreq = 'weekly';
+		}
+
+		echo "<url>\n";
+		printf( "  <loc>%s</loc>\n", esc_url( get_permalink( $post ) ) );
+		printf( "  <lastmod>%s</lastmod>\n", esc_xml( gmdate( 'Y-m-d\TH:i:s+00:00', $modified ) ) );
+		printf( "  <changefreq>%s</changefreq>\n", esc_xml( $changefreq ) );
+		printf( "  <priority>%s</priority>\n", esc_attr( $priority ) );
+
+		// Image entries.
+		if ( $with_images ) {
+			$this->render_image_entries( $post->ID );
+		}
+
+		echo "</url>\n";
 	}
 
 	/**

@@ -57,6 +57,11 @@ class SWPS_Crawl_Check_Registry {
 		SWPS_Check_Sitemap_Url_Error::class,
 		SWPS_Check_Sitemap_Url_Noncanonical::class,
 		SWPS_Check_Sitemap_Bad_Lastmod::class,
+		// Alt text quality checks.
+		SWPS_Check_Image_Alt_Filename::class,
+		SWPS_Check_Image_Alt_Too_Long::class,
+		SWPS_Check_Image_Alt_Stuffed::class,
+		SWPS_Check_Image_Alt_Duplicate_Sitewide::class,
 		// Structured data conflicts across JSON-LD blocks.
 		SWPS_Check_Schema_Conflict::class,
 	);
