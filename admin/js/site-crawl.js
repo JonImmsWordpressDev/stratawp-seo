@@ -30,7 +30,15 @@
         missing_h1:         'Missing H1',
         duplicate_h1:       'Duplicate H1',
         mixed_content:      'Mixed content',
-        noindex_in_sitemap: 'Noindexed URLs in sitemap'
+        noindex_in_sitemap: 'Noindexed URLs in sitemap',
+        sitemap_url_redirects:    'Sitemap URLs that redirect',
+        sitemap_url_error:        'Sitemap URLs that return errors',
+        sitemap_url_noncanonical: 'Sitemap URLs that point their canonical elsewhere',
+        sitemap_bad_lastmod:      'Sitemap entries with an impossible last-modified date',
+        image_alt_filename:           'Alt text that looks like a file name',
+        image_alt_too_long:           'Alt text over 150 characters',
+        image_alt_stuffed:            'Keyword-stuffed alt text',
+        image_alt_duplicate_sitewide: 'Same alt text on many different images'
     };
 
     function ajax(action, data) {
@@ -141,9 +149,17 @@
         if (d.external) { bits.push('external'); }
         if (d.hops && d.hops.length) { bits.push(d.hops.length + ' hops'); }
         if (d.canonical) { bits.push('canonical: ' + d.canonical); }
+        if (d.redirect_to) { bits.push('redirects to ' + d.redirect_to); }
+        if (d.lastmod) { bits.push('lastmod: ' + d.lastmod); }
         if (d.h1_count) { bits.push(d.h1_count + ' H1s'); }
         if (d.asset) { bits.push('asset: ' + d.asset); }
         if (d.found_on) { bits.push('found on ' + d.found_on); }
+        if (d.alts) {
+            Object.keys(d.alts).forEach(function (src) { bits.push(src + ': "' + d.alts[src] + '"'); });
+        } else if (d.alt) {
+            bits.push('"' + d.alt + '" on ' + d.file_count + ' images');
+            if (d.images && d.images.length) { bits.push(d.images.join(', ')); }
+        }
         return bits.join(' · ');
     }
 
@@ -172,7 +188,7 @@
         if (row.edit_url) {
             html += '<a class="swps-btn swps-btn-secondary" href="' + escapeHtml(row.edit_url) + '" target="_blank" rel="noopener" style="padding:6px 10px;font-size:11px">' + escapeHtml(i18n.editPost || 'Edit post') + '</a>';
         }
-        if ((type === 'canonical_mismatch' || type === 'missing_h1' || type === 'duplicate_h1' || type === 'noindex_in_sitemap') && row.post_id > 0) {
+        if ((type === 'canonical_mismatch' || type === 'missing_h1' || type === 'duplicate_h1' || type === 'noindex_in_sitemap' || type === 'sitemap_url_redirects' || type === 'sitemap_url_error' || type === 'sitemap_url_noncanonical') && row.post_id > 0) {
             html += '<button class="swps-btn swps-btn-secondary swps-crawl-fix-exclude" data-post-id="' + (row.post_id | 0) + '" style="padding:6px 10px;font-size:11px">' + escapeHtml(i18n.excludeSitemap || 'Exclude from sitemap') + '</button>';
         }
         html += '</div>';

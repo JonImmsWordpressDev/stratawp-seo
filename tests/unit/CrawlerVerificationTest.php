@@ -235,4 +235,33 @@ class CrawlerVerificationTest extends TestCase {
 		// Even with spoofed + user_blocked, master off = no block.
 		$this->assertFalse( SWPS_Crawler_Verification::should_block( 'spoofed', false, true, true ) );
 	}
+
+	// -------------------------------------------------------------------------
+	// notice_fingerprint
+	// -------------------------------------------------------------------------
+
+	public function test_notice_fingerprint_ignores_bot_order(): void {
+		$a = array( 'disallowed_crawling' => array( 'gptbot', 'ccbot' ), 'spoofed_bots' => array( 'googlebot' ) );
+		$b = array( 'spoofed_bots' => array( 'googlebot' ), 'disallowed_crawling' => array( 'ccbot', 'gptbot' ) );
+		$this->assertSame( SWPS_Crawler_Verification::notice_fingerprint( $a ), SWPS_Crawler_Verification::notice_fingerprint( $b ) );
+	}
+
+	public function test_notice_fingerprint_changes_when_a_bot_is_added(): void {
+		$a = array( 'disallowed_crawling' => array( 'gptbot' ), 'spoofed_bots' => array() );
+		$b = array( 'disallowed_crawling' => array( 'gptbot', 'ccbot' ), 'spoofed_bots' => array() );
+		$this->assertNotSame( SWPS_Crawler_Verification::notice_fingerprint( $a ), SWPS_Crawler_Verification::notice_fingerprint( $b ) );
+	}
+
+	public function test_notice_fingerprint_tells_lists_apart(): void {
+		$a = array( 'disallowed_crawling' => array( 'gptbot' ), 'spoofed_bots' => array() );
+		$b = array( 'disallowed_crawling' => array(), 'spoofed_bots' => array( 'gptbot' ) );
+		$this->assertNotSame( SWPS_Crawler_Verification::notice_fingerprint( $a ), SWPS_Crawler_Verification::notice_fingerprint( $b ) );
+	}
+
+	public function test_notice_fingerprint_handles_missing_keys(): void {
+		$this->assertSame(
+			SWPS_Crawler_Verification::notice_fingerprint( array() ),
+			SWPS_Crawler_Verification::notice_fingerprint( array( 'disallowed_crawling' => array(), 'spoofed_bots' => array() ) )
+		);
+	}
 }

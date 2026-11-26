@@ -27,7 +27,7 @@ trait SWPS_Ability_Defs {
 	 * @return array[]
 	 */
 	private function build_defs(): array {
-		return array(
+		$defs = array(
 
 			// ------------------------------------------------------------------
 			// queue-topic (WRITE)
@@ -373,6 +373,8 @@ trait SWPS_Ability_Defs {
 				'callback'      => array( $this, 'cb_get_decay_queue' ),
 			),
 		);
+
+		return array_merge( $defs, $this->build_crawl_defs() );
 	}
 
 	// =========================================================================

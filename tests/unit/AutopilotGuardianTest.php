@@ -11,6 +11,21 @@ require_once __DIR__ . '/../../includes/class-autopilot-guardian.php';
 
 class AutopilotGuardianTest extends TestCase {
 
+	// ---- budget_dismiss_key() ----
+
+	public function test_budget_dismiss_key_warning_keeps_existing_option_name(): void {
+		$this->assertSame( 'swps_budget_notice_dismissed_2026_11', SWPS_Autopilot_Guardian::budget_dismiss_key( 'warning', '2026_11' ) );
+	}
+
+	public function test_budget_dismiss_key_exceeded_is_separate_from_warning(): void {
+		$this->assertSame( 'swps_budget_exceeded_notice_dismissed_2026_11', SWPS_Autopilot_Guardian::budget_dismiss_key( 'exceeded', '2026_11' ) );
+	}
+
+	public function test_budget_dismiss_key_unknown_state_falls_back_to_warning(): void {
+		// Old dismiss links carried "1" as the value.
+		$this->assertSame( 'swps_budget_notice_dismissed_2026_11', SWPS_Autopilot_Guardian::budget_dismiss_key( '1', '2026_11' ) );
+	}
+
 	// ---- budget_state() ----
 
 	public function test_budget_state_ok_when_no_budget(): void {

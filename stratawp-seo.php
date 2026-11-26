@@ -3,7 +3,7 @@
  * Plugin Name: StrataWP SEO
  * Plugin URI: https://stratawpseo.com
  * Description: AI-powered SEO content generator that knows your WordPress site. Generate optimized blog posts with internal linking, on autopilot.
- * Version: 4.35.1
+ * Version: 4.36.0
  * Author: Jon Imms
  * Author URI: https://jonimms.com
  * License: GPL v2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SWPS_VERSION', '4.35.1' );
+define( 'SWPS_VERSION', '4.36.0' );
 define( 'SWPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SWPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -186,6 +186,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-legacy-page.p
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-head.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-minify-heuristic.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-content.php';
+require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-image-alt.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-checks-aggregate.php';
 require_once SWPS_PLUGIN_DIR . 'includes/crawl-checks/class-crawl-score.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-target.php';
@@ -216,7 +217,9 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-head-cleanup.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rss-optimizer.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-taxonomy-meta.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-sitemap-manager.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-rewrite-health.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-search-appearance.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-term-base.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-breadcrumbs.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-redirect-manager.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-redirect-admin.php';
@@ -247,6 +250,8 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-background-processor.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-model-cron.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rest-api.php';
 require_once SWPS_PLUGIN_DIR . 'includes/trait-ability-defs.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-crawl-abilities.php';
+require_once SWPS_PLUGIN_DIR . 'includes/trait-crawl-ability-defs.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-abilities.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-abilities-rest.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-abilities-settings.php';
@@ -317,6 +322,13 @@ final class StrataWP_SEO {
 	 * @var SWPS_Citation_Tracker
 	 */
 	public SWPS_Citation_Tracker $citation_tracker;
+
+	/**
+	 * Optional category base removal.
+	 *
+	 * @var SWPS_Term_Base
+	 */
+	public SWPS_Term_Base $term_base;
 
 	/**
 	 * AI citation tracker admin (AJAX + settings).
@@ -462,10 +474,12 @@ final class StrataWP_SEO {
 		$this->taxonomy_meta         = new SWPS_Taxonomy_Meta();
 		$this->sitemap_manager       = new SWPS_Sitemap_Manager();
 		$this->search_appearance     = new SWPS_Search_Appearance();
+		$this->term_base             = new SWPS_Term_Base();
 		$this->breadcrumbs           = new SWPS_Breadcrumbs();
 		$this->redirect_manager      = new SWPS_Redirect_Manager();
 		$this->sitemap_admin         = new SWPS_Sitemap_Admin();
 		$this->indexnow              = new SWPS_IndexNow();
+		new SWPS_Rewrite_Health(); // Registers the Site Health test and the rebuild action.
 
 		if ( is_admin() ) {
 			$this->post_list_seo = new SWPS_Post_List_SEO( $this->content_scorer );
