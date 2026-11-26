@@ -24,6 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SWPS_Abilities {
 
 	use SWPS_Ability_Defs;
+	use SWPS_Crawl_Ability_Defs;
 
 	/** DB schema version — bump whenever the log table DDL changes. */
 	public const DB_VERSION = '1';
