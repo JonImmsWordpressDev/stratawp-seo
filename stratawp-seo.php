@@ -86,6 +86,7 @@ require_once SWPS_PLUGIN_DIR . 'includes/class-cache-manager.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-hooks.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-templates.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-duplicate-checker.php';
+require_once SWPS_PLUGIN_DIR . 'includes/class-overlap-checker.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-rate-limiter.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-indexnow.php';
 require_once SWPS_PLUGIN_DIR . 'includes/class-cost-tracker.php';
@@ -886,10 +887,19 @@ final class StrataWP_SEO {
 			wp_send_json_error( array( 'message' => __( 'You do not have permission to create pages.', 'stratawp-seo' ) ) );
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- check_ajax_referer() above.
+		$options['allow_overlap'] = isset( $_POST['confirm_overlap'] ) && '1' === sanitize_text_field( wp_unslash( (string) $_POST['confirm_overlap'] ) );
+
 		$result = $this->generator->generate_post( $topic, $template, $brief, $options );
 
 		if ( is_wp_error( $result ) ) {
-			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+			$payload = array( 'message' => $result->get_error_message() );
+			if ( SWPS_Overlap_Checker::ERROR_CODE === $result->get_error_code() ) {
+				$data                = (array) $result->get_error_data();
+				$payload['code']     = SWPS_Overlap_Checker::ERROR_CODE;
+				$payload['overlaps'] = $data['overlaps'] ?? array();
+			}
+			wp_send_json_error( $payload );
 		}
 
 		wp_send_json_success( $result );

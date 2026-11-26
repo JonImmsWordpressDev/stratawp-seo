@@ -94,6 +94,15 @@ class SWPS_Cron {
 
 			$result = $this->generator->generate_post( $topic, $template, array(), array( 'continue_batch' => $i > 0 ) );
 
+			if ( is_wp_error( $result ) && SWPS_Overlap_Checker::ERROR_CODE === $result->get_error_code() ) {
+				// Not a failure: the site already covers this topic (the
+				// generator logged why). Park it so the queue doesn't retry it.
+				if ( $topic_id && $this->queue ) {
+					SWPS_Overlap_Checker::park_topic( $topic_id, $result, $this->queue );
+				}
+				continue;
+			}
+
 			if ( is_wp_error( $result ) ) {
 				++$failed;
 				error_log( '[StrataWP SEO Cron] Generation failed: ' . $result->get_error_message() );

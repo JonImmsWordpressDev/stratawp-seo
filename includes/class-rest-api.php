@@ -29,85 +29,90 @@ class SWPS_REST_API {
 				'callback'            => array( $this, 'generate_post' ),
 				'permission_callback' => array( $this, 'check_permissions' ),
 				'args'                => array(
-					'topic'          => array(
+					'topic'           => array(
 						'type'              => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
 						'default'           => '',
 					),
-					'template'       => array(
+					'template'        => array(
 						'type'              => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
 						'default'           => 'auto',
 					),
-					'brief'          => array(
+					'brief'           => array(
 						'type'              => 'string',
 						'description'       => __( 'Optional content brief: what to write about, include, emphasize or avoid. Plain text, multiline allowed.', 'stratawp-seo' ),
 						'sanitize_callback' => array( $this, 'sanitize_brief_text' ),
 						'default'           => '',
 					),
-					'audience'       => array(
+					'audience'        => array(
 						'type'              => 'string',
 						'sanitize_callback' => array( $this, 'sanitize_brief_field' ),
 						'default'           => '',
 					),
-					'goal'           => array(
+					'goal'            => array(
 						'type'              => 'string',
 						'sanitize_callback' => array( $this, 'sanitize_brief_field' ),
 						'default'           => '',
 					),
-					'key_points'     => array(
+					'key_points'      => array(
 						'type'              => 'string',
 						'sanitize_callback' => array( $this, 'sanitize_brief_field' ),
 						'default'           => '',
 					),
-					'tone'           => array(
+					'tone'            => array(
 						'type'              => 'string',
 						'sanitize_callback' => array( $this, 'sanitize_brief_field' ),
 						'default'           => '',
 					),
-					'facts'          => array(
+					'facts'           => array(
 						'type'              => 'string',
 						'sanitize_callback' => array( $this, 'sanitize_brief_field' ),
 						'default'           => '',
 					),
-					'avoid'          => array(
+					'avoid'           => array(
 						'type'              => 'string',
 						'sanitize_callback' => array( $this, 'sanitize_brief_field' ),
 						'default'           => '',
 					),
-					'cta'            => array(
+					'cta'             => array(
 						'type'              => 'string',
 						'sanitize_callback' => array( $this, 'sanitize_brief_field' ),
 						'default'           => '',
 					),
-					'content_type'   => array(
+					'content_type'    => array(
 						'type'              => 'string',
 						'enum'              => array( 'post', 'page' ),
 						'description'       => __( 'Generate a blog post (default) or a page.', 'stratawp-seo' ),
 						'sanitize_callback' => 'sanitize_text_field',
 						'default'           => 'post',
 					),
-					'parent_id'      => array(
+					'parent_id'       => array(
 						'type'              => 'integer',
 						'description'       => __( 'Parent page ID for pages; 0 for top level.', 'stratawp-seo' ),
 						'sanitize_callback' => 'absint',
 						'default'           => 0,
 					),
-					'featured_image' => array(
+					'featured_image'  => array(
 						'type'        => 'boolean',
 						'description' => __( 'Attach a featured image for this run (defaults to Settings).', 'stratawp-seo' ),
 					),
-					'content_images' => array(
+					'content_images'  => array(
 						'type'        => 'integer',
 						'minimum'     => 0,
 						'maximum'     => 4,
 						'description' => __( 'In-content images to insert for this run, 0-4 (defaults to Settings).', 'stratawp-seo' ),
 					),
-					'sources'        => array(
+					'sources'         => array(
 						'type'              => 'string',
 						'description'       => __( 'Optional source material: URLs (one per line, max 5) and/or notes the AI bases its facts on and cites.', 'stratawp-seo' ),
 						'sanitize_callback' => array( 'SWPS_Source_Material', 'sanitize' ),
 						'default'           => '',
+					),
+					'confirm_overlap' => array(
+						'type'        => 'boolean',
+						'description' => __( 'Generate even when the topic overlaps existing posts or ranking pages. Without it, an overlap returns 409 with the overlapping content.', 'stratawp-seo' ),
+						'default'     => false,
 					),
 				),
 			)
@@ -633,8 +638,23 @@ class SWPS_REST_API {
 			$options['image_plan'] = SWPS_Image_Plan::from_request( $raw_images, SWPS_Image_Plan::defaults_from_settings() );
 		}
 
+		$options['allow_overlap'] = (bool) $request->get_param( 'confirm_overlap' );
+
 		$plugin = stratawp_seo();
 		$result = $plugin->generator->generate_post( $topic, $template, $brief, $options );
+
+		if ( is_wp_error( $result ) && SWPS_Overlap_Checker::ERROR_CODE === $result->get_error_code() ) {
+			$data = (array) $result->get_error_data();
+			return new WP_REST_Response(
+				array(
+					'success'  => false,
+					'code'     => SWPS_Overlap_Checker::ERROR_CODE,
+					'message'  => $result->get_error_message(),
+					'overlaps' => $data['overlaps'] ?? array(),
+				),
+				409
+			);
+		}
 
 		if ( is_wp_error( $result ) ) {
 			return new WP_REST_Response(

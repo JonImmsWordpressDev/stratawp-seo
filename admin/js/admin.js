@@ -21,6 +21,9 @@
     const $progressDesc   = $('#swps-progress-desc');
     const $error          = $('#swps-error');
     const $errorMessage   = $('#swps-error-message');
+    const $overlap        = $('#swps-overlap');
+    const $overlapList    = $('#swps-overlap-list');
+    var confirmOverlapOnce = false;
     const $result         = $('#swps-result');
     const $analysis       = $('#swps-analysis');
     const $rateLimitBar   = $('#swps-rate-limit');
@@ -259,6 +262,7 @@
         messageIndex = 0;
         $progress.slideDown(200);
         $error.hide();
+        $overlap.hide();
         $result.hide();
 
         if (customTitle) {
@@ -294,6 +298,40 @@
         $errorMessage.text(message);
         $error.slideDown(200);
     }
+
+    /**
+     * Show the pages a topic overlaps, each linked, with a "Generate anyway" button.
+     */
+    function showOverlap(overlaps) {
+        stopProgress();
+        $overlapList.empty();
+        (overlaps || []).forEach(function(o) {
+            var $li = $('<li>');
+            var label;
+            if (o.type === 'ranking') {
+                label = 'Ranks #' + o.position + ' for "' + o.query + '": ';
+            } else if (o.type === 'keyword') {
+                label = 'Targets "' + o.query + '": ';
+            } else {
+                label = 'Similar title: ';
+            }
+            $li.append(document.createTextNode(label));
+            var text = o.title || o.url;
+            if (o.url && /^https?:\/\//i.test(o.url)) {
+                $li.append($('<a>', { href: o.url, target: '_blank', rel: 'noopener noreferrer' }).text(text));
+            } else {
+                $li.append(document.createTextNode(text));
+            }
+            $overlapList.append($li);
+        });
+        $overlap.slideDown(200);
+    }
+
+    $('#swps-overlap-confirm').on('click', function() {
+        $overlap.hide();
+        confirmOverlapOnce = true;
+        $generateBtn.trigger('click');
+    });
 
     function showResult(data) {
         stopProgress();
@@ -701,6 +739,9 @@
 
         startProgress(getContentType() === 'page' ? 'Generating your page...' : undefined);
 
+        var confirmOverlap = confirmOverlapOnce;
+        confirmOverlapOnce = false;
+
         $.ajax({
             url: swpsAdmin.ajax_url,
             type: 'POST',
@@ -709,6 +750,7 @@
                 nonce: swpsAdmin.nonce,
                 topic: topic,
                 template: template,
+                confirm_overlap: confirmOverlap ? '1' : '0',
             }, getBriefData(), getGenerateOptions()),
             timeout: 180000, // 3 minute timeout.
             success: function(response) {
@@ -720,6 +762,8 @@
                     if (cooldown > 0) {
                         startRateLimitCountdown(cooldown);
                     }
+                } else if (response.data && response.data.code === 'swps_overlap') {
+                    showOverlap(response.data.overlaps);
                 } else {
                     showError(response.data.message || 'Generation failed. Please try again.');
                 }

@@ -103,7 +103,8 @@ class SWPS_Generator {
 	 * @param string $topic    Optional specific topic. If empty, AI picks one.
 	 * @param string $template Content template slug.
 	 * @param array  $brief    Optional normalized content brief (see SWPS_Content_Brief::from_request()).
-	 * @param array  $options  Optional generation options (content_type, parent_id, image_plan, sources).
+	 * @param array  $options  Optional generation options (content_type, parent_id, image_plan, sources,
+	 *                         allow_overlap: true skips the SWPS_Overlap_Checker gate).
 	 * @return array|WP_Error Post data on success, error on failure.
 	 */
 	public function generate_post( string $topic = '', string $template = 'auto', array $brief = array(), array $options = array() ): array|WP_Error {
@@ -161,7 +162,8 @@ class SWPS_Generator {
 	 * @return array|WP_Error
 	 */
 	private function run_generate_post( string $topic, string $template, array $brief, array $options ): array|WP_Error {
-		$options = $this->normalize_options( $options );
+		$allow_overlap = ! empty( $options['allow_overlap'] );
+		$options       = $this->normalize_options( $options );
 
 		// Image generation (especially Gemini) can take several minutes per post.
 		// Lift PHP execution caps so cron/background jobs don't die mid-download,
@@ -180,6 +182,17 @@ class SWPS_Generator {
 		if ( is_wp_error( $budget_check ) ) {
 			SWPS_Hooks::do_generation_failed( $budget_check, $topic, $template );
 			return $budget_check;
+		}
+
+		// Overlap gate: don't pay for a post the site already has.
+		if ( ! $allow_overlap ) {
+			$overlaps = SWPS_Overlap_Checker::check( $topic, $this->duplicate_checker );
+			if ( ! empty( $overlaps ) ) {
+				$error = SWPS_Overlap_Checker::to_error( $topic, $overlaps );
+				$this->log( $error->get_error_message() );
+				SWPS_Hooks::do_generation_failed( $error, $topic, $template );
+				return $error;
+			}
 		}
 
 		// Fire before_generate action.
