@@ -427,6 +427,7 @@ By default, nothing is lost: uninstalling only clears scheduled tasks and caches
 == Changelog ==
 
 = Unreleased =
+* Added: Site Crawl now audits the sitemap itself. It reads the URLs your XML sitemap lists and flags the ones that redirect, return an error (404, 500 or no response), point their canonical tag at a different URL, or carry an impossible last-modified date (unreadable, before 2000 such as the 1970 date a missing value produces, or in the future). Sitemap URLs are crawled first so the crawl limit never skips them. Where the post is known, the redirect, error and canonical findings offer the one-click "Exclude from sitemap" fix.
 * Added: Site Crawl is now available to AI agents through Machine Access. Four new abilities: run-site-crawl queues a crawl and returns its ID (refused while one is running), get-crawl-issues returns the latest crawl's issues by check with paging and the fixers that apply to each, apply-crawl-fix applies one fix through the same Fix-It path as the button (so it can be undone on the Site Audit screen), and get-canonical-status reports a URL's or post's canonical, robots directives and sitemap inclusion. Like the other write abilities, run-site-crawl and apply-crawl-fix are off until you turn them on.
 
 = 4.35.1 =
