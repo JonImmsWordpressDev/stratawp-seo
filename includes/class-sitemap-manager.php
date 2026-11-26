@@ -110,11 +110,19 @@ class SWPS_Sitemap_Manager {
 	/**
 	 * Whether a canonical override points at the URL itself. Ignores scheme,
 	 * host case, a trailing slash and any fragment; the path and query must match.
+	 *
+	 * @param string $a First URL.
+	 * @param string $b Second URL.
 	 */
 	public static function is_same_url( string $a, string $b ): bool {
 		return self::comparable_url( $a ) === self::comparable_url( $b );
 	}
 
+	/**
+	 * Host, port, path without trailing slash, and query of a URL.
+	 *
+	 * @param string $url URL to reduce.
+	 */
 	private static function comparable_url( string $url ): string {
 		$parts = wp_parse_url( trim( $url ) );
 		if ( ! is_array( $parts ) ) {
