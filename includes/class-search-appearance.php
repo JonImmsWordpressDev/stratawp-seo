@@ -388,6 +388,30 @@ class SWPS_Search_Appearance {
 	}
 
 	/**
+	 * Search Appearance directives for a term archive.
+	 *
+	 * The term screen only has noindex and nofollow checkboxes (no "index"
+	 * choice), so a term value without noindex must not switch off the
+	 * taxonomy-wide noindex. Directives in the term value itself are added by
+	 * SWPS_Taxonomy_Meta::filter_robots(); this only returns what that misses.
+	 *
+	 * @param string $term_robots      The term's _swps_robots meta, e.g. "nofollow".
+	 * @param bool   $taxonomy_noindex Whether Search Appearance noindexes the taxonomy.
+	 * @return string[]
+	 */
+	public static function term_directives( string $term_robots, bool $taxonomy_noindex ): array {
+		if ( ! $taxonomy_noindex || str_contains( $term_robots, 'noindex' ) ) {
+			return array();
+		}
+
+		if ( str_contains( $term_robots, 'nofollow' ) ) {
+			return array( 'noindex' );
+		}
+
+		return array( 'noindex', 'follow' );
+	}
+
+	/**
 	 * Resolve robots directives for the current request.
 	 *
 	 * Per-post and per-term explicit robots settings win; this method only fills
@@ -420,16 +444,10 @@ class SWPS_Search_Appearance {
 				return array();
 			}
 
-			$explicit = get_term_meta( $term->term_id, '_swps_robots', true );
-			if ( ! empty( $explicit ) ) {
-				return array();
-			}
-
-			if ( get_option( "swps_noindex_{$term->taxonomy}", 0 ) ) {
-				return array( 'noindex', 'follow' );
-			}
-
-			return array();
+			return self::term_directives(
+				(string) get_term_meta( $term->term_id, '_swps_robots', true ),
+				(bool) get_option( "swps_noindex_{$term->taxonomy}", 0 )
+			);
 		}
 
 		if ( is_post_type_archive() ) {
