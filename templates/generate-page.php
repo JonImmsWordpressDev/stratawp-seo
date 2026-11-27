@@ -402,6 +402,13 @@ $gen_parent_dropdown  = wp_dropdown_pages(
 			<div id="swps-error" class="notice notice-error" style="display: none;">
 				<p id="swps-error-message"></p>
 			</div>
+
+			<!-- Overlap warning: the site already covers this topic -->
+			<div id="swps-overlap" class="notice notice-warning" style="display: none;">
+				<p><strong><?php esc_html_e( 'This topic overlaps content you already have.', 'stratawp-seo' ); ?></strong> <?php esc_html_e( 'A new post could compete with these pages. Nothing was generated and nothing was spent.', 'stratawp-seo' ); ?></p>
+				<ul id="swps-overlap-list"></ul>
+				<p><button type="button" class="button" id="swps-overlap-confirm"><?php esc_html_e( 'Generate anyway', 'stratawp-seo' ); ?></button></p>
+			</div>
 		</div>
 
 		<!-- Schedule Info Card -->
