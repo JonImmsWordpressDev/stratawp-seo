@@ -229,6 +229,16 @@ $gen_parent_dropdown  = wp_dropdown_pages(
 					</select>
 				</div>
 
+				<div id="swps-brand-mentions-group" class="swps-form-group swps-form-group-inline">
+					<label for="swps-brand-mentions"><?php esc_html_e( 'Brand mentions', 'stratawp-seo' ); ?></label>
+					<select id="swps-brand-mentions" <?php echo ! $has_api_key ? 'disabled' : ''; ?>>
+						<option value=""><?php echo esc_html( sprintf( /* translators: %s: the brand mention mode configured in settings. */ __( 'Use my default (%s)', 'stratawp-seo' ), ucfirst( SWPS_Generator::normalize_brand_mentions( null ) ) ) ); ?></option>
+						<option value="full"><?php esc_html_e( 'Full: weave in my product and CTA', 'stratawp-seo' ); ?></option>
+						<option value="limited"><?php esc_html_e( 'Limited: 2-3 light mentions', 'stratawp-seo' ); ?></option>
+						<option value="none"><?php esc_html_e( 'None: purely educational', 'stratawp-seo' ); ?></option>
+					</select>
+				</div>
+
 				<div id="swps-parent-group" class="swps-form-group swps-form-group-inline" hidden>
 					<label for="swps-parent"><?php esc_html_e( 'Parent page', 'stratawp-seo' ); ?></label>
 					<?php echo '' !== $gen_parent_dropdown ? $gen_parent_dropdown : '<select id="swps-parent" name="swps_parent"><option value="0">' . esc_html__( 'None (top level)', 'stratawp-seo' ) . '</option></select>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_dropdown_pages() output is escaped by core; fallback markup is hardcoded and escaped. ?>

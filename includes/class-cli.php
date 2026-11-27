@@ -25,6 +25,15 @@ class SWPS_CLI {
 	 * default: auto
 	 * ---
 	 *
+	 * [--brand-mentions=<mode>]
+	 * : How much the post promotes the site's own offer. Defaults to the Brand Mentions setting.
+	 * ---
+	 * options:
+	 *   - full
+	 *   - limited
+	 *   - none
+	 * ---
+	 *
 	 * [--force]
 	 * : Generate even when the topic overlaps an existing post or a page that already ranks for it.
 	 *
@@ -32,6 +41,7 @@ class SWPS_CLI {
 	 *
 	 *     wp swps generate "Best practices for WordPress security"
 	 *     wp swps generate --template=listicle
+	 *     wp swps generate "How to back up WordPress" --brand-mentions=none
 	 *     wp swps generate "WordPress security checklist" --force
 	 *
 	 * @param array $args       Positional arguments.
@@ -51,8 +61,16 @@ class SWPS_CLI {
 			WP_CLI::log( "Template: {$template}" );
 		}
 
+		$options = array();
+		if ( isset( $assoc_args['brand-mentions'] ) ) {
+			$options['brand_mentions'] = SWPS_Generator::normalize_brand_mentions( (string) $assoc_args['brand-mentions'] );
+			WP_CLI::log( "Brand mentions: {$options['brand_mentions']}" );
+		}
+
+		$options['allow_overlap'] = ! empty( $assoc_args['force'] );
+
 		$plugin = stratawp_seo();
-		$result = $plugin->generator->generate_post( $topic, $template, array(), array( 'allow_overlap' => ! empty( $assoc_args['force'] ) ) );
+		$result = $plugin->generator->generate_post( $topic, $template, array(), $options );
 
 		if ( is_wp_error( $result ) && SWPS_Overlap_Checker::ERROR_CODE === $result->get_error_code() ) {
 			$data = (array) $result->get_error_data();

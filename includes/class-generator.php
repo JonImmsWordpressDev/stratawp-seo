@@ -19,6 +19,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SWPS_Generator {
 
 	/**
+	 * Brand mention modes: how much a post promotes the site's own offer.
+	 */
+	public const BRAND_MENTIONS_FULL    = 'full';
+	public const BRAND_MENTIONS_LIMITED = 'limited';
+	public const BRAND_MENTIONS_NONE    = 'none';
+
+	/**
 	 * AI API provider.
 	 *
 	 * @var SWPS_AI_Provider
@@ -103,7 +110,7 @@ class SWPS_Generator {
 	 * @param string $topic    Optional specific topic. If empty, AI picks one.
 	 * @param string $template Content template slug.
 	 * @param array  $brief    Optional normalized content brief (see SWPS_Content_Brief::from_request()).
-	 * @param array  $options  Optional generation options (content_type, parent_id, image_plan, sources,
+	 * @param array  $options  Optional generation options (content_type, parent_id, image_plan, sources, brand_mentions,
 	 *                         allow_overlap: true skips the SWPS_Overlap_Checker gate).
 	 * @return array|WP_Error Post data on success, error on failure.
 	 */
@@ -316,10 +323,11 @@ class SWPS_Generator {
 	 * Normalize generation options.
 	 *
 	 * Missing keys reproduce the 4.30 behaviour exactly: a blog post, no
-	 * parent, image handling from Settings, no source material.
+	 * parent, image handling from Settings, no source material. A missing
+	 * brand_mentions uses the site default, which is full (no prompt change).
 	 *
 	 * @param array<string, mixed> $options Raw options.
-	 * @return array{content_type: string, parent_id: int, image_plan: array|null, sources: string}
+	 * @return array{content_type: string, parent_id: int, image_plan: array|null, sources: string, brand_mentions: string}
 	 */
 	private function normalize_options( array $options ): array {
 		$content_type = SWPS_Templates::normalize_type( $options['content_type'] ?? SWPS_Templates::TYPE_POST );
@@ -342,11 +350,58 @@ class SWPS_Generator {
 		}
 
 		return array(
-			'content_type' => $content_type,
-			'parent_id'    => $parent_id,
-			'image_plan'   => $image_plan,
-			'sources'      => is_string( $options['sources'] ?? null ) ? $options['sources'] : '',
+			'content_type'   => $content_type,
+			'parent_id'      => $parent_id,
+			'image_plan'     => $image_plan,
+			'sources'        => is_string( $options['sources'] ?? null ) ? $options['sources'] : '',
+			'brand_mentions' => self::normalize_brand_mentions( $options['brand_mentions'] ?? null ),
 		);
+	}
+
+	/**
+	 * Allowed brand mention modes, keyed by slug.
+	 *
+	 * @return array<string, string> Slug => label.
+	 */
+	public static function brand_mention_modes(): array {
+		return array(
+			self::BRAND_MENTIONS_FULL    => __( 'Full: weave in the site\'s product and CTA where relevant', 'stratawp-seo' ),
+			self::BRAND_MENTIONS_LIMITED => __( 'Limited: mostly educational, 2-3 light mentions', 'stratawp-seo' ),
+			self::BRAND_MENTIONS_NONE    => __( 'None: purely educational, no pitch', 'stratawp-seo' ),
+		);
+	}
+
+	/**
+	 * Resolve a brand mention mode: a valid per-run value wins, anything
+	 * else falls back to the site default (swps_brand_mentions), then full.
+	 *
+	 * @param mixed $value Requested mode, or null for the site default.
+	 * @return string full|limited|none
+	 */
+	public static function normalize_brand_mentions( $value ): string {
+		$valid = array( self::BRAND_MENTIONS_FULL, self::BRAND_MENTIONS_LIMITED, self::BRAND_MENTIONS_NONE );
+		if ( is_string( $value ) && in_array( $value, $valid, true ) ) {
+			return $value;
+		}
+		$default = get_option( 'swps_brand_mentions', self::BRAND_MENTIONS_FULL );
+		return is_string( $default ) && in_array( $default, $valid, true ) ? $default : self::BRAND_MENTIONS_FULL;
+	}
+
+	/**
+	 * Prompt requirement line for a brand mention mode. Full returns an empty
+	 * string so the prompt stays byte-identical to the pre-option behaviour.
+	 *
+	 * @param string $mode full|limited|none.
+	 * @return string
+	 */
+	public static function brand_mentions_instruction( string $mode ): string {
+		if ( self::BRAND_MENTIONS_LIMITED === $mode ) {
+			return "- Brand mentions: keep the post about 95% educational. Mention the site's own products or services at most 2-3 times, lightly and only where genuinely relevant, with no hard sell and at most one soft call to action at the end\n";
+		}
+		if ( self::BRAND_MENTIONS_NONE === $mode ) {
+			return "- Brand mentions: write a purely educational post. Do not promote, pitch or recommend the site's own products or services, and add no sales call to action. Internal links to helpful existing content are still required\n";
+		}
+		return '';
 	}
 
 	/**
@@ -485,7 +540,8 @@ class SWPS_Generator {
 			$takeaways_count,
 			$brief,
 			$content_type,
-			$sources['block']
+			$sources['block'],
+			(string) ( $options['brand_mentions'] ?? self::BRAND_MENTIONS_FULL )
 		);
 
 		// Apply template modifiers. Posts keep the settings default for 'auto';
@@ -689,6 +745,7 @@ PROMPT;
 	 * @param array  $brief              Normalized content brief (may be empty).
 	 * @param string $content_type       post|page.
 	 * @param string $sources_block      Rendered source-material block, or empty when no sources were supplied.
+	 * @param string $brand_mentions     full|limited|none (posts only; full adds nothing).
 	 * @return string
 	 */
 	private function build_user_prompt(
@@ -707,7 +764,8 @@ PROMPT;
 		int $takeaways_count = 5,
 		array $brief = array(),
 		string $content_type = SWPS_Templates::TYPE_POST,
-		string $sources_block = ''
+		string $sources_block = '',
+		string $brand_mentions = self::BRAND_MENTIONS_FULL
 	): string {
 		$is_page     = SWPS_Templates::TYPE_PAGE === $content_type;
 		$has_sources = '' !== trim( $sources_block );
@@ -783,6 +841,10 @@ PROMPT;
 
 		if ( $include_takeaways && ! $is_page ) {
 			$prompt .= "- Include {$takeaways_count} key takeaways — concise, actionable bullet points summarizing the post's most important insights (also populate the key_takeaways JSON field)\n";
+		}
+
+		if ( ! $is_page ) {
+			$prompt .= self::brand_mentions_instruction( $brand_mentions );
 		}
 
 		$prompt .= "- Use proper heading hierarchy (H2 for main sections, H3 for subsections)\n";

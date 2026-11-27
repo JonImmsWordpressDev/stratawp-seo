@@ -919,10 +919,18 @@ final class StrataWP_SEO {
 		$template = sanitize_text_field( $_POST['template'] ?? 'auto' );
 		$results  = array();
 
+		$brand = isset( $_POST['brand_mentions'] ) && is_scalar( $_POST['brand_mentions'] ) && '' !== $_POST['brand_mentions']
+			? SWPS_Generator::normalize_brand_mentions( sanitize_key( wp_unslash( (string) $_POST['brand_mentions'] ) ) )
+			: null;
+
 		for ( $i = 0; $i < $count; $i++ ) {
 			// One request for N posts: the double-click cooldown applies to the
 			// request, not to each post inside it.
-			$result = $this->generator->generate_post( '', $template, array(), array( 'continue_batch' => $i > 0 ) );
+			$batch_options = array( 'continue_batch' => $i > 0 );
+			if ( null !== $brand ) {
+				$batch_options['brand_mentions'] = $brand;
+			}
+			$result = $this->generator->generate_post( '', $template, array(), $batch_options );
 
 			if ( is_wp_error( $result ) ) {
 				$results[] = array(
@@ -1050,6 +1058,10 @@ final class StrataWP_SEO {
 		}
 		if ( SWPS_Image_Plan::has_request_keys( $raw_images ) ) {
 			$options['image_plan'] = SWPS_Image_Plan::from_request( $raw_images, SWPS_Image_Plan::defaults_from_settings() );
+		}
+
+		if ( isset( $_POST['brand_mentions'] ) && is_scalar( $_POST['brand_mentions'] ) && '' !== $_POST['brand_mentions'] ) {
+			$options['brand_mentions'] = SWPS_Generator::normalize_brand_mentions( sanitize_key( wp_unslash( (string) $_POST['brand_mentions'] ) ) );
 		}
 
 		if ( isset( $_POST[ SWPS_Source_Material::KEY ] ) && is_scalar( $_POST[ SWPS_Source_Material::KEY ] ) ) {
@@ -1584,6 +1596,7 @@ function swps_activate(): void {
 		'site_description'            => '',
 		'tone'                        => 'professional',
 		'writing_style'               => '',
+		'brand_mentions'              => 'full',
 		'target_keywords'             => '',
 		'post_category'               => 0,
 		'post_author'                 => get_current_user_id(),
