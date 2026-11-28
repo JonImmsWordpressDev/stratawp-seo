@@ -51,7 +51,7 @@ class SWPS_Redirect_Manager {
 		}
 
 		$request_path = wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH );
-		$request_path = rtrim( $request_path, '/' );
+		$request_path = rtrim( (string) $request_path, '/' );
 
 		if ( empty( $request_path ) || '/' === $request_path ) {
 			return;
@@ -59,9 +59,13 @@ class SWPS_Redirect_Manager {
 
 		$redirects = $this->get_cached_redirects();
 
+		// Exact sources are stored decoded (see clean_path()), and browsers send
+		// the path percent-encoded, so compare against the decoded request path.
+		$decoded_path = rtrim( self::clean_path( $request_path ), '/' );
+
 		// Exact match first.
 		foreach ( $redirects as $redirect ) {
-			if ( ! $redirect->is_regex && rtrim( $redirect->source_url, '/' ) === $request_path ) {
+			if ( ! $redirect->is_regex && rtrim( $redirect->source_url, '/' ) === $decoded_path ) {
 				$this->execute_redirect( $redirect );
 				return;
 			}
@@ -127,7 +131,8 @@ class SWPS_Redirect_Manager {
 
 		global $wpdb;
 		$table = $wpdb->prefix . self::LOG_TABLE;
-		$url   = sanitize_text_field( $_SERVER['REQUEST_URI'] ?? '' );
+		$path  = wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH );
+		$url   = is_string( $path ) ? self::clean_path( $path ) : '';
 
 		if ( empty( $url ) ) {
 			return;
@@ -312,7 +317,27 @@ class SWPS_Redirect_Manager {
 		$path = '/' . ltrim( $path, '/' );
 		$path = rtrim( $path, '/' );
 
-		return '' === $path ? '/' : sanitize_text_field( $path );
+		$path = self::clean_path( $path );
+		$path = rtrim( $path, '/' );
+
+		return '' === $path ? '/' : $path;
+	}
+
+	/**
+	 * Canonical form for exact paths: percent-decoded, tags and control
+	 * characters removed. Not sanitize_text_field(), which deletes every %XX
+	 * octet and so turns "/caf%C3%A9" into "/caf". Invalid UTF-8 yields ''.
+	 */
+	public static function clean_path( string $path ): string {
+		$path = rawurldecode( $path );
+		if ( 1 !== preg_match( '//u', $path ) ) {
+			return '';
+		}
+
+		$path = wp_strip_all_tags( $path );
+		$path = (string) preg_replace( '/[\x00-\x1F\x7F]+/', '', $path );
+
+		return trim( $path );
 	}
 
 	/**
@@ -420,7 +445,7 @@ class SWPS_Redirect_Manager {
 			return false;
 		}
 
-		return untrailingslashit( $source ) === untrailingslashit( $target_path );
+		return untrailingslashit( rawurldecode( $source ) ) === untrailingslashit( rawurldecode( $target_path ) );
 	}
 
 	/**
@@ -449,10 +474,13 @@ class SWPS_Redirect_Manager {
 			wp_send_json_error( 'Unauthorized' );
 		}
 
-		$source    = sanitize_text_field( wp_unslash( $_POST['source'] ?? '' ) );
+		$is_regex  = ! empty( $_POST['is_regex'] );
+		$source    = trim( (string) wp_unslash( $_POST['source'] ?? '' ) );
+		// Exact sources are cleaned by normalize_source_url(); sanitize_text_field()
+		// here would strip their %XX octets first.
+		$source    = $is_regex ? sanitize_text_field( $source ) : $source;
 		$target    = sanitize_text_field( wp_unslash( $_POST['target'] ?? '' ) );
 		$type      = (int) ( $_POST['type'] ?? 301 );
-		$is_regex  = ! empty( $_POST['is_regex'] );
 		$allow_hub = ! empty( $_POST['allow_hub'] );
 
 		if ( empty( $source ) ) {
