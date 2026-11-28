@@ -23,6 +23,10 @@ if ( ! function_exists( 'sanitize_text_field' ) ) {
 		$str = (string) $str;
 		$str = wp_strip_all_tags( $str );
 		$str = preg_replace( '/[\r\n\t ]+/', ' ', $str );
+		// Like core's _sanitize_text_fields(), remove percent-encoded octets.
+		while ( preg_match( '/%[a-f0-9]{2}/i', $str ) ) {
+			$str = preg_replace( '/%[a-f0-9]{2}/i', '', $str );
+		}
 		return trim( $str );
 	}
 }
@@ -131,6 +135,66 @@ class RedirectNormalizeTest extends TestCase {
 			'^/category/([^/]+)(?:/page/\d+)?$',
 			$this->invoke( 'normalize_source_url', '^/category/([^/]+)(?:/page/\d+)?$', true )
 		);
+	}
+
+	/**
+	 * @dataProvider encoded_source_cases
+	 */
+	public function test_non_ascii_and_space_sources_keep_their_characters( string $source, string $expected ): void {
+		$this->assertSame( $expected, $this->invoke( 'normalize_source_url', $source, false ) );
+	}
+
+	public static function encoded_source_cases(): array {
+		return array(
+			'percent-encoded accent' => array( '/caf%C3%A9', '/café' ),
+			'literal accent'         => array( '/café/', '/café' ),
+			'encoded spaces'         => array( '/my%20old%20page', '/my old page' ),
+			'full url, encoded'      => array( 'https://jonimms.com/caf%C3%A9/', '/café' ),
+			'non-latin slug'         => array( '/%D0%BF%D1%80%D0%B8%D0%B2%D0%B5%D1%82', '/привет' ),
+		);
+	}
+
+	/**
+	 * maybe_redirect() compares clean_path() of the raw request path with the
+	 * stored source, so both spellings of a source must match the encoded
+	 * path a browser sends.
+	 *
+	 * @dataProvider request_match_cases
+	 */
+	public function test_encoded_request_path_matches_stored_source( string $request_path, string $source ): void {
+		$stored = $this->invoke( 'normalize_source_url', $source, false );
+		$this->assertSame( $stored, rtrim( SWPS_Redirect_Manager::clean_path( $request_path ), '/' ) );
+	}
+
+	public static function request_match_cases(): array {
+		return array(
+			'typed encoded'     => array( '/caf%C3%A9', '/caf%C3%A9' ),
+			'typed literal'     => array( '/caf%C3%A9/', '/café' ),
+			'spaces'            => array( '/my%20old%20page', '/my old page' ),
+			'lowercase escapes' => array( '/caf%c3%a9', '/café' ),
+		);
+	}
+
+	public function test_clean_path_strips_tags_and_control_characters(): void {
+		$this->assertSame( '/foo', SWPS_Redirect_Manager::clean_path( '/<b>foo</b>%0A%00' ) );
+	}
+
+	public function test_clean_path_rejects_invalid_utf8(): void {
+		$this->assertSame( '', SWPS_Redirect_Manager::clean_path( '/bad%FF' ) );
+	}
+
+	public function test_add_redirect_stores_decoded_source(): void {
+		global $wpdb;
+		$wpdb = new SWPS_Test_Redirects_WPDB();
+
+		$ref      = new ReflectionClass( SWPS_Redirect_Manager::class );
+		$instance = $ref->newInstanceWithoutConstructor();
+
+		// 410 skips the target checks, which need WordPress.
+		$id = $instance->add_redirect( '/caf%C3%A9', '', 410 );
+
+		$this->assertSame( 1, $id );
+		$this->assertSame( '/café', $wpdb->inserts[0]['source_url'] );
 	}
 
 	// -------------------------------------------------------------------------
