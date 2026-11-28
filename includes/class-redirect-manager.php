@@ -51,7 +51,7 @@ class SWPS_Redirect_Manager {
 		}
 
 		$request_path = wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH );
-		$request_path = rtrim( (string) $request_path, '/' );
+		$request_path = rtrim( $request_path, '/' );
 
 		if ( empty( $request_path ) || '/' === $request_path ) {
 			return;
@@ -131,8 +131,9 @@ class SWPS_Redirect_Manager {
 
 		global $wpdb;
 		$table = $wpdb->prefix . self::LOG_TABLE;
-		$path  = wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH );
-		$url   = is_string( $path ) ? self::clean_path( $path ) : '';
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- cleaned by clean_path() on the next line.
+		$path = wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH );
+		$url  = is_string( $path ) ? self::clean_path( $path ) : '';
 
 		if ( empty( $url ) ) {
 			return;
@@ -327,6 +328,8 @@ class SWPS_Redirect_Manager {
 	 * Canonical form for exact paths: percent-decoded, tags and control
 	 * characters removed. Not sanitize_text_field(), which deletes every %XX
 	 * octet and so turns "/caf%C3%A9" into "/caf". Invalid UTF-8 yields ''.
+	 *
+	 * @param string $path URL path, percent-encoded or not.
 	 */
 	public static function clean_path( string $path ): string {
 		$path = rawurldecode( $path );
@@ -474,14 +477,17 @@ class SWPS_Redirect_Manager {
 			wp_send_json_error( 'Unauthorized' );
 		}
 
-		$is_regex  = ! empty( $_POST['is_regex'] );
-		$source    = trim( (string) wp_unslash( $_POST['source'] ?? '' ) );
-		// Exact sources are cleaned by normalize_source_url(); sanitize_text_field()
-		// here would strip their %XX octets first.
-		$source    = $is_regex ? sanitize_text_field( $source ) : $source;
+		$source    = trim( wp_unslash( $_POST['source'] ?? '' ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitized below or by normalize_source_url().
 		$target    = sanitize_text_field( wp_unslash( $_POST['target'] ?? '' ) );
 		$type      = (int) ( $_POST['type'] ?? 301 );
+		$is_regex  = ! empty( $_POST['is_regex'] );
 		$allow_hub = ! empty( $_POST['allow_hub'] );
+
+		// Exact sources are cleaned by normalize_source_url(); sanitize_text_field()
+		// would strip their %XX octets first.
+		if ( $is_regex ) {
+			$source = sanitize_text_field( $source );
+		}
 
 		if ( empty( $source ) ) {
 			wp_send_json_error( 'Source URL is required.' );
